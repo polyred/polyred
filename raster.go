@@ -18,7 +18,7 @@ import (
 
 // Rasterizer is a CPU rasterizer
 type Rasterizer struct {
-	c *PerspectiveCamera // camera
+	c Camera // camera
 	s *Scene
 
 	width          int
@@ -49,7 +49,7 @@ func NewRasterizer(width, height int) *Rasterizer {
 }
 
 // SetCamera sets the rasterizer camera
-func (r *Rasterizer) SetCamera(c *PerspectiveCamera) {
+func (r *Rasterizer) SetCamera(c Camera) {
 	r.c = c
 }
 
@@ -226,26 +226,21 @@ func (r *Rasterizer) initBufs() {
 }
 
 func (r *Rasterizer) initTrans() {
-	w := &Vector{r.c.LookAt.X, r.c.LookAt.Y, r.c.LookAt.Z, 1}
-	w.Sub(&r.c.Position).Normalize()
-	u := &Vector{}
-	u.CrossVectors(&r.c.Up, w).MultiplyScalar(-1).Normalize()
-	vv := &Vector{}
-	vv.CrossVectors(u, w).Normalize()
+	camPos := r.c.GetPosition()
+	camLookAt := r.c.GetLookAt()
+	camUp := r.c.GetUp()
+
+	w := (&Vector{camLookAt.X, camLookAt.Y, camLookAt.Z, 1}).Sub(&camPos).Normalize()
+	u := (&Vector{}).CrossVectors(&camUp, w).MultiplyScalar(-1).Normalize()
+	vv := (&Vector{}).CrossVectors(u, w).Normalize()
 	r.viewMatrix.Set(
-		u.X, u.Y, u.Z, -r.c.Position.X*u.X-r.c.Position.Y*u.Y-r.c.Position.Z*u.Z,
-		vv.X, vv.Y, vv.Z, -r.c.Position.X*vv.X-r.c.Position.Y*vv.Y-r.c.Position.Z*vv.Z,
-		-w.X, -w.Y, -w.Z, r.c.Position.X*w.X+r.c.Position.Y*w.Y+r.c.Position.Z*w.Z,
+		u.X, u.Y, u.Z, -camPos.X*u.X-camPos.Y*u.Y-camPos.Z*u.Z,
+		vv.X, vv.Y, vv.Z, -camPos.X*vv.X-camPos.Y*vv.Y-camPos.Z*vv.Z,
+		-w.X, -w.Y, -w.Z, camPos.X*w.X+camPos.Y*w.Y+camPos.Z*w.Z,
 		0, 0, 0, 1,
 	)
 
-	r.projMatrix.Set(
-		-1/(r.c.Aspect*math.Tan(r.c.FOV*math.Pi/360)), 0, 0, 0,
-		0, -1/(math.Tan(r.c.FOV*math.Pi/360)), 0, 0,
-		0, 0, (r.c.Near+r.c.Far)/(r.c.Near-r.c.Far),
-		2*(r.c.Near*r.c.Far)/(r.c.Near-r.c.Far),
-		0, 0, 1, 0,
-	)
+	r.projMatrix.SetMat(r.c.GetProjectionMatrix())
 
 	r.viewportMatrix.Set(
 		float64(r.width)/2, 0, 0, float64(r.width)/2,
@@ -275,7 +270,7 @@ func (r *Rasterizer) FragmentShader(tex *Texture, uv, normal, p *Vector) color.R
 	I := color.RGBA{uint8(R >> 8), uint8(G >> 8), uint8(B >> 8), uint8(A >> 8)}
 	L := (&Vector{r.s.Lights[0].Position.X, r.s.Lights[0].Position.Y,
 		r.s.Lights[0].Position.Z, 1}).Sub(p).Normalize()
-	V := (&Vector{r.c.Position.X, r.c.Position.Y, r.c.Position.Z, 1}).
+	V := (&Vector{r.c.GetPosition().X, r.c.GetPosition().Y, r.c.GetPosition().Z, 1}).
 		Sub(p).Normalize()
 	H := (&Vector{L.X, L.Y, L.Z, 0}).
 		Add(V).Normalize()

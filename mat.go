@@ -61,6 +61,13 @@ func (m *Matrix) Set(
 	m.x[15] = x44
 }
 
+// SetMat sets the matrix using given matrix
+func (m *Matrix) SetMat(mm Matrix) {
+	for i := 0; i < len(m.x); i++ {
+		m.x[i] = mm.x[i]
+	}
+}
+
 // MultiplyMatrix implements matrix multiplication for two
 // 4x4 matrices and assigns the result to this.
 func (m *Matrix) MultiplyMatrix(mm *Matrix) *Matrix {

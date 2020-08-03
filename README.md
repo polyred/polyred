@@ -29,12 +29,20 @@ if err != nil {
 }
 
 // set the camera
-r.SetCamera(ddd.NewPerspectiveCamera(
+r.SetCamera(ddd.NewPerspectiveCamera( // perspective
     ddd.NewVector(-550, 194, 734, 1),
     ddd.NewVector(-1000, 0, 0, 1),
     ddd.NewVector(0, 1, 1, 0),
     float64(width)/float64(height),
     100, 600, 45,
+))
+r.SetCamera(ddd.NewOrthographicCamera( // orthographic
+    ddd.NewVector(-550, 194, 734, 1),
+    ddd.NewVector(-1000, 0, 0, 1),
+    ddd.NewVector(0, 1, 1, 0),
+    -float64(width)/2, float64(width)/2,
+    float64(height)/2, -float64(height)/2,
+    200, -200,
 ))
 
 // construct scene graph
