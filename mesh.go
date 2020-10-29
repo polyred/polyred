@@ -39,31 +39,31 @@ type TriangleMesh struct {
 func NewTriangleMesh(ts []*Triangle) *TriangleMesh {
 	return &TriangleMesh{
 		triangles:       ts,
-		scaleMatrix:     NewMatrix(),
-		translateMatrix: NewMatrix(),
-		modelMatrix:     NewMatrix(),
-		normalMatrix:    NewMatrix(),
+		scaleMatrix:     IdentityMatrix,
+		translateMatrix: IdentityMatrix,
+		modelMatrix:     IdentityMatrix,
+		normalMatrix:    IdentityMatrix,
 	}
 }
 
 // SetScale sets the scale matrix.
-func (m *TriangleMesh) SetScale(v *Vector) {
-	m.scaleMatrix.Set(
+func (m *TriangleMesh) SetScale(v Vector) {
+	m.scaleMatrix = Matrix{
 		v.X, 0, 0, 0,
 		0, v.Y, 0, 0,
 		0, 0, v.Z, 0,
 		0, 0, 0, 1,
-	)
+	}
 }
 
 // SetTranslate sets the translate matrix.
-func (m *TriangleMesh) SetTranslate(v *Vector) {
-	m.translateMatrix.Set(
+func (m *TriangleMesh) SetTranslate(v Vector) {
+	m.translateMatrix = Matrix{
 		1, 0, 0, v.X,
 		0, 1, 0, v.Y,
 		0, 0, 1, v.Z,
 		0, 0, 0, 1,
-	)
+	}
 }
 
 // Texture is a texture

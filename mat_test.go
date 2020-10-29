@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewMatrix(t *testing.T) {
-	m := ddd.NewMatrix()
+	m := ddd.IdentityMatrix
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
@@ -28,13 +28,12 @@ func TestNewMatrix(t *testing.T) {
 }
 
 func TestSetMatrix(t *testing.T) {
-	m := ddd.NewMatrix()
-	m.Set(
+	m := ddd.Matrix{
 		1, 1, 1, 1,
 		1, 1, 1, 1,
 		1, 1, 1, 1,
 		1, 1, 1, 1,
-	)
+	}
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
@@ -47,32 +46,27 @@ func TestSetMatrix(t *testing.T) {
 }
 
 func TestMultiplyMatrices(t *testing.T) {
-	m1 := ddd.NewMatrix()
-	m1.Set(
+	m1 := ddd.Matrix{
 		1, 2, 3, 4,
 		5, 6, 7, 8,
 		9, 10, 11, 12,
 		13, 14, 15, 16,
-	)
-
-	m2 := ddd.NewMatrix()
-	m2.Set(
+	}
+	m2 := ddd.Matrix{
 		16, 15, 14, 13,
 		12, 11, 10, 9,
 		8, 7, 6, 5,
 		4, 3, 2, 1,
-	)
+	}
 
-	got := ddd.NewMatrix()
-	got.MultiplyMatrices(&m1, &m2)
+	got := m1.Mul(m2)
 
-	want := ddd.NewMatrix()
-	want.Set(
+	want := ddd.Matrix{
 		80, 70, 60, 50,
 		240, 214, 188, 162,
 		400, 358, 316, 274,
 		560, 502, 444, 386,
-	)
+	}
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
@@ -85,22 +79,20 @@ func TestMultiplyMatrices(t *testing.T) {
 }
 
 func TestInverseMatrix(t *testing.T) {
-	m1 := ddd.NewMatrix()
-	m1.Set(
+	m1 := ddd.Matrix{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
-	)
-	m1.Inverse()
+	}
+	m1 = m1.Inverse()
 
-	want := ddd.NewMatrix()
-	want.Set(
-		1003995.0/4463716, -10967.0/4463716, -5949.0/4463716, -219389.0/4463716,
-		-62879.0/4463716, 65251.0/4463716, 1613.0/4463716, -107839.0/4463716,
-		-3999.0/2231858, -3.0/2231858, 3865.0/2231858, 347.0/2231858,
-		-75565.0/4463716, -1731.0/4463716, -1753.0/4463716, 200219.0/4463716,
-	)
+	want := ddd.Matrix{
+		1003995.0 / 4463716, -10967.0 / 4463716, -5949.0 / 4463716, -219389.0 / 4463716,
+		-62879.0 / 4463716, 65251.0 / 4463716, 1613.0 / 4463716, -107839.0 / 4463716,
+		-3999.0 / 2231858, -3.0 / 2231858, 3865.0 / 2231858, 347.0 / 2231858,
+		-75565.0 / 4463716, -1731.0 / 4463716, -1753.0 / 4463716, 200219.0 / 4463716,
+	}
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
@@ -113,22 +105,20 @@ func TestInverseMatrix(t *testing.T) {
 }
 
 func TestTransposeMatrix(t *testing.T) {
-	m1 := ddd.NewMatrix()
-	m1.Set(
+	m1 := ddd.Matrix{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
-	)
-	m1.Transpose()
+	}
+	m1 = m1.Transpose()
 
-	want := ddd.NewMatrix()
-	want.Set(
+	want := ddd.Matrix{
 		5, 8, 5, 2,
 		1, 71, 1, 1,
 		5, 2, 582, 7,
 		6, 47, 4, 25,
-	)
+	}
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {

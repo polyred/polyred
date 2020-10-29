@@ -60,14 +60,12 @@ func (c OrthorgraphicCamera) GetUp() Vector {
 
 // GetProjectionMatrix returns the projection matrix
 func (c OrthorgraphicCamera) GetProjectionMatrix() Matrix {
-	m := NewMatrix()
-	m.Set(
-		2/(c.Right-c.Left), 0, 0, (c.Left+c.Right)/(c.Left-c.Right),
-		0, 2/(c.Top-c.Bottom), 0, (c.Bottom+c.Top)/(c.Bottom-c.Top),
-		0, 0, 2/(c.Near-c.Far), (c.Far+c.Near)/(c.Far-c.Near),
+	return Matrix{
+		2 / (c.Right - c.Left), 0, 0, (c.Left + c.Right) / (c.Left - c.Right),
+		0, 2 / (c.Top - c.Bottom), 0, (c.Bottom + c.Top) / (c.Bottom - c.Top),
+		0, 0, 2 / (c.Near - c.Far), (c.Far + c.Near) / (c.Far - c.Near),
 		0, 0, 0, 1,
-	)
-	return m
+	}
 }
 
 // NewOrthographicCamera returns a new orthographic camera with the given params
@@ -123,13 +121,11 @@ func (c PerspectiveCamera) GetUp() Vector {
 
 // GetProjectionMatrix returns the projection matrix
 func (c PerspectiveCamera) GetProjectionMatrix() Matrix {
-	m := NewMatrix()
-	m.Set(
-		-1/(c.Aspect*math.Tan(c.FOV*math.Pi/360)), 0, 0, 0,
-		0, -1/(math.Tan(c.FOV*math.Pi/360)), 0, 0,
-		0, 0, (c.Near+c.Far)/(c.Near-c.Far),
-		2*(c.Near*c.Far)/(c.Near-c.Far),
+	return Matrix{
+		-1 / (c.Aspect * math.Tan(c.FOV*math.Pi/360)), 0, 0, 0,
+		0, -1 / (math.Tan(c.FOV * math.Pi / 360)), 0, 0,
+		0, 0, (c.Near + c.Far) / (c.Near - c.Far),
+		2 * (c.Near * c.Far) / (c.Near - c.Far),
 		0, 0, 1, 0,
-	)
-	return m
+	}
 }

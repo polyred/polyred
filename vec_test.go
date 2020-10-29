@@ -11,12 +11,11 @@ import (
 )
 
 func TestVectorAddition(t *testing.T) {
-	v1 := ddd.NewVector(1, 2, 3, 4)
-	v2 := ddd.NewVector(4, 5, 6, 7)
+	v1 := ddd.Vector{1, 2, 3, 4}
+	v2 := ddd.Vector{4, 5, 6, 7}
 
-	v1.Add(&v2)
-
-	want := ddd.NewVector(5, 7, 9, 11)
+	v1 = v1.Add(v2)
+	want := ddd.Vector{5, 7, 9, 11}
 
 	if !equal(want, v1) {
 		t.Fatalf("vector addtion is not working, want %v, got %v", want, v1)

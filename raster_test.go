@@ -19,9 +19,9 @@ func newraster() *ddd.Rasterizer {
 	height := 500
 	r = ddd.NewRasterizer(width, height)
 	r.SetCamera(ddd.NewPerspectiveCamera(
-		ddd.NewVector(-550, 194, 734, 1),
-		ddd.NewVector(-1000, 0, 0, 1),
-		ddd.NewVector(0, 1, 1, 0),
+		ddd.Vector{-550, 194, 734, 1},
+		ddd.Vector{-1000, 0, 0, 1},
+		ddd.Vector{0, 1, 1, 0},
 		float64(width)/float64(height),
 		100,
 		600,
@@ -33,10 +33,8 @@ func newraster() *ddd.Rasterizer {
 	if err != nil {
 		panic(fmt.Errorf("cannot load obj model, path: %s, err: %v", path, err))
 	}
-	scale := ddd.NewVector(1500, 1500, 1500, 0)
-	m.SetScale(&scale)
-	trans := ddd.NewVector(-700, -5, 350, 1)
-	m.SetTranslate(&trans)
+	m.SetScale(ddd.Vector{1500, 1500, 1500, 0})
+	m.SetTranslate(ddd.Vector{-700, -5, 350, 1})
 	err = m.SetTexture("./tests/texture.jpg", 150)
 	if err != nil {
 		panic(fmt.Errorf("cannot load model texture, err: %v", err))

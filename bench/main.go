@@ -23,10 +23,8 @@ func main() {
 		}
 
 		// set model matrix
-		scale := ddd.NewVector(1500, 1500, 1500, 0)
-		trans := ddd.NewVector(-700, -5, 350, 1)
-		m.SetScale(&scale)
-		m.SetTranslate(&trans)
+		m.SetScale(ddd.Vector{1500, 1500, 1500, 0})
+		m.SetTranslate(ddd.Vector{-700, -5, 350, 1})
 
 		// set texture
 		err = m.SetTexture("../tests/texture.jpg", 150)
@@ -36,16 +34,16 @@ func main() {
 
 		// set the camera
 		r.SetCamera(ddd.NewPerspectiveCamera(
-			ddd.NewVector(-550, 194, 734, 1),
-			ddd.NewVector(-1000, 0, 0, 1),
-			ddd.NewVector(0, 1, 1, 0),
+			ddd.Vector{-550, 194, 734, 1},
+			ddd.Vector{-1000, 0, 0, 1},
+			ddd.Vector{0, 1, 1, 0},
 			float64(width)/float64(height),
 			100, 600, 45,
 		))
 		r.SetCamera(ddd.NewOrthographicCamera(
-			ddd.NewVector(-550, 194, 734, 1),
-			ddd.NewVector(-1000, 0, 0, 1),
-			ddd.NewVector(0, 1, 1, 0),
+			ddd.Vector{-550, 194, 734, 1},
+			ddd.Vector{-1000, 0, 0, 1},
+			ddd.Vector{0, 1, 1, 0},
 			-float64(width)/2, float64(width)/2,
 			float64(height)/2, -float64(height)/2,
 			200, -200,
@@ -57,7 +55,7 @@ func main() {
 		s.AddMesh(m)
 		l := ddd.NewPointLight(
 			color.RGBA{255, 255, 255, 255},
-			ddd.NewVector(-200, 250, 600, 1), 0.5, 0.6, 1,
+			ddd.Vector{-200, 250, 600, 1}, 0.5, 0.6, 1,
 		)
 		s.AddLight(l)
 
@@ -71,5 +69,5 @@ func main() {
 	})
 
 	ns := result.NsPerOp()
-	fmt.Printf("render perf: %v fps\n", 1/(time.Duration(ns)).Seconds())
+	fmt.Printf("BenchmarkRasterizer\t%v\t%v ns/op\t%v fps\n", result.N, ns, 1/(time.Duration(ns)).Seconds())
 }
