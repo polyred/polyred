@@ -66,22 +66,22 @@ See complete example [here](./bench/main.go).
 
 ## Benchmark
 
-The CPU rasterizer can render the bench example ~200fps:
+The CPU rasterizer can render the bench example >300fps:
 
 ```sh
 
 $ cd bench && go build
 $ for i in {1..10}; do perflock -governor 80% ./bench; done
-BenchmarkRasterizer     243     4915913 ns/op   203.42101253622673 fps
-BenchmarkRasterizer     244     4891938 ns/op   204.41796277875966 fps
-BenchmarkRasterizer     242     4884135 ns/op   204.74454534938118 fps
-BenchmarkRasterizer     237     4897988 ns/op   204.16546549317803 fps
-BenchmarkRasterizer     243     4886564 ns/op   204.64277148523993 fps
-BenchmarkRasterizer     243     4912620 ns/op   203.55736857318496 fps
-BenchmarkRasterizer     244     4950226 ns/op   202.01097889268084 fps
-BenchmarkRasterizer     242     4871713 ns/op   205.26660745409265 fps
-BenchmarkRasterizer     244     4926549 ns/op   202.9818438830102 fps
-BenchmarkRasterizer     244     4880202 ns/op   204.9095508751482 fps
+BenchmarkRasterizer     343     3498860 ns/op   285.80737726002184 fps
+BenchmarkRasterizer     344     3459285 ns/op   289.0770780667103 fps
+BenchmarkRasterizer     345     3472535 ns/op   287.9740592967385 fps
+BenchmarkRasterizer     345     3473249 ns/op   287.91486012088393 fps
+BenchmarkRasterizer     337     3456515 ns/op   289.3087401616947 fps
+BenchmarkRasterizer     345     3494367 ns/op   286.1748637163755 fps
+BenchmarkRasterizer     345     3470063 ns/op   288.17920596830663 fps
+BenchmarkRasterizer     345     3481662 ns/op   287.2191499347151 fps
+BenchmarkRasterizer     345     3464998 ns/op   288.60045518063794 fps
+BenchmarkRasterizer     344     3468320 ns/op   288.32403007796285 fps
 $ inxi -C
 CPU: Topology: 8-Core model: Intel Core i9-9900K bits: 64 type: MT MCP L2 cache: 16.0 MiB Speed: 800 MHz min/max: 800/5000 MHz Core speeds (MHz): 1: 800 2: 800 3: 800 4: 800 5: 800 6: 800 7: 800 8: 801 9: 800 10: 800 11: 800 12: 800 13: 800 14: 800 15: 800 16: 800
 ```

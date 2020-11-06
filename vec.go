@@ -29,8 +29,8 @@ func (v Vector) Sub(u Vector) Vector {
 	return Vector{v.X - u.X, v.Y - u.Y, v.Z - u.Z, v.W + u.W}
 }
 
-// MultiplyScalar implements scalar vector or scalar point multiplication
-func (v Vector) MultiplyScalar(s float64) Vector {
+// Mul implements scalar vector or scalar point multiplication
+func (v Vector) Mul(s float64) Vector {
 	return Vector{v.X * s, v.Y * s, v.Z * s, v.W * s}
 }
 
@@ -50,12 +50,16 @@ func (v Vector) Cross(u Vector) Vector {
 
 // Normalize normalizes this vector to a unit vector
 func (v Vector) Normalize() Vector {
-	norm := math.Sqrt(v.Dot(v))
-	return Vector{v.X / norm, v.Y / norm, v.Z / norm, v.W / norm}
+	n := 1.0 / math.Sqrt(v.Dot(v))
+	return Vector{v.X * n, v.Y * n, v.Z * n, v.W * n}
 }
 
 // ApplyMatrix applies 4x4 matrix and 4x1 vector multiplication.
 // the given matrix multiplies v from the left.
-func (v Vector) ApplyMatrix(m Matrix) Vector {
-	return m.MulVec(v)
+func (v Vector) ApplyMatrix(m *Matrix) Vector {
+	x := m.X00*v.X + m.X01*v.Y + m.X02*v.Z + m.X03*v.W
+	y := m.X10*v.X + m.X11*v.Y + m.X12*v.Z + m.X13*v.W
+	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z + m.X23*v.W
+	w := m.X30*v.X + m.X31*v.Y + m.X32*v.Z + m.X33*v.W
+	return Vector{x, y, z, w}
 }

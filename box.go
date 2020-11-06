@@ -23,7 +23,7 @@ func NewAABB(v1, v2, v3 Vertex) AABB {
 	zMin := math.Min(math.Min(v1.Position.Z, v2.Position.Z), v3.Position.Z)
 
 	return AABB{
-		min: NewVector(xMin, yMin, zMin, 1),
-		max: NewVector(xMax, yMax, zMax, 1),
+		min: Vector{xMin, yMin, zMin, 1},
+		max: Vector{xMax, yMax, zMax, 1},
 	}
 }

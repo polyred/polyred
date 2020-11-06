@@ -66,10 +66,11 @@ func (r *Rasterizer) SetConcurrencySize(new int32) (old int32) {
 
 // Render renders a scene graph
 func (r *Rasterizer) Render() {
-	r.initBufs()
+	r.resetBufs()
 	r.initTrans()
 	limiter := NewConccurLimiter(runtime.GOMAXPROCS(0))
-	for _, o := range r.s.Objects {
+	for i := 0; i < len(r.s.Objects); i++ {
+		o := r.s.Objects[i]
 		o.modelMatrix = o.translateMatrix.Mul(o.scaleMatrix)
 		o.normalMatrix = o.modelMatrix.Inverse().Transpose()
 		for i := 0; i < len(o.triangles); i += int(r.concurrentSize) {
@@ -144,21 +145,21 @@ func (r *Rasterizer) draw(tri *Triangle, tex *Texture, modelMatrix, normalMatrix
 	}
 
 	// compute normals and shading point in world space for fragment shading
-	n1 := tri.v1.Normal.ApplyMatrix(normalMatrix)
-	n2 := tri.v2.Normal.ApplyMatrix(normalMatrix)
-	n3 := tri.v3.Normal.ApplyMatrix(normalMatrix)
-	a := tri.v1.Position.ApplyMatrix(modelMatrix)
-	b := tri.v2.Position.ApplyMatrix(modelMatrix)
-	c := tri.v3.Position.ApplyMatrix(modelMatrix)
+	n1 := normalMatrix.MulVec(tri.v1.Normal)
+	n2 := normalMatrix.MulVec(tri.v2.Normal)
+	n3 := normalMatrix.MulVec(tri.v3.Normal)
+	a := modelMatrix.MulVec(tri.v1.Position)
+	b := modelMatrix.MulVec(tri.v2.Position)
+	c := modelMatrix.MulVec(tri.v3.Position)
 
 	for x := math.Floor(xMin); x < xMax; x++ {
 		for y := math.Floor(yMin); y < yMax; y++ {
 			// compute barycentric
-			ap := (Vector{x, y, 0, 1}).Sub(Vector{v1.Position.X, v1.Position.Y, 0, 1})
-			ab := (Vector{v2.Position.X, v2.Position.Y, 0, 1}).Sub(Vector{v1.Position.X, v1.Position.Y, 0, 1})
-			ac := (Vector{v3.Position.X, v3.Position.Y, 0, 1}).Sub(Vector{v1.Position.X, v1.Position.Y, 0, 1})
-			bc := (Vector{v3.Position.X, v3.Position.Y, 0, 1}).Sub(Vector{v2.Position.X, v2.Position.Y, 0, 1})
-			bp := (Vector{x, y, 0, 1}).Sub(Vector{v2.Position.X, v2.Position.Y, 0, 1})
+			ap := Vector{x, y, 0, 1}.Sub(Vector{v1.Position.X, v1.Position.Y, 0, 1})
+			ab := Vector{v2.Position.X, v2.Position.Y, 0, 1}.Sub(Vector{v1.Position.X, v1.Position.Y, 0, 1})
+			ac := Vector{v3.Position.X, v3.Position.Y, 0, 1}.Sub(Vector{v1.Position.X, v1.Position.Y, 0, 1})
+			bc := Vector{v3.Position.X, v3.Position.Y, 0, 1}.Sub(Vector{v2.Position.X, v2.Position.Y, 0, 1})
+			bp := Vector{x, y, 0, 1}.Sub(Vector{v2.Position.X, v2.Position.Y, 0, 1})
 			Sabc := ab.Cross(ac).Z
 			Sabp := ab.Cross(ap).Z
 			Sapc := ap.Cross(ac).Z
@@ -202,10 +203,10 @@ func (r *Rasterizer) draw(tri *Triangle, tex *Texture, modelMatrix, normalMatrix
 	}
 }
 
-func (r *Rasterizer) initBufs() {
+func (r *Rasterizer) resetBufs() {
 	size := r.width * r.height
 	for i := 0; i < size; i++ {
-		r.frameBuf[i] = color.RGBA{0, 0, 0, 0}
+		// r.frameBuf[i] = color.RGBA{0, 0, 0, 0}
 		r.depthBuf[i] = -math.MaxInt64
 	}
 }
@@ -216,7 +217,7 @@ func (r *Rasterizer) initTrans() {
 	camUp := r.c.GetUp()
 
 	w := (Vector{camLookAt.X, camLookAt.Y, camLookAt.Z, 1}).Sub(camPos).Normalize()
-	u := camUp.Cross(w).MultiplyScalar(-1).Normalize()
+	u := camUp.Cross(w).Mul(-1).Normalize()
 	vv := u.Cross(w).Normalize()
 	r.viewMatrix = Matrix{
 		u.X, u.Y, u.Z, -camPos.X*u.X - camPos.Y*u.Y - camPos.Z*u.Z,
@@ -233,46 +234,34 @@ func (r *Rasterizer) initTrans() {
 	}
 }
 
-// VertexShader ...
+// VertexShader is a vertex shader that conducts MVP transformations
 func (r *Rasterizer) VertexShader(v Vertex, modelMatrix Matrix) Vertex {
-	vv := v
-
-	v.Position = v.Position.ApplyMatrix(modelMatrix).ApplyMatrix(r.viewMatrix).
-		ApplyMatrix(r.projMatrix).ApplyMatrix(r.viewportMatrix)
-	vv.Position = Vector{v.Position.X / v.Position.W, v.Position.Y / v.Position.W, v.Position.Z / v.Position.W, 1}
-
-	return vv
+	v.Position = v.Position.ApplyMatrix(&modelMatrix).ApplyMatrix(&r.viewMatrix).
+		ApplyMatrix(&r.projMatrix).ApplyMatrix(&r.viewportMatrix)
+	w := 1.0 / v.Position.W
+	v.Position = Vector{v.Position.X * w, v.Position.Y * w, v.Position.Z * w, 1}
+	return v
 }
 
-// FragmentShader ...
+// FragmentShader is a Blinn-Phong fragment shader
 func (r *Rasterizer) FragmentShader(tex *Texture, uv, normal, p Vector) color.RGBA {
-	width := float64(tex.width)
-	height := float64(tex.height)
-	R, G, B, A := tex.data.At(
-		int(math.Floor(uv.X*width)), int(height-math.Floor(uv.Y*height))).RGBA()
-	I := color.RGBA{uint8(R >> 8), uint8(G >> 8), uint8(B >> 8), uint8(A >> 8)}
-	L := (&Vector{r.s.Lights[0].Position.X, r.s.Lights[0].Position.Y,
-		r.s.Lights[0].Position.Z, 1}).Sub(p).Normalize()
-	V := (&Vector{r.c.GetPosition().X, r.c.GetPosition().Y, r.c.GetPosition().Z, 1}).
-		Sub(p).Normalize()
-	H := (&Vector{L.X, L.Y, L.Z, 0}).
-		Add(V).Normalize()
-	La := clamp((Vector{float64(I.R), float64(I.G), float64(I.B), 0}).
-		MultiplyScalar(r.s.Lights[0].Kamb), 0, 255)
-	Ld := clamp((Vector{float64(I.R), float64(I.G), float64(I.B), 0}).
-		MultiplyScalar(r.s.Lights[0].Kdiff).
-		MultiplyScalar(normal.Dot(L)), 0, 255)
-	Ls := clamp((Vector{float64(I.R), float64(I.G), float64(I.B), 0}).
-		MultiplyScalar(r.s.Lights[0].Kspec).
-		MultiplyScalar(math.Pow(normal.Dot(H), tex.Shininess)), 0, 255)
-	c := clamp(La.Add(Ld).Add(Ls), 0, 255)
-	return color.RGBA{uint8(c.X), uint8(c.Y), uint8(c.Z), 255}
+	x := int(math.Floor(uv.X * float64(tex.width)))
+	y := int(float64(tex.height) - math.Floor(uv.Y*float64(tex.height)))
+	R, G, B, A := tex.data.At(x, y).RGBA()
+	I := Vector{float64(R >> 8), float64(G >> 8), float64(B >> 8), float64(A >> 8)}
+	L := r.s.Lights[0].Position.Sub(p).Normalize()
+	V := r.c.GetPosition().Sub(p).Normalize()
+	H := L.Add(V).Normalize()
+	nL := normal.Dot(L)
+	nH := math.Pow(normal.Dot(H), tex.Shininess)
+	blinnPhong := r.s.Lights[0].Kamb + r.s.Lights[0].Kdiff*nL + r.s.Lights[0].Kspec*nH
+	c := I.Mul(blinnPhong)
+	return color.RGBA{
+		uint8(clamp(c.X, 0, 255)),
+		uint8(clamp(c.Y, 0, 255)),
+		uint8(clamp(c.Z, 0, 255)), 255}
 }
 
-func clamp(v Vector, min, max float64) Vector {
-	x := math.Min(math.Max(v.X, 0), 255)
-	y := math.Min(math.Max(v.Y, 0), 255)
-	z := math.Min(math.Max(v.Z, 0), 255)
-	w := math.Min(math.Max(v.W, 0), 255)
-	return Vector{x, y, z, w}
+func clamp(v, min, max float64) float64 {
+	return math.Min(math.Max(v, min), max)
 }

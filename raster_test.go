@@ -7,6 +7,8 @@ package ddd_test
 import (
 	"fmt"
 	"image/color"
+	"os"
+	"runtime/pprof"
 	"testing"
 
 	"github.com/changkun/ddd"
@@ -49,7 +51,17 @@ func newraster() *ddd.Rasterizer {
 
 func TestRasterizer(t *testing.T) {
 	r := newraster()
-	r.Render()
+
+	f, err := os.Create("cpu.pprof")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pprof.StartCPUProfile(f)
+	for i := 0; i < 1000; i++ {
+		r.Render()
+	}
+	pprof.StopCPUProfile()
+
 	r.Save("./tests/render.jpg")
 }
 
