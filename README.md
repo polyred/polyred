@@ -2,6 +2,10 @@
 
 ddd is a 3d rasterizer written in pure Go.
 
+```
+import "changkun.de/x/ddd"
+```
+
 ## Usage
 
 ```go

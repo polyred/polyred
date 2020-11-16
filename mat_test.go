@@ -8,7 +8,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/changkun/ddd"
+	"changkun.de/x/ddd"
 )
 
 func TestNewMatrix(t *testing.T) {

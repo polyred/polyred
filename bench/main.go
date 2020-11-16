@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/changkun/ddd"
+	"changkun.de/x/ddd"
 )
 
 func main() {

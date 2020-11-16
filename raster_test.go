@@ -11,7 +11,7 @@ import (
 	"runtime/pprof"
 	"testing"
 
-	"github.com/changkun/ddd"
+	"changkun.de/x/ddd"
 )
 
 var r *ddd.Rasterizer

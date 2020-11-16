@@ -7,7 +7,7 @@ package ddd_test
 import (
 	"testing"
 
-	"github.com/changkun/ddd"
+	"changkun.de/x/ddd"
 )
 
 func TestVectorAddition(t *testing.T) {
