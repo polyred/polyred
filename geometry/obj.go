@@ -2,31 +2,27 @@
 // Use of this source code is governed by a GNU GPLv3
 // license that can be found in the LICENSE file.
 
-package ddd
+package geometry
 
 import (
 	"bufio"
-	"fmt"
-	"os"
+	"io"
 	"strconv"
 	"strings"
+
+	"changkun.de/x/ddd/math"
 )
 
 // LoadOBJ loads a .obj file to a TriangleMesh object
-func LoadOBJ(path string) (*TriangleMesh, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("loader: cannot open file %s, err: %v", path, err)
-	}
-	defer f.Close()
+func LoadOBJ(data io.Reader) (*TriangleMesh, error) {
 
-	vs := make([]Vector, 1, 1024)
-	vts := make([]Vector, 1, 1024)
-	vns := make([]Vector, 1, 1024)
+	vs := make([]math.Vector, 1, 1024)
+	vts := make([]math.Vector, 1, 1024)
+	vns := make([]math.Vector, 1, 1024)
 
 	var tris []*Triangle
 
-	s := bufio.NewScanner(f)
+	s := bufio.NewScanner(data)
 	for s.Scan() {
 		l := s.Text()
 		fields := strings.Fields(l)
@@ -38,13 +34,13 @@ func LoadOBJ(path string) (*TriangleMesh, error) {
 		switch k {
 		case "v": // vertices
 			coord := parseFloats(args)
-			vs = append(vs, Vector{coord[0], coord[1], coord[2], 1})
+			vs = append(vs, math.NewVector(coord[0], coord[1], coord[2], 1))
 		case "vt": // uv texture coords
 			coord := parseFloats(args)
-			vts = append(vts, Vector{coord[0], coord[1], 0, 1})
+			vts = append(vts, math.NewVector(coord[0], coord[1], 0, 1))
 		case "vn": // vertex normals
 			coord := parseFloats(args)
-			vns = append(vns, Vector{coord[0], coord[1], coord[2], 0})
+			vns = append(vns, math.NewVector(coord[0], coord[1], coord[2], 0))
 		case "f": // faces
 			fvs := make([]int, len(args))
 			fvts := make([]int, len(args))
