@@ -2,18 +2,18 @@
 // Use of this source code is governed by a GNU GPLv3
 // license that can be found in the LICENSE file.
 
-package ddd
+package math
 
 var (
-	// IdentityMatrix is an identity matrix
-	IdentityMatrix = Matrix{
+	// MatI is an identity matrix
+	MatI = Matrix{
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
 	}
-	// ZeroMatrix is a zero matrix
-	ZeroMatrix = Matrix{
+	// MatZero is a zero matrix
+	MatZero = Matrix{
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
@@ -25,8 +25,7 @@ var (
 type Matrix struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 4x4 Matrix.
-	// See benchmarks at https://golang.design/s/research.
-
+	// See benchmarks at https://golang.design/research/pointer-params/.
 	X00, X01, X02, X03 float64
 	X10, X11, X12, X13 float64
 	X20, X21, X22, X23 float64
@@ -35,7 +34,11 @@ type Matrix struct {
 
 // Get gets the matrix elements
 func (m Matrix) Get(i, j int) float64 {
-	switch i + j*4 {
+	if i < 0 || i > 3 || j < 0 || j > 3 {
+		panic("invalid index")
+	}
+
+	switch i*4 + j {
 	case 0:
 		return m.X00
 	case 1:
@@ -71,9 +74,116 @@ func (m Matrix) Get(i, j int) float64 {
 	}
 }
 
+// Set set the matrix elements at row i and column j
+func (m Matrix) Set(i, j int, v float64) {
+	if i < 0 || i > 3 || j < 0 || j > 3 {
+		panic("invalid index")
+	}
+
+	switch i*4 + j {
+	case 0:
+		m.X00 = v
+	case 1:
+		m.X01 = v
+	case 2:
+		m.X02 = v
+	case 3:
+		m.X03 = v
+	case 4:
+		m.X10 = v
+	case 5:
+		m.X11 = v
+	case 6:
+		m.X12 = v
+	case 7:
+		m.X13 = v
+	case 8:
+		m.X20 = v
+	case 9:
+		m.X21 = v
+	case 10:
+		m.X22 = v
+	case 11:
+		m.X23 = v
+	case 12:
+		m.X30 = v
+	case 13:
+		m.X31 = v
+	case 14:
+		m.X32 = v
+	default:
+		m.X33 = v
+	}
+}
+
+// Eq checks whether the given two matrices are equal or not.
+func (m Matrix) Eq(n Matrix) bool {
+	if ApproxEq(m.X00, n.X00, DefaultEpsilon) &&
+		ApproxEq(m.X10, n.X10, DefaultEpsilon) &&
+		ApproxEq(m.X20, n.X20, DefaultEpsilon) &&
+		ApproxEq(m.X30, n.X30, DefaultEpsilon) &&
+		ApproxEq(m.X01, n.X01, DefaultEpsilon) &&
+		ApproxEq(m.X11, n.X11, DefaultEpsilon) &&
+		ApproxEq(m.X21, n.X21, DefaultEpsilon) &&
+		ApproxEq(m.X31, n.X31, DefaultEpsilon) &&
+		ApproxEq(m.X02, n.X02, DefaultEpsilon) &&
+		ApproxEq(m.X12, n.X12, DefaultEpsilon) &&
+		ApproxEq(m.X22, n.X22, DefaultEpsilon) &&
+		ApproxEq(m.X32, n.X32, DefaultEpsilon) &&
+		ApproxEq(m.X03, n.X03, DefaultEpsilon) &&
+		ApproxEq(m.X13, n.X13, DefaultEpsilon) &&
+		ApproxEq(m.X23, n.X23, DefaultEpsilon) &&
+		ApproxEq(m.X33, n.X33, DefaultEpsilon) {
+		return true
+	}
+	return false
+}
+
+func (m Matrix) Add(n Matrix) Matrix {
+	return Matrix{
+		m.X00 + n.X00,
+		m.X01 + n.X01,
+		m.X02 + n.X02,
+		m.X03 + n.X03,
+		m.X10 + n.X10,
+		m.X11 + n.X11,
+		m.X12 + n.X12,
+		m.X13 + n.X13,
+		m.X20 + n.X20,
+		m.X21 + n.X21,
+		m.X22 + n.X22,
+		m.X23 + n.X23,
+		m.X30 + n.X30,
+		m.X31 + n.X31,
+		m.X32 + n.X32,
+		m.X33 + n.X33,
+	}
+}
+
+func (m Matrix) Sub(n Matrix) Matrix {
+	return Matrix{
+		m.X00 - n.X00,
+		m.X01 - n.X01,
+		m.X02 - n.X02,
+		m.X03 - n.X03,
+		m.X10 - n.X10,
+		m.X11 - n.X11,
+		m.X12 - n.X12,
+		m.X13 - n.X13,
+		m.X20 - n.X20,
+		m.X21 - n.X21,
+		m.X22 - n.X22,
+		m.X23 - n.X23,
+		m.X30 - n.X30,
+		m.X31 - n.X31,
+		m.X32 - n.X32,
+		m.X33 - n.X33,
+	}
+}
+
 // Mul implements matrix multiplication for two
 // 4x4 matrices and assigns the result to this.
-func (m Matrix) Mul(n Matrix) Matrix {
+func (m Matrix) MulM(n Matrix) Matrix {
 	mm := Matrix{}
 	mm.X00 = m.X00*n.X00 + m.X01*n.X10 + m.X02*n.X20 + m.X03*n.X30
 	mm.X10 = m.X10*n.X00 + m.X11*n.X10 + m.X12*n.X20 + m.X13*n.X30
@@ -96,7 +206,7 @@ func (m Matrix) Mul(n Matrix) Matrix {
 
 // MulVec implements matrix vector multiplication
 // and returns the resulting vector.
-func (m Matrix) MulVec(v Vector) Vector {
+func (m Matrix) MulV(v Vector) Vector {
 	x := m.X00*v.X + m.X01*v.Y + m.X02*v.Z + m.X03*v.W
 	y := m.X10*v.X + m.X11*v.Y + m.X12*v.Z + m.X13*v.W
 	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z + m.X23*v.W
@@ -104,8 +214,8 @@ func (m Matrix) MulVec(v Vector) Vector {
 	return Vector{x, y, z, w}
 }
 
-// Inverse computes the inverse matrix of a given Matrix
-func (m Matrix) Inverse() Matrix {
+// Inv computes the inverse matrix of a given Matrix
+func (m Matrix) Inv() Matrix {
 	d := m.Det()
 	if d == 0 {
 		panic("zero determinant")
@@ -146,8 +256,8 @@ func (m Matrix) Det() float64 {
 		m.X03*m.X12*m.X20*m.X31 + m.X03*m.X12*m.X21*m.X30
 }
 
-// Transpose computes the transpose matrix of a given Matrix
-func (m Matrix) Transpose() Matrix {
+// T computes the transpose matrix of a given Matrix
+func (m Matrix) T() Matrix {
 	return Matrix{
 		m.X00, m.X10, m.X20, m.X30,
 		m.X01, m.X11, m.X21, m.X31,
