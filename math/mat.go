@@ -32,6 +32,15 @@ type Matrix struct {
 	X30, X31, X32, X33 float64
 }
 
+func NewMatrix(X00, X01, X02, X03, X10, X11, X12, X13, X20, X21, X22, X23, X30, X31, X32, X33 float64) Matrix {
+	return Matrix{
+		X00, X01, X02, X03,
+		X10, X11, X12, X13,
+		X20, X21, X22, X23,
+		X30, X31, X32, X33,
+	}
+}
+
 // Get gets the matrix elements
 func (m Matrix) Get(i, j int) float64 {
 	if i < 0 || i > 3 || j < 0 || j > 3 {

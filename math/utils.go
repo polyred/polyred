@@ -5,6 +5,7 @@ import "math"
 var (
 	Cos = math.Cos
 	Sin = math.Sin
+	Tan = math.Tan
 	Pi  = math.Pi
 )
 
@@ -29,6 +30,24 @@ func ClampV(v Vector, min, max float64) Vector {
 		Clamp(v.Z, min, max),
 		Clamp(v.W, min, max),
 	}
+}
+
+// Min compares n values and returns the minimum
+func Min(xs ...float64) float64 {
+	min := math.MaxFloat64
+	for _, x := range xs {
+		min = math.Min(min, x)
+	}
+	return min
+}
+
+// Max compares n values and returns the maximum
+func Max(xs ...float64) float64 {
+	max := -math.MaxFloat64
+	for _, x := range xs {
+		max = math.Min(max, x)
+	}
+	return max
 }
 
 // ViewportMatrix returns the viewport matrix.
