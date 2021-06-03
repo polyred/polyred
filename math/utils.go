@@ -3,10 +3,16 @@ package math
 import "math"
 
 var (
-	Cos = math.Cos
-	Sin = math.Sin
-	Tan = math.Tan
-	Pi  = math.Pi
+	Cos        = math.Cos
+	Sin        = math.Sin
+	Tan        = math.Tan
+	Pi         = math.Pi
+	MaxInt64   = math.MaxInt64
+	MaxFloat64 = math.MaxFloat64
+	Round      = math.Round
+	Floor      = math.Floor
+	Log2       = math.Log2
+	Pow        = math.Pow
 )
 
 // DefaultEpsilon is a default epsilon value for computation.
@@ -43,9 +49,9 @@ func Min(xs ...float64) float64 {
 
 // Max compares n values and returns the maximum
 func Max(xs ...float64) float64 {
-	max := -math.MaxFloat64
+	max := -math.MaxFloat32
 	for _, x := range xs {
-		max = math.Min(max, x)
+		max = math.Max(max, x)
 	}
 	return max
 }

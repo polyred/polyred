@@ -3,9 +3,6 @@ package camera
 import "changkun.de/x/ddd/math"
 
 type Interface interface {
-	GetPos() math.Vector
-	GetLookAt() math.Vector
-	GetUp() math.Vector
 	ViewMatrix() math.Matrix
 	ProjMatrix() math.Matrix
 }

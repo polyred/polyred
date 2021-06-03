@@ -21,11 +21,12 @@ type Vertex struct {
 
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
-	v1, v2, v3 Vertex
+	V1, V2, V3 Vertex
 }
 
 // TriangleMesh implements a triangular mesh.
 type TriangleMesh struct {
+	Faces []*Triangle
 
 	// context is a transformation context (model matrix) that accumulates
 	// applied transformation matrices (multiplied from left side) for the
@@ -35,15 +36,13 @@ type TriangleMesh struct {
 	// for each of the rendering frame unless the mesh intentionally calls
 	// resetContext() method.
 	context math.Matrix
-
-	faces []*Triangle
 }
 
 // NewTriangleMesh returns a triangular mesh.
 func NewTriangleMesh(ts []*Triangle) *TriangleMesh {
 	return &TriangleMesh{
+		Faces:   ts,
 		context: math.MatI,
-		faces:   ts,
 	}
 }
 

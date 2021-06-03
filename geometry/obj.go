@@ -54,15 +54,15 @@ func LoadOBJ(data io.Reader) (*TriangleMesh, error) {
 			for i := 1; i < len(fvs)-1; i++ {
 				i1, i2, i3 := 0, i, i+1
 				t := Triangle{}
-				t.v1.Position = vs[fvs[i1]]
-				t.v2.Position = vs[fvs[i2]]
-				t.v3.Position = vs[fvs[i3]]
-				t.v1.Normal = vns[fvns[i1]]
-				t.v2.Normal = vns[fvns[i2]]
-				t.v3.Normal = vns[fvns[i3]]
-				t.v1.UV = vts[fvts[i1]]
-				t.v2.UV = vts[fvts[i2]]
-				t.v3.UV = vts[fvts[i3]]
+				t.V1.Position = vs[fvs[i1]]
+				t.V2.Position = vs[fvs[i2]]
+				t.V3.Position = vs[fvs[i3]]
+				t.V1.Normal = vns[fvns[i1]]
+				t.V2.Normal = vns[fvns[i2]]
+				t.V3.Normal = vns[fvns[i3]]
+				t.V1.UV = vts[fvts[i1]]
+				t.V2.UV = vts[fvts[i2]]
+				t.V3.UV = vts[fvts[i3]]
 				tris = append(tris, &t)
 			}
 		}

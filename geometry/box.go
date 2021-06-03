@@ -8,23 +8,23 @@ import "changkun.de/x/ddd/math"
 
 // AABB an axis aligned bounding box
 type AABB struct {
-	min, max math.Vector
+	Min, Max math.Vector
 }
 
 // NewAABB computes a new axis aligned bounding box of given vertices
-func NewAABB(v1, v2, v3 Vertex) AABB {
-	xMax := math.Max(v1.Position.X, v2.Position.X, v3.Position.X)
-	xMin := math.Min(v1.Position.X, v2.Position.X, v3.Position.X)
+func NewAABB(v1, v2, v3 math.Vector) AABB {
+	xMax := math.Max(v1.X, v2.X, v3.X)
+	xMin := math.Min(v1.X, v2.X, v3.X)
 
-	yMax := math.Max(v1.Position.Y, v2.Position.Y, v3.Position.Y)
-	yMin := math.Min(v1.Position.Y, v2.Position.Y, v3.Position.Y)
+	yMax := math.Max(v1.Y, v2.Y, v3.Y)
+	yMin := math.Min(v1.Y, v2.Y, v3.Y)
 
-	zMax := math.Max(v1.Position.Z, v2.Position.Z, v3.Position.Z)
-	zMin := math.Min(v1.Position.Z, v2.Position.Z, v3.Position.Z)
+	zMax := math.Max(v1.Z, v2.Z, v3.Z)
+	zMin := math.Min(v1.Z, v2.Z, v3.Z)
 
 	return AABB{
-		min: math.NewVector(xMin, yMin, zMin, 1),
-		max: math.NewVector(xMax, yMax, zMax, 1),
+		Min: math.NewVector(xMin, yMin, zMin, 1),
+		Max: math.NewVector(xMax, yMax, zMax, 1),
 	}
 }
 
@@ -33,15 +33,15 @@ func NewAABB(v1, v2, v3 Vertex) AABB {
 // it is also considered as an intersection and returns true.
 func (aabb AABB) Intersect(aabb2 AABB) bool {
 	min := math.NewVector(
-		math.Max(aabb.min.X, aabb2.min.X),
-		math.Max(aabb.min.X, aabb2.min.X),
-		math.Max(aabb.min.X, aabb2.min.X),
+		math.Max(aabb.Min.X, aabb2.Min.X),
+		math.Max(aabb.Min.Y, aabb2.Min.Y),
+		math.Max(aabb.Min.Z, aabb2.Min.Z),
 		1,
 	)
 	max := math.NewVector(
-		math.Min(aabb.min.X, aabb2.min.X),
-		math.Min(aabb.min.X, aabb2.min.X),
-		math.Min(aabb.min.X, aabb2.min.X),
+		math.Min(aabb.Max.X, aabb2.Max.X),
+		math.Min(aabb.Max.Y, aabb2.Max.Y),
+		math.Min(aabb.Max.Y, aabb2.Max.Z),
 		1,
 	)
 
