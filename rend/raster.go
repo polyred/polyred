@@ -19,6 +19,7 @@ import (
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/utils"
+	"golang.org/x/image/draw"
 )
 
 // Rasterizer is a CPU rasterizer
@@ -38,19 +39,18 @@ func NewRasterizer(width, height, msaa int) *Rasterizer {
 		width:          width * msaa,
 		height:         height * msaa,
 		msaa:           msaa,
-		lockBuf:        make([]sync.Mutex, width*height*msaa),
+		lockBuf:        make([]sync.Mutex, width*height*msaa*msaa),
 		concurrentSize: 128, // empirical, see benchmark
 	}
 }
 
 // Render renders a scene.
-func (r *Rasterizer) Render(s *Scene) []color.RGBA {
+func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	r.s = s
-	frameBuf := make([]color.RGBA, r.width*r.height)
+	frameBuf := image.NewRGBA(image.Rect(0, 0, r.width, r.height))
 	depthBuf := make([]float64, r.width*r.height)
 	size := r.width * r.height
 	for i := 0; i < size; i++ {
-		frameBuf[i] = color.RGBA{0, 0, 0, 0}
 		depthBuf[i] = -1
 	}
 
@@ -75,6 +75,7 @@ func (r *Rasterizer) Render(s *Scene) []color.RGBA {
 					if ii+int(k) >= length {
 						return
 					}
+
 					r.draw(frameBuf, depthBuf, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
 				}
 			})
@@ -82,7 +83,15 @@ func (r *Rasterizer) Render(s *Scene) []color.RGBA {
 	}
 
 	limiter.Wait()
-	return frameBuf
+	width := r.width / r.msaa
+	height := r.height / r.msaa
+
+	ret := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.BiLinear.Scale(ret, ret.Bounds(), frameBuf, image.Rectangle{
+		image.Point{0, 0},
+		image.Point{r.width, r.height},
+	}, draw.Over, nil)
+	return ret
 }
 
 func (r *Rasterizer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 float64) {
@@ -99,7 +108,7 @@ func (r *Rasterizer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 flo
 	return
 }
 
-func (r *Rasterizer) draw(frameBuf []color.RGBA, depthBuf []float64, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
+func (r *Rasterizer) draw(frameBuf *image.RGBA, depthBuf []float64, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
 	matModel := uniforms["matModel"]
 	m1 := tri.V1.Position.Apply(matModel)
 	m2 := tri.V1.Position.Apply(matModel)
@@ -256,7 +265,7 @@ func (r *Rasterizer) inViewport(v1, v2, v3 math.Vector) bool {
 	return viewportAABB.Intersect(triangleAABB)
 }
 
-func (r *Rasterizer) fragmentProcessing(frameBuf []color.RGBA, depthBuf []float64, x, y int, z float64, col color.RGBA) {
+func (r *Rasterizer) fragmentProcessing(frameBuf *image.RGBA, depthBuf []float64, x, y int, z float64, col color.RGBA) {
 	if x < 0 || y >= r.width {
 		return
 	}
@@ -266,7 +275,7 @@ func (r *Rasterizer) fragmentProcessing(frameBuf []color.RGBA, depthBuf []float6
 
 	idx := x + y*r.width
 	r.lockBuf[idx].Lock()
-	frameBuf[idx] = col
+	frameBuf.Set(x, r.height-y, col)
 	depthBuf[idx] = z
 	r.lockBuf[idx].Unlock()
 }
@@ -277,30 +286,8 @@ func (r *Rasterizer) SetConcurrencySize(new int32) (old int32) {
 	return
 }
 
-// // Render renders a scene graph
-// func (r *Rasterizer) Render() {
-// 	r.resetBufs()
-// 	r.initTrans()
-//
-// 	for i := 0; i < len(r.s.Objects); i++ {
-// 		o := r.s.Objects[i]
-// 		o.modelMatrix = o.translateMatrix.Mul(o.scaleMatrix)
-// 		o.normalMatrix = o.modelMatrix.Inverse().Transpose()
-// 		for i := 0; i < len(o.triangles); i += int(r.concurrentSize) {
-// 			ii := i
-// 				for k := int32(0); k < r.concurrentSize; k++ {
-// 					if ii+int(k) >= len(o.triangles) {
-// 						return
-// 					}
-// 					r.draw(o.triangles[ii+int(k)], o.texture, o.modelMatrix, o.normalMatrix)
-// 				}
-// 			})
-// 		}
-// 	}
-// }
-
 // Save stores the current frame buffer to a newly created file.
-func (r *Rasterizer) Save(frameBuf []color.RGBA, filename string) {
+func (r *Rasterizer) Save(frameBuf *image.RGBA, filename string) {
 	err := r.flushFrameBuffer(frameBuf, filename)
 	if err != nil {
 		panic(fmt.Errorf("cannot save the render result, err: %v", err))
@@ -308,108 +295,17 @@ func (r *Rasterizer) Save(frameBuf []color.RGBA, filename string) {
 }
 
 // flushFrameBuffer writes the frame buffer to an image
-func (r *Rasterizer) flushFrameBuffer(frameBuf []color.RGBA, filename string) error {
-	m := image.NewRGBA(image.Rectangle{image.Point{0, 0}, image.Point{r.width, r.height}})
-	for i := 0; i < r.width; i++ {
-		for j := 0; j < r.height; j++ {
-			m.Set(i, r.height-j, frameBuf[j*r.width+i])
-		}
-	}
-
+func (r *Rasterizer) flushFrameBuffer(frameBuf *image.RGBA, filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	err = png.Encode(f, m)
+	err = png.Encode(f, frameBuf)
 	if err != nil {
 		return err
 	}
 
 	return nil
 }
-
-// func (r *Rasterizer) draw(tri *Triangle, tex *Texture, modelMatrix, normalMatrix Matrix) {
-// 	v1 := r.VertexShader(tri.v1, modelMatrix)
-// 	v2 := r.VertexShader(tri.v2, modelMatrix)
-// 	v3 := r.VertexShader(tri.v3, modelMatrix)
-
-// 	// backface culling
-// 	f1 := math.Vector{v2.Position.X, v2.Position.Y, v2.Position.Z, 1}.Sub(v1.Position)
-// 	f2 := math.Vector{v3.Position.X, v3.Position.Y, v3.Position.Z, 1}.Sub(v1.Position)
-// 	fN := f1.Cross(f2)
-// 	v := math.Vector{0, 0, -1, 0}
-// 	if v.Dot(fN) >= 0 {
-// 		return
-// 	}
-
-// 	box := NewAABB(v1, v2, v3)
-
-// 	// view frustum culling
-// 	xMax := math.Min(box.max.X, float64(r.width))
-// 	xMin := math.Max(box.min.X, 0)
-// 	yMax := math.Min(box.max.Y, float64(r.height))
-// 	yMin := math.Max(box.min.Y, 0)
-// 	if xMin > xMax && yMin > yMax {
-// 		return
-// 	}
-
-// 	// compute normals and shading point in world space for fragment shading
-// 	n1 := normalMatrix.MulVec(tri.v1.Normal)
-// 	n2 := normalMatrix.MulVec(tri.v2.Normal)
-// 	n3 := normalMatrix.MulVec(tri.v3.Normal)
-// 	a := modelMatrix.MulVec(tri.v1.Position)
-// 	b := modelMatrix.MulVec(tri.v2.Position)
-// 	c := modelMatrix.MulVec(tri.v3.Position)
-
-// 	for x := math.Floor(xMin); x < xMax; x++ {
-// 		for y := math.Floor(yMin); y < yMax; y++ {
-// 			// compute barycentric
-// 			ap := math.Vector{x, y, 0, 1}.Sub(math.Vector{v1.Position.X, v1.Position.Y, 0, 1})
-// 			ab := math.Vector{v2.Position.X, v2.Position.Y, 0, 1}.Sub(math.Vector{v1.Position.X, v1.Position.Y, 0, 1})
-// 			ac := math.Vector{v3.Position.X, v3.Position.Y, 0, 1}.Sub(math.Vector{v1.Position.X, v1.Position.Y, 0, 1})
-// 			bc := math.Vector{v3.Position.X, v3.Position.Y, 0, 1}.Sub(math.Vector{v2.Position.X, v2.Position.Y, 0, 1})
-// 			bp := math.Vector{x, y, 0, 1}.Sub(math.Vector{v2.Position.X, v2.Position.Y, 0, 1})
-// 			Sabc := ab.Cross(ac).Z
-// 			Sabp := ab.Cross(ap).Z
-// 			Sapc := ap.Cross(ac).Z
-// 			Sbcp := bc.Cross(bp).Z
-// 			w1, w2, w3 := Sbcp/Sabc, Sapc/Sabc, Sabp/Sabc
-
-// 			// skip frags outside the triangle
-// 			if w1 < 0 || w2 < 0 || w3 < 0 {
-// 				continue
-// 			}
-
-// 			z := w1*v1.Position.Z + w2*v2.Position.Z + w3*v3.Position.Z
-// 			idx := int(y*float64(r.width) + x)
-// 			r.lockBuf[idx].Lock()
-// 			if z < r.depthBuf[idx] {
-// 				r.lockBuf[idx].Unlock()
-// 				continue
-// 			}
-// 			r.lockBuf[idx].Unlock()
-
-// 			// uv interpolation
-// 			uv := math.Vector{
-// 				w1*tri.v1.UV.X + w2*tri.v2.UV.X + w3*tri.v3.UV.X,
-// 				w1*tri.v1.UV.Y + w2*tri.v2.UV.Y + w3*tri.v3.UV.Y,
-// 				0, 1}
-// 			p := math.Vector{
-// 				w1*a.X + w2*b.X + w3*c.X,
-// 				w1*a.Y + w2*b.Y + w3*c.Y,
-// 				w1*a.Z + w2*b.Z + w3*c.Z, 1}
-// 			n := math.Vector{
-// 				w1*n1.X + w2*n2.X + w3*n3.X,
-// 				w1*n1.Y + w2*n2.Y + w3*n3.Y,
-// 				w1*n1.Z + w2*n2.Z + w3*n3.Z, 0}.Normalize()
-// 			c := r.FragmentShader(tex, uv, n, p)
-
-// 			r.lockBuf[idx].Lock()
-// 			r.depthBuf[idx] = z
-// 			r.frameBuf[idx] = c
-// 			r.lockBuf[idx].Unlock()
-// 		}
-// 	}
-// }

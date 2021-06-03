@@ -52,7 +52,7 @@ func loadTexture(path string) *material.Texture {
 
 func main() {
 	result := testing.Benchmark(func(b *testing.B) {
-		width, height := 800, 500
+		width, height, msaa := 1920, 1080, 2
 		s := rend.NewScene()
 
 		c := camera.NewPerspectiveCamera(
@@ -85,8 +85,8 @@ func main() {
 		m.Translate(0, -0, -0.4)
 		s.AddMesh(m)
 
-		r := rend.NewRasterizer(width, height, 1)
-		var buf []color.RGBA
+		r := rend.NewRasterizer(width, height, msaa)
+		var buf *image.RGBA
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			buf = r.Render(s)

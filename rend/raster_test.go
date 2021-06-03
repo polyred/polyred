@@ -73,13 +73,6 @@ func newraster() (*rend.Rasterizer, *rend.Scene) {
 	l := light.NewPointLight(color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
 	s.AddLight(l)
 
-	// err = m.SetTexture("./tests/texture.jpg", 150)
-	// if err != nil {
-	// 	panic(fmt.Errorf("cannot load model texture, err: %v", err))
-	// }
-	// s.AddLight(ddd.NewPointLight(color.RGBA{255, 255, 255, 255}, ddd.NewVector(-200, 250, 600, 1), 0.5, 0.6, 1))
-	// r.SetScene(s)
-
 	return r, s
 }
 
@@ -90,7 +83,7 @@ func TestRasterizer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var buf []color.RGBA
+	var buf *image.RGBA
 	pprof.StartCPUProfile(f)
 	for i := 0; i < 1; i++ {
 		buf = r.Render(s)
