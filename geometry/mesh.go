@@ -7,6 +7,7 @@ package geometry
 import (
 	_ "image/jpeg" // for jpg encoding
 
+	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 )
 
@@ -26,7 +27,8 @@ type Triangle struct {
 
 // TriangleMesh implements a triangular mesh.
 type TriangleMesh struct {
-	Faces []*Triangle
+	Faces    []*Triangle
+	Material material.Material
 
 	// context is a transformation context (model matrix) that accumulates
 	// applied transformation matrices (multiplied from left side) for the
@@ -44,6 +46,10 @@ func NewTriangleMesh(ts []*Triangle) *TriangleMesh {
 		Faces:   ts,
 		context: math.MatI,
 	}
+}
+
+func (t *TriangleMesh) UseMaterial(mat material.Material) {
+	t.Material = mat
 }
 
 // modelMatrix returns the transformation context as the model matrix

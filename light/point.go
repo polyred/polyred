@@ -10,16 +10,24 @@ import (
 	"changkun.de/x/ddd/math"
 )
 
+type Light interface {
+	Position() math.Vector
+}
+
 // PointLight is a point light
 type PointLight struct {
 	Color    color.RGBA
-	Position math.Vector
+	position math.Vector
 }
 
 // NewPointLight returns a new point light
-func NewPointLight(c color.RGBA, p math.Vector) PointLight {
-	return PointLight{
+func NewPointLight(c color.RGBA, p math.Vector) Light {
+	return &PointLight{
 		Color:    c,
-		Position: p,
+		position: p,
 	}
+}
+
+func (l *PointLight) Position() math.Vector {
+	return l.position
 }

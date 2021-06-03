@@ -36,12 +36,17 @@ func NewTexture(data *image.RGBA) *Texture {
 	for i := 1; i < L; i++ {
 		size := t.Size / int(math.Pow(2, float64(i)))
 		t.mipmap[i] = image.NewRGBA(image.Rect(0, 0, size, size))
-		draw.CatmullRom.Scale(
+		draw.BiLinear.Scale(
 			t.mipmap[i], t.mipmap[i].Bounds(),
 			data, image.Rectangle{
 				image.Point{0, 0},
-				image.Point{size, size},
+				image.Point{size * 2, size * 2},
 			}, draw.Over, nil)
+		// f, err := os.Create(fmt.Sprintf("%d.png", i))
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// png.Encode(f, t.mipmap[i])
 	}
 
 	return t
@@ -62,10 +67,10 @@ func (t *Texture) Query(u, v float64, lod float64) color.RGBA {
 		lod = float64(len(t.mipmap) - 2)
 	}
 
-	// if lod < 1 {
-	// 	return t.queryL0(u, v)
-	// }
-	// lod -= 1
+	if lod < 1 {
+		return t.queryL0(u, v)
+	}
+	lod -= 1
 
 	// Figure out two different mipmap levels, then compute
 	// tri-linear interpolation between the two discrete mipmap levels.

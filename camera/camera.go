@@ -3,6 +3,7 @@ package camera
 import "changkun.de/x/ddd/math"
 
 type Interface interface {
+	Position() math.Vector
 	ViewMatrix() math.Matrix
 	ProjMatrix() math.Matrix
 }
@@ -19,6 +20,10 @@ type PerspectiveCamera struct {
 
 func NewPerspectiveCamera(pos, lookAt, up math.Vector, fov, aspect, near, far float64) PerspectiveCamera {
 	return PerspectiveCamera{pos, lookAt, up, fov, aspect, near, far}
+}
+
+func (c PerspectiveCamera) Position() math.Vector {
+	return c.position
 }
 
 func (c PerspectiveCamera) ViewMatrix() math.Matrix {
@@ -67,6 +72,10 @@ type OrthographicCamera struct {
 
 func NewOrthographicCamera(pos, lookAt, up math.Vector, fov, aspect, near, far float64) PerspectiveCamera {
 	return PerspectiveCamera{pos, lookAt, up, fov, aspect, near, far}
+}
+
+func (c OrthographicCamera) Position() math.Vector {
+	return c.position
 }
 
 func (c OrthographicCamera) ViewMatrix() math.Matrix {
