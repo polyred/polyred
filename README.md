@@ -1,67 +1,56 @@
 # ddd
 
-ddd is a 3d rasterizer written in pure Go.
+ddd is a 3d renderer written in pure Go.
 
-```
+```go
 import "changkun.de/x/ddd"
 ```
 
 ## Usage
 
 ```go
-width, height := 800, 500
+width, height := 1920, 1080
 
-// create rasterizer
-r := ddd.NewRasterizer(width, height)
+// Create scene graph
+s := rend.NewScene()
 
-// load obj model
-m, err := ddd.LoadOBJ("path/to/bunny.obj")
-if err != nil {
-    panic(fmt.Sprintf("cannot load obj model, err: %v", err))
-}
-
-// set model matrix
-m.SetScale(ddd.Vector{1500, 1500, 1500, 0})
-m.SetTranslate(ddd.Vector{-700, -5, 350, 1})
-
-// set texture
-err = m.SetTexture("path/to/texture.jpg", 150)
-if err != nil {
-    panic(fmt.Sprintf("cannot load model texture, err: %v", err))
-}
-
-// set the camera
-r.SetCamera(ddd.NewPerspectiveCamera(
-    ddd.Vector{-550, 194, 734, 1},
-    ddd.Vector{-1000, 0, 0, 1},
-    ddd.Vector{0, 1, 1, 0},
+// Specify camera settings
+c := camera.NewPerspectiveCamera(
+    math.NewVector(-0.5, 0.5, 0.5, 1),
+    math.NewVector(0, 0, -0.5, 1),
+    math.NewVector(0, 1, 0, 0),
+    45,
     float64(width)/float64(height),
-    100, 600, 45,
-))
-r.SetCamera(ddd.NewOrthographicCamera(
-    ddd.Vector{-550, 194, 734, 1},
-    ddd.Vector{-1000, 0, 0, 1},
-    ddd.Vector{0, 1, 1, 0},
-    -float64(width)/2, float64(width)/2,
-    float64(height)/2, -float64(height)/2,
-    200, -200,
-))
-
-// construct scene graph
-s := ddd.NewScene()
-r.SetScene(s)
-s.AddMesh(m)
-l := ddd.NewPointLight(
-    color.RGBA{255, 255, 255, 255},
-    ddd.Vector{-200, 250, 600, 1}, 0.5, 0.6, 1,
+    -0.1,
+    -3,
 )
+s.UseCamera(c)
+
+// Add light sources
+l := light.NewPointLight(color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
 s.AddLight(l)
 
-// render!
-r.Render()
+// Load assets
+m := loadMesh("../testdata/bunny.obj")
+tex := loadTexture("../testdata/bunny.png")
+mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
+m.UseMaterial(mat)
+m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
+m.Translate(0, -0, -0.4)
+s.AddMesh(m)
 
-// save result
-r.Save("path/to/render.jpg")
+// Load another assets
+m = loadMesh("../testdata/ground.obj")
+tex = loadTexture("../testdata/ground.png")
+mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
+m.UseMaterial(mat)
+m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
+m.Translate(0, -0, -0.4)
+s.AddMesh(m)
+
+// Create the rasterizer and render it.
+r := rend.NewRasterizer(width, height, 1)
+r.Save(r.Render(s), "./render.jpg")
 ```
 
 ![](./bench/render.jpg)
@@ -70,26 +59,24 @@ See complete example [here](./bench/main.go).
 
 ## Benchmark
 
-The CPU rasterizer can render the bench example >300fps:
-
 ```sh
-
 $ cd bench && go build
 $ for i in {1..10}; do perflock -governor 80% ./bench; done
-BenchmarkRasterizer     343     3498860 ns/op   285.80737726002184 fps
-BenchmarkRasterizer     344     3459285 ns/op   289.0770780667103 fps
-BenchmarkRasterizer     345     3472535 ns/op   287.9740592967385 fps
-BenchmarkRasterizer     345     3473249 ns/op   287.91486012088393 fps
-BenchmarkRasterizer     337     3456515 ns/op   289.3087401616947 fps
-BenchmarkRasterizer     345     3494367 ns/op   286.1748637163755 fps
-BenchmarkRasterizer     345     3470063 ns/op   288.17920596830663 fps
-BenchmarkRasterizer     345     3481662 ns/op   287.2191499347151 fps
-BenchmarkRasterizer     345     3464998 ns/op   288.60045518063794 fps
-BenchmarkRasterizer     344     3468320 ns/op   288.32403007796285 fps
+BenchmarkRasterizer     40      28539371 ns/op  35.039314636612 fps
+BenchmarkRasterizer     42      29070529 ns/op  34.39909882616859 fps
+BenchmarkRasterizer     42      30322510 ns/op  32.97880023784311 fps
+BenchmarkRasterizer     38      29042832 ns/op  34.43190388595713 fps
+BenchmarkRasterizer     42      28728505 ns/op  34.8086334461191 fps
+BenchmarkRasterizer     42      28635385 ns/op  34.921828360261266 fps
+BenchmarkRasterizer     39      28476114 ns/op  35.117151167466176 fps
+BenchmarkRasterizer     42      28535627 ns/op  35.04391194908736 fps
+BenchmarkRasterizer     42      29167186 ns/op  34.2851038149515 fps
+BenchmarkRasterizer     42      28533852 ns/op  35.04609191917026 fps
+
 $ inxi -C
 CPU: Topology: 8-Core model: Intel Core i9-9900K bits: 64 type: MT MCP L2 cache: 16.0 MiB Speed: 800 MHz min/max: 800/5000 MHz Core speeds (MHz): 1: 800 2: 800 3: 800 4: 800 5: 800 6: 800 7: 800 8: 801 9: 800 10: 800 11: 800 12: 800 13: 800 14: 800 15: 800 16: 800
 ```
 
 ## License
 
-GNU GPLv3 &copy; [Changkun Ou](https://changkun.de)
+Copyright &copy; 2020-2021 [Changkun Ou](https://changkun.de). All rights reserved.
