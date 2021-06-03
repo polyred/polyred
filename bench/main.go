@@ -53,6 +53,7 @@ func loadTexture(path string) *material.Texture {
 func main() {
 	result := testing.Benchmark(func(b *testing.B) {
 		width, height, msaa := 1920, 1080, 2
+		// width, height, msaa := 800, 500, 1
 		s := rend.NewScene()
 
 		c := camera.NewPerspectiveCamera(

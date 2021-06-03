@@ -22,8 +22,8 @@ import (
 )
 
 func newraster() (*rend.Rasterizer, *rend.Scene) {
-	width := 800
-	height := 500
+	width, height, msaa := 1920, 1080, 2
+
 	c := camera.NewPerspectiveCamera(
 		math.NewVector(-0.5, 0.5, 0.5, 1),
 		math.NewVector(0, 0, -0.5, 1),
@@ -34,7 +34,7 @@ func newraster() (*rend.Rasterizer, *rend.Scene) {
 		-3,
 	)
 
-	r := rend.NewRasterizer(width, height, 1)
+	r := rend.NewRasterizer(width, height, msaa)
 
 	path := "../testdata/bunny.obj"
 	f, err := os.Open(path)

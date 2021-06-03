@@ -44,6 +44,15 @@ func NewRasterizer(width, height, msaa int) *Rasterizer {
 	}
 }
 
+type rendInfo struct {
+	ok        bool
+	z         float64
+	u, v      float64
+	lod       float64
+	x, n, pos math.Vector
+	mat       material.Material
+}
+
 // Render renders a scene.
 func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	r.s = s
@@ -53,6 +62,8 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	for i := 0; i < size; i++ {
 		depthBuf[i] = -1
 	}
+
+	gBuf := make([]rendInfo, r.width*r.height)
 
 	limiter := utils.NewConccurLimiter(runtime.GOMAXPROCS(0))
 
@@ -76,13 +87,30 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 						return
 					}
 
-					r.draw(frameBuf, depthBuf, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
+					r.draw(frameBuf, depthBuf, gBuf, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
 				}
 			})
 		}
 	}
-
 	limiter.Wait()
+
+	limiter = utils.NewConccurLimiter(runtime.GOMAXPROCS(0))
+	for i := 0; i < r.width; i++ {
+		ii := i
+		limiter.Execute(func() {
+			for j := 0; j < r.height; j++ {
+				idx := ii + r.width*j
+				info := gBuf[idx]
+				if info.ok {
+					col := info.mat.Texture().Query(info.u, 1-info.v, info.lod)
+					col = info.mat.Shader(col, info.x, info.n, r.s.Lights[0].Position(), r.s.Camera.Position())
+					r.fragmentProcessing(frameBuf, depthBuf, ii, j, info.z, col)
+				}
+			}
+		})
+	}
+	limiter.Wait()
+
 	width := r.width / r.msaa
 	height := r.height / r.msaa
 
@@ -108,7 +136,7 @@ func (r *Rasterizer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 flo
 	return
 }
 
-func (r *Rasterizer) draw(frameBuf *image.RGBA, depthBuf []float64, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
+func (r *Rasterizer) draw(frameBuf *image.RGBA, depthBuf []float64, gbuf []rendInfo, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
 	matModel := uniforms["matModel"]
 	m1 := tri.V1.Position.Apply(matModel)
 	m2 := tri.V1.Position.Apply(matModel)
@@ -211,7 +239,6 @@ func (r *Rasterizer) draw(frameBuf *image.RGBA, depthBuf []float64, uniforms map
 			)
 			lod := math.Log2(
 				math.Max(uvX.Sub(uv).Len(), uvY.Sub(uv).Len()))
-			col := mat.Texture().Query(uv.X, 1-uv.Y, lod)
 
 			// normal interpolation
 			n := math.NewVector(
@@ -226,9 +253,15 @@ func (r *Rasterizer) draw(frameBuf *image.RGBA, depthBuf []float64, uniforms map
 				(w1*m3.Z+w2*m3.Z+w3*m3.Z)/Z,
 				1,
 			)
-			col = mat.Shader(col, pos, n, r.s.Lights[0].Position(), r.s.Camera.Position())
 
-			r.fragmentProcessing(frameBuf, depthBuf, x, y, z, col)
+			r.lockBuf[idx].Lock()
+			gbuf[idx] = rendInfo{
+				ok: true,
+				z:  z, u: uv.X, v: uv.Y, lod: lod,
+				n: n, pos: pos, mat: mat,
+			}
+			depthBuf[idx] = z
+			r.lockBuf[idx].Unlock()
 		}
 	}
 }
@@ -276,7 +309,6 @@ func (r *Rasterizer) fragmentProcessing(frameBuf *image.RGBA, depthBuf []float64
 	idx := x + y*r.width
 	r.lockBuf[idx].Lock()
 	frameBuf.Set(x, r.height-y, col)
-	depthBuf[idx] = z
 	r.lockBuf[idx].Unlock()
 }
 
