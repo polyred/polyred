@@ -108,7 +108,7 @@ func main() {
 	})
 }
 func fn() {
-	width, height, msaa := 1920, 1080, 2
+	width, height, msaa := 1600, 1000, 2
 	w, err := win.NewWindow(
 		win.Title("window"),
 		win.Size(width, height),
