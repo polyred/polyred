@@ -29,8 +29,10 @@ type Rasterizer struct {
 	msaa   int
 	s      *Scene
 
-	lockBuf        []sync.Mutex
-	concurrentSize int32 // atomic
+	rendBuf, frameBuf *image.RGBA
+	depthBuf          []float64
+	lockBuf           []sync.Mutex
+	concurrentSize    int32 // atomic
 }
 
 // NewRasterizer creates a new rasterizer
@@ -39,6 +41,9 @@ func NewRasterizer(width, height, msaa int) *Rasterizer {
 		width:          width * msaa,
 		height:         height * msaa,
 		msaa:           msaa,
+		rendBuf:        image.NewRGBA(image.Rect(0, 0, width*msaa, height*msaa)),
+		frameBuf:       image.NewRGBA(image.Rect(0, 0, width, height)),
+		depthBuf:       make([]float64, width*height*msaa*msaa),
 		lockBuf:        make([]sync.Mutex, width*height*msaa*msaa),
 		concurrentSize: 128, // empirical, see benchmark
 	}
@@ -53,14 +58,31 @@ type rendInfo struct {
 	mat    material.Material
 }
 
+func (r *Rasterizer) RenderScene() *image.RGBA {
+	if r.s == nil {
+		panic("no scene!")
+	}
+
+	return r.Render(r.s)
+}
+
+func (r *Rasterizer) SetSize(width, height, msaa int) {
+	r.width = width
+	r.height = height
+	r.lockBuf = make([]sync.Mutex, width*height*msaa*msaa)
+}
+
+func (r *Rasterizer) SetScene(s *Scene) {
+	r.s = s
+}
+
 // Render renders a scene.
 func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	r.s = s
-	frameBuf := image.NewRGBA(image.Rect(0, 0, r.width, r.height))
-	depthBuf := make([]float64, r.width*r.height)
 	size := r.width * r.height
 	for i := 0; i < size; i++ {
-		depthBuf[i] = -1
+		r.rendBuf.Pix[i] = 0
+		r.depthBuf[i] = -1
 	}
 
 	gBuf := make([]rendInfo, r.width*r.height)
@@ -68,13 +90,13 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	nP := runtime.GOMAXPROCS(0)
 	limiter := utils.NewConccurLimiter(nP)
 
-	for m := 0; m < len(s.Meshes); m++ {
-		mesh := s.Meshes[m]
+	for m := 0; m < len(r.s.Meshes); m++ {
+		mesh := r.s.Meshes[m]
 
 		uniforms := map[string]math.Matrix{
 			"matModel":  mesh.ModelMatrix(),
-			"matView":   s.Camera.ViewMatrix(),
-			"matProj":   s.Camera.ProjMatrix(),
+			"matView":   r.s.Camera.ViewMatrix(),
+			"matProj":   r.s.Camera.ProjMatrix(),
 			"matVP":     math.ViewportMatrix(float64(r.width), float64(r.height)),
 			"matNormal": mesh.NormalMatrix(),
 		}
@@ -88,7 +110,7 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 						return
 					}
 
-					r.draw(depthBuf, gBuf, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
+					r.draw(r.depthBuf, gBuf, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
 				}
 			})
 		}
@@ -105,7 +127,7 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 				if info.ok {
 					col := info.mat.Texture().Query(info.u, 1-info.v, info.lod)
 					col = info.mat.Shader(col, info.pos, info.n, r.s.Lights[0].Position(), r.s.Camera.Position())
-					r.fragmentProcessing(frameBuf, depthBuf, ii, j, info.z, col)
+					r.fragmentProcessing(ii, j, info.z, &col)
 				}
 			}
 		})
@@ -114,13 +136,15 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 
 	width := r.width / r.msaa
 	height := r.height / r.msaa
-
-	ret := image.NewRGBA(image.Rect(0, 0, width, height))
-	draw.BiLinear.Scale(ret, ret.Bounds(), frameBuf, image.Rectangle{
+	size = width * height
+	for i := 0; i < size; i++ {
+		r.frameBuf.Pix[i] = 0
+	}
+	draw.BiLinear.Scale(r.frameBuf, r.frameBuf.Bounds(), r.rendBuf, image.Rectangle{
 		image.Point{0, 0},
 		image.Point{r.width, r.height},
 	}, draw.Over, nil)
-	return ret
+	return r.frameBuf
 }
 
 func (r *Rasterizer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 float64) {
@@ -138,10 +162,10 @@ func (r *Rasterizer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 flo
 }
 
 func (r *Rasterizer) draw(depthBuf []float64, gbuf []rendInfo, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
-	// matModel := uniforms["matModel"]
-	// m1 := tri.V1.Position.Apply(matModel)
-	// m2 := tri.V1.Position.Apply(matModel)
-	// m3 := tri.V1.Position.Apply(matModel)
+	matModel := uniforms["matModel"]
+	m1 := tri.V1.Position.Apply(matModel)
+	m2 := tri.V1.Position.Apply(matModel)
+	m3 := tri.V1.Position.Apply(matModel)
 
 	t1 := r.vertexShader(tri.V1, uniforms)
 	t2 := r.vertexShader(tri.V2, uniforms)
@@ -249,9 +273,9 @@ func (r *Rasterizer) draw(depthBuf []float64, gbuf []rendInfo, uniforms map[stri
 				0,
 			)
 			pos := math.NewVector(
-				(w1*t1.Position.X+w2*t1.Position.X+w3*t1.Position.X)/Z,
-				(w1*t2.Position.Y+w2*t2.Position.Y+w3*t2.Position.Y)/Z,
-				(w1*t3.Position.Z+w2*t3.Position.Z+w3*t3.Position.Z)/Z,
+				(w1*m1.X+w2*m1.X+w3*m1.X)/Z,
+				(w1*m2.Y+w2*m2.Y+w3*m2.Y)/Z,
+				(w1*m3.Z+w2*m3.Z+w3*m3.Z)/Z,
 				1,
 			)
 
@@ -299,7 +323,7 @@ func (r *Rasterizer) inViewport(v1, v2, v3 math.Vector) bool {
 	return viewportAABB.Intersect(triangleAABB)
 }
 
-func (r *Rasterizer) fragmentProcessing(frameBuf *image.RGBA, depthBuf []float64, x, y int, z float64, col color.RGBA) {
+func (r *Rasterizer) fragmentProcessing(x, y int, z float64, col *color.RGBA) {
 	if x < 0 || y >= r.width {
 		return
 	}
@@ -309,7 +333,7 @@ func (r *Rasterizer) fragmentProcessing(frameBuf *image.RGBA, depthBuf []float64
 
 	idx := x + y*r.width
 	r.lockBuf[idx].Lock()
-	frameBuf.Set(x, r.height-y, col)
+	r.rendBuf.Set(x, r.height-y, col)
 	r.lockBuf[idx].Unlock()
 }
 
@@ -320,22 +344,22 @@ func (r *Rasterizer) SetConcurrencySize(new int32) (old int32) {
 }
 
 // Save stores the current frame buffer to a newly created file.
-func (r *Rasterizer) Save(frameBuf *image.RGBA, filename string) {
-	err := r.flushFrameBuffer(frameBuf, filename)
+func (r *Rasterizer) Save(buf *image.RGBA, filename string) {
+	err := r.flushFrameBuffer(buf, filename)
 	if err != nil {
 		panic(fmt.Errorf("cannot save the render result, err: %v", err))
 	}
 }
 
 // flushFrameBuffer writes the frame buffer to an image
-func (r *Rasterizer) flushFrameBuffer(frameBuf *image.RGBA, filename string) error {
+func (r *Rasterizer) flushFrameBuffer(buf *image.RGBA, filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	err = png.Encode(f, frameBuf)
+	err = png.Encode(f, r.rendBuf)
 	if err != nil {
 		return err
 	}
