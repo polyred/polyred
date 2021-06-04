@@ -1,6 +1,6 @@
-// Copyright 2020 Changkun Ou. All rights reserved.
-// Use of this source code is governed by a GNU GPLv3
-// license that can be found in the LICENSE file.
+// Copyright 2021 Changkun Ou. All rights reserved.
+// Use of this source code is governed by a license
+// that can be found in the LICENSE file.
 
 package rend
 
@@ -45,12 +45,12 @@ func NewRasterizer(width, height, msaa int) *Rasterizer {
 }
 
 type rendInfo struct {
-	ok        bool
-	z         float64
-	u, v      float64
-	lod       float64
-	x, n, pos math.Vector
-	mat       material.Material
+	ok     bool
+	z      float64
+	u, v   float64
+	lod    float64
+	n, pos math.Vector
+	mat    material.Material
 }
 
 // Render renders a scene.
@@ -65,7 +65,8 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 
 	gBuf := make([]rendInfo, r.width*r.height)
 
-	limiter := utils.NewConccurLimiter(runtime.GOMAXPROCS(0))
+	nP := runtime.GOMAXPROCS(0)
+	limiter := utils.NewConccurLimiter(nP)
 
 	for m := 0; m < len(s.Meshes); m++ {
 		mesh := s.Meshes[m]
@@ -87,14 +88,14 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 						return
 					}
 
-					r.draw(frameBuf, depthBuf, gBuf, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
+					r.draw(depthBuf, gBuf, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
 				}
 			})
 		}
 	}
 	limiter.Wait()
 
-	limiter = utils.NewConccurLimiter(runtime.GOMAXPROCS(0))
+	limiter = utils.NewConccurLimiter(nP)
 	for i := 0; i < r.width; i++ {
 		ii := i
 		limiter.Execute(func() {
@@ -103,7 +104,7 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 				info := gBuf[idx]
 				if info.ok {
 					col := info.mat.Texture().Query(info.u, 1-info.v, info.lod)
-					col = info.mat.Shader(col, info.x, info.n, r.s.Lights[0].Position(), r.s.Camera.Position())
+					col = info.mat.Shader(col, info.pos, info.n, r.s.Lights[0].Position(), r.s.Camera.Position())
 					r.fragmentProcessing(frameBuf, depthBuf, ii, j, info.z, col)
 				}
 			}
@@ -136,11 +137,11 @@ func (r *Rasterizer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 flo
 	return
 }
 
-func (r *Rasterizer) draw(frameBuf *image.RGBA, depthBuf []float64, gbuf []rendInfo, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
-	matModel := uniforms["matModel"]
-	m1 := tri.V1.Position.Apply(matModel)
-	m2 := tri.V1.Position.Apply(matModel)
-	m3 := tri.V1.Position.Apply(matModel)
+func (r *Rasterizer) draw(depthBuf []float64, gbuf []rendInfo, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
+	// matModel := uniforms["matModel"]
+	// m1 := tri.V1.Position.Apply(matModel)
+	// m2 := tri.V1.Position.Apply(matModel)
+	// m3 := tri.V1.Position.Apply(matModel)
 
 	t1 := r.vertexShader(tri.V1, uniforms)
 	t2 := r.vertexShader(tri.V2, uniforms)
@@ -248,9 +249,9 @@ func (r *Rasterizer) draw(frameBuf *image.RGBA, depthBuf []float64, gbuf []rendI
 				0,
 			)
 			pos := math.NewVector(
-				(w1*m1.X+w2*m1.X+w3*m1.X)/Z,
-				(w1*m2.Y+w2*m2.Y+w3*m2.Y)/Z,
-				(w1*m3.Z+w2*m3.Z+w3*m3.Z)/Z,
+				(w1*t1.Position.X+w2*t1.Position.X+w3*t1.Position.X)/Z,
+				(w1*t2.Position.Y+w2*t2.Position.Y+w3*t2.Position.Y)/Z,
+				(w1*t3.Position.Z+w2*t3.Position.Z+w3*t3.Position.Z)/Z,
 				1,
 			)
 
