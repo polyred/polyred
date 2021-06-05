@@ -5,11 +5,8 @@
 package rend
 
 import (
-	"fmt"
 	"image"
 	"image/color"
-	"image/png"
-	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -24,29 +21,17 @@ import (
 
 // Rasterizer is a CPU rasterizer
 type Rasterizer struct {
-	width  int
-	height int
-	msaa   int
-	s      *Scene
+	width          int
+	height         int
+	msaa           int
+	concurrentSize int32 // atomic
 
-	rendBuf, frameBuf *image.RGBA
-	depthBuf          []float64
-	lockBuf           []sync.Mutex
-	concurrentSize    int32 // atomic
-}
+	s       *Scene
+	lockBuf []sync.Mutex
+	gBuf    []*rendInfo
+	rendBuf *image.RGBA
 
-// NewRasterizer creates a new rasterizer
-func NewRasterizer(width, height, msaa int) *Rasterizer {
-	return &Rasterizer{
-		width:          width * msaa,
-		height:         height * msaa,
-		msaa:           msaa,
-		rendBuf:        image.NewRGBA(image.Rect(0, 0, width*msaa, height*msaa)),
-		frameBuf:       image.NewRGBA(image.Rect(0, 0, width, height)),
-		depthBuf:       make([]float64, width*height*msaa*msaa),
-		lockBuf:        make([]sync.Mutex, width*height*msaa*msaa),
-		concurrentSize: 128, // empirical, see benchmark
-	}
+	frameBuf *image.RGBA
 }
 
 type rendInfo struct {
@@ -56,6 +41,20 @@ type rendInfo struct {
 	lod    float64
 	n, pos math.Vector
 	mat    material.Material
+}
+
+// NewRasterizer creates a new rasterizer
+func NewRasterizer(width, height, msaa int) *Rasterizer {
+	return &Rasterizer{
+		width:          width * msaa,
+		height:         height * msaa,
+		msaa:           msaa,
+		gBuf:           make([]*rendInfo, width*height*msaa*msaa),
+		rendBuf:        image.NewRGBA(image.Rect(0, 0, width*msaa, height*msaa)),
+		frameBuf:       image.NewRGBA(image.Rect(0, 0, width, height)),
+		lockBuf:        make([]sync.Mutex, width*height*msaa*msaa),
+		concurrentSize: 128, // empirical, see benchmark
+	}
 }
 
 func (r *Rasterizer) RenderScene() *image.RGBA {
@@ -76,16 +75,27 @@ func (r *Rasterizer) SetScene(s *Scene) {
 	r.s = s
 }
 
+func (r *Rasterizer) resetBufs() {
+	size := r.width * r.height / (r.msaa * r.msaa)
+	for i := 0; i < size; i++ {
+		r.frameBuf.Pix[i] = 0
+	}
+	size = r.width * r.height
+	for i := 0; i < size; i++ {
+		r.rendBuf.Pix[i] = 0
+	}
+	size = len(r.gBuf)
+	for i := 0; i < size; i++ {
+		if r.gBuf[i] != nil {
+			r.gBuf[i].ok = false
+		}
+	}
+}
+
 // Render renders a scene.
 func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	r.s = s
-	size := r.width * r.height
-	for i := 0; i < size; i++ {
-		r.rendBuf.Pix[i] = 0
-		r.depthBuf[i] = -1
-	}
-
-	gBuf := make([]rendInfo, r.width*r.height)
+	r.resetBufs()
 
 	nP := runtime.GOMAXPROCS(0)
 	limiter := utils.NewConccurLimiter(nP)
@@ -110,7 +120,7 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 						return
 					}
 
-					r.draw(r.depthBuf, gBuf, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
+					r.draw(uniforms, mesh.Faces[ii+int(k)], mesh.Material)
 				}
 			})
 		}
@@ -123,8 +133,8 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 		limiter.Execute(func() {
 			for j := 0; j < r.height; j++ {
 				idx := ii + r.width*j
-				info := gBuf[idx]
-				if info.ok {
+				info := r.gBuf[idx]
+				if info != nil && info.ok {
 					col := info.mat.Texture().Query(info.u, 1-info.v, info.lod)
 					col = info.mat.Shader(col, info.pos, info.n, r.s.Lights[0].Position(), r.s.Camera.Position())
 					r.fragmentProcessing(ii, j, info.z, &col)
@@ -134,12 +144,6 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	}
 	limiter.Wait()
 
-	width := r.width / r.msaa
-	height := r.height / r.msaa
-	size = width * height
-	for i := 0; i < size; i++ {
-		r.frameBuf.Pix[i] = 0
-	}
 	draw.BiLinear.Scale(r.frameBuf, r.frameBuf.Bounds(), r.rendBuf, image.Rectangle{
 		image.Point{0, 0},
 		image.Point{r.width, r.height},
@@ -161,7 +165,7 @@ func (r *Rasterizer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 flo
 	return
 }
 
-func (r *Rasterizer) draw(depthBuf []float64, gbuf []rendInfo, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
+func (r *Rasterizer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
 	matModel := uniforms["matModel"]
 	m1 := tri.V1.Position.Apply(matModel)
 	m2 := tri.V1.Position.Apply(matModel)
@@ -225,7 +229,7 @@ func (r *Rasterizer) draw(depthBuf []float64, gbuf []rendInfo, uniforms map[stri
 
 			idx := x + y*r.width
 			r.lockBuf[idx].Lock()
-			if z <= depthBuf[idx] {
+			if r.gBuf[idx] != nil && r.gBuf[idx].ok && z <= r.gBuf[idx].z {
 				r.lockBuf[idx].Unlock()
 				continue
 			}
@@ -280,12 +284,11 @@ func (r *Rasterizer) draw(depthBuf []float64, gbuf []rendInfo, uniforms map[stri
 			)
 
 			r.lockBuf[idx].Lock()
-			gbuf[idx] = rendInfo{
+			r.gBuf[idx] = &rendInfo{
 				ok: true,
 				z:  z, u: uv.X, v: uv.Y, lod: lod,
 				n: n, pos: pos, mat: mat,
 			}
-			depthBuf[idx] = z
 			r.lockBuf[idx].Unlock()
 		}
 	}
@@ -341,28 +344,4 @@ func (r *Rasterizer) fragmentProcessing(x, y int, z float64, col *color.RGBA) {
 func (r *Rasterizer) SetConcurrencySize(new int32) (old int32) {
 	old = atomic.SwapInt32(&r.concurrentSize, new)
 	return
-}
-
-// Save stores the current frame buffer to a newly created file.
-func (r *Rasterizer) Save(buf *image.RGBA, filename string) {
-	err := r.flushFrameBuffer(buf, filename)
-	if err != nil {
-		panic(fmt.Errorf("cannot save the render result, err: %v", err))
-	}
-}
-
-// flushFrameBuffer writes the frame buffer to an image
-func (r *Rasterizer) flushFrameBuffer(buf *image.RGBA, filename string) error {
-	f, err := os.Create(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	err = png.Encode(f, r.rendBuf)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

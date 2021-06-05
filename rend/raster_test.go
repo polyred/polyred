@@ -19,6 +19,7 @@ import (
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/utils"
 )
 
 func newraster() (*rend.Rasterizer, *rend.Scene) {
@@ -90,7 +91,7 @@ func TestRasterizer(t *testing.T) {
 	}
 	pprof.StopCPUProfile()
 
-	r.Save(buf, "../testdata/render.jpg")
+	utils.Save(buf, "../testdata/render.jpg")
 }
 
 func BenchmarkRasterizer(b *testing.B) {

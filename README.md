@@ -1,10 +1,19 @@
 # ddd
 
-ddd is a 3d renderer written in pure Go.
+A performant 3D renderer written in pure Go.
 
 ```go
 import "changkun.de/x/ddd"
 ```
+
+## Features
+
+- OBJ file format
+- rasterization
+- backface, viewfrustum, and occlusion culling
+- texture and mipmap
+- deferred shading
+- anti-aliasing
 
 ## Usage
 

@@ -19,6 +19,7 @@ import (
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/utils"
 )
 
 func loadMesh(path string) *geometry.TriangleMesh {
@@ -56,8 +57,8 @@ func loadTexture(path string) *material.Texture {
 
 func main() {
 	result := testing.Benchmark(func(b *testing.B) {
-		width, height, msaa := 1920, 1080, 2
-		// width, height, msaa := 800, 500, 1
+		// width, height, msaa := 1920, 1080, 2
+		width, height, msaa := 800, 500, 1
 		s := rend.NewScene()
 
 		c := camera.NewPerspectiveCamera(
@@ -98,7 +99,7 @@ func main() {
 		}
 		b.StopTimer()
 
-		r.Save(buf, "./render.jpg")
+		utils.Save(buf, "./render.jpg")
 	})
 
 	ns := result.NsPerOp()
