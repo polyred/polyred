@@ -5,10 +5,7 @@
 package main
 
 import (
-	"fmt"
-	"image"
 	"image/color"
-	"image/png"
 	"log"
 	"os"
 	"runtime"
@@ -17,47 +14,15 @@ import (
 
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/geometry"
+	"changkun.de/x/ddd/internal/win"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/rend"
-	"changkun.de/x/ddd/win"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"golang.design/x/mainthread"
 )
 
-func loadMesh(path string) *geometry.TriangleMesh {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(fmt.Errorf("loader: cannot open file %s, err: %v", path, err))
-	}
-	m, err := geometry.LoadOBJ(f)
-	f.Close()
-	if err != nil {
-		panic(fmt.Errorf("cannot load obj model, path: %s, err: %v", path, err))
-	}
-	return m
-}
-
-func loadTexture(path string) *material.Texture {
-	f, err := os.Open(path)
-	if err != nil {
-		panic(fmt.Errorf("loader: cannot open file %s, err: %v", path, err))
-	}
-	img, err := png.Decode(f)
-	f.Close()
-	if err != nil {
-		panic(fmt.Errorf("cannot load obj model, path: %s, err: %v", path, err))
-	}
-	var data *image.RGBA
-	if v, ok := img.(*image.NRGBA); ok {
-		data = (*image.RGBA)(v)
-	} else if v, ok := img.(*image.RGBA); ok {
-		data = v
-	}
-
-	return material.NewTexture(data)
-}
 func loadScene(width, height int) *rend.Scene {
 	s := rend.NewScene()
 
@@ -75,16 +40,16 @@ func loadScene(width, height int) *rend.Scene {
 	l := light.NewPointLight(color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
 	s.AddLight(l)
 
-	m := loadMesh("../../testdata/bunny.obj")
-	tex := loadTexture("../../testdata/bunny.png")
+	m := geometry.MustLoad("../../testdata/bunny.obj")
+	tex := material.MustLoad("../../testdata/bunny.png")
 	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 	m.Translate(0, -0, -0.4)
 	s.AddMesh(m)
 
-	m = loadMesh("../../testdata/ground.obj")
-	tex = loadTexture("../../testdata/ground.png")
+	m = geometry.MustLoad("../../testdata/ground.obj")
+	tex = material.MustLoad("../../testdata/ground.png")
 	mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
