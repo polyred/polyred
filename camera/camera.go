@@ -74,8 +74,21 @@ type OrthographicCamera struct {
 	far      float64
 }
 
-func NewOrthographicCamera(pos, lookAt, up math.Vector, fov, aspect, near, far float64) PerspectiveCamera {
-	return PerspectiveCamera{pos, lookAt, up, fov, aspect, near, far}
+func NewOrthographicCamera(
+	pos, lookAt, up math.Vector,
+	left, right, bottom, top, near, far float64,
+) OrthographicCamera {
+	return OrthographicCamera{
+		position: pos,
+		lookAt:   lookAt,
+		up:       up,
+		left:     left,
+		right:    right,
+		bottom:   bottom,
+		top:      top,
+		near:     near,
+		far:      far,
+	}
 }
 
 func (c OrthographicCamera) Position() math.Vector {
