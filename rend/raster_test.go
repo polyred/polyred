@@ -60,7 +60,7 @@ func newraster() (*rend.Rasterizer, *rend.Scene) {
 		panic(fmt.Errorf("cannot load obj model, path: %s, err: %v", path, err))
 	}
 
-	tex := material.NewTexture((*image.RGBA)(img.(*image.NRGBA)))
+	tex := material.NewTexture((*image.RGBA)(img.(*image.NRGBA)), true)
 	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
 	m.UseMaterial(mat)
 

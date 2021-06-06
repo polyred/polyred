@@ -139,6 +139,7 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	}
 	limiter.Wait()
 
+	// deferred shading
 	limiter = utils.NewConccurLimiter(nP)
 	xstep := int(r.concurrentSize)
 	ystep := int(r.concurrentSize)
@@ -158,9 +159,12 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 							continue
 						}
 
-						lod := math.Log2(math.Sqrt(math.Max(info.du, info.dv)))
+						lod := 0.0
+						if info.mat.Texture().UseMipmap {
+							lod = math.Log2(math.Sqrt(math.Max(info.du, info.dv)))
+						}
 						col := info.mat.Texture().Query(info.u, 1-info.v, lod)
-						col = info.mat.Shader(col, info.pos, info.n, r.s.Lights[0].Position(), r.s.Camera.Position())
+						col = info.mat.Shader(col, info.pos, info.n, r.s.Camera.Position(), r.s.Lights)
 						r.fragmentProcessing(ii+k, jj+l, info.z, &col)
 					}
 				}
@@ -200,9 +204,12 @@ func (r *Rasterizer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangl
 	t2 := r.vertexShader(tri.V2, uniforms)
 	t3 := r.vertexShader(tri.V3, uniforms)
 
+	// Backface culling
 	if t2.Position.Sub(t1.Position).Cross(t3.Position.Sub(t1.Position)).Z < 0 {
 		return
 	}
+
+	// Viewfrustum culling
 	if !r.inViewport(t1.Position, t2.Position, t3.Position) {
 		return
 	}
@@ -219,9 +226,6 @@ func (r *Rasterizer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangl
 		t1.UV = t1.UV.Scale(t1Z, t1Z, 0, 1)
 		t2.UV = t2.UV.Scale(t2Z, t2Z, 0, 1)
 		t3.UV = t3.UV.Scale(t3Z, t3Z, 0, 1)
-		t1.Normal = t1.Normal.Scale(t1Z, t1Z, t1Z, 1)
-		t2.Normal = t2.Normal.Scale(t2Z, t2Z, t2Z, 1)
-		t3.Normal = t3.Normal.Scale(t3Z, t3Z, t3Z, 1)
 	}
 
 	// Compute AABB make the AABB a little bigger that align with pixels
@@ -273,26 +277,29 @@ func (r *Rasterizer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangl
 			uvY := (w1*t1.UV.Y + w2*t2.UV.Y + w3*t3.UV.Y) / Z
 
 			// Compute du dv
-			w1x, w2x, w3x := r.barycoord(x+1, y, t1.Position, t2.Position, t3.Position)
-			w1y, w2y, w3y := r.barycoord(x+1, y, t1.Position, t2.Position, t3.Position)
-			uvdU := (w1x*t1.UV.X + w2x*t2.UV.X + w3x*t3.UV.X) / Z
-			uvdX := (w1x*t1.UV.Y + w2x*t2.UV.Y + w3x*t3.UV.Y) / Z
-			uvdV := (w1y*t1.UV.X + w2y*t2.UV.X + w3y*t3.UV.X) / Z
-			uvdY := (w1y*t1.UV.Y + w2y*t2.UV.Y + w3y*t3.UV.Y) / Z
-			du := (uvdU-uvX)*(uvdU-uvX) + (uvdX-uvY)*(uvdX-uvY)
-			dv := (uvdV-uvX)*(uvdV-uvX) + (uvdY-uvY)*(uvdY-uvY)
+			var du, dv float64
+			if mat.Texture().UseMipmap {
+				w1x, w2x, w3x := r.barycoord(x+1, y, t1.Position, t2.Position, t3.Position)
+				w1y, w2y, w3y := r.barycoord(x+1, y, t1.Position, t2.Position, t3.Position)
+				uvdU := (w1x*t1.UV.X + w2x*t2.UV.X + w3x*t3.UV.X) / Z
+				uvdX := (w1x*t1.UV.Y + w2x*t2.UV.Y + w3x*t3.UV.Y) / Z
+				uvdV := (w1y*t1.UV.X + w2y*t2.UV.X + w3y*t3.UV.X) / Z
+				uvdY := (w1y*t1.UV.Y + w2y*t2.UV.Y + w3y*t3.UV.Y) / Z
+				du = (uvdU-uvX)*(uvdU-uvX) + (uvdX-uvY)*(uvdX-uvY)
+				dv = (uvdV-uvX)*(uvdV-uvX) + (uvdY-uvY)*(uvdY-uvY)
+			}
 
 			// normal interpolation
-			n := math.Vector{
-				X: (w1*t1.Normal.X + w2*t2.Normal.X + w3*t3.Normal.X) / Z,
-				Y: (w1*t1.Normal.Y + w2*t2.Normal.Y + w3*t3.Normal.Y) / Z,
-				Z: (w1*t1.Normal.Z + w2*t2.Normal.Z + w3*t3.Normal.Z) / Z,
+			n := (math.Vector{
+				X: (w1*t1.Normal.X + w2*t2.Normal.X + w3*t3.Normal.X),
+				Y: (w1*t1.Normal.Y + w2*t2.Normal.Y + w3*t3.Normal.Y),
+				Z: (w1*t1.Normal.Z + w2*t2.Normal.Z + w3*t3.Normal.Z),
 				W: 0,
-			}
+			}).Unit()
 			pos := math.Vector{
-				X: (w1*m1.X + w2*m1.X + w3*m1.X) / Z,
-				Y: (w1*m2.Y + w2*m2.Y + w3*m2.Y) / Z,
-				Z: (w1*m3.Z + w2*m3.Z + w3*m3.Z) / Z,
+				X: (w1*m1.X + w2*m1.X + w3*m1.X),
+				Y: (w1*m2.Y + w2*m2.Y + w3*m2.Y),
+				Z: (w1*m3.Z + w2*m3.Z + w3*m3.Z),
 				W: 1,
 			}
 

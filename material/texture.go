@@ -15,15 +15,16 @@ import (
 // Texture represents a power-of-two 2D texture. The power-of-two means
 // that the texture width and height must be a power of two. e.g. 1024x1024.
 type Texture struct {
-	Size   int
-	mipmap []*image.RGBA
+	Size      int
+	UseMipmap bool
+	mipmap    []*image.RGBA
 }
 
-func NewTexture(data *image.RGBA) *Texture {
+func NewTexture(data *image.RGBA, useMipmap bool) *Texture {
 	if data.Bounds().Dx() != data.Bounds().Dy() {
 		panic("image data width and height is not equal!")
 	}
-	t := &Texture{Size: data.Bounds().Dx()}
+	t := &Texture{Size: data.Bounds().Dx(), UseMipmap: useMipmap}
 	if t.Size == 0 || t.Size == 1 {
 		t.mipmap = []*image.RGBA{data}
 		return t
@@ -46,11 +47,6 @@ func NewTexture(data *image.RGBA) *Texture {
 				image.Point{0, 0},
 				image.Point{size * 2, size * 2},
 			}, draw.Over, nil)
-		// f, err := os.Create(fmt.Sprintf("%d.png", i))
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// png.Encode(f, t.mipmap[i])
 	}
 
 	return t
@@ -62,6 +58,10 @@ func (t *Texture) Query(u, v float64, lod float64) color.RGBA {
 	// Early error checking.
 	if u < 0 || u > 1 || v < 0 || v > 1 {
 		panic("out of UV query range")
+	}
+
+	if !t.UseMipmap {
+		return t.queryL0(u, v)
 	}
 
 	// Make sure LOD is sitting on a valid range before proceed.

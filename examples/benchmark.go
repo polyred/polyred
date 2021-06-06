@@ -24,8 +24,8 @@ import (
 
 func main() {
 	result := testing.Benchmark(func(b *testing.B) {
-		// width, height, msaa := 1920, 1080, 2
-		width, height, msaa := 800, 500, 1
+		width, height, msaa := 1920, 1080, 2
+		// width, height, msaa := 800, 500, 1
 		s := rend.NewScene()
 
 		c := camera.NewPerspectiveCamera(
@@ -39,12 +39,12 @@ func main() {
 		)
 		s.UseCamera(c)
 
-		l := light.NewPointLight(color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
+		l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
 		s.AddLight(l)
 
 		m := geometry.MustLoad("../testdata/bunny.obj")
 		tex := material.MustLoad("../testdata/bunny.png")
-		mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
+		mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
 		m.UseMaterial(mat)
 		m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 		m.Translate(0, -0, -0.4)
@@ -52,7 +52,7 @@ func main() {
 
 		m = geometry.MustLoad("../testdata/ground.obj")
 		tex = material.MustLoad("../testdata/ground.png")
-		mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
+		mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
 		m.UseMaterial(mat)
 		m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 		m.Translate(0, -0, -0.4)
@@ -76,7 +76,7 @@ func main() {
 		pprof.StopCPUProfile()
 		f.Close()
 
-		utils.Save(buf, "./render.jpg")
+		utils.Save(buf, "./benchmark.png")
 	})
 
 	ns := result.NsPerOp()

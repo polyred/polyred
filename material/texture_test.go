@@ -19,7 +19,7 @@ func TestBilinear(t *testing.T) {
 	data.Set(1, 0, color.RGBA{0, 0, 0, 0})
 	data.Set(1, 1, color.RGBA{255, 255, 255, 255})
 
-	tex := material.NewTexture(data)
+	tex := material.NewTexture(data, true)
 
 	col := tex.Query(0, 0, 0)
 	if col.R != 255 || col.G != 255 || col.B != 255 || col.A != 255 {

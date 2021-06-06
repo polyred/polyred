@@ -11,23 +11,35 @@ import (
 )
 
 type Light interface {
+	Itensity() float64
 	Position() math.Vector
+	Color() color.RGBA
 }
 
 // PointLight is a point light
 type PointLight struct {
-	Color    color.RGBA
+	itensity float64
+	color    color.RGBA
 	position math.Vector
 }
 
 // NewPointLight returns a new point light
-func NewPointLight(c color.RGBA, p math.Vector) Light {
+func NewPointLight(I float64, c color.RGBA, p math.Vector) Light {
 	return &PointLight{
-		Color:    c,
+		itensity: I,
+		color:    c,
 		position: p,
 	}
 }
 
+func (l *PointLight) Itensity() float64 {
+	return l.itensity
+}
+
 func (l *PointLight) Position() math.Vector {
 	return l.position
+}
+
+func (l *PointLight) Color() color.RGBA {
+	return l.color
 }
