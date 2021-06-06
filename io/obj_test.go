@@ -2,13 +2,15 @@
 // Use of this source code is governed by a license
 // that can be found in the LICENSE file.
 
-package geometry_test
+package io_test
 
 import (
+	"fmt"
+	"math/rand"
 	"os"
 	"testing"
 
-	"changkun.de/x/ddd/geometry"
+	"changkun.de/x/ddd/io"
 )
 
 func TestLoadOBJ(t *testing.T) {
@@ -21,14 +23,14 @@ func TestLoadOBJ(t *testing.T) {
 	}
 	defer f.Close()
 
-	_, err = geometry.LoadOBJ(f)
+	_, err = io.LoadOBJ(f)
 	if err != nil {
 		t.Fatalf("cannot load obj model, path: %s, err: %v", path, err)
 	}
 }
 
-func BenchmarkLoadObj(b *testing.B) {
-	path := "../testdata/bunny.obj"
+func BenchmarkLoadOBJ(b *testing.B) {
+	path := "../testdata/bunny-high.obj"
 	f, err := os.Open(path)
 	if err != nil {
 		b.Errorf("loader: cannot open file %s, err: %v", path, err)
@@ -36,8 +38,28 @@ func BenchmarkLoadObj(b *testing.B) {
 	}
 	defer f.Close()
 
+	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		geometry.LoadOBJ(f)
+		io.LoadOBJ(f)
 	}
+}
+
+func BenchmarkParseFloat(b *testing.B) {
+	fs := make([]float64, 100)
+	for i := range fs {
+		fs[i] = rand.Float64()
+	}
+
+	fsstr := make([]string, 100)
+	for i := range fsstr {
+		fsstr[i] = fmt.Sprintf("%v", fs[i])
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		io.ParseFloat(fsstr)
+	}
+
 }

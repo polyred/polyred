@@ -9,7 +9,7 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/camera"
-	"changkun.de/x/ddd/geometry"
+	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
@@ -38,11 +38,10 @@ func main() {
 
 	// load a mesh
 	done = utils.Timed("loading mesh")
-	m := geometry.MustLoad("../testdata/dragon.obj")
+	m := io.MustLoadMesh("../testdata/dragon.obj")
 	done()
 
 	done = utils.Timed("loading texture")
-
 	data := image.NewRGBA(image.Rect(0, 0, 1, 1))
 	data.Set(0, 0, color.RGBA{0, 128, 255, 255})
 	tex := material.NewTexture(data, true)

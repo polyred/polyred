@@ -13,8 +13,8 @@ import (
 	"runtime/trace"
 
 	"changkun.de/x/ddd/camera"
-	"changkun.de/x/ddd/geometry"
 	"changkun.de/x/ddd/internal/win"
+	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
@@ -37,19 +37,19 @@ func loadScene(width, height int) *rend.Scene {
 	)
 	s.UseCamera(c)
 
-	l := light.NewPointLight(color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
+	l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
 	s.AddLight(l)
 
-	m := geometry.MustLoad("../../testdata/bunny.obj")
-	tex := material.MustLoad("../../testdata/bunny.png")
+	m := io.MustLoadMesh("../../testdata/bunny.obj")
+	tex := io.MustLoadTexture("../../testdata/bunny.png")
 	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 	m.Translate(0, -0, -0.4)
 	s.AddMesh(m)
 
-	m = geometry.MustLoad("../../testdata/ground.obj")
-	tex = material.MustLoad("../../testdata/ground.png")
+	m = io.MustLoadMesh("../../testdata/ground.obj")
+	tex = io.MustLoadTexture("../../testdata/ground.png")
 	mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)

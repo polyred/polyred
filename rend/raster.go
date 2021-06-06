@@ -6,7 +6,6 @@ package rend
 
 import (
 	"image"
-	"image/color"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -78,48 +77,30 @@ func (r *Rasterizer) SetScene(s *Scene) {
 }
 
 func (r *Rasterizer) resetBufs() {
-	wg := sync.WaitGroup{}
-	wg.Add(3)
-	go func() {
-		size := r.width * r.height / (r.msaa * r.msaa)
-		for i := 0; i < size; i++ {
-			r.frameBuf.Pix[i] = 0
-		}
-		wg.Done()
-	}()
-	go func() {
-		size := r.width * r.height
-		for i := 0; i < size; i++ {
-			r.rendBuf.Pix[i] = 0
-		}
-		wg.Done()
-	}()
-	go func() {
-		size := len(r.gBuf)
-		for i := 0; i < size; i++ {
-			r.gBuf[i].ok = false
-		}
-		wg.Done()
-	}()
-	wg.Wait()
+	for i := range r.frameBuf.Pix {
+		r.frameBuf.Pix[i] = 0
+	}
+	for i := range r.rendBuf.Pix {
+		r.rendBuf.Pix[i] = 0
+	}
+	for i := range r.gBuf {
+		r.gBuf[i] = rendInfo{}
+	}
 }
 
-// Render renders a scene.
-func (r *Rasterizer) Render(s *Scene) *image.RGBA {
-	r.s = s
-	r.resetBufs()
-
+func (r *Rasterizer) forwardPass() {
 	nP := runtime.GOMAXPROCS(0)
 	limiter := utils.NewConccurLimiter(nP)
-
-	for m := 0; m < len(r.s.Meshes); m++ {
+	matView := r.s.Camera.ViewMatrix()
+	matProj := r.s.Camera.ProjMatrix()
+	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
+	for m := range r.s.Meshes {
 		mesh := r.s.Meshes[m]
-
 		uniforms := map[string]math.Matrix{
 			"matModel":  mesh.ModelMatrix(),
-			"matView":   r.s.Camera.ViewMatrix(),
-			"matProj":   r.s.Camera.ProjMatrix(),
-			"matVP":     math.ViewportMatrix(float64(r.width), float64(r.height)),
+			"matView":   matView,
+			"matProj":   matProj,
+			"matVP":     matVP,
 			"matNormal": mesh.NormalMatrix(),
 		}
 
@@ -138,9 +119,11 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 		}
 	}
 	limiter.Wait()
+}
 
-	// deferred shading
-	limiter = utils.NewConccurLimiter(nP)
+func (r *Rasterizer) deferredPass() {
+	nP := runtime.GOMAXPROCS(0)
+	limiter := utils.NewConccurLimiter(nP)
 	xstep := int(r.concurrentSize)
 	ystep := int(r.concurrentSize)
 	for i := 0; i < r.width; i += xstep {
@@ -150,7 +133,10 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 			limiter.Execute(func() {
 				for k := 0; k < xstep; k++ {
 					for l := 0; l < ystep; l++ {
-						idx := ii + k + r.width*(jj+l)
+						x := ii + k
+						y := jj + l
+
+						idx := x + r.width*y
 						if idx >= len(r.gBuf) {
 							continue
 						}
@@ -165,18 +151,34 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 						}
 						col := info.mat.Texture().Query(info.u, 1-info.v, lod)
 						col = info.mat.Shader(col, info.pos, info.n, r.s.Camera.Position(), r.s.Lights)
-						r.fragmentProcessing(ii+k, jj+l, info.z, &col)
+
+						r.lockBuf[idx].Lock()
+						r.rendBuf.Set(x, r.height-y, col)
+						r.lockBuf[idx].Unlock()
 					}
 				}
 			})
 		}
 	}
 	limiter.Wait()
+}
 
+func (r *Rasterizer) antialiasing() {
 	draw.BiLinear.Scale(r.frameBuf, r.frameBuf.Bounds(), r.rendBuf, image.Rectangle{
 		image.Point{0, 0},
 		image.Point{r.width, r.height},
 	}, draw.Over, nil)
+}
+
+// Render renders a scene.
+func (r *Rasterizer) Render(s *Scene) *image.RGBA {
+	r.s = s
+	r.resetBufs()
+
+	r.forwardPass()
+	r.deferredPass()
+	r.antialiasing()
+
 	return r.frameBuf
 }
 
@@ -344,20 +346,6 @@ func (r *Rasterizer) inViewport(v1, v2, v3 math.Vector) bool {
 	)
 	triangleAABB := geometry.NewAABB(v1, v2, v3)
 	return viewportAABB.Intersect(triangleAABB)
-}
-
-func (r *Rasterizer) fragmentProcessing(x, y int, z float64, col *color.RGBA) {
-	if x < 0 || y >= r.width {
-		return
-	}
-	if x < 0 || y >= r.height {
-		return
-	}
-
-	idx := x + y*r.width
-	r.lockBuf[idx].Lock()
-	r.rendBuf.Set(x, r.height-y, col)
-	r.lockBuf[idx].Unlock()
 }
 
 // SetConcurrencySize sets the number of triangles that is processed in parallel

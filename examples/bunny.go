@@ -8,7 +8,7 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/camera"
-	"changkun.de/x/ddd/geometry"
+	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
@@ -40,11 +40,11 @@ func main() {
 
 	// load a mesh
 	done = utils.Timed("loading mesh")
-	m := geometry.MustLoad("../testdata/bunny.obj")
+	m := io.MustLoadMesh("../testdata/bunny.obj")
 	done()
 
 	done = utils.Timed("loading texture")
-	t := material.MustLoad("../testdata/bunny.png")
+	t := io.MustLoadTexture("../testdata/bunny.png")
 	done()
 
 	mat := material.NewBlinnPhongMaterial(

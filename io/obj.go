@@ -2,7 +2,7 @@
 // Use of this source code is governed by a license
 // that can be found in the LICENSE file.
 
-package geometry
+package io
 
 import (
 	"bufio"
@@ -10,17 +10,18 @@ import (
 	"strconv"
 	"strings"
 
+	"changkun.de/x/ddd/geometry"
 	"changkun.de/x/ddd/math"
 )
 
 // LoadOBJ loads a .obj file to a TriangleMesh object
-func LoadOBJ(data io.Reader) (*TriangleMesh, error) {
+func LoadOBJ(data io.Reader) (*geometry.TriangleMesh, error) {
 
-	vs := make([]math.Vector, 1, 1024)
+	vs := make([]math.Vector, 1)
 	vts := make([]math.Vector, 1, 1024)
 	vns := make([]math.Vector, 1, 1024)
 
-	var tris []*Triangle
+	var tris []*geometry.Triangle
 
 	s := bufio.NewScanner(data)
 	for s.Scan() {
@@ -32,16 +33,16 @@ func LoadOBJ(data io.Reader) (*TriangleMesh, error) {
 		k := fields[0]
 		args := fields[1:]
 		switch k {
-		case "v": // vertices
+		case "v":
 			coord := parseFloats(args)
 			vs = append(vs, math.NewVector(coord[0], coord[1], coord[2], 1))
-		case "vt": // uv texture coords
+		case "vt":
 			coord := parseFloats(args)
 			vts = append(vts, math.NewVector(coord[0], coord[1], 0, 1))
-		case "vn": // vertex normals
+		case "vn":
 			coord := parseFloats(args)
 			vns = append(vns, math.NewVector(coord[0], coord[1], coord[2], 0))
-		case "f": // faces
+		case "f":
 			fvs := make([]int, len(args))
 			fvts := make([]int, len(args))
 			fvns := make([]int, len(args))
@@ -53,7 +54,7 @@ func LoadOBJ(data io.Reader) (*TriangleMesh, error) {
 			}
 			for i := 1; i < len(fvs)-1; i++ {
 				i1, i2, i3 := 0, i, i+1
-				t := Triangle{}
+				t := geometry.Triangle{}
 				t.V1.Position = vs[fvs[i1]]
 				t.V2.Position = vs[fvs[i2]]
 				t.V3.Position = vs[fvs[i3]]
@@ -67,7 +68,7 @@ func LoadOBJ(data io.Reader) (*TriangleMesh, error) {
 			}
 		}
 	}
-	return NewTriangleMesh(tris), s.Err()
+	return geometry.NewTriangleMesh(tris), s.Err()
 }
 
 func parseFloats(items []string) []float64 {

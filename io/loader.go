@@ -2,7 +2,7 @@
 // Use of this source code is governed by a license
 // that can be found in the LICENSE file.
 
-package material
+package io
 
 import (
 	"fmt"
@@ -11,10 +11,27 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
+
+	"changkun.de/x/ddd/geometry"
+	"changkun.de/x/ddd/material"
 )
 
-// MustLoad loads a given file into a texture.
-func MustLoad(path string) *Texture {
+// MustLoadMesh loads a given file to a triangle mesh.
+func MustLoadMesh(path string) *geometry.TriangleMesh {
+	f, err := os.Open(path)
+	if err != nil {
+		panic(fmt.Errorf("loader: cannot open file %s, err: %v", path, err))
+	}
+	m, err := LoadOBJ(f)
+	f.Close()
+	if err != nil {
+		panic(fmt.Errorf("cannot load obj model, path: %s, err: %v", path, err))
+	}
+	return m
+}
+
+// MustLoadTexture loads a given file into a texture.
+func MustLoadTexture(path string) *material.Texture {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(fmt.Errorf("loader: cannot open file %s, err: %v", path, err))
@@ -32,5 +49,5 @@ func MustLoad(path string) *Texture {
 		draw.Draw(data, data.Bounds(), img, img.Bounds().Min, draw.Src)
 	}
 
-	return NewTexture(data, true)
+	return material.NewTexture(data, true)
 }

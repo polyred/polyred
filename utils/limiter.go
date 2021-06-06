@@ -53,6 +53,6 @@ func (c *ConccurLimiter) Execute(job func()) int {
 // to un-desired race conditions
 func (c *ConccurLimiter) Wait() {
 	for i := 0; i < c.limit; i++ {
-		_ = <-c.tickets
+		<-c.tickets
 	}
 }
