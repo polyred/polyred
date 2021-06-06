@@ -31,6 +31,8 @@ type Rasterizer struct {
 	rendBuf *image.RGBA
 
 	frameBuf *image.RGBA
+
+	debug bool
 }
 
 type rendInfo struct {
@@ -53,6 +55,7 @@ func NewRasterizer(width, height, msaa int) *Rasterizer {
 		frameBuf:       image.NewRGBA(image.Rect(0, 0, width, height)),
 		lockBuf:        make([]sync.Mutex, width*height*msaa*msaa),
 		concurrentSize: 64, // empirical, see benchmark
+		debug:          false,
 	}
 	r.resetBufs()
 	return r
@@ -74,6 +77,10 @@ func (r *Rasterizer) SetSize(width, height, msaa int) {
 
 func (r *Rasterizer) SetScene(s *Scene) {
 	r.s = s
+}
+
+func (r *Rasterizer) SetDebug(d bool) {
+	r.debug = d
 }
 
 func (r *Rasterizer) resetBufs() {
@@ -175,10 +182,30 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	r.s = s
 	r.resetBufs()
 
+	var done func()
+	if r.debug {
+		done = utils.Timed("forward pass....")
+	}
 	r.forwardPass()
-	r.deferredPass()
-	r.antialiasing()
+	if r.debug {
+		done()
+	}
 
+	if r.debug {
+		done = utils.Timed("deferred pass...")
+	}
+	r.deferredPass()
+	if r.debug {
+		done()
+	}
+
+	if r.debug {
+		done = utils.Timed("antialiasing....")
+	}
+	r.antialiasing()
+	if r.debug {
+		done()
+	}
 	return r.frameBuf
 }
 

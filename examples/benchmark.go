@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"os"
-	"runtime/pprof"
 	"testing"
 	"time"
 
@@ -23,62 +21,65 @@ import (
 )
 
 func main() {
-	result := testing.Benchmark(func(b *testing.B) {
-		width, height, msaa := 1920, 1080, 2
-		// width, height, msaa := 800, 500, 1
-		s := rend.NewScene()
+	resolutions := [][]int{
+		[]int{800, 500, 2},
+		[]int{800, 500, 4},
+		[]int{1920, 1080, 2},
+		[]int{1920, 1080, 4},
+		[]int{1920 * 2, 1080 * 2, 2},
+		[]int{1920 * 2, 1080 * 2, 4},
+		[]int{1920 * 3, 1080 * 3, 2},
+		[]int{1920 * 3, 1080 * 3, 4},
+	}
 
-		c := camera.NewPerspectiveCamera(
-			math.NewVector(-0.5, 0.5, 0.5, 1),
-			math.NewVector(0, 0, -0.5, 1),
-			math.NewVector(0, 1, 0, 0),
-			45,
-			float64(width)/float64(height),
-			-0.1,
-			-3,
-		)
-		s.UseCamera(c)
+	for _, resolution := range resolutions {
+		width, height, msaa := resolution[0], resolution[1], resolution[2]
+		result := testing.Benchmark(func(b *testing.B) {
+			s := rend.NewScene()
 
-		l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
-		s.AddLight(l)
+			c := camera.NewPerspectiveCamera(
+				math.NewVector(-0.5, 0.5, 0.5, 1),
+				math.NewVector(0, 0, -0.5, 1),
+				math.NewVector(0, 1, 0, 0),
+				45,
+				float64(width)/float64(height),
+				-0.1,
+				-3,
+			)
+			s.UseCamera(c)
 
-		m := io.MustLoadMesh("../testdata/bunny.obj")
-		tex := io.MustLoadTexture("../testdata/bunny.png")
-		mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
-		m.UseMaterial(mat)
-		m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
-		m.Translate(0, -0, -0.4)
-		s.AddMesh(m)
+			l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
+			s.AddLight(l)
 
-		m = io.MustLoadMesh("../testdata/ground.obj")
-		tex = io.MustLoadTexture("../testdata/ground.png")
-		mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
-		m.UseMaterial(mat)
-		m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
-		m.Translate(0, -0, -0.4)
-		s.AddMesh(m)
+			m := io.MustLoadMesh("../testdata/bunny.obj")
+			tex := io.MustLoadTexture("../testdata/bunny.png")
+			mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
+			m.UseMaterial(mat)
+			m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
+			m.Translate(0, -0, -0.4)
+			s.AddMesh(m)
 
-		r := rend.NewRasterizer(width, height, msaa)
+			m = io.MustLoadMesh("../testdata/ground.obj")
+			tex = io.MustLoadTexture("../testdata/ground.png")
+			mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
+			m.UseMaterial(mat)
+			m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
+			m.Translate(0, -0, -0.4)
+			s.AddMesh(m)
 
-		// cpu pprof
-		f, err := os.Create("cpu.pprof")
-		if err != nil {
-			panic(err)
-		}
-		pprof.StartCPUProfile(f)
+			r := rend.NewRasterizer(width, height, msaa)
+			// r.SetDebug(true)
 
-		var buf *image.RGBA
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			buf = r.Render(s)
-		}
-		b.StopTimer()
-		pprof.StopCPUProfile()
-		f.Close()
+			var buf *image.RGBA
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				buf = r.Render(s)
+			}
+			b.StopTimer()
+			utils.Save(buf, "./benchmark.png")
+		})
 
-		utils.Save(buf, "./benchmark.png")
-	})
-
-	ns := result.NsPerOp()
-	fmt.Printf("BenchmarkRasterizer\t%v\t%v ns/op\t%v fps\n", result.N, ns, 1/(time.Duration(ns)).Seconds())
+		ns := result.NsPerOp()
+		fmt.Printf("BenchmarkRasterizer-%dx%d-%dxMSAA\t%v\t%v ns/op\t%v fps\n", width, height, msaa, result.N, ns, 1/(time.Duration(ns)).Seconds())
+	}
 }
