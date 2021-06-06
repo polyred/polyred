@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"os"
+	"runtime/pprof"
 	"testing"
 	"time"
 
@@ -57,12 +59,22 @@ func main() {
 		s.AddMesh(m)
 
 		r := rend.NewRasterizer(width, height, msaa)
+
+		// cpu pprof
+		f, err := os.Create("cpu.pprof")
+		if err != nil {
+			panic(err)
+		}
+		pprof.StartCPUProfile(f)
+
 		var buf *image.RGBA
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			buf = r.Render(s)
 		}
 		b.StopTimer()
+		pprof.StopCPUProfile()
+		f.Close()
 
 		utils.Save(buf, "./render.jpg")
 	})

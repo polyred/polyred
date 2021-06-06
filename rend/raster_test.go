@@ -10,6 +10,7 @@ import (
 	"image/color"
 	"image/png"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"testing"
 
@@ -80,16 +81,25 @@ func newraster() (*rend.Rasterizer, *rend.Scene) {
 func TestRasterizer(t *testing.T) {
 	r, s := newraster()
 
-	f, err := os.Create("../testdata/cpu.pprof")
+	f, err := os.Create("cpu.pprof")
 	if err != nil {
 		t.Fatal(err)
 	}
+	mem, err := os.Create("mem.pprof")
+	if err != nil {
+		panic(err)
+	}
+
 	var buf *image.RGBA
 	pprof.StartCPUProfile(f)
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 100; i++ {
 		buf = r.Render(s)
 	}
 	pprof.StopCPUProfile()
+	runtime.GC()
+	pprof.WriteHeapProfile(mem)
+	mem.Close()
+	f.Close()
 
 	utils.Save(buf, "../testdata/render.jpg")
 }

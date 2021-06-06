@@ -42,7 +42,7 @@ func main() {
 	)
 	s.UseCamera(c)
 
-	l := light.NewPointLight(color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
+	l := light.NewPointLight(color.RGBA{0, 0, 0, 255}, math.NewVector(-2, 2.5, 6, 1))
 	s.AddLight(l)
 
 	var done func()

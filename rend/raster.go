@@ -28,7 +28,7 @@ type Rasterizer struct {
 
 	s       *Scene
 	lockBuf []sync.Mutex
-	gBuf    []*rendInfo
+	gBuf    []rendInfo
 	rendBuf *image.RGBA
 
 	frameBuf *image.RGBA
@@ -38,23 +38,25 @@ type rendInfo struct {
 	ok     bool
 	z      float64
 	u, v   float64
-	lod    float64
+	du, dv float64
 	n, pos math.Vector
 	mat    material.Material
 }
 
 // NewRasterizer creates a new rasterizer
 func NewRasterizer(width, height, msaa int) *Rasterizer {
-	return &Rasterizer{
+	r := &Rasterizer{
 		width:          width * msaa,
 		height:         height * msaa,
 		msaa:           msaa,
-		gBuf:           make([]*rendInfo, width*height*msaa*msaa),
+		gBuf:           make([]rendInfo, width*height*msaa*msaa),
 		rendBuf:        image.NewRGBA(image.Rect(0, 0, width*msaa, height*msaa)),
 		frameBuf:       image.NewRGBA(image.Rect(0, 0, width, height)),
 		lockBuf:        make([]sync.Mutex, width*height*msaa*msaa),
-		concurrentSize: 128, // empirical, see benchmark
+		concurrentSize: 64, // empirical, see benchmark
 	}
+	r.resetBufs()
+	return r
 }
 
 func (r *Rasterizer) RenderScene() *image.RGBA {
@@ -76,20 +78,30 @@ func (r *Rasterizer) SetScene(s *Scene) {
 }
 
 func (r *Rasterizer) resetBufs() {
-	size := r.width * r.height / (r.msaa * r.msaa)
-	for i := 0; i < size; i++ {
-		r.frameBuf.Pix[i] = 0
-	}
-	size = r.width * r.height
-	for i := 0; i < size; i++ {
-		r.rendBuf.Pix[i] = 0
-	}
-	size = len(r.gBuf)
-	for i := 0; i < size; i++ {
-		if r.gBuf[i] != nil {
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+	go func() {
+		size := r.width * r.height / (r.msaa * r.msaa)
+		for i := 0; i < size; i++ {
+			r.frameBuf.Pix[i] = 0
+		}
+		wg.Done()
+	}()
+	go func() {
+		size := r.width * r.height
+		for i := 0; i < size; i++ {
+			r.rendBuf.Pix[i] = 0
+		}
+		wg.Done()
+	}()
+	go func() {
+		size := len(r.gBuf)
+		for i := 0; i < size; i++ {
 			r.gBuf[i].ok = false
 		}
-	}
+		wg.Done()
+	}()
+	wg.Wait()
 }
 
 // Render renders a scene.
@@ -128,19 +140,32 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	limiter.Wait()
 
 	limiter = utils.NewConccurLimiter(nP)
-	for i := 0; i < r.width; i++ {
-		ii := i
-		limiter.Execute(func() {
-			for j := 0; j < r.height; j++ {
-				idx := ii + r.width*j
-				info := r.gBuf[idx]
-				if info != nil && info.ok {
-					col := info.mat.Texture().Query(info.u, 1-info.v, info.lod)
-					col = info.mat.Shader(col, info.pos, info.n, r.s.Lights[0].Position(), r.s.Camera.Position())
-					r.fragmentProcessing(ii, j, info.z, &col)
+	xstep := int(r.concurrentSize)
+	ystep := int(r.concurrentSize)
+	for i := 0; i < r.width; i += xstep {
+		for j := 0; j < r.height; j += ystep {
+			ii := i
+			jj := j
+			limiter.Execute(func() {
+				for k := 0; k < xstep; k++ {
+					for l := 0; l < ystep; l++ {
+						idx := ii + k + r.width*(jj+l)
+						if idx >= len(r.gBuf) {
+							continue
+						}
+						info := r.gBuf[idx]
+						if !info.ok {
+							continue
+						}
+
+						lod := math.Log2(math.Sqrt(math.Max(info.du, info.dv)))
+						col := info.mat.Texture().Query(info.u, 1-info.v, lod)
+						col = info.mat.Shader(col, info.pos, info.n, r.s.Lights[0].Position(), r.s.Camera.Position())
+						r.fragmentProcessing(ii+k, jj+l, info.z, &col)
+					}
 				}
-			}
-		})
+			})
+		}
 	}
 	limiter.Wait()
 
@@ -152,11 +177,11 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 }
 
 func (r *Rasterizer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 float64) {
-	ap := math.NewVector(float64(x)-t1.X, float64(y)-t1.Y, 0, 0)
-	ab := math.NewVector(t2.X-t1.X, t2.Y-t1.Y, 0, 0)
-	ac := math.NewVector(t3.X-t1.X, t3.Y-t1.Y, 0, 0)
-	bc := math.NewVector(t3.X-t2.X, t3.Y-t2.Y, 0, 0)
-	bp := math.NewVector(float64(x)-t2.X, float64(y)-t2.Y, 0, 0)
+	ap := math.Vector{X: float64(x) - t1.X, Y: float64(y) - t1.Y, Z: 0, W: 0}
+	ab := math.Vector{X: t2.X - t1.X, Y: t2.Y - t1.Y, Z: 0, W: 0}
+	ac := math.Vector{X: t3.X - t1.X, Y: t3.Y - t1.Y, Z: 0, W: 0}
+	bc := math.Vector{X: t3.X - t2.X, Y: t3.Y - t2.Y, Z: 0, W: 0}
+	bp := math.Vector{X: float64(x) - t2.X, Y: float64(y) - t2.Y, Z: 0, W: 0}
 	Sabc := ab.Cross(ac).Z
 	Sabp := ab.Cross(ap).Z
 	Sapc := ap.Cross(ac).Z
@@ -175,7 +200,7 @@ func (r *Rasterizer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangl
 	t2 := r.vertexShader(tri.V2, uniforms)
 	t3 := r.vertexShader(tri.V3, uniforms)
 
-	if r.isBackFace(t1.Position, t2.Position, t3.Position) {
+	if t2.Position.Sub(t1.Position).Cross(t3.Position.Sub(t1.Position)).Z < 0 {
 		return
 	}
 	if !r.inViewport(t1.Position, t2.Position, t3.Position) {
@@ -229,7 +254,7 @@ func (r *Rasterizer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangl
 
 			idx := x + y*r.width
 			r.lockBuf[idx].Lock()
-			if r.gBuf[idx] != nil && r.gBuf[idx].ok && z <= r.gBuf[idx].z {
+			if r.gBuf[idx].ok && z <= r.gBuf[idx].z {
 				r.lockBuf[idx].Unlock()
 				continue
 			}
@@ -244,51 +269,43 @@ func (r *Rasterizer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangl
 			}
 
 			// UV interpolation
-			uv := math.NewVector(
-				(w1*t1.UV.X+w2*t2.UV.X+w3*t3.UV.X)/Z,
-				(w1*t1.UV.Y+w2*t2.UV.Y+w3*t3.UV.Y)/Z,
-				0,
-				1,
-			)
+			uvX := (w1*t1.UV.X + w2*t2.UV.X + w3*t3.UV.X) / Z
+			uvY := (w1*t1.UV.Y + w2*t2.UV.Y + w3*t3.UV.Y) / Z
 
 			// Compute du dv
 			w1x, w2x, w3x := r.barycoord(x+1, y, t1.Position, t2.Position, t3.Position)
 			w1y, w2y, w3y := r.barycoord(x+1, y, t1.Position, t2.Position, t3.Position)
-			uvX := math.NewVector(
-				(w1x*t1.UV.X+w2x*t2.UV.X+w3x*t3.UV.X)/Z,
-				(w1x*t1.UV.Y+w2x*t2.UV.Y+w3x*t3.UV.Y)/Z,
-				0,
-				1,
-			)
-			uvY := math.NewVector(
-				(w1y*t1.UV.X+w2y*t2.UV.X+w3y*t3.UV.X)/Z,
-				(w1y*t1.UV.Y+w2y*t2.UV.Y+w3y*t3.UV.Y)/Z,
-				0,
-				1,
-			)
-			lod := math.Log2(
-				math.Max(uvX.Sub(uv).Len(), uvY.Sub(uv).Len()))
+			uvdU := (w1x*t1.UV.X + w2x*t2.UV.X + w3x*t3.UV.X) / Z
+			uvdX := (w1x*t1.UV.Y + w2x*t2.UV.Y + w3x*t3.UV.Y) / Z
+			uvdV := (w1y*t1.UV.X + w2y*t2.UV.X + w3y*t3.UV.X) / Z
+			uvdY := (w1y*t1.UV.Y + w2y*t2.UV.Y + w3y*t3.UV.Y) / Z
+			du := (uvdU-uvX)*(uvdU-uvX) + (uvdX-uvY)*(uvdX-uvY)
+			dv := (uvdV-uvX)*(uvdV-uvX) + (uvdY-uvY)*(uvdY-uvY)
 
 			// normal interpolation
-			n := math.NewVector(
-				(w1*t1.Normal.X+w2*t2.Normal.X+w3*t3.Normal.X)/Z,
-				(w1*t1.Normal.Y+w2*t2.Normal.Y+w3*t3.Normal.Y)/Z,
-				(w1*t1.Normal.Z+w2*t2.Normal.Z+w3*t3.Normal.Z)/Z,
-				0,
-			)
-			pos := math.NewVector(
-				(w1*m1.X+w2*m1.X+w3*m1.X)/Z,
-				(w1*m2.Y+w2*m2.Y+w3*m2.Y)/Z,
-				(w1*m3.Z+w2*m3.Z+w3*m3.Z)/Z,
-				1,
-			)
+			n := math.Vector{
+				X: (w1*t1.Normal.X + w2*t2.Normal.X + w3*t3.Normal.X) / Z,
+				Y: (w1*t1.Normal.Y + w2*t2.Normal.Y + w3*t3.Normal.Y) / Z,
+				Z: (w1*t1.Normal.Z + w2*t2.Normal.Z + w3*t3.Normal.Z) / Z,
+				W: 0,
+			}
+			pos := math.Vector{
+				X: (w1*m1.X + w2*m1.X + w3*m1.X) / Z,
+				Y: (w1*m2.Y + w2*m2.Y + w3*m2.Y) / Z,
+				Z: (w1*m3.Z + w2*m3.Z + w3*m3.Z) / Z,
+				W: 1,
+			}
 
 			r.lockBuf[idx].Lock()
-			r.gBuf[idx] = &rendInfo{
-				ok: true,
-				z:  z, u: uv.X, v: uv.Y, lod: lod,
-				n: n, pos: pos, mat: mat,
-			}
+			r.gBuf[idx].ok = true
+			r.gBuf[idx].z = z
+			r.gBuf[idx].u = uvX
+			r.gBuf[idx].v = uvY
+			r.gBuf[idx].du = du
+			r.gBuf[idx].dv = dv
+			r.gBuf[idx].n = n
+			r.gBuf[idx].pos = pos
+			r.gBuf[idx].mat = mat
 			r.lockBuf[idx].Unlock()
 		}
 	}
@@ -311,12 +328,8 @@ func (r *Rasterizer) vertexShader(v geometry.Vertex, uniforms map[string]math.Ma
 	}
 }
 
-func (r *Rasterizer) isBackFace(v1, v2, v3 math.Vector) bool {
-	fN := v2.Sub(v1).Cross(v3.Sub(v1))
-	return math.NewVector(0, 0, -1, 0).Dot(fN) >= 0
-}
-
 func (r *Rasterizer) inViewport(v1, v2, v3 math.Vector) bool {
+
 	viewportAABB := geometry.NewAABB(
 		math.NewVector(float64(r.width), float64(r.height), 1, 1),
 		math.NewVector(0, 0, 0, 1),

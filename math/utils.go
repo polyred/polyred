@@ -17,6 +17,7 @@ var (
 	Floor      = math.Floor
 	Log2       = math.Log2
 	Pow        = math.Pow
+	Sqrt       = math.Sqrt
 )
 
 // DefaultEpsilon is a default epsilon value for computation.
