@@ -120,3 +120,150 @@ func TestTransposeMatrix(t *testing.T) {
 	}
 	t.Fatalf("transpose matrices does not working properly, got %+v, want %+v", m1, want)
 }
+
+func BenchmarkMatrix_Eq(b *testing.B) {
+	m1 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+	m2 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+
+	var m bool
+	for i := 0; i < b.N; i++ {
+		m = m1.Eq(m2)
+	}
+	_ = m
+}
+
+func BenchmarkMatrix_Add(b *testing.B) {
+	m1 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+	m2 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+
+	var m math.Matrix
+	for i := 0; i < b.N; i++ {
+		m = m1.Add(m2)
+	}
+	_ = m
+}
+
+func BenchmarkMatrix_Sub(b *testing.B) {
+	m1 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+	m2 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+
+	var m math.Matrix
+	for i := 0; i < b.N; i++ {
+		m = m1.Sub(m2)
+	}
+	_ = m
+}
+
+func BenchmarkMatrix_MulM(b *testing.B) {
+	m1 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+	m2 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+
+	var m math.Matrix
+	for i := 0; i < b.N; i++ {
+		m = m1.MulM(m2)
+	}
+	_ = m
+}
+
+func BenchmarkMatrix_MulV(b *testing.B) {
+	m1 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+	m2 := math.Vector{
+		5, 1, 5, 6,
+	}
+
+	var m math.Vector
+	for i := 0; i < b.N; i++ {
+		m = m1.MulV(m2)
+	}
+	_ = m
+}
+
+func BenchmarkMatrix_Inv(b *testing.B) {
+	m1 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+
+	var m math.Matrix
+	for i := 0; i < b.N; i++ {
+		m = m1.Inv()
+	}
+	_ = m
+}
+
+func BenchmarkMatrix_Det(b *testing.B) {
+	m1 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+
+	var m float64
+	for i := 0; i < b.N; i++ {
+		m = m1.Det()
+	}
+	_ = m
+}
+
+func BenchmarkMatrix_T(b *testing.B) {
+	m1 := math.Matrix{
+		5, 1, 5, 6,
+		8, 71, 2, 47,
+		5, 1, 582, 4,
+		2, 1, 7, 25,
+	}
+
+	var m math.Matrix
+	for i := 0; i < b.N; i++ {
+		m = m1.T()
+	}
+	_ = m
+}

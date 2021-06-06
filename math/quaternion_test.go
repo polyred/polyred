@@ -74,3 +74,19 @@ func TestQuaternionToRotationMatrix(t *testing.T) {
 		t.Fatalf("ToRoMat is wrong, want: %v, got: %v", want, got)
 	}
 }
+
+func BenchmarkQuaternion_ToRoMat(b *testing.B) {
+	dirX := math.Vector{1, 0, 0, 0}
+	angle := math.Pi / 3
+
+	u := dirX.Unit()
+	cosa := math.Cos(angle / 2)
+	sina := math.Sin(angle / 2)
+	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
+
+	var m math.Matrix
+	for i := 0; i < b.N; i++ {
+		m = q.ToRoMat()
+	}
+	_ = m
+}
