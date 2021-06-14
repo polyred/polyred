@@ -5,6 +5,7 @@
 package material
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
@@ -57,7 +58,7 @@ func NewTexture(data *image.RGBA, useMipmap bool) *Texture {
 func (t *Texture) Query(u, v float64, lod float64) color.RGBA {
 	// Early error checking.
 	if u < 0 || u > 1 || v < 0 || v > 1 {
-		panic("out of UV query range")
+		panic(fmt.Sprintf("out of UV query range: %v, %v", u, v))
 	}
 
 	if !t.UseMipmap {

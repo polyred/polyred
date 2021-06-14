@@ -23,13 +23,13 @@ import (
 func main() {
 	resolutions := [][]int{
 		[]int{800, 500, 1},
-		// []int{800, 500, 4},
-		// []int{1920, 1080, 2},
-		// []int{1920, 1080, 4},
-		// []int{1920 * 2, 1080 * 2, 2},
-		// []int{1920 * 2, 1080 * 2, 4},
-		// []int{1920 * 3, 1080 * 3, 2},
-		// []int{1920 * 3, 1080 * 3, 4},
+		[]int{800, 500, 4},
+		[]int{1920, 1080, 1},
+		[]int{1920, 1080, 4},
+		[]int{1920 * 2, 1080 * 2, 1},
+		[]int{1920 * 2, 1080 * 2, 4},
+		[]int{1920 * 3, 1080 * 3, 1},
+		[]int{1920 * 3, 1080 * 3, 4},
 	}
 
 	for _, resolution := range resolutions {
@@ -38,8 +38,8 @@ func main() {
 			s := rend.NewScene()
 
 			c := camera.NewPerspectiveCamera(
-				math.NewVector(-0.5, 0.5, 0.5, 1),
-				math.NewVector(0, 0, -0.5, 1),
+				math.NewVector(0, 0.6, 0.9, 1),
+				math.NewVector(0, 0, 0, 1),
 				math.NewVector(0, 1, 0, 0),
 				45,
 				float64(width)/float64(height),
@@ -48,23 +48,19 @@ func main() {
 			)
 			s.UseCamera(c)
 
-			l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-2, 6.5, 3, 1))
+			l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(4, 4, 2, 1))
 			s.AddLight(l)
 
 			m := io.MustLoadMesh("../testdata/bunny.obj")
 			tex := io.MustLoadTexture("../testdata/bunny.png")
 			mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
 			m.UseMaterial(mat)
-			m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
-			m.Translate(0, -0, -0.4)
 			s.AddMesh(m)
 
 			m = io.MustLoadMesh("../testdata/ground.obj")
 			tex = io.MustLoadTexture("../testdata/ground.png")
 			mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
 			m.UseMaterial(mat)
-			m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
-			m.Translate(0, -0, -0.4)
 			s.AddMesh(m)
 
 			r := rend.NewRasterizer(width, height, msaa)

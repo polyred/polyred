@@ -5,7 +5,6 @@
 package rend
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"runtime"
@@ -128,8 +127,7 @@ func (r *Rasterizer) forwardPass() {
 }
 
 func (r *Rasterizer) deferredPass() {
-	// nP := runtime.GOMAXPROCS(0)
-	nP := 1
+	nP := runtime.GOMAXPROCS(0)
 	limiter := utils.NewConccurLimiter(nP)
 	xstep := int(r.concurrentSize)
 	ystep := int(r.concurrentSize)
@@ -137,7 +135,6 @@ func (r *Rasterizer) deferredPass() {
 	matView := r.s.Camera.ViewMatrix()
 	matProj := r.s.Camera.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
-	fmt.Println(r.width, r.height)
 	for i := 0; i < r.width; i += xstep {
 		for j := 0; j < r.height; j += ystep {
 			ii := i
@@ -154,9 +151,10 @@ func (r *Rasterizer) deferredPass() {
 						}
 						info := r.gBuf[idx]
 						if !info.ok {
-							r.lockBuf[idx].Lock()
-							r.rendBuf.Set(x, r.height-y, color.White)
-							r.lockBuf[idx].Unlock()
+							// TODO: background
+							// r.lockBuf[idx].Lock()
+							// r.rendBuf.Set(x, r.height-y, color.White)
+							// r.lockBuf[idx].Unlock()
 							continue
 						}
 
@@ -164,19 +162,54 @@ func (r *Rasterizer) deferredPass() {
 						if info.mat.Texture().UseMipmap {
 							lod = math.Log2(math.Sqrt(math.Max(info.du, info.dv)))
 						}
-						col := info.mat.Texture().Query(info.u, 1-info.v, lod)
+						col := info.mat.Texture().Query(info.u, info.v, lod)
 						col = info.mat.Shader(col, info.pos, info.n, r.s.Camera.Position(), r.s.Lights)
 
-						screenCoord := math.NewVector(float64(i), float64(j), info.z, 1).Apply(matVP.Inv()).Apply(matProj.Inv()).Apply(matView.Inv())
-						screenCoord = screenCoord.Scale(1/screenCoord.W, 1/screenCoord.W, 1/screenCoord.W, 1/screenCoord.W)
-						screenCoord = screenCoord.Apply(r.lightCamera.ViewMatrix())
-						screenCoord = screenCoord.Apply(r.lightCamera.ProjMatrix())
-						screenCoord = screenCoord.Apply(matVP)
-						fmt.Println(float64(x), float64(y), info.z, "screen in word: ", screenCoord)
+						// transform scrren coordinate to light viewport
+						screenCoord := math.NewVector(float64(x), float64(y), info.z, 1).
+							Apply(matVP.Inv()).
+							Apply(matProj.Inv()).
+							Apply(matView.Inv()).
+							Apply(r.lightCamera.ViewMatrix()).
+							Apply(r.lightCamera.ProjMatrix()).
+							Apply(matVP)
+						screenCoord = screenCoord.Scale(
+							1/screenCoord.W,
+							1/screenCoord.W,
+							1/screenCoord.W,
+							1/screenCoord.W,
+						)
+
+						// now the screend coordinates is transformed to
+						// the light perspective, find out the depth we
+						// need to query:
 						lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
-						if lightX+(r.height-lightY)*r.width > 0 && lightX+(r.height-lightY)*r.width < len(r.shadowTexture) {
-							if screenCoord.Z < r.shadowTexture[lightX+lightY*r.width] || math.ApproxEq(screenCoord.Z, r.shadowTexture[lightX+lightY*r.width], math.DefaultEpsilon) {
-								col = color.RGBA{0, 0, 0, 255}
+						shadowIdx := lightX + lightY*r.width
+
+						if shadowIdx > 0 && shadowIdx < len(r.shadowTexture) {
+							shadowZ := r.shadowTexture[shadowIdx]
+
+							// bilinear depth value query
+							shadowIdx2 := lightX + 1 + lightY*r.width
+							shadowIdx3 := lightX + (lightY+1)*r.width
+							shadowIdx4 := lightX + 1 + (lightY+1)*r.width
+							if (shadowIdx2 > 0 && shadowIdx2 < len(r.shadowTexture)) &&
+								(shadowIdx3 > 0 && shadowIdx3 < len(r.shadowTexture)) &&
+								(shadowIdx4 > 0 && shadowIdx4 < len(r.shadowTexture)) {
+
+								shadowZ1 := shadowZ
+								shadowZ2 := r.shadowTexture[shadowIdx2]
+								shadowZ3 := r.shadowTexture[shadowIdx3]
+								shadowZ4 := r.shadowTexture[shadowIdx4]
+								tx := screenCoord.X - float64(lightX)
+								shadowZa1 := math.Lerp(shadowZ1, shadowZ2, tx)
+								shadowZa2 := math.Lerp(shadowZ3, shadowZ4, tx)
+								ty := screenCoord.Y - float64(lightY)
+								shadowZ = math.Lerp(shadowZa1, shadowZa2, ty)
+
+								if screenCoord.Z < shadowZ-0.004 {
+									col = color.RGBA{col.R / 2, col.G / 2, col.B / 2, 255}
+								}
 							}
 						}
 
@@ -201,11 +234,12 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	r.resetBufs()
 
 	// shadow pass
+	// TODO: compute optimal shadow map size
 	r.lightCamera = camera.NewOrthographicCamera(
 		s.Lights[0].Position(),
 		s.Meshes[1].Center(),
 		math.NewVector(0, 1, 0, 0),
-		-0.6, 0.4, -0.2, 0.8, -5, -8,
+		-0.3, 0.3, -0.2, 0.3, 0, -10,
 	)
 	viewCamera := r.s.Camera
 	r.s.Camera = r.lightCamera
@@ -393,7 +427,7 @@ func (r *Rasterizer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangl
 			r.gBuf[idx].ok = true
 			r.gBuf[idx].z = z
 			r.gBuf[idx].u = uvX
-			r.gBuf[idx].v = uvY
+			r.gBuf[idx].v = 1 - uvY
 			r.gBuf[idx].du = du
 			r.gBuf[idx].dv = dv
 			r.gBuf[idx].n = n
