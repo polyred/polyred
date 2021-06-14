@@ -100,3 +100,13 @@ func (m *TriangleMesh) Rotate(dir math.Vector, angle float64) {
 	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
 	m.context = q.ToRoMat().MulM(m.context)
 }
+
+func (m *TriangleMesh) Center() math.Vector {
+	aabb := NewAABB(m.Faces[0].V1.Position, m.Faces[0].V2.Position, m.Faces[0].V3.Position)
+
+	for i := 1; i < len(m.Faces); i++ {
+		aabb.Add(NewAABB(m.Faces[i].V1.Position, m.Faces[i].V2.Position, m.Faces[i].V3.Position))
+	}
+
+	return aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2, 1)
+}

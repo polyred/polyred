@@ -50,3 +50,14 @@ func (aabb AABB) Intersect(aabb2 AABB) bool {
 	}
 	return false
 }
+
+// Add adds a given aabb to the current aabb
+func (aabb AABB) Add(aabb2 AABB) {
+	aabb.Min.X = math.Min(aabb.Min.X, aabb2.Min.X)
+	aabb.Min.Y = math.Min(aabb.Min.Y, aabb2.Min.Y)
+	aabb.Min.Z = math.Min(aabb.Min.Z, aabb2.Min.Z)
+
+	aabb.Max.X = math.Max(aabb.Max.X, aabb2.Max.X)
+	aabb.Max.Y = math.Max(aabb.Max.Y, aabb2.Max.Y)
+	aabb.Max.Z = math.Max(aabb.Max.Z, aabb2.Max.Z)
+}

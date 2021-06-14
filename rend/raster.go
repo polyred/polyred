@@ -5,7 +5,9 @@
 package rend
 
 import (
+	"fmt"
 	"image"
+	"image/color"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -31,7 +33,9 @@ type Rasterizer struct {
 
 	frameBuf *image.RGBA
 
-	debug bool
+	shadowTexture []float64
+	lightCamera   camera.OrthographicCamera
+	debug         bool
 }
 
 type rendInfo struct {
@@ -86,7 +90,7 @@ func (r *Rasterizer) resetBufs() {
 		r.rendBuf.Pix[i] = 0
 	}
 	for i := range r.gBuf {
-		r.gBuf[i] = rendInfo{}
+		r.gBuf[i] = rendInfo{z: -1}
 	}
 }
 
@@ -124,10 +128,16 @@ func (r *Rasterizer) forwardPass() {
 }
 
 func (r *Rasterizer) deferredPass() {
-	nP := runtime.GOMAXPROCS(0)
+	// nP := runtime.GOMAXPROCS(0)
+	nP := 1
 	limiter := utils.NewConccurLimiter(nP)
 	xstep := int(r.concurrentSize)
 	ystep := int(r.concurrentSize)
+
+	matView := r.s.Camera.ViewMatrix()
+	matProj := r.s.Camera.ProjMatrix()
+	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
+	fmt.Println(r.width, r.height)
 	for i := 0; i < r.width; i += xstep {
 		for j := 0; j < r.height; j += ystep {
 			ii := i
@@ -144,6 +154,9 @@ func (r *Rasterizer) deferredPass() {
 						}
 						info := r.gBuf[idx]
 						if !info.ok {
+							r.lockBuf[idx].Lock()
+							r.rendBuf.Set(x, r.height-y, color.White)
+							r.lockBuf[idx].Unlock()
 							continue
 						}
 
@@ -153,6 +166,19 @@ func (r *Rasterizer) deferredPass() {
 						}
 						col := info.mat.Texture().Query(info.u, 1-info.v, lod)
 						col = info.mat.Shader(col, info.pos, info.n, r.s.Camera.Position(), r.s.Lights)
+
+						screenCoord := math.NewVector(float64(i), float64(j), info.z, 1).Apply(matVP.Inv()).Apply(matProj.Inv()).Apply(matView.Inv())
+						screenCoord = screenCoord.Scale(1/screenCoord.W, 1/screenCoord.W, 1/screenCoord.W, 1/screenCoord.W)
+						screenCoord = screenCoord.Apply(r.lightCamera.ViewMatrix())
+						screenCoord = screenCoord.Apply(r.lightCamera.ProjMatrix())
+						screenCoord = screenCoord.Apply(matVP)
+						fmt.Println(float64(x), float64(y), info.z, "screen in word: ", screenCoord)
+						lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
+						if lightX+(r.height-lightY)*r.width > 0 && lightX+(r.height-lightY)*r.width < len(r.shadowTexture) {
+							if screenCoord.Z < r.shadowTexture[lightX+lightY*r.width] || math.ApproxEq(screenCoord.Z, r.shadowTexture[lightX+lightY*r.width], math.DefaultEpsilon) {
+								col = color.RGBA{0, 0, 0, 255}
+							}
+						}
 
 						r.lockBuf[idx].Lock()
 						r.rendBuf.Set(x, r.height-y, col)
@@ -174,9 +200,48 @@ func (r *Rasterizer) Render(s *Scene) *image.RGBA {
 	r.s = s
 	r.resetBufs()
 
+	// shadow pass
+	r.lightCamera = camera.NewOrthographicCamera(
+		s.Lights[0].Position(),
+		s.Meshes[1].Center(),
+		math.NewVector(0, 1, 0, 0),
+		-0.6, 0.4, -0.2, 0.8, -5, -8,
+	)
+	viewCamera := r.s.Camera
+	r.s.Camera = r.lightCamera
+
 	var done func()
 	if r.debug {
-		done = utils.Timed("forward pass....")
+		done = utils.Timed("forward pass (shadow)....")
+	}
+	r.forwardPass()
+	if r.debug {
+		done()
+	}
+
+	r.shadowTexture = make([]float64, len(r.gBuf))
+	for i, info := range r.gBuf {
+		r.shadowTexture[i] = info.z
+	}
+
+	img := image.NewRGBA(image.Rect(0, 0, r.width, r.height))
+	for i := 0; i < r.width; i++ {
+		for j := 0; j < r.height; j++ {
+			img.Set(i, j, color.RGBA{
+				uint8(r.shadowTexture[i+(r.height-j-1)*r.width] * 255),
+				uint8(r.shadowTexture[i+(r.height-j-1)*r.width] * 255),
+				uint8(r.shadowTexture[i+(r.height-j-1)*r.width] * 255),
+				255,
+			})
+		}
+	}
+	utils.Save(img, "shadow.png")
+
+	r.s.Camera = viewCamera
+	r.resetBufs()
+
+	if r.debug {
+		done = utils.Timed("forward pass (world)....")
 	}
 	r.forwardPass()
 	if r.debug {

@@ -22,14 +22,14 @@ import (
 
 func main() {
 	resolutions := [][]int{
-		[]int{800, 500, 2},
-		[]int{800, 500, 4},
-		[]int{1920, 1080, 2},
-		[]int{1920, 1080, 4},
-		[]int{1920 * 2, 1080 * 2, 2},
-		[]int{1920 * 2, 1080 * 2, 4},
-		[]int{1920 * 3, 1080 * 3, 2},
-		[]int{1920 * 3, 1080 * 3, 4},
+		[]int{800, 500, 1},
+		// []int{800, 500, 4},
+		// []int{1920, 1080, 2},
+		// []int{1920, 1080, 4},
+		// []int{1920 * 2, 1080 * 2, 2},
+		// []int{1920 * 2, 1080 * 2, 4},
+		// []int{1920 * 3, 1080 * 3, 2},
+		// []int{1920 * 3, 1080 * 3, 4},
 	}
 
 	for _, resolution := range resolutions {
@@ -48,7 +48,7 @@ func main() {
 			)
 			s.UseCamera(c)
 
-			l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
+			l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-2, 6.5, 3, 1))
 			s.AddLight(l)
 
 			m := io.MustLoadMesh("../testdata/bunny.obj")
