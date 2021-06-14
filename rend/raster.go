@@ -15,7 +15,6 @@ import (
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/utils"
-	"golang.org/x/image/draw"
 )
 
 // Rasterizer is a CPU rasterizer
@@ -52,7 +51,6 @@ func NewRasterizer(width, height, msaa int) *Rasterizer {
 		msaa:           msaa,
 		gBuf:           make([]rendInfo, width*height*msaa*msaa),
 		rendBuf:        image.NewRGBA(image.Rect(0, 0, width*msaa, height*msaa)),
-		frameBuf:       image.NewRGBA(image.Rect(0, 0, width, height)),
 		lockBuf:        make([]sync.Mutex, width*height*msaa*msaa),
 		concurrentSize: 64, // empirical, see benchmark
 		debug:          false,
@@ -84,9 +82,6 @@ func (r *Rasterizer) SetDebug(d bool) {
 }
 
 func (r *Rasterizer) resetBufs() {
-	for i := range r.frameBuf.Pix {
-		r.frameBuf.Pix[i] = 0
-	}
 	for i := range r.rendBuf.Pix {
 		r.rendBuf.Pix[i] = 0
 	}
@@ -171,10 +166,7 @@ func (r *Rasterizer) deferredPass() {
 }
 
 func (r *Rasterizer) antialiasing() {
-	draw.BiLinear.Scale(r.frameBuf, r.frameBuf.Bounds(), r.rendBuf, image.Rectangle{
-		image.Point{0, 0},
-		image.Point{r.width, r.height},
-	}, draw.Over, nil)
+	r.frameBuf = utils.Resize(r.width/r.msaa, r.height/r.msaa, r.rendBuf)
 }
 
 // Render renders a scene.
