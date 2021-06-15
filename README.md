@@ -66,7 +66,7 @@ r := rend.NewRenderer(
 utils.Save(r.Render(), "./benchmark.png")
 ```
 
-![](./examples/benchmark/benchmark.png)
+![](./examples/teaser.png)
 
 
 ## More Examples

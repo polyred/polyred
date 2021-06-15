@@ -20,8 +20,7 @@ import (
 // See more mesh data here: https://casual-effects.com/data/
 
 func main() {
-	width, height, msaa := 800, 500, 1
-	// width, height, msaa := 2048, 2048, 1
+	width, height, msaa := 960, 540, 2
 	s := rend.NewScene()
 	c := camera.NewPerspectiveCamera(
 		math.NewVector(-3, 1.25, -2, 1),
