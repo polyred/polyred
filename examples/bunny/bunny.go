@@ -1,6 +1,6 @@
-// Copyright 2021 Changkun Ou. All rights reserved.
-// Use of this source code is governed by a license
-// that can be found in the LICENSE file.
+// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
 
 package main
 
@@ -40,11 +40,11 @@ func main() {
 
 	// load a mesh
 	done = utils.Timed("loading mesh")
-	m := io.MustLoadMesh("../testdata/bunny.obj")
+	m := io.MustLoadMesh("../../testdata/bunny.obj")
 	done()
 
 	done = utils.Timed("loading texture")
-	t := io.MustLoadTexture("../testdata/bunny.png")
+	t := io.MustLoadTexture("../../testdata/bunny.png")
 	done()
 
 	mat := material.NewBlinnPhongMaterial(
@@ -60,10 +60,14 @@ func main() {
 	m.Translate(-700, -5, 350)
 	s.AddMesh(m)
 
-	r := rend.NewRasterizer(width, height, msaa)
+	r := rend.NewRenderer(
+		rend.WithSize(width, height),
+		rend.WithMSAA(msaa),
+		rend.WithScene(s),
+	)
 
 	done = utils.Timed("rendering")
-	buf := r.Render(s)
+	buf := r.Render()
 	done()
 
 	utils.Save(buf, "bunny.png")

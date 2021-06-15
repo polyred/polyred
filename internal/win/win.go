@@ -68,7 +68,7 @@ type Win struct {
 
 	resize chan image.Rectangle
 
-	renderer *rend.Rasterizer
+	renderer *rend.Renderer
 
 	img     *image.RGBA
 	ratio   int // for retina display
@@ -142,7 +142,7 @@ func NewWindow(opts ...Option) (*Win, error) {
 }
 
 // SetRenderer sets fn as the renderer callback
-func (w *Win) SetRenderer(r *rend.Rasterizer) {
+func (w *Win) SetRenderer(r *rend.Renderer) {
 	w.th.Call(func() { w.renderer = r }) // for thread safety
 }
 
@@ -157,8 +157,12 @@ func (w *Win) Run() {
 
 	for !w.Closed() {
 		select {
+		// TODO: fix resize
 		case r := <-w.resize:
-			w.renderer.SetSize(r.Max.X, r.Max.Y, 1)
+			fmt.Println("resize:", r.Max)
+			w.renderer.UpdateOptions(
+				rend.WithSize(r.Max.X, r.Max.Y),
+			)
 		default:
 			mainthread.Call(func() { glfw.WaitEventsTimeout(1.0 / 30) })
 		}
@@ -188,7 +192,7 @@ func (w *Win) flush() {
 	var img *image.RGBA
 	if w.showFPS {
 		t := time.Now()
-		img = w.renderer.RenderScene()
+		img = w.renderer.Render()
 		col := color.RGBA{200, 100, 0, 255}
 		point := fixed.Point26_6{X: fixed.Int26_6(0 * 64), Y: fixed.Int26_6(13 * 64)}
 		d := font.Drawer{
@@ -197,7 +201,7 @@ func (w *Win) flush() {
 		}
 		d.DrawString(fmt.Sprintf("%d", time.Second/time.Since(t)))
 	} else {
-		img = w.renderer.RenderScene()
+		img = w.renderer.Render()
 	}
 
 	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
