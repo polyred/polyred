@@ -27,7 +27,7 @@ func main() {
 		math.NewVector(-3, 1.25, -2, 1),
 		math.NewVector(0, -0.1, -0.1, 1),
 		math.NewVector(0, 1, 0, 0),
-		30, float64(width)/float64(height), -1, -10,
+		30, float64(width)/float64(height), 0.01, 1000,
 	)
 	s.UseCamera(c)
 
@@ -38,7 +38,7 @@ func main() {
 
 	// load a mesh
 	done = utils.Timed("loading mesh")
-	m := io.MustLoadMesh("../testdata/dragon.obj")
+	m := io.MustLoadMesh("../../testdata/dragon.obj")
 	done()
 
 	done = utils.Timed("loading texture")
@@ -53,10 +53,14 @@ func main() {
 	m.Translate(0, -0.1, -0.15)
 	s.AddMesh(m)
 
-	r := rend.NewRasterizer(width, height, msaa)
+	r := rend.NewRenderer(
+		rend.WithSize(width, height),
+		rend.WithMSAA(msaa),
+		rend.WithScene(s),
+	)
 
 	done = utils.Timed("rendering")
-	buf := r.Render(s)
+	buf := r.Render()
 	done()
 
 	utils.Save(buf, "dragon.png")

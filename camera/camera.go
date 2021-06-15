@@ -18,7 +18,7 @@ type PerspectiveCamera struct {
 	up       math.Vector
 	fov      float64
 	aspect   float64
-	near     float64
+	near     float64 // 0 < near < far
 	far      float64
 }
 
@@ -51,13 +51,13 @@ func (c PerspectiveCamera) ViewMatrix() math.Matrix {
 
 func (c PerspectiveCamera) ProjMatrix() math.Matrix {
 	aspect := c.aspect
-	fov := c.fov
+	fov := (c.fov * math.Pi) / 180
 	n := c.near
 	f := c.far
 	return math.NewMatrix(
-		-1/(aspect*math.Tan((fov*math.Pi)/360)), 0, 0, 0,
-		0, -1/math.Tan((fov*math.Pi)/360), 0, 0,
-		0, 0, (n+f)/(n-f), (2*n*f)/(f-n),
+		-1/(aspect*math.Tan(fov/2)), 0, 0, 0,
+		0, -1/math.Tan(fov/2), 0, 0,
+		0, 0, (n+f)/(n-f), (2*n*f)/(n-f),
 		0, 0, 1, 0,
 	)
 }
@@ -99,19 +99,28 @@ func (c OrthographicCamera) ViewMatrix() math.Matrix {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
 	u := lxu.Cross(l).Unit()
-	Tr := math.NewMatrix(
-		lxu.X, lxu.Y, lxu.Z, 0,
-		u.X, u.Y, u.Z, 0,
-		-l.X, -l.Y, -l.Z, 0,
+	x := c.position.X
+	y := c.position.Y
+	z := c.position.Z
+	// Tr := math.NewMatrix(
+	// 	lxu.X, lxu.Y, lxu.Z, 0,
+	// 	u.X, u.Y, u.Z, 0,
+	// 	-l.X, -l.Y, -l.Z, 0,
+	// 	0, 0, 0, 1,
+	// )
+	// Tt := math.NewMatrix(
+	// 	1, 0, 0, -x,
+	// 	0, 1, 0, -y,
+	// 	0, 0, 1, -z,
+	// 	0, 0, 0, 1,
+	// )
+	TrTt := math.NewMatrix(
+		lxu.X, lxu.Y, lxu.Z, -lxu.X*x-lxu.Y*y-lxu.Z*z,
+		u.X, u.Y, u.Z, -u.X*x-u.Y*y-u.Z*z,
+		-l.X, -l.Y, -l.Z, l.X*x+l.Y*y+l.Z*z,
 		0, 0, 0, 1,
 	)
-	Tt := math.NewMatrix(
-		1, 0, 0, -c.position.X,
-		0, 1, 0, -c.position.Y,
-		0, 0, 1, -c.position.Z,
-		0, 0, 0, 1,
-	)
-	return Tr.MulM(Tt)
+	return TrTt // Tr.MulM(Tt)
 }
 
 func (c OrthographicCamera) ProjMatrix() math.Matrix {

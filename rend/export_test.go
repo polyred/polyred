@@ -11,16 +11,16 @@ import (
 )
 
 var (
-	Draw = func(r *Rasterizer, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
+	Draw = func(r *Renderer, uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
 		r.draw(uniforms, tri, mat)
 	}
-	ResetBuf = func(r *Rasterizer) {
+	ResetBuf = func(r *Renderer) {
 		r.resetBufs()
 	}
-	ForwardPass = func(r *Rasterizer) {
+	ForwardPass = func(r *Renderer) {
 		r.forwardPass()
 	}
-	DeferredPass = func(r *Rasterizer) {
+	DeferredPass = func(r *Renderer) {
 		r.deferredPass()
 	}
 )

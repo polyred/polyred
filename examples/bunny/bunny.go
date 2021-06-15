@@ -25,7 +25,7 @@ func main() {
 		math.Vector{0, 1, 1, 0},
 		45,
 		float64(width)/float64(height),
-		-100, -600,
+		100, 600,
 	)
 	s.UseCamera(c)
 

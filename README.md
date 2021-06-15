@@ -1,10 +1,13 @@
 # ddd
 
-Software 3D renderer written in pure Go.
+3D hybrid renderer written in pure Go.
+
 
 ```go
 import "changkun.de/x/ddd"
 ```
+
+_Caution: experiment, expect it to break at any time. Use it at your own risk._
 
 ## Features
 
@@ -54,20 +57,24 @@ mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6
 m.UseMaterial(mat)
 s.AddMesh(m)
 
-// Create the rasterizer and render it.
-r := rend.NewRasterizer(width, height, msaa)
-utils.Save(r.Render(s), "./benchmark.png")
+// Create the renderer and render it.
+r := rend.NewRenderer(
+    rend.WithSize(width, height),
+    rend.WithMSAA(msaa),
+    rend.WithScene(s),
+)
+utils.Save(r.Render(), "./benchmark.png")
 ```
 
-![](./examples/benchmark.png)
+![](./examples/benchmark/benchmark.png)
 
 
 ## More Examples
 
 | Example | Code |
 |:-------:|:-----:|
-|<img src="./examples/bunny.png" width="300px"/>|[bunny](./examples/bunny.go)|
-|<img src="./examples/dragon.png" width="300px"/>|[dragon](./examples/dragon.go)|
+|<img src="./examples/bunny/bunny.png" width="300px"/>|[bunny](./examples/bunny/bunny.go)|
+|<img src="./examples/dragon/dragon.png" width="300px"/>|[dragon](./examples/dragon/dragon.go)|
 
 ## License
 

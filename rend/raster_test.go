@@ -22,39 +22,44 @@ import (
 	"changkun.de/x/ddd/utils"
 )
 
-func newscene() (*rend.Rasterizer, *rend.Scene) {
+func newscene() *rend.Renderer {
 	width, height, msaa := 1920, 1080, 2
 
 	s := rend.NewScene()
 	c := camera.NewPerspectiveCamera(
-		math.NewVector(-0.5, 0.5, 0.5, 1),
+		math.NewVector(0, 1.5, 1, 1),
 		math.NewVector(0, 0, -0.5, 1),
 		math.NewVector(0, 1, 0, 0),
 		45,
 		float64(width)/float64(height),
-		-0.1,
-		-3,
+		0.1,
+		3,
 	)
 	s.UseCamera(c)
 
-	l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
+	l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-2, 2.5, 6, 1))
 	s.AddLight(l)
 
 	m := io.MustLoadMesh("../testdata/bunny.obj")
 	tex := io.MustLoadTexture("../testdata/bunny.png")
-	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
+	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 	m.Scale(2, 2, 2)
 	m.Translate(0, -0, -0.4)
 	s.AddMesh(m)
 
-	r := rend.NewRasterizer(width, height, msaa)
-	return r, s
+	r := rend.NewRenderer(
+		rend.WithSize(width, height),
+		rend.WithMSAA(msaa),
+		rend.WithScene(s),
+		rend.WithBackground(color.RGBA{0, 127, 255, 255}),
+	)
+	return r
 }
 
 func TestRasterizer(t *testing.T) {
-	r, s := newscene()
+	r := newscene()
 
 	f, err := os.Create("cpu.pprof")
 	if err != nil {
@@ -67,8 +72,8 @@ func TestRasterizer(t *testing.T) {
 
 	var buf *image.RGBA
 	pprof.StartCPUProfile(f)
-	for i := 0; i < 1; i++ {
-		buf = r.Render(s)
+	for i := 0; i < 10; i++ {
+		buf = r.Render()
 	}
 	pprof.StopCPUProfile()
 	runtime.GC()
@@ -76,18 +81,22 @@ func TestRasterizer(t *testing.T) {
 	mem.Close()
 	f.Close()
 
-	utils.Save(buf, "../testdata/render.jpg")
+	path := "../testdata/render.jpg"
+	fmt.Printf("render saved at: %s\n", path)
+	utils.Save(buf, path)
 }
 
 func BenchmarkRasterizer(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r, s := newscene()
-		r.SetConcurrencySize(int32(block))
+		r := newscene()
+		r.UpdateOptions(
+			rend.WithConcurrency(int32(block)),
+		)
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.Render(s)
+				r.Render()
 			}
 		})
 	}
@@ -95,9 +104,10 @@ func BenchmarkRasterizer(b *testing.B) {
 
 func BenchmarkForwardPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r, s := newscene()
-		r.SetConcurrencySize(int32(block))
-		r.SetScene(s)
+		r := newscene()
+		r.UpdateOptions(
+			rend.WithConcurrency(int32(block)),
+		)
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -110,9 +120,10 @@ func BenchmarkForwardPass(b *testing.B) {
 
 func BenchmarkDeferredPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r, s := newscene()
-		r.SetConcurrencySize(int32(block))
-		r.SetScene(s)
+		r := newscene()
+		r.UpdateOptions(
+			rend.WithConcurrency(int32(block)),
+		)
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -125,9 +136,10 @@ func BenchmarkDeferredPass(b *testing.B) {
 
 func BenchmarkResetBuf(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r, s := newscene()
-		r.SetConcurrencySize(int32(block))
-		r.SetScene(s)
+		r := newscene()
+		r.UpdateOptions(
+			rend.WithConcurrency(int32(block)),
+		)
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -140,25 +152,28 @@ func BenchmarkResetBuf(b *testing.B) {
 
 func BenchmarkDraw(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r, s := newscene()
-		r.SetConcurrencySize(int32(block))
-		r.SetScene(s)
-		matView := s.Camera.ViewMatrix()
-		matProj := s.Camera.ProjMatrix()
+		r := newscene()
+		r.UpdateOptions(
+			rend.WithConcurrency(int32(block)),
+		)
+		matView := r.GetScene().Camera.ViewMatrix()
+		matProj := r.GetScene().Camera.ProjMatrix()
 		matVP := math.ViewportMatrix(1920, 1080)
 		uniforms := map[string]math.Matrix{
-			"matModel":  s.Meshes[0].ModelMatrix(),
+			"matModel":  r.GetScene().Meshes[0].ModelMatrix(),
 			"matView":   matView,
 			"matProj":   matProj,
 			"matVP":     matVP,
-			"matNormal": s.Meshes[0].NormalMatrix(),
+			"matNormal": r.GetScene().Meshes[0].NormalMatrix(),
 		}
 
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
+			mat := r.GetScene().Meshes[0].Material
 			for i := 0; i < b.N; i++ {
-				rend.Draw(r, uniforms, s.Meshes[0].Faces[i%(len(s.Meshes[0].Faces))], s.Meshes[0].Material)
+				f := r.GetScene().Meshes[0].Faces[i%(len(r.GetScene().Meshes[0].Faces))]
+				rend.Draw(r, uniforms, f, mat)
 			}
 		})
 	}
