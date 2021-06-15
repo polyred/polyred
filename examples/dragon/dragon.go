@@ -5,7 +5,6 @@
 package main
 
 import (
-	"image"
 	"image/color"
 
 	"changkun.de/x/ddd/camera"
@@ -30,7 +29,7 @@ func main() {
 	)
 	s.UseCamera(c)
 
-	l := light.NewPointLight(20, color.RGBA{255, 255, 255, 255}, math.NewVector(-1.5, -1, 1, 1))
+	l := light.NewPointLight(1, color.RGBA{255, 255, 255, 255}, math.NewVector(-1.5, -1, 1, 1))
 	s.AddLight(l)
 
 	var done func()
@@ -41,16 +40,9 @@ func main() {
 	done()
 
 	done = utils.Timed("loading texture")
-	data := image.NewRGBA(image.Rect(0, 0, 1, 1))
-	data.Set(0, 0, color.RGBA{0, 128, 255, 255})
-	tex := material.NewTexture(data, true)
+	mat := material.NewBasicMaterial(color.RGBA{0, 128, 255, 255})
 	done()
 
-	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.5, 0.6, 200),
-		material.WithBlinnPhongShininess(25),
-	)
 	m.UseMaterial(mat)
 	m.Scale(1.5, 1.5, 1.5)
 	m.Translate(0, -0.1, -0.15)

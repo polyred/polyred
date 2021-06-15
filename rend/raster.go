@@ -19,6 +19,9 @@ import (
 	"changkun.de/x/ddd/utils"
 )
 
+// 1 second / 60fps = 16.6666 ms/frame
+// 1 second / 30fps = 33.3333 ms/frame
+
 // Renderer is a hybrid software renderer that implements
 // rasterization and ray tracing.
 type Renderer struct {
@@ -76,7 +79,7 @@ func NewRenderer(opts ...Option) *Renderer {
 }
 
 func (r *Renderer) UpdateOptions(opts ...Option) {
-	r.wait()
+	r.wait() // wait last frame to finish
 
 	for _, opt := range opts {
 		opt(r)
@@ -112,15 +115,19 @@ func (r *Renderer) GetScene() *Scene {
 func (r *Renderer) Render() *image.RGBA {
 	r.resetBufs()
 	var (
+		total      func()
 		done       func()
 		viewCamera camera.Interface
 	)
 	if r.shouldStop() {
 		return r.outBuf
 	}
+	if r.debug {
+		total = utils.Timed("entire rendering")
+	}
 
 	// shadow pass
-	// TODO: compute optimal shadow map size
+	// TODO: compute adaptive shadow map size
 	if r.useShadowMap {
 		r.lightCamera = camera.NewOrthographicCamera(
 			r.scene.Lights[0].Position(),
@@ -131,7 +138,7 @@ func (r *Renderer) Render() *image.RGBA {
 		viewCamera = r.scene.Camera
 		r.scene.Camera = r.lightCamera
 		if r.debug {
-			done = utils.Timed("forward pass (shadow)....")
+			done = utils.Timed("forward pass (shadow)")
 		}
 		r.forwardPass()
 		if r.debug {
@@ -163,7 +170,7 @@ func (r *Renderer) Render() *image.RGBA {
 	}
 
 	if r.debug {
-		done = utils.Timed("forward pass (world)....")
+		done = utils.Timed("forward pass (world)")
 	}
 	r.forwardPass()
 	if r.debug {
@@ -174,7 +181,7 @@ func (r *Renderer) Render() *image.RGBA {
 	}
 
 	if r.debug {
-		done = utils.Timed("deferred pass (shading)...")
+		done = utils.Timed("deferred pass (shading)")
 	}
 	r.deferredPass()
 	if r.debug {
@@ -185,11 +192,12 @@ func (r *Renderer) Render() *image.RGBA {
 	}
 
 	if r.debug {
-		done = utils.Timed("antialiasing....")
+		done = utils.Timed("antialiasing")
 	}
 	r.antialiasing()
 	if r.debug {
 		done()
+		total()
 	}
 	return r.outBuf
 }
@@ -279,11 +287,15 @@ func (r *Renderer) deferredPass() {
 						col := info.col
 						if info.mat != nil {
 							lod := 0.0
-							if info.mat.Texture().UseMipmap {
-								// FIXME: seems need multiple texture size: float64(info.mat.Texture().Size)
-								lod = math.Log2(math.Sqrt(math.Max(info.du, info.dv)))
+							if info.mat.Texture().UseMipmap() {
+								// FIXME: seems need multiple texture size:
+								siz := float64(info.mat.Texture().Size()) * math.Sqrt(math.Max(info.du, info.dv))
+								if siz < 1 {
+									siz = 1
+								}
+								lod = math.Log2(siz)
 							}
-							col = info.mat.Texture().Query(info.u, info.v, lod)
+							col = info.mat.Texture().Query(info.u, 1-info.v, lod)
 							col = info.mat.FragmentShader(col, info.pos, info.n, r.scene.Camera.Position(), r.scene.Lights)
 						}
 
@@ -440,7 +452,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 
 			// Compute du dv
 			var du, dv float64
-			if mat != nil && mat.Texture().UseMipmap {
+			if mat != nil && mat.Texture().UseMipmap() {
 				w1x, w2x, w3x := r.barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
 				w1y, w2y, w3y := r.barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
 				uvdU := (w1x*t1.UV.X + w2x*t2.UV.X + w3x*t3.UV.X) / Z
@@ -465,10 +477,10 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 				W: 1,
 			}
 			col := color.RGBA{
-				R: uint8(w1*float64(t1.Col.R) + w2*float64(t2.Col.R) + w3*float64(t3.Col.R)),
-				G: uint8(w1*float64(t1.Col.G) + w2*float64(t2.Col.G) + w3*float64(t3.Col.G)),
-				B: uint8(w1*float64(t1.Col.B) + w2*float64(t2.Col.B) + w3*float64(t3.Col.B)),
-				A: uint8(w1*float64(t1.Col.A) + w2*float64(t2.Col.A) + w3*float64(t3.Col.A)),
+				R: uint8(math.Clamp(w1*float64(t1.Col.R)+w2*float64(t2.Col.R)+w3*float64(t3.Col.R), 0, 255)),
+				G: uint8(math.Clamp(w1*float64(t1.Col.G)+w2*float64(t2.Col.G)+w3*float64(t3.Col.G), 0, 255)),
+				B: uint8(math.Clamp(w1*float64(t1.Col.B)+w2*float64(t2.Col.B)+w3*float64(t3.Col.B), 0, 255)),
+				A: uint8(math.Clamp(w1*float64(t1.Col.A)+w2*float64(t2.Col.A)+w3*float64(t3.Col.A), 0, 255)),
 			}
 
 			// update G-buffer
@@ -477,7 +489,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			r.gBuf[idx].ok = true
 			r.gBuf[idx].z = z
 			r.gBuf[idx].u = uvX
-			r.gBuf[idx].v = 1 - uvY
+			r.gBuf[idx].v = uvY
 			r.gBuf[idx].du = du
 			r.gBuf[idx].dv = dv
 			r.gBuf[idx].n = n

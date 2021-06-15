@@ -17,6 +17,8 @@ type TriangleMesh struct {
 	Faces    []*primitive.Triangle
 	Material material.Material
 
+	// aabb must be transformed when applying the context.
+	aabb AABB
 	// context is a transformation context (model matrix) that accumulates
 	// applied transformation matrices (multiplied from left side) for the
 	// given mesh.
@@ -29,8 +31,21 @@ type TriangleMesh struct {
 
 // NewTriangleMesh returns a triangular mesh.
 func NewTriangleMesh(ts []*primitive.Triangle) *TriangleMesh {
+	// Compute AABB at loading time.
+	min := math.Vector{X: math.MaxFloat64, Y: math.MaxFloat64, Z: math.MaxFloat64, W: 1}
+	max := math.Vector{X: -math.MaxFloat64, Y: -math.MaxFloat64, Z: -math.MaxFloat64, W: 1}
+	for i := 0; i < len(ts); i++ {
+		min.X = math.Min(min.X, ts[i].V1.Pos.X, ts[i].V2.Pos.X, ts[i].V3.Pos.X)
+		min.Y = math.Min(min.Y, ts[i].V1.Pos.Y, ts[i].V2.Pos.Y, ts[i].V3.Pos.Y)
+		min.Z = math.Min(min.Z, ts[i].V1.Pos.Z, ts[i].V2.Pos.Z, ts[i].V3.Pos.Z)
+		max.X = math.Max(min.X, ts[i].V1.Pos.X, ts[i].V2.Pos.X, ts[i].V3.Pos.X)
+		max.Y = math.Max(min.Y, ts[i].V1.Pos.Y, ts[i].V2.Pos.Y, ts[i].V3.Pos.Y)
+		max.Z = math.Max(min.Z, ts[i].V1.Pos.Z, ts[i].V2.Pos.Z, ts[i].V3.Pos.Z)
+	}
+
 	return &TriangleMesh{
 		Faces:   ts,
+		aabb:    AABB{min, max},
 		context: math.MatI,
 	}
 }
@@ -88,12 +103,40 @@ func (m *TriangleMesh) Rotate(dir math.Vector, angle float64) {
 	m.context = q.ToRoMat().MulM(m.context)
 }
 
-func (m *TriangleMesh) Center() math.Vector {
-	aabb := NewAABB(m.Faces[0].V1.Pos, m.Faces[0].V2.Pos, m.Faces[0].V3.Pos)
+func (m *TriangleMesh) AABB() AABB {
+	min := m.aabb.Min.Apply(m.ModelMatrix())
+	max := m.aabb.Max.Apply(m.ModelMatrix())
+	return AABB{min, max}
+}
 
-	for i := 1; i < len(m.Faces); i++ {
-		aabb.Add(NewAABB(m.Faces[i].V1.Pos, m.Faces[i].V2.Pos, m.Faces[i].V3.Pos))
+func (m *TriangleMesh) Center() math.Vector {
+	aabb := m.AABB()
+	return aabb.Min.Add(aabb.Max).Pos()
+}
+
+func (m *TriangleMesh) Radius() float64 {
+	aabb := m.AABB()
+	return aabb.Max.Sub(aabb.Min).Len() / 2
+}
+
+// Normalize rescales the mesh to the unit sphere centered at the origin.
+func (m *TriangleMesh) Normalize() {
+	aabb := m.AABB()
+	center := aabb.Min.Add(aabb.Max).Pos()
+	radius := aabb.Max.Sub(aabb.Min).Len() / 2
+	fac := 1 / radius
+
+	// scale all vertices
+	for i := 0; i < len(m.Faces); i++ {
+		f := m.Faces[i]
+		f.V1.Pos = f.V1.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+		f.V2.Pos = f.V2.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+		f.V3.Pos = f.V3.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
 	}
 
-	return aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2, 1)
+	// update AABB after scaling
+	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+	m.aabb = AABB{min, max}
+	m.ResetContext()
 }

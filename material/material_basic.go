@@ -4,16 +4,21 @@
 
 package material
 
-import "image/color"
+import (
+	"image"
+	"image/color"
+)
 
-type BasicMaterial struct {
-	color color.RGBA
-}
-
-type BasicMaterialOption func(m *BasicMaterial)
-
-func WithColor(c color.RGBA) BasicMaterialOption {
-	return func(m *BasicMaterial) {
-		m.color = c
-	}
+func NewBasicMaterial(c color.Color) Material {
+	data := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	data.Set(0, 0, c)
+	tex := NewTexture(
+		WithImage(data),
+		WithIsotropicMipMap(true),
+	)
+	return NewBlinnPhong(
+		WithBlinnPhongTexture(tex),
+		WithBlinnPhongFactors(0.5, 0.6, 10),
+		WithBlinnPhongShininess(100),
+	)
 }

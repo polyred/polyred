@@ -88,8 +88,8 @@ func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, c math.Vector,
 
 	I := ls[0].Itensity() / D
 
-	r := uint8(math.Clamp((La+Ld)*float64(col.R)+Ls*float64(ls[0].Color().R)*I, 0, 255))
-	g := uint8(math.Clamp((La+Ld)*float64(col.G)+Ls*float64(ls[0].Color().G)*I, 0, 255))
-	b := uint8(math.Clamp((La+Ld)*float64(col.B)+Ls*float64(ls[0].Color().B)*I, 0, 255))
+	r := uint8(math.Clamp(math.Round((La+Ld)*float64(col.R)+Ls*float64(ls[0].Color().R)*I), 0, 255))
+	g := uint8(math.Clamp(math.Round((La+Ld)*float64(col.G)+Ls*float64(ls[0].Color().G)*I), 0, 255))
+	b := uint8(math.Clamp(math.Round((La+Ld)*float64(col.B)+Ls*float64(ls[0].Color().B)*I), 0, 255))
 	return color.RGBA{r, g, b, col.A}
 }

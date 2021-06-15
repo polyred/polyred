@@ -26,7 +26,10 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 
 	data := image.NewRGBA(image.Rect(0, 0, 1, 1))
 	data.Set(0, 0, color.RGBA{0, 128, 255, 255})
-	tex := material.NewTexture(data, true)
+	tex := material.NewTexture(
+		material.WithImage(data),
+		material.WithIsotropicMipMap(true),
+	)
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
 		material.WithBlinnPhongFactors(0.5, 0.6, 200),

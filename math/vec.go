@@ -37,7 +37,7 @@ func (v Vector) Add(u Vector) Vector {
 
 // Sub subtracts the given two vectors, or point and vector, or two points
 func (v Vector) Sub(u Vector) Vector {
-	return Vector{v.X - u.X, v.Y - u.Y, v.Z - u.Z, v.W + u.W}
+	return Vector{v.X - u.X, v.Y - u.Y, v.Z - u.Z, v.W - u.W}
 }
 
 // Scale scales the given vector using given scalars
@@ -45,14 +45,29 @@ func (v Vector) Scale(x, y, z, w float64) Vector {
 	return Vector{v.X * x, v.Y * y, v.Z * z, v.W * w}
 }
 
+// Translate translates the given position or vector
+func (v Vector) Translate(x, y, z float64) Vector {
+	if v.W == 0 {
+		return v
+	}
+	return Vector{v.X/v.W + x, v.Y/v.W + y, v.Z/v.W + z, 1}
+}
+
 // Dot implements dot product of two vectors
 func (v Vector) Dot(u Vector) float64 {
+	// if !ApproxEq(v.W, 0, DefaultEpsilon) || !ApproxEq(u.W, 0, DefaultEpsilon) {
+	// 	panic("v or u is not a vector")
+	// }
+
 	return v.X*u.X + v.Y*u.Y + v.Z*u.Z + v.W*u.W
 }
 
 // Cross implements cross product for two given vectors
 // and assign the result to this.
 func (v Vector) Cross(u Vector) Vector {
+	// if !ApproxEq(v.W, 0, DefaultEpsilon) || !ApproxEq(u.W, 0, DefaultEpsilon) {
+	// 	panic("v or u is not a vector")
+	// }
 	x := v.Y*u.Z - v.Z*u.Y
 	y := v.Z*u.X - v.X*u.Z
 	z := v.X*u.Y - v.Y*u.X
@@ -61,11 +76,17 @@ func (v Vector) Cross(u Vector) Vector {
 
 // Len computes the length of the given Vector
 func (v Vector) Len() float64 {
+	// if !ApproxEq(v.W, 0, DefaultEpsilon) {
+	// 	panic("v is not a vector")
+	// }
 	return math.Sqrt(v.Dot(v))
 }
 
-// Unit normalizes this vector to a unit vector
+// Unit normalizes this vector to an unit vector
 func (v Vector) Unit() Vector {
+	// if !ApproxEq(v.W, 0, DefaultEpsilon) {
+	// 	panic("v is not a vector")
+	// }
 	n := 1.0 / v.Len()
 	return Vector{v.X * n, v.Y * n, v.Z * n, v.W * n}
 }
@@ -78,4 +99,20 @@ func (v Vector) Apply(m Matrix) Vector {
 	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z + m.X23*v.W
 	w := m.X30*v.X + m.X31*v.Y + m.X32*v.Z + m.X33*v.W
 	return Vector{x, y, z, w}
+}
+
+// Pos converts a homogeneous represented vector to a point
+func (v Vector) Pos() Vector {
+	if v.W == 1 || v.W == 0 {
+		return Vector{v.X, v.Y, v.Z, 1}
+	}
+	return Vector{v.X / v.W, v.Y / v.W, v.Z / v.W, 1}
+}
+
+// Vec converts the a homogeneous represented point to a vector
+func (v Vector) Vec() Vector {
+	if v.W == 0 || v.W == 1 {
+		return Vector{v.X, v.Y, v.Z, 0}
+	}
+	return Vector{v.X / v.W, v.Y / v.W, v.Z / v.W, 0}
 }
