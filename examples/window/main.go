@@ -42,7 +42,11 @@ func loadScene(width, height int) *rend.Scene {
 
 	m := io.MustLoadMesh("../../testdata/bunny.obj")
 	tex := io.MustLoadTexture("../../testdata/bunny.png")
-	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
+	mat := material.NewBlinnPhong(
+		material.WithBlinnPhongTexture(tex),
+		material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		material.WithBlinnPhongShininess(150),
+	)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 	m.Translate(0, -0, -0.4)
@@ -50,7 +54,11 @@ func loadScene(width, height int) *rend.Scene {
 
 	m = io.MustLoadMesh("../../testdata/ground.obj")
 	tex = io.MustLoadTexture("../../testdata/ground.png")
-	mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.6, 1, 0.5, 150)
+	mat = material.NewBlinnPhong(
+		material.WithBlinnPhongTexture(tex),
+		material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		material.WithBlinnPhongShininess(150),
+	)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 	m.Translate(0, -0, -0.4)

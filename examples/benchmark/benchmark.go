@@ -51,7 +51,6 @@ func main() {
 }
 
 func bench(opt *benchOpts) {
-
 	result := testing.Benchmark(func(b *testing.B) {
 		s := rend.NewScene()
 
@@ -71,13 +70,21 @@ func bench(opt *benchOpts) {
 
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
 		tex := io.MustLoadTexture("../../testdata/bunny.png")
-		mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
+		mat := material.NewBlinnPhong(
+			material.WithBlinnPhongTexture(tex),
+			material.WithBlinnPhongFactors(0.5, 0.6, 1),
+			material.WithBlinnPhongShininess(150),
+		)
 		m.UseMaterial(mat)
 		s.AddMesh(m)
 
 		m = io.MustLoadMesh("../../testdata/ground.obj")
 		tex = io.MustLoadTexture("../../testdata/ground.png")
-		mat = material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
+		mat = material.NewBlinnPhong(
+			material.WithBlinnPhongTexture(tex),
+			material.WithBlinnPhongFactors(0.5, 0.6, 1),
+			material.WithBlinnPhongShininess(150),
+		)
 		m.UseMaterial(mat)
 		s.AddMesh(m)
 

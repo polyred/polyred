@@ -47,13 +47,10 @@ func main() {
 	t := io.MustLoadTexture("../../testdata/bunny.png")
 	done()
 
-	mat := material.NewBlinnPhongMaterial(
-		t,
-		color.RGBA{0, 125, 255, 255},
-		0.5,
-		0.6,
-		1,
-		150,
+	mat := material.NewBlinnPhong(
+		material.WithBlinnPhongTexture(t),
+		material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		material.WithBlinnPhongShininess(150),
 	)
 	m.UseMaterial(mat)
 	m.Scale(1500, 1500, 1500)

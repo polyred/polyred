@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"changkun.de/x/ddd/geometry"
+	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/math"
 )
 
@@ -21,7 +22,7 @@ func LoadOBJ(data io.Reader) (*geometry.TriangleMesh, error) {
 	vts := make([]math.Vector, 1, 1024)
 	vns := make([]math.Vector, 1, 1024)
 
-	var tris []*geometry.Triangle
+	var tris []*primitive.Triangle
 
 	s := bufio.NewScanner(data)
 	for s.Scan() {
@@ -54,13 +55,13 @@ func LoadOBJ(data io.Reader) (*geometry.TriangleMesh, error) {
 			}
 			for i := 1; i < len(fvs)-1; i++ {
 				i1, i2, i3 := 0, i, i+1
-				t := geometry.Triangle{}
-				t.V1.Position = vs[fvs[i1]]
-				t.V2.Position = vs[fvs[i2]]
-				t.V3.Position = vs[fvs[i3]]
-				t.V1.Normal = vns[fvns[i1]]
-				t.V2.Normal = vns[fvns[i2]]
-				t.V3.Normal = vns[fvns[i3]]
+				t := primitive.Triangle{}
+				t.V1.Pos = vs[fvs[i1]]
+				t.V2.Pos = vs[fvs[i2]]
+				t.V3.Pos = vs[fvs[i3]]
+				t.V1.Nor = vns[fvns[i1]]
+				t.V2.Nor = vns[fvns[i2]]
+				t.V3.Nor = vns[fvns[i3]]
 				t.V1.UV = vts[fvts[i1]]
 				t.V2.UV = vts[fvts[i2]]
 				t.V3.UV = vts[fvts[i3]]

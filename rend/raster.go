@@ -13,6 +13,7 @@ import (
 
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/geometry"
+	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/utils"
@@ -53,7 +54,7 @@ func NewRenderer(opts ...Option) *Renderer {
 		height:       500,
 		msaa:         1,
 		useShadowMap: false,
-		debug:        true,
+		debug:        false,
 		scene:        nil,
 	}
 	for _, opt := range opts {
@@ -200,6 +201,7 @@ type gInfo struct {
 	u, v   float64
 	du, dv float64
 	n, pos math.Vector
+	col    color.RGBA
 	mat    material.Material
 }
 
@@ -220,7 +222,7 @@ func (r *Renderer) forwardPass() {
 	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
 	for m := range r.scene.Meshes {
 		mesh := r.scene.Meshes[m]
-		uniforms := map[string]math.Matrix{
+		uniforms := map[string]interface{}{
 			"matModel":  mesh.ModelMatrix(),
 			"matView":   matView,
 			"matProj":   matProj,
@@ -274,13 +276,16 @@ func (r *Renderer) deferredPass() {
 							continue
 						}
 
-						lod := 0.0
-						if info.mat.Texture().UseMipmap {
-							// FIXME: seems need multiple texture size: float64(info.mat.Texture().Size)
-							lod = math.Log2(math.Sqrt(math.Max(info.du, info.dv)))
+						col := info.col
+						if info.mat != nil {
+							lod := 0.0
+							if info.mat.Texture().UseMipmap {
+								// FIXME: seems need multiple texture size: float64(info.mat.Texture().Size)
+								lod = math.Log2(math.Sqrt(math.Max(info.du, info.dv)))
+							}
+							col = info.mat.Texture().Query(info.u, info.v, lod)
+							col = info.mat.FragmentShader(col, info.pos, info.n, r.scene.Camera.Position(), r.scene.Lights)
 						}
-						col := info.mat.Texture().Query(info.u, info.v, lod)
-						col = info.mat.Shader(col, info.pos, info.n, r.scene.Camera.Position(), r.scene.Lights)
 
 						if r.useShadowMap {
 							// transform scrren coordinate to light viewport
@@ -353,23 +358,30 @@ func (r *Renderer) setFramebuf(x, y int, c color.RGBA) {
 	r.lockBuf[idx].Unlock()
 }
 
-func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle, mat material.Material) {
-	matModel := uniforms["matModel"]
-	m1 := tri.V1.Position.Apply(matModel)
-	m2 := tri.V1.Position.Apply(matModel)
-	m3 := tri.V1.Position.Apply(matModel)
+func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {
+	matModel := uniforms["matModel"].(math.Matrix)
+	m1 := tri.V1.Pos.Apply(matModel)
+	m2 := tri.V1.Pos.Apply(matModel)
+	m3 := tri.V1.Pos.Apply(matModel)
 
-	t1 := r.vertexShader(tri.V1, uniforms)
-	t2 := r.vertexShader(tri.V2, uniforms)
-	t3 := r.vertexShader(tri.V3, uniforms)
+	var t1, t2, t3 primitive.Vertex
+	if mat != nil {
+		t1 = mat.VertexShader(tri.V1, uniforms)
+		t2 = mat.VertexShader(tri.V2, uniforms)
+		t3 = mat.VertexShader(tri.V3, uniforms)
+	} else {
+		t1 = r.vertShader(tri.V1, uniforms)
+		t2 = r.vertShader(tri.V2, uniforms)
+		t3 = r.vertShader(tri.V3, uniforms)
+	}
 
 	// Backface culling
-	if t2.Position.Sub(t1.Position).Cross(t3.Position.Sub(t1.Position)).Z < 0 {
+	if t2.Pos.Sub(t1.Pos).Cross(t3.Pos.Sub(t1.Pos)).Z < 0 {
 		return
 	}
 
 	// Viewfrustum culling
-	if !r.inViewport(t1.Position, t2.Position, t3.Position) {
+	if !r.inViewport(t1.Pos, t2.Pos, t3.Pos) {
 		return
 	}
 
@@ -378,9 +390,9 @@ func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle,
 	t2Z := 1.0
 	t3Z := 1.0
 	if _, ok := r.scene.Camera.(camera.PerspectiveCamera); ok {
-		t1Z = 1 / t1.Position.Z
-		t2Z = 1 / t2.Position.Z
-		t3Z = 1 / t3.Position.Z
+		t1Z = 1 / t1.Pos.Z
+		t2Z = 1 / t2.Pos.Z
+		t3Z = 1 / t3.Pos.Z
 
 		t1.UV = t1.UV.Scale(t1Z, t1Z, 0, 1)
 		t2.UV = t2.UV.Scale(t2Z, t2Z, 0, 1)
@@ -389,7 +401,7 @@ func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle,
 
 	// Compute AABB make the AABB a little bigger that align with pixels
 	// to contain the entire triangle
-	aabb := geometry.NewAABB(t1.Position, t2.Position, t3.Position)
+	aabb := geometry.NewAABB(t1.Pos, t2.Pos, t3.Pos)
 	xmin := int(math.Round(aabb.Min.X) - 1)
 	xmax := int(math.Round(aabb.Max.X) + 1)
 	ymin := int(math.Round(aabb.Min.Y) - 1)
@@ -401,7 +413,7 @@ func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle,
 				continue
 			}
 
-			w1, w2, w3 := r.barycoord(x, y, t1.Position, t2.Position, t3.Position)
+			w1, w2, w3 := r.barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
 			if w1 < 0 || w2 < 0 || w3 < 0 {
@@ -409,7 +421,7 @@ func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle,
 			}
 
 			// Z-test
-			z := w1*t1.Position.Z + w2*t2.Position.Z + w3*t3.Position.Z
+			z := w1*t1.Pos.Z + w2*t2.Pos.Z + w3*t3.Pos.Z
 			if !r.passDepthTest(x, y, z) {
 				continue
 			}
@@ -428,9 +440,9 @@ func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle,
 
 			// Compute du dv
 			var du, dv float64
-			if mat.Texture().UseMipmap {
-				w1x, w2x, w3x := r.barycoord(x+1, y, t1.Position, t2.Position, t3.Position)
-				w1y, w2y, w3y := r.barycoord(x+1, y, t1.Position, t2.Position, t3.Position)
+			if mat != nil && mat.Texture().UseMipmap {
+				w1x, w2x, w3x := r.barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
+				w1y, w2y, w3y := r.barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
 				uvdU := (w1x*t1.UV.X + w2x*t2.UV.X + w3x*t3.UV.X) / Z
 				uvdX := (w1x*t1.UV.Y + w2x*t2.UV.Y + w3x*t3.UV.Y) / Z
 				uvdV := (w1y*t1.UV.X + w2y*t2.UV.X + w3y*t3.UV.X) / Z
@@ -441,9 +453,9 @@ func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle,
 
 			// normal interpolation
 			n := (math.Vector{
-				X: (w1*t1.Normal.X + w2*t2.Normal.X + w3*t3.Normal.X),
-				Y: (w1*t1.Normal.Y + w2*t2.Normal.Y + w3*t3.Normal.Y),
-				Z: (w1*t1.Normal.Z + w2*t2.Normal.Z + w3*t3.Normal.Z),
+				X: (w1*t1.Nor.X + w2*t2.Nor.X + w3*t3.Nor.X),
+				Y: (w1*t1.Nor.Y + w2*t2.Nor.Y + w3*t3.Nor.Y),
+				Z: (w1*t1.Nor.Z + w2*t2.Nor.Z + w3*t3.Nor.Z),
 				W: 0,
 			}).Unit()
 			pos := math.Vector{
@@ -451,6 +463,12 @@ func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle,
 				Y: (w1*m2.Y + w2*m2.Y + w3*m2.Y),
 				Z: (w1*m3.Z + w2*m3.Z + w3*m3.Z),
 				W: 1,
+			}
+			col := color.RGBA{
+				R: uint8(w1*float64(t1.Col.R) + w2*float64(t2.Col.R) + w3*float64(t3.Col.R)),
+				G: uint8(w1*float64(t1.Col.G) + w2*float64(t2.Col.G) + w3*float64(t3.Col.G)),
+				B: uint8(w1*float64(t1.Col.B) + w2*float64(t2.Col.B) + w3*float64(t3.Col.B)),
+				A: uint8(w1*float64(t1.Col.A) + w2*float64(t2.Col.A) + w3*float64(t3.Col.A)),
 			}
 
 			// update G-buffer
@@ -464,6 +482,7 @@ func (r *Renderer) draw(uniforms map[string]math.Matrix, tri *geometry.Triangle,
 			r.gBuf[idx].dv = dv
 			r.gBuf[idx].n = n
 			r.gBuf[idx].pos = pos
+			r.gBuf[idx].col = col
 			r.gBuf[idx].mat = mat
 			r.lockBuf[idx].Unlock()
 		}
@@ -477,22 +496,6 @@ func (r *Renderer) passDepthTest(x, y int, z float64) bool {
 	defer r.lockBuf[idx].Unlock()
 
 	return !(r.gBuf[idx].ok && z <= r.gBuf[idx].z)
-}
-
-func (r *Renderer) vertexShader(v geometry.Vertex, uniforms map[string]math.Matrix) geometry.Vertex {
-	matModel := uniforms["matModel"]
-	matView := uniforms["matView"]
-	matProj := uniforms["matProj"]
-	matVP := uniforms["matVP"]
-	matNormal := uniforms["matNormal"]
-
-	pos := v.Position.Apply(matModel).Apply(matView).Apply(matProj).Apply(matVP)
-	return geometry.Vertex{
-		Position: pos.Scale(1/pos.W, 1/pos.W, 1/pos.W, 1/pos.W),
-		Color:    v.Color,
-		UV:       v.UV,
-		Normal:   v.Normal.Apply(matNormal),
-	}
 }
 
 func (r *Renderer) inViewport(v1, v2, v3 math.Vector) bool {
@@ -517,4 +520,21 @@ func (r *Renderer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 float
 	Sbcp := bc.Cross(bp).Z
 	w1, w2, w3 = Sbcp/Sabc, Sapc/Sabc, Sabp/Sabc
 	return
+}
+
+// vertShader is a default vertex shader.
+func (r *Renderer) vertShader(v primitive.Vertex, uniforms map[string]interface{}) primitive.Vertex {
+	matModel := uniforms["matModel"].(math.Matrix)
+	matView := uniforms["matView"].(math.Matrix)
+	matProj := uniforms["matProj"].(math.Matrix)
+	matVP := uniforms["matVP"].(math.Matrix)
+	matNormal := uniforms["matNormal"].(math.Matrix)
+
+	pos := v.Pos.Apply(matModel).Apply(matView).Apply(matProj).Apply(matVP)
+	return primitive.Vertex{
+		Pos: pos.Scale(1/pos.W, 1/pos.W, 1/pos.W, 1/pos.W),
+		Col: v.Col,
+		UV:  v.UV,
+		Nor: v.Nor.Apply(matNormal),
+	}
 }

@@ -27,13 +27,17 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	data := image.NewRGBA(image.Rect(0, 0, 1, 1))
 	data.Set(0, 0, color.RGBA{0, 128, 255, 255})
 	tex := material.NewTexture(data, true)
-	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 200, 25)
+	mat := material.NewBlinnPhong(
+		material.WithBlinnPhongTexture(tex),
+		material.WithBlinnPhongFactors(0.5, 0.6, 200),
+		material.WithBlinnPhongShininess(25),
+	)
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	var cc color.RGBA
 	for i := 0; i < b.N; i++ {
-		cc = mat.Shader(col, x, n, c, l)
+		cc = mat.FragmentShader(col, x, n, c, l)
 	}
 	_ = cc
 }

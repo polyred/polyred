@@ -46,7 +46,11 @@ func main() {
 	tex := material.NewTexture(data, true)
 	done()
 
-	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 200, 25)
+	mat := material.NewBlinnPhong(
+		material.WithBlinnPhongTexture(tex),
+		material.WithBlinnPhongFactors(0.5, 0.6, 200),
+		material.WithBlinnPhongShininess(25),
+	)
 	m.UseMaterial(mat)
 	m.Scale(1.5, 1.5, 1.5)
 	m.Translate(0, -0.1, -0.15)
@@ -56,11 +60,14 @@ func main() {
 		rend.WithSize(width, height),
 		rend.WithMSAA(msaa),
 		rend.WithScene(s),
+		rend.WithDebug(true),
 	)
 
 	done = utils.Timed("rendering")
 	buf := r.Render()
 	done()
 
+	done = utils.Timed("save")
 	utils.Save(buf, "dragon.png")
+	done()
 }

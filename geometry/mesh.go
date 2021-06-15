@@ -7,27 +7,14 @@ package geometry
 import (
 	_ "image/jpeg" // for jpg encoding
 
+	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 )
 
-// Vertex is a vertex that contains the necessary information for
-// describing a mesh.
-type Vertex struct {
-	Position math.Vector
-	Color    math.Vector
-	UV       math.Vector
-	Normal   math.Vector
-}
-
-// Triangle is a triangle that contains three vertices.
-type Triangle struct {
-	V1, V2, V3 Vertex
-}
-
 // TriangleMesh implements a triangular mesh.
 type TriangleMesh struct {
-	Faces    []*Triangle
+	Faces    []*primitive.Triangle
 	Material material.Material
 
 	// context is a transformation context (model matrix) that accumulates
@@ -41,7 +28,7 @@ type TriangleMesh struct {
 }
 
 // NewTriangleMesh returns a triangular mesh.
-func NewTriangleMesh(ts []*Triangle) *TriangleMesh {
+func NewTriangleMesh(ts []*primitive.Triangle) *TriangleMesh {
 	return &TriangleMesh{
 		Faces:   ts,
 		context: math.MatI,
@@ -102,10 +89,10 @@ func (m *TriangleMesh) Rotate(dir math.Vector, angle float64) {
 }
 
 func (m *TriangleMesh) Center() math.Vector {
-	aabb := NewAABB(m.Faces[0].V1.Position, m.Faces[0].V2.Position, m.Faces[0].V3.Position)
+	aabb := NewAABB(m.Faces[0].V1.Pos, m.Faces[0].V2.Pos, m.Faces[0].V3.Pos)
 
 	for i := 1; i < len(m.Faces); i++ {
-		aabb.Add(NewAABB(m.Faces[i].V1.Position, m.Faces[i].V2.Position, m.Faces[i].V3.Position))
+		aabb.Add(NewAABB(m.Faces[i].V1.Pos, m.Faces[i].V2.Pos, m.Faces[i].V3.Pos))
 	}
 
 	return aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2, 1)

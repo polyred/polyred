@@ -11,11 +11,8 @@ import (
 
 // Timed returns a function for printing out the time elapced.
 func Timed(name string) func() {
-	if len(name) > 0 {
-		fmt.Printf("%s... ", name)
-	}
 	start := time.Now()
 	return func() {
-		fmt.Println(time.Since(start))
+		fmt.Printf("%s...%v\n", name, time.Since(start))
 	}
 }

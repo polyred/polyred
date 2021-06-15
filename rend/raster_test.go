@@ -42,11 +42,15 @@ func newscene() *rend.Renderer {
 
 	m := io.MustLoadMesh("../testdata/bunny.obj")
 	tex := io.MustLoadTexture("../testdata/bunny.png")
-	mat := material.NewBlinnPhongMaterial(tex, color.RGBA{0, 125, 255, 255}, 0.5, 0.6, 1, 150)
+	mat := material.NewBlinnPhong(
+		material.WithBlinnPhongTexture(tex),
+		material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		material.WithBlinnPhongShininess(150),
+	)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
-	m.Scale(2, 2, 2)
-	m.Translate(0, -0, -0.4)
+	m.Scale(4, 4, 4)
+	m.Translate(0.1, 0, -0.2)
 	s.AddMesh(m)
 
 	r := rend.NewRenderer(
@@ -159,7 +163,7 @@ func BenchmarkDraw(b *testing.B) {
 		matView := r.GetScene().Camera.ViewMatrix()
 		matProj := r.GetScene().Camera.ProjMatrix()
 		matVP := math.ViewportMatrix(1920, 1080)
-		uniforms := map[string]math.Matrix{
+		uniforms := map[string]interface{}{
 			"matModel":  r.GetScene().Meshes[0].ModelMatrix(),
 			"matView":   matView,
 			"matProj":   matProj,
