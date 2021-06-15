@@ -1,6 +1,6 @@
-// Copyright 2021 Changkun Ou. All rights reserved.
-// Use of this source code is governed by a license
-// that can be found in the LICENSE file.
+// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
 
 package main
 
@@ -32,8 +32,8 @@ func loadScene(width, height int) *rend.Scene {
 		math.NewVector(0, 1, 0, 0),
 		45,
 		float64(width)/float64(height),
-		-0.1,
-		-3,
+		0.1,
+		3,
 	)
 	s.UseCamera(c)
 
@@ -82,12 +82,14 @@ func fn() {
 	if err != nil {
 		log.Fatalf("failed to create a window: %v", err)
 	}
-
-	r := rend.NewRasterizer(width, height, msaa)
-	w.SetRenderer(r)
-
 	s := loadScene(width, height)
-	r.SetScene(s)
+
+	r := rend.NewRenderer(
+		rend.WithSize(width, height),
+		rend.WithMSAA(msaa),
+		rend.WithScene(s),
+	)
+	w.SetRenderer(r)
 
 	// cpu pprof
 	f, err := os.Create("cpu.pprof")

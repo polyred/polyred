@@ -1,7 +1,6 @@
 # ddd
 
-3D hybrid renderer written in pure Go.
-
+A software hybrid renderer written in pure Go.
 
 ```go
 import "changkun.de/x/ddd"
@@ -61,6 +60,7 @@ s.AddMesh(m)
 r := rend.NewRenderer(
     rend.WithSize(width, height),
     rend.WithMSAA(msaa),
+    rend.WithShadowMap(true),
     rend.WithScene(s),
 )
 utils.Save(r.Render(), "./benchmark.png")

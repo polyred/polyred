@@ -1,6 +1,6 @@
-// Copyright 2021 Changkun Ou. All rights reserved.
-// Use of this source code is governed by a license
-// that can be found in the LICENSE file.
+// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
 
 package rend
 
@@ -276,7 +276,8 @@ func (r *Renderer) deferredPass() {
 
 						lod := 0.0
 						if info.mat.Texture().UseMipmap {
-							lod = math.Log2(float64(info.mat.Texture().Size) * math.Sqrt(math.Max(info.du, info.dv)))
+							// FIXME: seems need multiple texture size: float64(info.mat.Texture().Size)
+							lod = math.Log2(math.Sqrt(math.Max(info.du, info.dv)))
 						}
 						col := info.mat.Texture().Query(info.u, info.v, lod)
 						col = info.mat.Shader(col, info.pos, info.n, r.scene.Camera.Position(), r.scene.Lights)

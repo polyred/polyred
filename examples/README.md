@@ -1,10 +1,11 @@
 # Examples & Benchmarks
 
+To run the benchmark:
+
 ```
 go build benchmark.go
 for i in {1..10}; do perflock -governor 80% ./benchmark; done
 ```
-
 
 ## License
 
