@@ -49,5 +49,8 @@ func MustLoadTexture(path string) *material.Texture {
 		draw.Draw(data, data.Bounds(), img, img.Bounds().Min, draw.Src)
 	}
 
-	return material.NewTexture(data, true)
+	return material.NewTexture(
+		material.WithImage(data),
+		material.WithIsotropicMipMap(true),
+	)
 }

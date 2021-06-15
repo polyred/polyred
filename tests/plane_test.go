@@ -35,7 +35,7 @@ func TestPlane(t *testing.T) {
 	)
 	s.AddLight(l)
 
-	m := geometry.NewPlane()
+	m := geometry.NewPlane(1, 1)
 	s.AddMesh(m)
 
 	r := rend.NewRenderer(

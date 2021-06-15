@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"changkun.de/x/ddd/color"
 	"changkun.de/x/ddd/geometry"
 	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/math"
@@ -65,6 +66,9 @@ func LoadOBJ(data io.Reader) (*geometry.TriangleMesh, error) {
 				t.V1.UV = vts[fvts[i1]]
 				t.V2.UV = vts[fvts[i2]]
 				t.V3.UV = vts[fvts[i3]]
+				t.V1.Col = color.FromHex("#ffffff")
+				t.V2.Col = color.FromHex("#ffffff")
+				t.V3.Col = color.FromHex("#ffffff")
 				tris = append(tris, &t)
 			}
 		}

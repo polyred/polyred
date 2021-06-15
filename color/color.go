@@ -35,3 +35,10 @@ func FromHex(x string) color.RGBA {
 	}
 	return color.RGBA{r, g, b, 0xff}
 }
+
+func Equal(c1, c2 color.RGBA) bool {
+	if c1.R == c2.R && c1.G == c2.G && c1.B == c2.B && c1.A == c2.A {
+		return true
+	}
+	return false
+}

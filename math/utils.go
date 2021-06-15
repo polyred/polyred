@@ -18,6 +18,7 @@ var (
 	Log2       = math.Log2
 	Pow        = math.Pow
 	Sqrt       = math.Sqrt
+	IsNaN      = math.IsNaN
 )
 
 // DefaultEpsilon is a default epsilon value for computation.

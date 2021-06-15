@@ -105,6 +105,6 @@ func bench(opt *benchOpts) {
 		utils.Save(buf, "./benchmark.png")
 	})
 
-	ns := result.NsPerOp()
-	fmt.Printf("BenchmarkRasterizer-%v\t%v\t%v ns/op\t%v fps\n", opt, result.N, ns, 1/(time.Duration(ns)).Seconds())
+	ns := time.Duration(result.NsPerOp())
+	fmt.Printf("BenchmarkRasterizer-%v\t%v\t%+v/op\t%v fps\n", opt, result.N, ns, 1/(time.Duration(ns)).Seconds())
 }
