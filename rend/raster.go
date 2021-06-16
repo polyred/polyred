@@ -133,11 +133,36 @@ func (r *Renderer) Render() *image.RGBA {
 	// shadow pass
 	// TODO: compute adaptive shadow map size
 	if r.useShadowMap {
+		lightTransMat := r.scene.Camera.ViewMatrix().Inv().MulM(r.scene.Camera.ProjMatrix().Inv())
+		lightTransMat = camera.ViewMatrix(
+			r.scene.Lights[0].Position(),
+			r.scene.Meshes[1].Center(),
+			math.NewVector(0, 1, 0, 0),
+		).MulM(lightTransMat)
+		v1 := math.NewVector(1, 1, 1, 1).Apply(lightTransMat)
+		v1 = v1.Scale(1/v1.W, 1/v1.W, 1/v1.W, 1/v1.W)
+		v2 := math.NewVector(1, 1, -1, 1).Apply(lightTransMat)
+		v2 = v2.Scale(1/v2.W, 1/v2.W, 1/v2.W, 1/v2.W)
+		v3 := math.NewVector(1, -1, 1, 1).Apply(lightTransMat)
+		v3 = v3.Scale(1/v3.W, 1/v3.W, 1/v3.W, 1/v3.W)
+		v4 := math.NewVector(-1, 1, 1, 1).Apply(lightTransMat)
+		v4 = v4.Scale(1/v4.W, 1/v4.W, 1/v4.W, 1/v4.W)
+		v5 := math.NewVector(-1, -1, 1, 1).Apply(lightTransMat)
+		v5 = v5.Scale(1/v5.W, 1/v5.W, 1/v5.W, 1/v5.W)
+		v6 := math.NewVector(1, -1, -1, 1).Apply(lightTransMat)
+		v6 = v6.Scale(1/v6.W, 1/v6.W, 1/v6.W, 1/v6.W)
+		v7 := math.NewVector(-1, 1, -1, 1).Apply(lightTransMat)
+		v7 = v7.Scale(1/v7.W, 1/v7.W, 1/v7.W, 1/v7.W)
+		v8 := math.NewVector(-1, -1, -1, 1).Apply(lightTransMat)
+		v8 = v8.Scale(1/v8.W, 1/v8.W, 1/v8.W, 1/v8.W)
+		aabb := primitive.NewAABB(v1, v2, v3, v4, v5, v6, v7, v8)
+		fmt.Println(aabb, v1, v2)
+
 		r.lightCamera = camera.NewOrthographicCamera(
 			r.scene.Lights[0].Position(),
 			r.scene.Meshes[1].Center(),
 			math.NewVector(0, 1, 0, 0),
-			-0.5, 0.5, -0.5, 0.5, 0, -10,
+			aabb.Min.X, aabb.Max.X, aabb.Min.Y, aabb.Max.Y, aabb.Max.Z, aabb.Min.Z,
 		)
 		viewCamera = r.scene.Camera
 		r.scene.Camera = r.lightCamera

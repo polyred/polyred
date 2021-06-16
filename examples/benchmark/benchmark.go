@@ -31,18 +31,18 @@ func (opt *benchOpts) String() string {
 
 func main() {
 	opts := []*benchOpts{
-		{960, 540, 1, false},
-		{960, 540, 1, true},
-		{960, 540, 4, false},
+		// {960, 540, 1, false},
+		// {960, 540, 1, true},
+		// {960, 540, 4, false},
 		{960, 540, 4, true},
-		{1920, 1080, 1, false},
-		{1920, 1080, 1, true},
-		{1920, 1080, 4, false},
-		{1920, 1080, 4, true},
-		{1920 * 2, 1080 * 2, 1, false},
-		{1920 * 2, 1080 * 2, 1, true},
-		{1920 * 2, 1080 * 2, 4, false},
-		{1920 * 2, 1080 * 2, 4, true},
+		// {1920, 1080, 1, false},
+		// {1920, 1080, 1, true},
+		// {1920, 1080, 4, false},
+		// {1920, 1080, 4, true},
+		// {1920 * 2, 1080 * 2, 1, false},
+		// {1920 * 2, 1080 * 2, 1, true},
+		// {1920 * 2, 1080 * 2, 4, false},
+		// {1920 * 2, 1080 * 2, 4, true},
 	}
 
 	for _, opt := range opts {
@@ -61,7 +61,7 @@ func bench(opt *benchOpts) {
 			45,
 			float64(opt.width)/float64(opt.height),
 			0.1,
-			3,
+			2,
 		)
 		s.UseCamera(c)
 
@@ -87,7 +87,7 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongShininess(150),
 		)
 		m.UseMaterial(mat)
-		m.Scale(50, 50, 50)
+		m.Scale(2, 2, 2)
 		s.AddMesh(m)
 
 		r := rend.NewRenderer(

@@ -12,6 +12,35 @@ type Interface interface {
 	ProjMatrix() math.Matrix
 }
 
+// ViewMatrix is a handy function for computing view matrix.
+func ViewMatrix(pos, lookAt, up math.Vector) math.Matrix {
+	l := lookAt.Sub(pos).Unit()
+	lxu := l.Cross(up).Unit()
+	u := lxu.Cross(l).Unit()
+	x := pos.X
+	y := pos.Y
+	z := pos.Z
+	// Tr := math.NewMatrix(
+	// 	lxu.X, lxu.Y, lxu.Z, 0,
+	// 	u.X, u.Y, u.Z, 0,
+	// 	-l.X, -l.Y, -l.Z, 0,
+	// 	0, 0, 0, 1,
+	// )
+	// Tt := math.NewMatrix(
+	// 	1, 0, 0, -x,
+	// 	0, 1, 0, -y,
+	// 	0, 0, 1, -z,
+	// 	0, 0, 0, 1,
+	// )
+	TrTt := math.NewMatrix(
+		lxu.X, lxu.Y, lxu.Z, -lxu.X*x-lxu.Y*y-lxu.Z*z,
+		u.X, u.Y, u.Z, -u.X*x-u.Y*y-u.Z*z,
+		-l.X, -l.Y, -l.Z, l.X*x+l.Y*y+l.Z*z,
+		0, 0, 0, 1,
+	)
+	return TrTt // Tr.MulM(Tt)
+}
+
 type PerspectiveCamera struct {
 	position math.Vector
 	lookAt   math.Vector
@@ -34,19 +63,28 @@ func (c PerspectiveCamera) ViewMatrix() math.Matrix {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
 	u := lxu.Cross(l).Unit()
-	Tr := math.NewMatrix(
-		lxu.X, lxu.Y, lxu.Z, 0,
-		u.X, u.Y, u.Z, 0,
-		-l.X, -l.Y, -l.Z, 0,
+	x := c.position.X
+	y := c.position.Y
+	z := c.position.Z
+	// Tr := math.NewMatrix(
+	// 	lxu.X, lxu.Y, lxu.Z, 0,
+	// 	u.X, u.Y, u.Z, 0,
+	// 	-l.X, -l.Y, -l.Z, 0,
+	// 	0, 0, 0, 1,
+	// )
+	// Tt := math.NewMatrix(
+	// 	1, 0, 0, -x,
+	// 	0, 1, 0, -y,
+	// 	0, 0, 1, -z,
+	// 	0, 0, 0, 1,
+	// )
+	TrTt := math.NewMatrix(
+		lxu.X, lxu.Y, lxu.Z, -lxu.X*x-lxu.Y*y-lxu.Z*z,
+		u.X, u.Y, u.Z, -u.X*x-u.Y*y-u.Z*z,
+		-l.X, -l.Y, -l.Z, l.X*x+l.Y*y+l.Z*z,
 		0, 0, 0, 1,
 	)
-	Tt := math.NewMatrix(
-		1, 0, 0, -c.position.X,
-		0, 1, 0, -c.position.Y,
-		0, 0, 1, -c.position.Z,
-		0, 0, 0, 1,
-	)
-	return Tr.MulM(Tt)
+	return TrTt // Tr.MulM(Tt)
 }
 
 func (c PerspectiveCamera) ProjMatrix() math.Matrix {
