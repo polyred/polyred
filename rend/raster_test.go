@@ -26,7 +26,7 @@ func newscene() *rend.Renderer {
 	width, height, msaa := 1920, 1080, 2
 
 	s := rend.NewScene()
-	c := camera.NewPerspectiveCamera(
+	c := camera.NewPerspective(
 		math.NewVector(0, 1.5, 1, 1),
 		math.NewVector(0, 0, -0.5, 1),
 		math.NewVector(0, 1, 0, 0),

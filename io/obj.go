@@ -60,9 +60,21 @@ func LoadOBJ(data io.Reader) (*geometry.TriangleMesh, error) {
 				t.V1.Pos = vs[fvs[i1]]
 				t.V2.Pos = vs[fvs[i2]]
 				t.V3.Pos = vs[fvs[i3]]
+				v2v1 := t.V1.Pos.Sub(t.V2.Pos)
+				v2v3 := t.V3.Pos.Sub(t.V2.Pos)
+				t.FaceNormal = v2v3.Cross(v2v1).Unit()
 				t.V1.Nor = vns[fvns[i1]]
 				t.V2.Nor = vns[fvns[i2]]
 				t.V3.Nor = vns[fvns[i3]]
+				if t.V1.Nor.IsZero() {
+					t.V1.Nor = t.FaceNormal
+				}
+				if t.V2.Nor.IsZero() {
+					t.V1.Nor = t.FaceNormal
+				}
+				if t.V3.Nor.IsZero() {
+					t.V1.Nor = t.FaceNormal
+				}
 				t.V1.UV = vts[fvts[i1]]
 				t.V2.UV = vts[fvts[i2]]
 				t.V3.UV = vts[fvts[i3]]

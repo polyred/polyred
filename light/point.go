@@ -7,6 +7,7 @@ package light
 import (
 	"image/color"
 
+	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/math"
 )
 
@@ -21,6 +22,18 @@ type PointLight struct {
 	itensity float64
 	color    color.RGBA
 	position math.Vector
+
+	enableShadowMap bool
+	shadowMap       []float64
+	shadowCamera    camera.Perspective
+}
+
+type PointLightOption func(l *PointLight)
+
+func WithShadowMap(enable bool) PointLightOption {
+	return func(l *PointLight) {
+		l.enableShadowMap = enable
+	}
 }
 
 // NewPointLight returns a new point light

@@ -29,6 +29,7 @@ func (v *Vertex) AABB() AABB {
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
 	V1, V2, V3 Vertex
+	FaceNormal math.Vector
 }
 
 func (t *Triangle) AABB() AABB {

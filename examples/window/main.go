@@ -5,12 +5,14 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"log"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"runtime/trace"
+	"time"
 
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/internal/win"
@@ -26,7 +28,7 @@ import (
 func loadScene(width, height int) *rend.Scene {
 	s := rend.NewScene()
 
-	c := camera.NewPerspectiveCamera(
+	c := camera.NewPerspective(
 		math.NewVector(-0.5, 0.5, 0.5, 1),
 		math.NewVector(0, 0, -0.5, 1),
 		math.NewVector(0, 1, 0, 0),
@@ -100,7 +102,7 @@ func fn() {
 	w.SetRenderer(r)
 
 	// cpu pprof
-	f, err := os.Create("cpu.pprof")
+	f, err := os.Create(fmt.Sprintf("cpu-%v.pprof", time.Now().Format(time.RFC3339)))
 	if err != nil {
 		panic(err)
 	}
@@ -110,7 +112,7 @@ func fn() {
 
 	// mem pprof
 	defer func() {
-		mem, err := os.Create("mem.pprof")
+		mem, err := os.Create(fmt.Sprintf("mem-%v.pprof", time.Now().Format(time.RFC3339)))
 		if err != nil {
 			panic(err)
 		}
@@ -120,12 +122,16 @@ func fn() {
 	}()
 
 	// trace
-	t, err := os.Create("trace.out")
+	t, err := os.Create(fmt.Sprintf("trace-%v.trace", time.Now().Format(time.RFC3339)))
 	if err != nil {
 		panic(err)
 	}
 	defer t.Close()
 	trace.Start(t)
 	defer trace.Stop()
-	w.Run()
+
+	go func() {
+		w.Run()
+	}()
+	time.Sleep(time.Second * 5)
 }

@@ -34,11 +34,11 @@ func main() {
 		// {960, 540, 1, false},
 		// {960, 540, 1, true},
 		// {960, 540, 4, false},
-		{960, 540, 4, true},
+		// {960, 540, 4, true},
 		// {1920, 1080, 1, false},
 		// {1920, 1080, 1, true},
 		// {1920, 1080, 4, false},
-		// {1920, 1080, 4, true},
+		{1920, 1080, 4, true},
 		// {1920 * 2, 1080 * 2, 1, false},
 		// {1920 * 2, 1080 * 2, 1, true},
 		// {1920 * 2, 1080 * 2, 4, false},
@@ -54,7 +54,7 @@ func bench(opt *benchOpts) {
 	result := testing.Benchmark(func(b *testing.B) {
 		s := rend.NewScene()
 
-		c := camera.NewPerspectiveCamera(
+		c := camera.NewPerspective(
 			math.NewVector(0, 0.6, 0.9, 1),
 			math.NewVector(0, 0, 0, 1),
 			math.NewVector(0, 1, 0, 0),

@@ -40,6 +40,17 @@ func (v Vector) Sub(u Vector) Vector {
 	return Vector{v.X - u.X, v.Y - u.Y, v.Z - u.Z, v.W - u.W}
 }
 
+// IsZero asserts the x, y, z components of the given vector, and returns
+// true if it is a zero vector or point.
+func (v Vector) IsZero() bool {
+	if ApproxEq(v.X, v.X, DefaultEpsilon) &&
+		ApproxEq(v.Y, v.Y, DefaultEpsilon) &&
+		ApproxEq(v.Z, v.Z, DefaultEpsilon) {
+		return true
+	}
+	return false
+}
+
 // Scale scales the given vector using given scalars
 func (v Vector) Scale(x, y, z, w float64) Vector {
 	return Vector{v.X * x, v.Y * y, v.Z * z, v.W * w}

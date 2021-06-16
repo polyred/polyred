@@ -19,7 +19,7 @@ import (
 func main() {
 	width, height, msaa := 960, 540, 2
 	s := rend.NewScene()
-	c := camera.NewPerspectiveCamera(
+	c := camera.NewPerspective(
 		math.Vector{-550, 194, 734, 1},
 		math.Vector{-1000, 0, 0, 1},
 		math.Vector{0, 1, 1, 0},

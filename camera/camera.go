@@ -41,7 +41,7 @@ func ViewMatrix(pos, lookAt, up math.Vector) math.Matrix {
 	return TrTt // Tr.MulM(Tt)
 }
 
-type PerspectiveCamera struct {
+type Perspective struct {
 	position math.Vector
 	lookAt   math.Vector
 	up       math.Vector
@@ -51,15 +51,15 @@ type PerspectiveCamera struct {
 	far      float64
 }
 
-func NewPerspectiveCamera(pos, lookAt, up math.Vector, fov, aspect, near, far float64) PerspectiveCamera {
-	return PerspectiveCamera{pos, lookAt, up, fov, aspect, near, far}
+func NewPerspective(pos, lookAt, up math.Vector, fov, aspect, near, far float64) Perspective {
+	return Perspective{pos, lookAt, up, fov, aspect, near, far}
 }
 
-func (c PerspectiveCamera) Position() math.Vector {
+func (c Perspective) Position() math.Vector {
 	return c.position
 }
 
-func (c PerspectiveCamera) ViewMatrix() math.Matrix {
+func (c Perspective) ViewMatrix() math.Matrix {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
 	u := lxu.Cross(l).Unit()
@@ -87,7 +87,7 @@ func (c PerspectiveCamera) ViewMatrix() math.Matrix {
 	return TrTt // Tr.MulM(Tt)
 }
 
-func (c PerspectiveCamera) ProjMatrix() math.Matrix {
+func (c Perspective) ProjMatrix() math.Matrix {
 	aspect := c.aspect
 	fov := (c.fov * math.Pi) / 180
 	n := c.near
@@ -100,7 +100,7 @@ func (c PerspectiveCamera) ProjMatrix() math.Matrix {
 	)
 }
 
-type OrthographicCamera struct {
+type Orthographic struct {
 	position math.Vector
 	lookAt   math.Vector
 	up       math.Vector
@@ -112,11 +112,11 @@ type OrthographicCamera struct {
 	far      float64
 }
 
-func NewOrthographicCamera(
+func NewOrthographic(
 	pos, lookAt, up math.Vector,
 	left, right, bottom, top, near, far float64,
-) OrthographicCamera {
-	return OrthographicCamera{
+) Orthographic {
+	return Orthographic{
 		position: pos,
 		lookAt:   lookAt,
 		up:       up,
@@ -129,11 +129,11 @@ func NewOrthographicCamera(
 	}
 }
 
-func (c OrthographicCamera) Position() math.Vector {
+func (c Orthographic) Position() math.Vector {
 	return c.position
 }
 
-func (c OrthographicCamera) ViewMatrix() math.Matrix {
+func (c Orthographic) ViewMatrix() math.Matrix {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
 	u := lxu.Cross(l).Unit()
@@ -161,7 +161,7 @@ func (c OrthographicCamera) ViewMatrix() math.Matrix {
 	return TrTt // Tr.MulM(Tt)
 }
 
-func (c OrthographicCamera) ProjMatrix() math.Matrix {
+func (c Orthographic) ProjMatrix() math.Matrix {
 	l := c.left
 	r := c.right
 	t := c.top

@@ -18,7 +18,7 @@ import (
 
 func TestPlane(t *testing.T) {
 	s := rend.NewScene()
-	c := camera.NewPerspectiveCamera(
+	c := camera.NewPerspective(
 		math.NewVector(2, 2, 2, 1),
 		math.NewVector(0, 0, 0, 1),
 		math.NewVector(0, 1, 0, 0),

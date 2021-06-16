@@ -45,7 +45,7 @@ type Renderer struct {
 	gBuf           []gInfo
 	frameBuf       *image.RGBA
 	shadowTexture  []float64
-	lightCamera    camera.OrthographicCamera
+	lightCamera    camera.Orthographic
 	outBuf         *image.RGBA
 }
 
@@ -54,13 +54,14 @@ type Renderer struct {
 // The renderer implements a rasterization rendering pipeline.
 func NewRenderer(opts ...Option) *Renderer {
 	r := &Renderer{ // default settings
-		width:        800,
-		height:       500,
-		msaa:         1,
-		useShadowMap: false,
-		debug:        false,
-		scene:        nil,
-		gomaxprocs:   runtime.GOMAXPROCS(0),
+		width:          800,
+		height:         500,
+		msaa:           1,
+		useShadowMap:   false,
+		debug:          false,
+		scene:          nil,
+		gomaxprocs:     runtime.GOMAXPROCS(0),
+		concurrentSize: 64,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -71,7 +72,6 @@ func NewRenderer(opts ...Option) *Renderer {
 	r.height *= r.msaa
 
 	// initialize rendering caches
-	r.concurrentSize = 64
 	r.lockBuf = make([]sync.Mutex, r.width*r.height)
 	r.gBuf = make([]gInfo, r.width*r.height)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, r.width, r.height))
@@ -156,9 +156,8 @@ func (r *Renderer) Render() *image.RGBA {
 		v8 := math.NewVector(-1, -1, -1, 1).Apply(lightTransMat)
 		v8 = v8.Scale(1/v8.W, 1/v8.W, 1/v8.W, 1/v8.W)
 		aabb := primitive.NewAABB(v1, v2, v3, v4, v5, v6, v7, v8)
-		fmt.Println(aabb, v1, v2)
 
-		r.lightCamera = camera.NewOrthographicCamera(
+		r.lightCamera = camera.NewOrthographic(
 			r.scene.Lights[0].Position(),
 			r.scene.Meshes[1].Center(),
 			math.NewVector(0, 1, 0, 0),
@@ -190,7 +189,9 @@ func (r *Renderer) Render() *image.RGBA {
 				})
 			}
 		}
-		utils.Save(img, "shadow.png")
+		if r.debug {
+			utils.Save(img, "shadow.png")
+		}
 		r.scene.Camera = viewCamera
 		r.resetBufs()
 	}
@@ -307,7 +308,7 @@ func (r *Renderer) deferredPass() {
 						if idx >= len(r.gBuf) {
 							continue
 						}
-						info := r.gBuf[idx]
+						info := &r.gBuf[idx]
 						if !info.ok {
 							r.setFramebuf(x, y, r.background)
 							continue
@@ -317,7 +318,6 @@ func (r *Renderer) deferredPass() {
 						if info.mat != nil {
 							lod := 0.0
 							if info.mat.Texture().UseMipmap() {
-								// FIXME: seems need multiple texture size:
 								siz := float64(info.mat.Texture().Size()) * math.Sqrt(math.Max(info.du, info.dv))
 								if siz < 1 {
 									siz = 1
@@ -430,7 +430,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 	t1Z := 1.0
 	t2Z := 1.0
 	t3Z := 1.0
-	if _, ok := r.scene.Camera.(camera.PerspectiveCamera); ok {
+	if _, ok := r.scene.Camera.(camera.Perspective); ok {
 		t1Z = 1 / t1.Pos.Z
 		t2Z = 1 / t2.Pos.Z
 		t3Z = 1 / t3.Pos.Z
@@ -457,7 +457,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			w1, w2, w3 := r.barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
-			if w1 <= 0 || w2 <= 0 || w3 <= 0 {
+			if w1 < 0 || w2 < 0 || w3 < 0 {
 				continue
 			}
 
@@ -471,7 +471,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			// Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 			// Department of Computer Science, University of North Carolina at Chapel Hill (2002).
 			Z := 1.0
-			if _, ok := r.scene.Camera.(camera.PerspectiveCamera); ok {
+			if _, ok := r.scene.Camera.(camera.Perspective); ok {
 				Z = w1*t1Z + w2*t2Z + w3*t3Z
 			}
 
@@ -551,10 +551,10 @@ func (r *Renderer) inViewport(v1, v2, v3 math.Vector) bool {
 
 func (r *Renderer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 float64) {
 	if t1.X == t2.X && t2.X == t3.X { // not a triangle
-		return
+		return -1, -1, -1
 	}
 	if t1.Y == t2.Y && t2.Y == t3.Y { // not a triangle
-		return
+		return -1, -1, -1
 	}
 
 	ap := math.Vector{X: float64(x) - t1.X, Y: float64(y) - t1.Y, Z: 0, W: 0}

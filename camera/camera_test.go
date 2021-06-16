@@ -13,7 +13,7 @@ import (
 
 func BenchmarkCamera(b *testing.B) {
 	w, h := 1920, 1080
-	c1 := camera.NewPerspectiveCamera(
+	c1 := camera.NewPerspective(
 		math.NewVector(-0.5, 0.5, 0.5, 1),
 		math.NewVector(0, 0, -0.5, 1),
 		math.NewVector(0, 1, 0, 0),
@@ -40,7 +40,7 @@ func BenchmarkCamera(b *testing.B) {
 		_ = m
 	})
 
-	c2 := camera.NewOrthographicCamera(
+	c2 := camera.NewOrthographic(
 		math.NewVector(-0.5, 0.5, 0.5, 1),
 		math.NewVector(0, 0, -0.5, 1),
 		math.NewVector(0, 1, 0, 0),

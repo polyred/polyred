@@ -96,47 +96,47 @@ var (
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 2, color.RGBA{R: 67, G: 107, B: 11, A: 255},
+			0.5, 0.5, 2, color.RGBA{R: 79, G: 119, B: 11, A: 255},
 		},
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 3.5, color.RGBA{R: 76, G: 109, B: 19, A: 255},
+			0.5, 0.5, 3.5, color.RGBA{R: 72, G: 109, B: 13, A: 255},
 		},
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 4.5, color.RGBA{R: 92, G: 134, B: 22, A: 255},
+			0.5, 0.5, 4.5, color.RGBA{R: 75, G: 112, B: 13, A: 255},
 		},
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 5.5, color.RGBA{R: 77, G: 117, B: 17, A: 255},
+			0.5, 0.5, 5.5, color.RGBA{R: 77, G: 114, B: 14, A: 255},
 		},
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 6, color.RGBA{R: 67, G: 107, B: 11, A: 255},
+			0.5, 0.5, 6, color.RGBA{R: 78, G: 115, B: 15, A: 255},
 		},
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 7, color.RGBA{R: 67, G: 107, B: 11, A: 255},
+			0.5, 0.5, 7, color.RGBA{R: 77, G: 113, B: 15, A: 255},
 		},
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 8.5, color.RGBA{R: 65, G: 106, B: 12, A: 255},
+			0.5, 0.5, 8.5, color.RGBA{R: 79, G: 116, B: 17, A: 255},
 		},
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 9.5, color.RGBA{R: 61, G: 102, B: 11, A: 255},
+			0.5, 0.5, 9.5, color.RGBA{R: 80, G: 116, B: 18, A: 255},
 		},
 		{
 			"1024x1024",
 			io.MustLoadTexture("../testdata/ground.png"),
-			0.5, 0.5, 10, color.RGBA{R: 66, G: 105, B: 12, A: 255},
+			0.5, 0.5, 10, color.RGBA{R: 79, G: 116, B: 18, A: 255},
 		},
 	}
 )
