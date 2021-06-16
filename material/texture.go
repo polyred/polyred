@@ -91,10 +91,17 @@ func (t *Texture) UseMipmap() bool {
 // Query fetches the color of at pixel (u, v). This function is a naive
 // mipmap implementation that does magnification and minification.
 func (t *Texture) Query(lod, u, v float64) color.RGBA {
-	_, u = math.Modf(u)
-	_, v = math.Modf(v)
+	iu, u := math.Modf(u)
+	if iu != 0 && u == 0 {
+		u = 1
+	}
 	if u < 0 {
 		u = 1 - u
+	}
+
+	iv, v := math.Modf(v)
+	if iv != 0 && v == 0 {
+		v = 1
 	}
 	if v < 0 {
 		v = 1 - v

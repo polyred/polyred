@@ -37,6 +37,7 @@ func main() {
 		"buddha",
 		"conference",
 		"roadBike",
+		"hairball",
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
