@@ -18,18 +18,21 @@ import (
 )
 
 func main() {
-	width, height, msaa := 500, 500, 1
-	models := []string{"cube", "bunny", "monkey", "dragon"}
+	width, height, msaa := 500, 500, 4
+	models := []string{
+		"cube",
+		"bunny",
+		"monkey",
+		"dragon",
+	}
 
 	for _, model := range models {
 		s := rend.NewScene()
-		c := camera.NewOrthographicCamera(
-			math.NewVector(0, 0, 1, 1),
-			math.NewVector(0, 0, -1, 1),
+		c := camera.NewPerspectiveCamera(
+			math.NewVector(1, 1, 2, 1),
+			math.NewVector(0, 0, 0, 1),
 			math.NewVector(0, 1, 0, 0),
-			-1, 1,
-			-1, 1,
-			1, -1,
+			45, 1, 0.1, 100,
 		)
 		s.UseCamera(c)
 		s.AddLight(light.NewPointLight(
@@ -48,6 +51,7 @@ func main() {
 			rend.WithMSAA(msaa),
 			rend.WithScene(s),
 			rend.WithDebug(true),
+			rend.WithThreadLimit(1),
 		)
 
 		fmt.Printf("rendering: %s\n", model)

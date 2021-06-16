@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package geometry
+package primitive
 
 import "changkun.de/x/ddd/math"
 
@@ -12,20 +12,18 @@ type AABB struct {
 }
 
 // NewAABB computes a new axis aligned bounding box of given vertices
-func NewAABB(v1, v2, v3 math.Vector) AABB {
-	xMax := math.Max(v1.X, v2.X, v3.X)
-	xMin := math.Min(v1.X, v2.X, v3.X)
-
-	yMax := math.Max(v1.Y, v2.Y, v3.Y)
-	yMin := math.Min(v1.Y, v2.Y, v3.Y)
-
-	zMax := math.Max(v1.Z, v2.Z, v3.Z)
-	zMin := math.Min(v1.Z, v2.Z, v3.Z)
-
-	return AABB{
-		Min: math.NewVector(xMin, yMin, zMin, 1),
-		Max: math.NewVector(xMax, yMax, zMax, 1),
+func NewAABB(vs ...math.Vector) AABB {
+	min := math.NewVector(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
+	max := math.NewVector(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
+	for i := range vs {
+		min.X = math.Min(min.X, vs[i].X)
+		min.Y = math.Min(min.Y, vs[i].Y)
+		min.Z = math.Min(min.Z, vs[i].Z)
+		max.X = math.Max(max.X, vs[i].X)
+		max.Y = math.Max(max.Y, vs[i].Y)
+		max.Z = math.Max(max.Z, vs[i].Z)
 	}
+	return AABB{min, max}
 }
 
 // Intersect checks if the two given AABBs share an intersection.

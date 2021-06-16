@@ -98,7 +98,7 @@ func (t *Texture) UseMipmap() bool {
 
 // Query fetches the color of at pixel (u, v). This function is a naive
 // mipmap implementation that does magnification and minification.
-func (t *Texture) Query(u, v float64, lod float64) color.RGBA {
+func (t *Texture) Query(lod, u, v float64) color.RGBA {
 	// Early error checking.
 	if u < 0 || u > 1 || v < 0 || v > 1 {
 		panic(fmt.Sprintf("out of UV query range: %v, %v", u, v))
@@ -116,8 +116,7 @@ func (t *Texture) Query(u, v float64, lod float64) color.RGBA {
 	}
 
 	if lod <= 1 {
-		siz := float64(t.image.Bounds().Dx())
-		return t.queryBilinear(0, u*(siz-1), v*(siz-1))
+		return t.queryBilinear(0, u, v)
 	}
 	lod -= 1
 
@@ -149,21 +148,15 @@ func (t *Texture) queryL0(u, v float64) color.RGBA {
 }
 
 func (t *Texture) queryTrilinear(h, l int, p, u, v float64) color.RGBA {
-	siz := float64(t.image.Bounds().Dx())
-	L1 := t.queryBilinear(
-		h,
-		(u*(siz-1))/math.Pow(2, float64(h)),
-		(v*(siz-1))/math.Pow(2, float64(h)),
-	)
-	L2 := t.queryBilinear(
-		l,
-		(u*(siz-1))/math.Pow(2, float64(l)),
-		(v*(siz-1))/math.Pow(2, float64(l)),
-	)
+	L1 := t.queryBilinear(h, u, v)
+	L2 := t.queryBilinear(l, u, v)
 	return math.LerpC(L1, L2, p)
 }
 
-func (t *Texture) queryBilinear(lod int, x, y float64) color.RGBA {
+func (t *Texture) queryBilinear(lod int, u, v float64) color.RGBA {
+	x := (u * (float64(t.image.Bounds().Dx()) - 1)) / math.Pow(2, float64(lod))
+	y := (v * (float64(t.image.Bounds().Dx()) - 1)) / math.Pow(2, float64(lod))
+
 	buf := t.mipmap[lod]
 	size := buf.Bounds().Dx()
 	if size == 1 {

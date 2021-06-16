@@ -144,7 +144,7 @@ var (
 func TestQuery(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%s-lod-%f", tt.name, tt.lod), func(t *testing.T) {
-			got := tt.tex.Query(tt.u, tt.v, tt.lod)
+			got := tt.tex.Query(tt.lod, tt.u, tt.v)
 			if !color.Equal(got, tt.want) {
 				t.Errorf("#%d want: %+v, got: %+v", i, tt.want, got)
 			}

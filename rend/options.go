@@ -4,7 +4,9 @@
 
 package rend
 
-import "image/color"
+import (
+	"image/color"
+)
 
 type Option func(opts *Renderer)
 
@@ -48,5 +50,11 @@ func WithDebug(enable bool) Option {
 func WithConcurrency(n int32) Option {
 	return func(r *Renderer) {
 		r.concurrentSize = n
+	}
+}
+
+func WithThreadLimit(n int) Option {
+	return func(r *Renderer) {
+		r.gomaxprocs = n
 	}
 }

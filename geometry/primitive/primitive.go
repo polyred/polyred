@@ -19,7 +19,30 @@ type Vertex struct {
 	Col color.RGBA
 }
 
+func (v *Vertex) AABB() AABB {
+	return AABB{
+		Min: v.Pos,
+		Max: v.Pos,
+	}
+}
+
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
 	V1, V2, V3 Vertex
+}
+
+func (t *Triangle) AABB() AABB {
+	xMax := math.Max(t.V1.Pos.X, t.V2.Pos.X, t.V3.Pos.X)
+	xMin := math.Min(t.V1.Pos.X, t.V2.Pos.X, t.V3.Pos.X)
+
+	yMax := math.Max(t.V1.Pos.Y, t.V2.Pos.Y, t.V3.Pos.Y)
+	yMin := math.Min(t.V1.Pos.Y, t.V2.Pos.Y, t.V3.Pos.Y)
+
+	zMax := math.Max(t.V1.Pos.Z, t.V2.Pos.Z, t.V3.Pos.Z)
+	zMin := math.Min(t.V1.Pos.Z, t.V2.Pos.Z, t.V3.Pos.Z)
+
+	return AABB{
+		Min: math.NewVector(xMin, yMin, zMin, 1),
+		Max: math.NewVector(xMax, yMax, zMax, 1),
+	}
 }

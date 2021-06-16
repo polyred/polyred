@@ -18,7 +18,7 @@ type TriangleMesh struct {
 	Material material.Material
 
 	// aabb must be transformed when applying the context.
-	aabb AABB
+	aabb primitive.AABB
 	// context is a transformation context (model matrix) that accumulates
 	// applied transformation matrices (multiplied from left side) for the
 	// given mesh.
@@ -38,14 +38,14 @@ func NewTriangleMesh(ts []*primitive.Triangle) *TriangleMesh {
 		min.X = math.Min(min.X, ts[i].V1.Pos.X, ts[i].V2.Pos.X, ts[i].V3.Pos.X)
 		min.Y = math.Min(min.Y, ts[i].V1.Pos.Y, ts[i].V2.Pos.Y, ts[i].V3.Pos.Y)
 		min.Z = math.Min(min.Z, ts[i].V1.Pos.Z, ts[i].V2.Pos.Z, ts[i].V3.Pos.Z)
-		max.X = math.Max(min.X, ts[i].V1.Pos.X, ts[i].V2.Pos.X, ts[i].V3.Pos.X)
-		max.Y = math.Max(min.Y, ts[i].V1.Pos.Y, ts[i].V2.Pos.Y, ts[i].V3.Pos.Y)
-		max.Z = math.Max(min.Z, ts[i].V1.Pos.Z, ts[i].V2.Pos.Z, ts[i].V3.Pos.Z)
+		max.X = math.Max(max.X, ts[i].V1.Pos.X, ts[i].V2.Pos.X, ts[i].V3.Pos.X)
+		max.Y = math.Max(max.Y, ts[i].V1.Pos.Y, ts[i].V2.Pos.Y, ts[i].V3.Pos.Y)
+		max.Z = math.Max(max.Z, ts[i].V1.Pos.Z, ts[i].V2.Pos.Z, ts[i].V3.Pos.Z)
 	}
 
 	return &TriangleMesh{
 		Faces:   ts,
-		aabb:    AABB{min, max},
+		aabb:    primitive.AABB{Min: min, Max: max},
 		context: math.MatI,
 	}
 }
@@ -103,10 +103,10 @@ func (m *TriangleMesh) Rotate(dir math.Vector, angle float64) {
 	m.context = q.ToRoMat().MulM(m.context)
 }
 
-func (m *TriangleMesh) AABB() AABB {
+func (m *TriangleMesh) AABB() primitive.AABB {
 	min := m.aabb.Min.Apply(m.ModelMatrix())
 	max := m.aabb.Max.Apply(m.ModelMatrix())
-	return AABB{min, max}
+	return primitive.AABB{Min: min, Max: max}
 }
 
 func (m *TriangleMesh) Center() math.Vector {
@@ -137,6 +137,6 @@ func (m *TriangleMesh) Normalize() {
 	// update AABB after scaling
 	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
 	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-	m.aabb = AABB{min, max}
+	m.aabb = primitive.AABB{Min: min, Max: max}
 	m.ResetContext()
 }

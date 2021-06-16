@@ -76,6 +76,7 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongShininess(150),
 		)
 		m.UseMaterial(mat)
+		m.Scale(2, 2, 2)
 		s.AddMesh(m)
 
 		m = io.MustLoadMesh("../../testdata/ground.obj")
@@ -86,6 +87,7 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongShininess(150),
 		)
 		m.UseMaterial(mat)
+		m.Scale(50, 50, 50)
 		s.AddMesh(m)
 
 		r := rend.NewRenderer(
@@ -93,7 +95,7 @@ func bench(opt *benchOpts) {
 			rend.WithMSAA(opt.msaa),
 			rend.WithScene(s),
 			rend.WithShadowMap(opt.shadowmap),
-			rend.WithDebug(false),
+			rend.WithDebug(true),
 		)
 
 		var buf *image.RGBA

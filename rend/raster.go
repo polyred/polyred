@@ -5,6 +5,7 @@
 package rend
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"runtime"
@@ -12,7 +13,6 @@ import (
 	"sync/atomic"
 
 	"changkun.de/x/ddd/camera"
-	"changkun.de/x/ddd/geometry"
 	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
@@ -40,6 +40,7 @@ type Renderer struct {
 
 	// rendering caches
 	concurrentSize int32
+	gomaxprocs     int
 	lockBuf        []sync.Mutex
 	gBuf           []gInfo
 	frameBuf       *image.RGBA
@@ -59,6 +60,7 @@ func NewRenderer(opts ...Option) *Renderer {
 		useShadowMap: false,
 		debug:        false,
 		scene:        nil,
+		gomaxprocs:   runtime.GOMAXPROCS(0),
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -123,6 +125,8 @@ func (r *Renderer) Render() *image.RGBA {
 		return r.outBuf
 	}
 	if r.debug {
+		runtime.GOMAXPROCS(r.gomaxprocs)
+		fmt.Printf("rendering under GOMAXPROCS=%v\n", r.gomaxprocs)
 		total = utils.Timed("entire rendering")
 	}
 
@@ -133,7 +137,7 @@ func (r *Renderer) Render() *image.RGBA {
 			r.scene.Lights[0].Position(),
 			r.scene.Meshes[1].Center(),
 			math.NewVector(0, 1, 0, 0),
-			-0.3, 0.3, -0.2, 0.3, 0, -10,
+			-0.5, 0.5, -0.5, 0.5, 0, -10,
 		)
 		viewCamera = r.scene.Camera
 		r.scene.Camera = r.lightCamera
@@ -295,7 +299,7 @@ func (r *Renderer) deferredPass() {
 								}
 								lod = math.Log2(siz)
 							}
-							col = info.mat.Texture().Query(info.u, 1-info.v, lod)
+							col = info.mat.Texture().Query(lod, info.u, 1-info.v)
 							col = info.mat.FragmentShader(col, info.pos, info.n, r.scene.Camera.Position(), r.scene.Lights)
 						}
 
@@ -413,7 +417,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 
 	// Compute AABB make the AABB a little bigger that align with pixels
 	// to contain the entire triangle
-	aabb := geometry.NewAABB(t1.Pos, t2.Pos, t3.Pos)
+	aabb := primitive.NewAABB(t1.Pos, t2.Pos, t3.Pos)
 	xmin := int(math.Round(aabb.Min.X) - 1)
 	xmax := int(math.Round(aabb.Max.X) + 1)
 	ymin := int(math.Round(aabb.Min.Y) - 1)
@@ -428,7 +432,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			w1, w2, w3 := r.barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
-			if w1 < 0 || w2 < 0 || w3 < 0 {
+			if w1 <= 0 || w2 <= 0 || w3 <= 0 {
 				continue
 			}
 
@@ -511,16 +515,23 @@ func (r *Renderer) passDepthTest(x, y int, z float64) bool {
 }
 
 func (r *Renderer) inViewport(v1, v2, v3 math.Vector) bool {
-	viewportAABB := geometry.NewAABB(
+	viewportAABB := primitive.NewAABB(
 		math.NewVector(float64(r.width), float64(r.height), 1, 1),
 		math.NewVector(0, 0, 0, 1),
 		math.NewVector(0, 0, -1, 1),
 	)
-	triangleAABB := geometry.NewAABB(v1, v2, v3)
+	triangleAABB := primitive.NewAABB(v1, v2, v3)
 	return viewportAABB.Intersect(triangleAABB)
 }
 
 func (r *Renderer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 float64) {
+	if t1.X == t2.X && t2.X == t3.X { // not a triangle
+		return
+	}
+	if t1.Y == t2.Y && t2.Y == t3.Y { // not a triangle
+		return
+	}
+
 	ap := math.Vector{X: float64(x) - t1.X, Y: float64(y) - t1.Y, Z: 0, W: 0}
 	ab := math.Vector{X: t2.X - t1.X, Y: t2.Y - t1.Y, Z: 0, W: 0}
 	ac := math.Vector{X: t3.X - t1.X, Y: t3.Y - t1.Y, Z: 0, W: 0}
