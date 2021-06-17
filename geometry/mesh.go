@@ -22,10 +22,9 @@ type TriangleMesh struct {
 	// context is a transformation context (model matrix) that accumulates
 	// applied transformation matrices (multiplied from left side) for the
 	// given mesh.
-	//
 	// context is a persistant status for the given mesh and can be reused
 	// for each of the rendering frame unless the mesh intentionally calls
-	// resetContext() method.
+	// ResetContext() method.
 	context math.Matrix
 }
 
