@@ -168,7 +168,7 @@ func (r *Renderer) Render() *image.RGBA {
 		if r.debug {
 			done = utils.Timed("forward pass (shadow)")
 		}
-		r.forwardPass()
+		r.depthPass()
 		if r.debug {
 			done()
 		}
@@ -250,6 +250,38 @@ func (r *Renderer) resetBufs() {
 	for i := range r.gBuf {
 		r.gBuf[i] = gInfo{z: -1}
 	}
+}
+
+func (r *Renderer) depthPass() {
+	nP := runtime.GOMAXPROCS(0)
+	limiter := utils.NewLimiter(nP)
+	matView := r.scene.Camera.ViewMatrix()
+	matProj := r.scene.Camera.ProjMatrix()
+	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
+	for m := range r.scene.Meshes {
+		mesh := r.scene.Meshes[m]
+		uniforms := map[string]interface{}{
+			"matModel":  mesh.ModelMatrix(),
+			"matView":   matView,
+			"matProj":   matProj,
+			"matVP":     matVP,
+			"matNormal": mesh.NormalMatrix(),
+		}
+
+		length := len(mesh.Faces)
+		for i := 0; i < length; i += int(r.concurrentSize) {
+			ii := i
+			limiter.Execute(func() {
+				for k := int32(0); k < r.concurrentSize; k++ {
+					if ii+int(k) >= length {
+						return
+					}
+					r.drawDepth(uniforms, mesh.Faces[ii+int(k)], mesh.Material)
+				}
+			})
+		}
+	}
+	limiter.Wait()
 }
 
 func (r *Renderer) forwardPass() {
@@ -397,6 +429,65 @@ func (r *Renderer) setFramebuf(x, y int, c color.RGBA) {
 	r.lockBuf[idx].Lock()
 	r.frameBuf.Set(x, r.height-y, c)
 	r.lockBuf[idx].Unlock()
+}
+
+func (r *Renderer) drawDepth(uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {
+	var t1, t2, t3 primitive.Vertex
+	if mat != nil {
+		t1 = mat.VertexShader(tri.V1, uniforms)
+		t2 = mat.VertexShader(tri.V2, uniforms)
+		t3 = mat.VertexShader(tri.V3, uniforms)
+	} else {
+		t1 = r.vertShader(tri.V1, uniforms)
+		t2 = r.vertShader(tri.V2, uniforms)
+		t3 = r.vertShader(tri.V3, uniforms)
+	}
+
+	// Backface culling
+	if t2.Pos.Sub(t1.Pos).Cross(t3.Pos.Sub(t1.Pos)).Z < 0 {
+		return
+	}
+
+	// Viewfrustum culling
+	if !r.inViewport(t1.Pos, t2.Pos, t3.Pos) {
+		return
+	}
+
+	// Compute AABB make the AABB a little bigger that align with pixels
+	// to contain the entire triangle
+	aabb := primitive.NewAABB(t1.Pos, t2.Pos, t3.Pos)
+	xmin := int(math.Round(aabb.Min.X) - 1)
+	xmax := int(math.Round(aabb.Max.X) + 1)
+	ymin := int(math.Round(aabb.Min.Y) - 1)
+	ymax := int(math.Round(aabb.Max.Y) + 1)
+
+	for x := xmin; x <= xmax; x++ {
+		for y := ymin; y <= ymax; y++ {
+			if x < 0 || x >= r.width || y < 0 || y >= r.height {
+				continue
+			}
+
+			w1, w2, w3 := r.barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
+
+			// Is inside triangle?
+			if w1 < 0 || w2 < 0 || w3 < 0 {
+				continue
+			}
+
+			// Z-test
+			z := w1*t1.Pos.Z + w2*t2.Pos.Z + w3*t3.Pos.Z
+			if !r.passDepthTest(x, y, z) {
+				continue
+			}
+
+			// update G-buffer
+			idx := x + y*r.width
+			r.lockBuf[idx].Lock()
+			r.gBuf[idx].ok = true
+			r.gBuf[idx].z = z
+			r.lockBuf[idx].Unlock()
+		}
+	}
 }
 
 func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {

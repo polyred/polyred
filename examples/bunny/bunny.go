@@ -20,19 +20,19 @@ func main() {
 	width, height, msaa := 960, 540, 2
 	s := rend.NewScene()
 	c := camera.NewPerspective(
-		math.Vector{-550, 194, 734, 1},
-		math.Vector{-1000, 0, 0, 1},
-		math.Vector{0, 1, 1, 0},
+		math.NewVector(-550, 194, 734, 1),
+		math.NewVector(-1000, 0, 0, 1),
+		math.NewVector(0, 1, 1, 0),
 		45,
 		float64(width)/float64(height),
 		100, 600,
 	)
 	s.UseCamera(c)
 
-	l := light.NewPointLight(
-		200,
-		color.RGBA{255, 255, 255, 255},
-		math.Vector{-200, 250, 600, 1},
+	l := light.NewPoint(
+		light.WithPoingLightItensity(200),
+		light.WithPoingLightColor(color.RGBA{255, 255, 255, 255}),
+		light.WithPoingLightPosition(math.NewVector(-200, 250, 600, 1)),
 	)
 	s.AddLight(l)
 

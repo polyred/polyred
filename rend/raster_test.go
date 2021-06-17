@@ -37,7 +37,11 @@ func newscene() *rend.Renderer {
 	)
 	s.UseCamera(c)
 
-	l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-2, 2.5, 6, 1))
+	l := light.NewPoint(
+		light.WithPoingLightItensity(20),
+		light.WithPoingLightColor(color.RGBA{0, 0, 0, 255}),
+		light.WithPoingLightPosition(math.NewVector(-2, 2.5, 6, 1)),
+	)
 	s.AddLight(l)
 
 	m := io.MustLoadMesh("../testdata/bunny.obj")

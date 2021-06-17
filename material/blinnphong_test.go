@@ -5,7 +5,6 @@
 package material_test
 
 import (
-	"image"
 	"image/color"
 	"math/rand"
 	"testing"
@@ -21,17 +20,24 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	n := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 0}.Unit()
 	c := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 1}
 	l := []light.Light{
-		light.NewPointLight(20, color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), 255}, math.NewVector(rand.Float64(), rand.Float64(), rand.Float64(), 1)),
+		light.NewPoint(
+			light.WithPoingLightItensity(20),
+			light.WithPoingLightColor(
+				color.RGBA{
+					uint8(rand.Int()),
+					uint8(rand.Int()),
+					uint8(rand.Int()),
+					255,
+				},
+			),
+			light.WithPoingLightPosition(
+				math.NewVector(rand.Float64(), rand.Float64(), rand.Float64(), 1),
+			),
+		),
 	}
 
-	data := image.NewRGBA(image.Rect(0, 0, 1, 1))
-	data.Set(0, 0, color.RGBA{0, 128, 255, 255})
-	tex := material.NewTexture(
-		material.WithImage(data),
-		material.WithIsotropicMipMap(true),
-	)
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(tex),
+		material.WithBlinnPhongTexture(material.NewTexture()),
 		material.WithBlinnPhongFactors(0.5, 0.6, 200),
 		material.WithBlinnPhongShininess(25),
 	)

@@ -27,13 +27,11 @@ func TestPlane(t *testing.T) {
 		0.1, 10,
 	)
 	s.UseCamera(c)
-
-	l := light.NewPointLight(
-		1,
-		color.RGBA{0, 128, 255, 255},
-		math.NewVector(2, 2, 2, 1),
-	)
-	s.AddLight(l)
+	s.AddLight(light.NewPoint(
+		light.WithPoingLightItensity(1),
+		light.WithPoingLightColor(color.RGBA{0, 128, 255, 255}),
+		light.WithPoingLightPosition(math.NewVector(2, 2, 2, 1)),
+	))
 
 	m := geometry.NewPlane(1, 1)
 	s.AddMesh(m)

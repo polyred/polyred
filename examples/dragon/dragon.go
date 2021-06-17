@@ -16,8 +16,6 @@ import (
 	"changkun.de/x/ddd/utils"
 )
 
-// See more mesh data here: https://casual-effects.com/data/
-
 func main() {
 	width, height, msaa := 960, 540, 2
 	s := rend.NewScene()
@@ -29,7 +27,11 @@ func main() {
 	)
 	s.UseCamera(c)
 
-	l := light.NewPointLight(1, color.RGBA{255, 255, 255, 255}, math.NewVector(-1.5, -1, 1, 1))
+	l := light.NewPoint(
+		light.WithPoingLightItensity(1),
+		light.WithPoingLightColor(color.RGBA{255, 255, 255, 255}),
+		light.WithPoingLightPosition(math.NewVector(-1.5, -1, 1, 1)),
+	)
 	s.AddLight(l)
 
 	var done func()

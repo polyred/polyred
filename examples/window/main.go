@@ -38,9 +38,11 @@ func loadScene(width, height int) *rend.Scene {
 		3,
 	)
 	s.UseCamera(c)
-
-	l := light.NewPointLight(20, color.RGBA{0, 0, 0, 255}, math.NewVector(-200, 250, 600, 1))
-	s.AddLight(l)
+	s.AddLight(light.NewPoint(
+		light.WithPoingLightItensity(20),
+		light.WithPoingLightColor(color.RGBA{0, 0, 0, 255}),
+		light.WithPoingLightPosition(math.NewVector(-200, 250, 600, 1)),
+	))
 
 	m := io.MustLoadMesh("../../testdata/bunny.obj")
 	tex := io.MustLoadTexture("../../testdata/bunny.png")

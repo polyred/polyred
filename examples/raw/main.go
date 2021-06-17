@@ -53,10 +53,10 @@ func main() {
 			50, 1, 0.1, 100,
 		)
 		s.UseCamera(c)
-		s.AddLight(light.NewPointLight(
-			10,
-			color.RGBA{255, 255, 255, 255},
-			math.NewVector(2, 2, 2, 1),
+		s.AddLight(light.NewPoint(
+			light.WithPoingLightItensity(10),
+			light.WithPoingLightColor(color.RGBA{255, 255, 255, 255}),
+			light.WithPoingLightPosition(math.NewVector(2, 2, 2, 1)),
 		))
 
 		m := io.MustLoadMesh(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))

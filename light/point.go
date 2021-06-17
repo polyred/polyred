@@ -17,42 +17,64 @@ type Light interface {
 	Color() color.RGBA
 }
 
-// PointLight is a point light
-type PointLight struct {
-	itensity float64
-	color    color.RGBA
-	position math.Vector
-
-	enableShadowMap bool
-	shadowMap       []float64
-	shadowCamera    camera.Perspective
+// Point is a point light
+type Point struct {
+	itensity     float64
+	color        color.RGBA
+	pos          math.Vector
+	shadowCamera *camera.Perspective
 }
 
-type PointLightOption func(l *PointLight)
+type PointOption func(l *Point)
 
-func WithShadowMap(enable bool) PointLightOption {
-	return func(l *PointLight) {
-		l.enableShadowMap = enable
+func WithPoingLightItensity(I float64) PointOption {
+	return func(l *Point) {
+		l.itensity = I
 	}
 }
 
-// NewPointLight returns a new point light
-func NewPointLight(I float64, c color.RGBA, p math.Vector) Light {
-	return &PointLight{
-		itensity: I,
-		color:    c,
-		position: p,
+func WithPoingLightColor(c color.RGBA) PointOption {
+	return func(l *Point) {
+		l.color = c
 	}
 }
 
-func (l *PointLight) Itensity() float64 {
+func WithPoingLightPosition(pos math.Vector) PointOption {
+	return func(l *Point) {
+		l.pos = pos
+	}
+}
+
+func WithShadowMap(c *camera.Perspective) PointOption {
+	return func(l *Point) {
+		l.shadowCamera = c
+	}
+}
+
+// NewPoint returns a new point light
+func NewPoint(opts ...PointOption) Light {
+	l := &Point{
+		itensity:     1,
+		color:        color.RGBA{255, 255, 255, 255},
+		pos:          math.Vector{},
+		shadowCamera: nil,
+	}
+
+	for _, opt := range opts {
+		opt(l)
+	}
+
+	return l
+}
+
+func (l *Point) Itensity() float64 {
 	return l.itensity
 }
 
-func (l *PointLight) Position() math.Vector {
-	return l.position
+func (l *Point) Position() math.Vector {
+	return l.pos
 }
 
-func (l *PointLight) Color() color.RGBA {
+func (l *Point) Color() color.RGBA {
 	return l.color
 }
