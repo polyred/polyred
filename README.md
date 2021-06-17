@@ -10,15 +10,46 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
 
 ## Features
 
-- OBJ file format
-- hybrid rendering: rasterization + ray tracing
-- backface, viewfrustum, and occlusion culling
-- isotropic texturing
-- deferred shading
-- shadow mapping
-- anti-aliasing
-- concurrent processing
-- built-in geometries (plane)
+- IO
+  + [x] OBJ file loader
+  + [ ] OBJ file exporter
+- geometry
+  + [x] triangle mesh
+  + [x] quad mesh
+  + [ ] quad dominant mesh
+  + [ ] half-edge mesh
+  + [ ] built-in geometries
+    * [x] plane
+    * [ ] cube
+- hybrid rendering:
+  + [x] rasterization
+    * [ ] clipping
+    * [x] backface culling
+    * [x] viewfrustum culling
+    * [x] occlusion culling
+  + [x] depth test 
+  + [ ] alpha test
+  + [x] deferred shading
+  + [ ] ambient occlusion
+  + [ ] ray tracing
+  + anti-aliasing
+    * [x] MSAA
+- texturing
+  + [x] isotropic mipmap
+  + [ ] anisotropic mipmap
+  + [ ] arbitrary texture size
++ material
+  + [x] basic material
+  + [x] Blinn-Phong material
+  + [ ] Lambertian material
+  + [ ] Diffuse material
+  + [ ] Glossy material
+  + [ ] Micofacet material
+- lighting
+  + [ ] poing light
+  + [ ] shadow mapping
+- general
+  + [x] concurrent processing
 
 <!-- ## Performance
 
