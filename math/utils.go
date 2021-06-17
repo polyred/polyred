@@ -10,6 +10,8 @@ var (
 	Cos        = math.Cos
 	Sin        = math.Sin
 	Tan        = math.Tan
+	Abs        = math.Abs
+	Atan       = math.Atan
 	Pi         = math.Pi
 	MaxInt64   = math.MaxInt64
 	MaxFloat64 = math.MaxFloat64

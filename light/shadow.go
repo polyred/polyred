@@ -9,7 +9,8 @@ import "changkun.de/x/ddd/camera"
 type ShadowType int
 
 const (
-	ShadowTypePCF  ShadowType = iota // percentage closer filtering
+	ShadowTypeHard ShadowType = iota // hard shadow mapping
+	ShadowTypePCF                    // percentage closer filtering
 	ShadowTypePCSS                   // percentage closer soft shadows
 	ShadowTypeVSSM                   // variance soft shadow mapping
 	ShadowTypeMSM                    // moment shadow mapping
@@ -19,8 +20,6 @@ type ShadowMap struct {
 	typ    ShadowType
 	camera camera.Interface
 	bias   float64
-	size   int
-	tex    []float64
 }
 
 type ShadowMapOption func(sm *ShadowMap)
@@ -43,22 +42,22 @@ func WithShadowMapBias(bias float64) ShadowMapOption {
 	}
 }
 
-func WithShadowMapSize(size int) ShadowMapOption {
-	return func(sm *ShadowMap) {
-		sm.size = size
-	}
-}
-
 func NewShadowMap(opts ...ShadowMapOption) *ShadowMap {
 	sm := &ShadowMap{
-		typ:    ShadowTypePCF,
+		typ:    ShadowTypeHard,
 		camera: nil, // default left nil to allow rasterizer decide at runtime
-		bias:   0,
-		size:   512,
+		bias:   0.03,
 	}
 	for _, opt := range opts {
 		opt(sm)
 	}
-	sm.tex = make([]float64, sm.size)
 	return sm
+}
+
+func (sm *ShadowMap) Camera() camera.Interface {
+	return sm.camera
+}
+
+func (sm *ShadowMap) Bias() float64 {
+	return sm.bias
 }

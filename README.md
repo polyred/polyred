@@ -22,6 +22,7 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
     * [x] plane
     * [ ] cube
 - hybrid rendering:
+  + [ ] scene graph
   + [x] rasterization
     * [ ] clipping
     * [x] backface culling
@@ -46,18 +47,11 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
   + [ ] Glossy material
   + [ ] Micofacet material
 - lighting
-  + [ ] poing light
+  + [ ] point light
+  + [ ] directional light
   + [ ] shadow mapping
 - general
   + [x] concurrent processing
-
-<!-- ## Performance
-
-ddd renders in parallel and utilizes all the CPUs.
-
-| model | resolution | msaa | rendering (ms) |
-|:------|:-----------|:-----|:---------------|
-| stanford bunny |  -->
 
 ![](./examples/teaser.png)
 

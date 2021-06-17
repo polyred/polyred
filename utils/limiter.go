@@ -10,7 +10,7 @@ const DefaultLimit = 100
 // Limiter object
 type Limiter struct {
 	limit   int
-	tickets chan int
+	tickets chan struct{}
 }
 
 // NewConccurLimiter allocates a new ConccurLimiter
@@ -22,12 +22,12 @@ func NewLimiter(limit int) *Limiter {
 	// allocate a limiter instance
 	c := &Limiter{
 		limit:   limit,
-		tickets: make(chan int, limit),
+		tickets: make(chan struct{}, limit),
 	}
 
 	// allocate the tickets:
 	for i := 0; i < c.limit; i++ {
-		c.tickets <- i
+		c.tickets <- struct{}{}
 	}
 
 	return c
@@ -37,7 +37,7 @@ func NewLimiter(limit int) *Limiter {
 // if num of go routines allocated by this instance is < limit
 // launch a new go routine to execute job
 // else wait until a go routine becomes available
-func (c *Limiter) Execute(job func()) int {
+func (c *Limiter) Execute(job func()) {
 	ticket := <-c.tickets
 	go func() {
 		defer func() {
@@ -45,7 +45,6 @@ func (c *Limiter) Execute(job func()) int {
 		}()
 		job()
 	}()
-	return ticket
 }
 
 // Wait will block all the previously Executed jobs completed running.
@@ -54,5 +53,11 @@ func (c *Limiter) Execute(job func()) int {
 func (c *Limiter) Wait() {
 	for i := 0; i < c.limit; i++ {
 		<-c.tickets
+	}
+
+	// reset all tickets
+	c.tickets = make(chan struct{}, c.limit)
+	for i := 0; i < c.limit; i++ {
+		c.tickets <- struct{}{}
 	}
 }

@@ -65,12 +65,12 @@ func bench(opt *benchOpts) {
 		)
 		s.UseCamera(c)
 
-		l := light.NewPoint(
+		s.AddLight(light.NewPoint(
 			light.WithPoingLightItensity(20),
 			light.WithPoingLightColor(color.RGBA{0, 0, 0, 255}),
 			light.WithPoingLightPosition(math.NewVector(4, 4, 2, 1)),
-		)
-		s.AddLight(l)
+			light.WithShadowMap(opt.shadowmap),
+		))
 
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
 		tex := io.MustLoadTexture("../../testdata/bunny.png")
@@ -89,6 +89,7 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongTexture(tex),
 			material.WithBlinnPhongFactors(0.5, 0.6, 1),
 			material.WithBlinnPhongShininess(150),
+			material.WithBlinnPhongShadow(opt.shadowmap),
 		)
 		m.UseMaterial(mat)
 		m.Scale(2, 2, 2)
@@ -99,7 +100,7 @@ func bench(opt *benchOpts) {
 			rend.WithMSAA(opt.msaa),
 			rend.WithScene(s),
 			rend.WithShadowMap(opt.shadowmap),
-			rend.WithDebug(true),
+			rend.WithDebug(false),
 		)
 
 		var buf *image.RGBA

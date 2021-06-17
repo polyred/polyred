@@ -13,13 +13,19 @@ var (
 	Draw = func(r *Renderer, uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {
 		r.draw(uniforms, tri, mat)
 	}
-	ResetBuf = func(r *Renderer) {
-		r.resetBufs()
+	ResetGBuf = func(r *Renderer) {
+		r.resetGBuf()
 	}
-	ForwardPass = func(r *Renderer) {
-		r.forwardPass()
+	ResetFrameBuf = func(r *Renderer) {
+		r.resetFrameBuf()
 	}
-	DeferredPass = func(r *Renderer) {
-		r.deferredPass()
+	PassForward = func(r *Renderer) {
+		r.passForward()
+	}
+	PassDeferred = func(r *Renderer) {
+		r.passDeferred()
+	}
+	PassAntiAliasing = func(r *Renderer) {
+		r.passAntialiasing()
 	}
 )

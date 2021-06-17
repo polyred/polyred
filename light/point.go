@@ -7,7 +7,6 @@ package light
 import (
 	"image/color"
 
-	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/math"
 )
 
@@ -15,6 +14,7 @@ type Light interface {
 	Itensity() float64
 	Position() math.Vector
 	Color() color.RGBA
+	CastShadow() bool
 }
 
 // Point is a point light
@@ -22,7 +22,7 @@ type Point struct {
 	itensity     float64
 	color        color.RGBA
 	pos          math.Vector
-	shadowCamera *camera.Perspective
+	useShadowMap bool
 }
 
 type PointOption func(l *Point)
@@ -45,9 +45,9 @@ func WithPoingLightPosition(pos math.Vector) PointOption {
 	}
 }
 
-func WithShadowMap(c *camera.Perspective) PointOption {
+func WithShadowMap(enable bool) PointOption {
 	return func(l *Point) {
-		l.shadowCamera = c
+		l.useShadowMap = enable
 	}
 }
 
@@ -57,7 +57,7 @@ func NewPoint(opts ...PointOption) Light {
 		itensity:     1,
 		color:        color.RGBA{255, 255, 255, 255},
 		pos:          math.Vector{},
-		shadowCamera: nil,
+		useShadowMap: false,
 	}
 
 	for _, opt := range opts {
@@ -77,4 +77,8 @@ func (l *Point) Position() math.Vector {
 
 func (l *Point) Color() color.RGBA {
 	return l.color
+}
+
+func (l *Point) CastShadow() bool {
+	return l.useShadowMap
 }

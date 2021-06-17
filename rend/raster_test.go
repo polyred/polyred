@@ -120,7 +120,7 @@ func BenchmarkForwardPass(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				rend.ForwardPass(r)
+				rend.PassForward(r)
 			}
 		})
 	}
@@ -136,9 +136,18 @@ func BenchmarkDeferredPass(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				rend.DeferredPass(r)
+				rend.PassDeferred(r)
 			}
 		})
+	}
+}
+
+func BenchmarkAntiAliasingPass(b *testing.B) {
+	r := newscene()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		rend.PassAntiAliasing(r)
 	}
 }
 
@@ -152,7 +161,8 @@ func BenchmarkResetBuf(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				rend.ResetBuf(r)
+				rend.ResetGBuf(r)
+				rend.ResetFrameBuf(r)
 			}
 		})
 	}

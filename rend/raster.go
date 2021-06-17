@@ -10,7 +10,6 @@ import (
 	"image/color"
 	"runtime"
 	"sync"
-	"sync/atomic"
 
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/geometry/primitive"
@@ -41,11 +40,12 @@ type Renderer struct {
 	// rendering caches
 	concurrentSize int32
 	gomaxprocs     int
+	limiter        *utils.Limiter
 	lockBuf        []sync.Mutex
 	gBuf           []gInfo
 	frameBuf       *image.RGBA
-	shadowTexture  []float64
-	lightCamera    camera.Orthographic
+	renderCamera   camera.Interface
+	shadowBufs     []shadowInfo
 	outBuf         *image.RGBA
 }
 
@@ -75,175 +75,60 @@ func NewRenderer(opts ...Option) *Renderer {
 	r.lockBuf = make([]sync.Mutex, r.width*r.height)
 	r.gBuf = make([]gInfo, r.width*r.height)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, r.width, r.height))
-	r.resetBufs()
+	r.limiter = utils.NewLimiter(r.gomaxprocs)
 
+	// initialize shadow maps
+	if r.scene != nil && r.useShadowMap {
+		r.initShadowMaps()
+	}
+
+	r.resetGBuf()
+	r.resetFrameBuf()
 	return r
-}
-
-func (r *Renderer) UpdateOptions(opts ...Option) {
-	r.wait() // wait last frame to finish
-
-	for _, opt := range opts {
-		opt(r)
-	}
-
-	// calibrate rendering size
-	r.width *= r.msaa
-	r.height *= r.msaa
-	r.lockBuf = make([]sync.Mutex, r.width*r.height)
-	r.gBuf = make([]gInfo, r.width*r.height)
-	r.frameBuf = image.NewRGBA(image.Rect(0, 0, r.width, r.height))
-	r.resetBufs()
-}
-
-// wait waits the current rendering terminates
-func (r *Renderer) wait() {
-	atomic.StoreUint32(&r.stop, 1)
-	for r.isRunning() {
-		runtime.Gosched()
-	}
-	atomic.StoreUint32(&r.stop, 0)
-}
-
-func (r *Renderer) startRunning() {
-	atomic.StoreUint32(&r.running, 1)
-}
-
-func (r *Renderer) isRunning() bool {
-	return atomic.LoadUint32(&r.running) == 1
-}
-
-func (r *Renderer) stopRunning() {
-	atomic.StoreUint32(&r.running, 0)
-}
-
-func (r *Renderer) shouldStop() bool {
-	return atomic.LoadUint32(&r.stop) == 1
-}
-
-func (r *Renderer) GetScene() *Scene {
-	return r.scene
 }
 
 // Render renders a scene.
 func (r *Renderer) Render() *image.RGBA {
-	r.startRunning()
-	defer r.stopRunning()
-
-	r.resetBufs()
-	var (
-		total      func()
-		done       func()
-		viewCamera camera.Interface
-	)
-	if r.shouldStop() {
-		return r.outBuf
-	}
 	if r.debug {
 		runtime.GOMAXPROCS(r.gomaxprocs)
 		fmt.Printf("rendering under GOMAXPROCS=%v\n", r.gomaxprocs)
-		total = utils.Timed("entire rendering")
+		total := utils.Timed("entire rendering")
+		defer total()
 	}
 
-	// shadow pass
-	// TODO: compute adaptive shadow map size
+	// record running
+	r.startRunning()
+	defer r.stopRunning()
+
+	// reset buffers
+	r.resetGBuf()
+	if r.shouldStop() {
+		return r.outBuf
+	}
+
+	// decide if need shadow passes
 	if r.useShadowMap {
-		lightTransMat := r.scene.Camera.ViewMatrix().Inv().MulM(r.scene.Camera.ProjMatrix().Inv())
-		lightTransMat = camera.ViewMatrix(
-			r.scene.Lights[0].Position(),
-			r.scene.Meshes[1].Center(),
-			math.NewVector(0, 1, 0, 0),
-		).MulM(lightTransMat)
-		v1 := math.NewVector(1, 1, 1, 1).Apply(lightTransMat)
-		v1 = v1.Scale(1/v1.W, 1/v1.W, 1/v1.W, 1/v1.W)
-		v2 := math.NewVector(1, 1, -1, 1).Apply(lightTransMat)
-		v2 = v2.Scale(1/v2.W, 1/v2.W, 1/v2.W, 1/v2.W)
-		v3 := math.NewVector(1, -1, 1, 1).Apply(lightTransMat)
-		v3 = v3.Scale(1/v3.W, 1/v3.W, 1/v3.W, 1/v3.W)
-		v4 := math.NewVector(-1, 1, 1, 1).Apply(lightTransMat)
-		v4 = v4.Scale(1/v4.W, 1/v4.W, 1/v4.W, 1/v4.W)
-		v5 := math.NewVector(-1, -1, 1, 1).Apply(lightTransMat)
-		v5 = v5.Scale(1/v5.W, 1/v5.W, 1/v5.W, 1/v5.W)
-		v6 := math.NewVector(1, -1, -1, 1).Apply(lightTransMat)
-		v6 = v6.Scale(1/v6.W, 1/v6.W, 1/v6.W, 1/v6.W)
-		v7 := math.NewVector(-1, 1, -1, 1).Apply(lightTransMat)
-		v7 = v7.Scale(1/v7.W, 1/v7.W, 1/v7.W, 1/v7.W)
-		v8 := math.NewVector(-1, -1, -1, 1).Apply(lightTransMat)
-		v8 = v8.Scale(1/v8.W, 1/v8.W, 1/v8.W, 1/v8.W)
-		aabb := primitive.NewAABB(v1, v2, v3, v4, v5, v6, v7, v8)
-
-		r.lightCamera = camera.NewOrthographic(
-			r.scene.Lights[0].Position(),
-			r.scene.Meshes[1].Center(),
-			math.NewVector(0, 1, 0, 0),
-			aabb.Min.X, aabb.Max.X, aabb.Min.Y, aabb.Max.Y, aabb.Max.Z, aabb.Min.Z,
-		)
-		viewCamera = r.scene.Camera
-		r.scene.Camera = r.lightCamera
-		if r.debug {
-			done = utils.Timed("forward pass (shadow)")
-		}
-		r.depthPass()
-		if r.debug {
-			done()
-		}
-
-		r.shadowTexture = make([]float64, len(r.gBuf))
-		for i, info := range r.gBuf {
-			r.shadowTexture[i] = info.z
-		}
-
-		img := image.NewRGBA(image.Rect(0, 0, r.width, r.height))
-		for i := 0; i < r.width; i++ {
-			for j := 0; j < r.height; j++ {
-				img.Set(i, j, color.RGBA{
-					uint8(r.shadowTexture[i+(r.height-j-1)*r.width] * 255),
-					uint8(r.shadowTexture[i+(r.height-j-1)*r.width] * 255),
-					uint8(r.shadowTexture[i+(r.height-j-1)*r.width] * 255),
-					255,
-				})
+		for i := 0; i < len(r.shadowBufs); i++ {
+			r.passShadows(i)
+			if r.shouldStop() {
+				return r.outBuf
 			}
 		}
-		if r.debug {
-			utils.Save(img, "shadow.png")
-		}
-		r.scene.Camera = viewCamera
-		r.resetBufs()
+		r.resetGBuf()
 	}
+
+	r.passForward()
 	if r.shouldStop() {
 		return r.outBuf
 	}
 
-	if r.debug {
-		done = utils.Timed("forward pass (world)")
-	}
-	r.forwardPass()
-	if r.debug {
-		done()
-	}
+	r.resetFrameBuf()
+	r.passDeferred()
 	if r.shouldStop() {
 		return r.outBuf
 	}
 
-	if r.debug {
-		done = utils.Timed("deferred pass (shading)")
-	}
-	r.deferredPass()
-	if r.debug {
-		done()
-	}
-	if r.shouldStop() {
-		return r.outBuf
-	}
-
-	if r.debug {
-		done = utils.Timed("antialiasing")
-	}
-	r.antialiasing()
-	if r.debug {
-		done()
-		total()
-	}
+	r.passAntialiasing()
 	return r.outBuf
 }
 
@@ -258,20 +143,15 @@ type gInfo struct {
 	mat    material.Material
 }
 
-func (r *Renderer) resetBufs() {
-	for i := range r.frameBuf.Pix {
-		r.frameBuf.Pix[i] = 0
+func (r *Renderer) passForward() {
+	if r.debug {
+		done := utils.Timed("forward pass (world)")
+		defer done()
 	}
-	for i := range r.gBuf {
-		r.gBuf[i] = gInfo{z: -1}
-	}
-}
 
-func (r *Renderer) depthPass() {
-	nP := runtime.GOMAXPROCS(0)
-	limiter := utils.NewLimiter(nP)
-	matView := r.scene.Camera.ViewMatrix()
-	matProj := r.scene.Camera.ProjMatrix()
+	r.renderCamera = r.scene.Camera
+	matView := r.renderCamera.ViewMatrix()
+	matProj := r.renderCamera.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
 	for m := range r.scene.Meshes {
 		mesh := r.scene.Meshes[m]
@@ -286,39 +166,7 @@ func (r *Renderer) depthPass() {
 		length := len(mesh.Faces)
 		for i := 0; i < length; i += int(r.concurrentSize) {
 			ii := i
-			limiter.Execute(func() {
-				for k := int32(0); k < r.concurrentSize; k++ {
-					if ii+int(k) >= length {
-						return
-					}
-					r.drawDepth(uniforms, mesh.Faces[ii+int(k)], mesh.Material)
-				}
-			})
-		}
-	}
-	limiter.Wait()
-}
-
-func (r *Renderer) forwardPass() {
-	nP := runtime.GOMAXPROCS(0)
-	limiter := utils.NewLimiter(nP)
-	matView := r.scene.Camera.ViewMatrix()
-	matProj := r.scene.Camera.ProjMatrix()
-	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
-	for m := range r.scene.Meshes {
-		mesh := r.scene.Meshes[m]
-		uniforms := map[string]interface{}{
-			"matModel":  mesh.ModelMatrix(),
-			"matView":   matView,
-			"matProj":   matProj,
-			"matVP":     matVP,
-			"matNormal": mesh.NormalMatrix(),
-		}
-
-		length := len(mesh.Faces)
-		for i := 0; i < length; i += int(r.concurrentSize) {
-			ii := i
-			limiter.Execute(func() {
+			r.limiter.Execute(func() {
 				for k := int32(0); k < r.concurrentSize; k++ {
 					if ii+int(k) >= length {
 						return
@@ -329,112 +177,97 @@ func (r *Renderer) forwardPass() {
 			})
 		}
 	}
-	limiter.Wait()
+	r.limiter.Wait()
 }
 
-func (r *Renderer) deferredPass() {
-	nP := runtime.GOMAXPROCS(0)
-	limiter := utils.NewLimiter(nP)
+func (r *Renderer) passDeferred() {
+	if r.debug {
+		done := utils.Timed("deferred pass (shading)")
+		defer done()
+	}
+
+	r.renderCamera = r.scene.Camera
+
 	xstep := int(r.concurrentSize)
 	ystep := int(r.concurrentSize)
-
-	matView := r.scene.Camera.ViewMatrix()
-	matProj := r.scene.Camera.ProjMatrix()
+	matView := r.renderCamera.ViewMatrix()
+	matProj := r.renderCamera.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
+	uniforms := map[string]interface{}{
+		"matView":    matView,
+		"matViewInv": matView.Inv(),
+		"matProj":    matProj,
+		"matProjInv": matProj.Inv(),
+		"matVP":      matVP,
+		"matVPInv":   matVP.Inv(),
+	}
 	for i := 0; i < r.width; i += xstep {
 		for j := 0; j < r.height; j += ystep {
 			ii := i
 			jj := j
-			limiter.Execute(func() {
+			r.limiter.Execute(func() {
 				for k := 0; k < xstep; k++ {
 					for l := 0; l < ystep; l++ {
 						x := ii + k
 						y := jj + l
-
-						idx := x + r.width*y
-						if idx >= len(r.gBuf) {
-							continue
-						}
-						info := &r.gBuf[idx]
-						if !info.ok {
-							r.setFramebuf(x, y, r.background)
-							continue
-						}
-
-						col := info.col
-						if info.mat != nil {
-							lod := 0.0
-							if info.mat.Texture().UseMipmap() {
-								siz := float64(info.mat.Texture().Size()) * math.Sqrt(math.Max(info.du, info.dv))
-								if siz < 1 {
-									siz = 1
-								}
-								lod = math.Log2(siz)
-							}
-							col = info.mat.Texture().Query(lod, info.u, 1-info.v)
-							col = info.mat.FragmentShader(col, info.pos, info.n, r.scene.Camera.Position(), r.scene.Lights)
-						}
-
-						if r.useShadowMap {
-							// transform scrren coordinate to light viewport
-							screenCoord := math.NewVector(float64(x), float64(y), info.z, 1).
-								Apply(matVP.Inv()).
-								Apply(matProj.Inv()).
-								Apply(matView.Inv()).
-								Apply(r.lightCamera.ViewMatrix()).
-								Apply(r.lightCamera.ProjMatrix()).
-								Apply(matVP)
-							screenCoord = screenCoord.Scale(
-								1/screenCoord.W,
-								1/screenCoord.W,
-								1/screenCoord.W,
-								1/screenCoord.W,
-							)
-
-							// now the screend coordinates is transformed to
-							// the light perspective, find out the depth we
-							// need to query:
-							lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
-							shadowIdx := lightX + lightY*r.width
-
-							if shadowIdx > 0 && shadowIdx < len(r.shadowTexture) {
-								shadowZ := r.shadowTexture[shadowIdx]
-
-								// bilinear depth value query
-								shadowIdx2 := lightX + 1 + lightY*r.width
-								shadowIdx3 := lightX + (lightY+1)*r.width
-								shadowIdx4 := lightX + 1 + (lightY+1)*r.width
-								if (shadowIdx2 > 0 && shadowIdx2 < len(r.shadowTexture)) &&
-									(shadowIdx3 > 0 && shadowIdx3 < len(r.shadowTexture)) &&
-									(shadowIdx4 > 0 && shadowIdx4 < len(r.shadowTexture)) {
-
-									shadowZ1 := shadowZ
-									shadowZ2 := r.shadowTexture[shadowIdx2]
-									shadowZ3 := r.shadowTexture[shadowIdx3]
-									shadowZ4 := r.shadowTexture[shadowIdx4]
-									tx := screenCoord.X - float64(lightX)
-									shadowZa1 := math.Lerp(shadowZ1, shadowZ2, tx)
-									shadowZa2 := math.Lerp(shadowZ3, shadowZ4, tx)
-									ty := screenCoord.Y - float64(lightY)
-									shadowZ = math.Lerp(shadowZa1, shadowZa2, ty)
-
-									if screenCoord.Z < shadowZ-0.004 {
-										col = color.RGBA{col.R / 2, col.G / 2, col.B / 2, 255}
-									}
-								}
-							}
-						}
-
-						r.setFramebuf(x, y, col)
+						r.shade(x, y, uniforms)
 					}
 				}
 			})
 		}
 	}
-	limiter.Wait()
+	r.limiter.Wait()
 }
 
-func (r *Renderer) antialiasing() {
+func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
+	idx := x + r.width*y
+	if idx >= len(r.gBuf) {
+		return
+	}
+	info := &r.gBuf[idx]
+	if !info.ok {
+		r.setFramebuf(x, y, r.background)
+		return
+	}
+
+	col := info.col
+	if info.mat != nil {
+		lod := 0.0
+		if info.mat.Texture().UseMipmap() {
+			siz := float64(info.mat.Texture().Size()) * math.Sqrt(math.Max(info.du, info.dv))
+			if siz < 1 {
+				siz = 1
+			}
+			lod = math.Log2(siz)
+		}
+		col = info.mat.Texture().Query(lod, info.u, 1-info.v)
+		col = info.mat.FragmentShader(col, info.pos, info.n, r.renderCamera.Position(), r.scene.Lights)
+	}
+
+	if r.useShadowMap && info.mat.ReceiveShadow() {
+		visibles := 0.0
+		ns := len(r.shadowBufs)
+		for i := 0; i < ns; i++ {
+			visible := r.shadingVisibility(x, y, i, info, uniforms)
+			if visible {
+				visibles++
+			}
+		}
+		w := math.Pow(0.5, visibles)
+		r := uint8(float64(col.R) * w)
+		g := uint8(float64(col.G) * w)
+		b := uint8(float64(col.B) * w)
+		col = color.RGBA{r, g, b, col.A}
+	}
+	r.setFramebuf(x, y, col)
+}
+
+func (r *Renderer) passAntialiasing() {
+	if r.debug {
+		done := utils.Timed("antialiasing")
+		defer done()
+	}
+
 	r.outBuf = utils.Resize(r.width/r.msaa, r.height/r.msaa, r.frameBuf)
 }
 
@@ -444,65 +277,6 @@ func (r *Renderer) setFramebuf(x, y int, c color.RGBA) {
 	r.lockBuf[idx].Lock()
 	r.frameBuf.Set(x, r.height-y, c)
 	r.lockBuf[idx].Unlock()
-}
-
-func (r *Renderer) drawDepth(uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {
-	var t1, t2, t3 primitive.Vertex
-	if mat != nil {
-		t1 = mat.VertexShader(tri.V1, uniforms)
-		t2 = mat.VertexShader(tri.V2, uniforms)
-		t3 = mat.VertexShader(tri.V3, uniforms)
-	} else {
-		t1 = r.vertShader(tri.V1, uniforms)
-		t2 = r.vertShader(tri.V2, uniforms)
-		t3 = r.vertShader(tri.V3, uniforms)
-	}
-
-	// Backface culling
-	if t2.Pos.Sub(t1.Pos).Cross(t3.Pos.Sub(t1.Pos)).Z < 0 {
-		return
-	}
-
-	// Viewfrustum culling
-	if !r.inViewport(t1.Pos, t2.Pos, t3.Pos) {
-		return
-	}
-
-	// Compute AABB make the AABB a little bigger that align with pixels
-	// to contain the entire triangle
-	aabb := primitive.NewAABB(t1.Pos, t2.Pos, t3.Pos)
-	xmin := int(math.Round(aabb.Min.X) - 1)
-	xmax := int(math.Round(aabb.Max.X) + 1)
-	ymin := int(math.Round(aabb.Min.Y) - 1)
-	ymax := int(math.Round(aabb.Max.Y) + 1)
-
-	for x := xmin; x <= xmax; x++ {
-		for y := ymin; y <= ymax; y++ {
-			if x < 0 || x >= r.width || y < 0 || y >= r.height {
-				continue
-			}
-
-			w1, w2, w3 := r.barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
-
-			// Is inside triangle?
-			if w1 < 0 || w2 < 0 || w3 < 0 {
-				continue
-			}
-
-			// Z-test
-			z := w1*t1.Pos.Z + w2*t2.Pos.Z + w3*t3.Pos.Z
-			if !r.passDepthTest(x, y, z) {
-				continue
-			}
-
-			// update G-buffer
-			idx := x + y*r.width
-			r.lockBuf[idx].Lock()
-			r.gBuf[idx].ok = true
-			r.gBuf[idx].z = z
-			r.lockBuf[idx].Unlock()
-		}
-	}
 }
 
 func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {
@@ -517,9 +291,9 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 		t2 = mat.VertexShader(tri.V2, uniforms)
 		t3 = mat.VertexShader(tri.V3, uniforms)
 	} else {
-		t1 = r.vertShader(tri.V1, uniforms)
-		t2 = r.vertShader(tri.V2, uniforms)
-		t3 = r.vertShader(tri.V3, uniforms)
+		t1 = defaultVertexShader(tri.V1, uniforms)
+		t2 = defaultVertexShader(tri.V2, uniforms)
+		t3 = defaultVertexShader(tri.V3, uniforms)
 	}
 
 	// Backface culling
@@ -536,7 +310,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 	t1Z := 1.0
 	t2Z := 1.0
 	t3Z := 1.0
-	if _, ok := r.scene.Camera.(camera.Perspective); ok {
+	if _, ok := r.renderCamera.(camera.Perspective); ok {
 		t1Z = 1 / t1.Pos.Z
 		t2Z = 1 / t2.Pos.Z
 		t3Z = 1 / t3.Pos.Z
@@ -569,7 +343,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 
 			// Z-test
 			z := w1*t1.Pos.Z + w2*t2.Pos.Z + w3*t3.Pos.Z
-			if !r.passDepthTest(x, y, z) {
+			if !r.depthTest(x, y, z) {
 				continue
 			}
 
@@ -577,7 +351,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			// Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 			// Department of Computer Science, University of North Carolina at Chapel Hill (2002).
 			Z := 1.0
-			if _, ok := r.scene.Camera.(camera.Perspective); ok {
+			if _, ok := r.renderCamera.(camera.Perspective); ok {
 				Z = w1*t1Z + w2*t2Z + w3*t3Z
 			}
 
@@ -636,12 +410,11 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 	}
 }
 
-func (r *Renderer) passDepthTest(x, y int, z float64) bool {
+func (r *Renderer) depthTest(x, y int, z float64) bool {
 	idx := x + y*r.width
 
 	r.lockBuf[idx].Lock()
 	defer r.lockBuf[idx].Unlock()
-
 	return !(r.gBuf[idx].ok && z <= r.gBuf[idx].z)
 }
 
@@ -674,21 +447,4 @@ func (r *Renderer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 float
 	Sbcp := bc.Cross(bp).Z
 	w1, w2, w3 = Sbcp/Sabc, Sapc/Sabc, Sabp/Sabc
 	return
-}
-
-// vertShader is a default vertex shader.
-func (r *Renderer) vertShader(v primitive.Vertex, uniforms map[string]interface{}) primitive.Vertex {
-	matModel := uniforms["matModel"].(math.Matrix)
-	matView := uniforms["matView"].(math.Matrix)
-	matProj := uniforms["matProj"].(math.Matrix)
-	matVP := uniforms["matVP"].(math.Matrix)
-	matNormal := uniforms["matNormal"].(math.Matrix)
-
-	pos := v.Pos.Apply(matModel).Apply(matView).Apply(matProj).Apply(matVP)
-	return primitive.Vertex{
-		Pos: pos.Scale(1/pos.W, 1/pos.W, 1/pos.W, 1/pos.W),
-		Col: v.Col,
-		UV:  v.UV,
-		Nor: v.Nor.Apply(matNormal),
-	}
 }

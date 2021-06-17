@@ -5,7 +5,11 @@
 package rend
 
 import (
+	"image"
 	"image/color"
+	"sync"
+
+	"changkun.de/x/ddd/utils"
 )
 
 type Option func(opts *Renderer)
@@ -57,4 +61,22 @@ func WithThreadLimit(n int) Option {
 	return func(r *Renderer) {
 		r.gomaxprocs = n
 	}
+}
+
+func (r *Renderer) UpdateOptions(opts ...Option) {
+	r.wait() // wait last frame to finish
+
+	for _, opt := range opts {
+		opt(r)
+	}
+
+	// calibrate rendering size
+	r.width *= r.msaa
+	r.height *= r.msaa
+	r.lockBuf = make([]sync.Mutex, r.width*r.height)
+	r.gBuf = make([]gInfo, r.width*r.height)
+	r.frameBuf = image.NewRGBA(image.Rect(0, 0, r.width, r.height))
+	r.limiter = utils.NewLimiter(r.gomaxprocs)
+	r.resetGBuf()
+	r.resetFrameBuf()
 }

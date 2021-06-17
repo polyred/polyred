@@ -6,6 +6,7 @@ package utils_test
 
 import (
 	"runtime"
+	"sync/atomic"
 	"testing"
 
 	"changkun.de/x/ddd/utils"
@@ -19,6 +20,33 @@ var (
 		}
 	}
 )
+
+func TestLimiter(t *testing.T) {
+	l := utils.NewLimiter(2)
+	sum := uint32(0)
+	for i := 0; i < 10; i++ {
+		ii := uint32(i)
+		l.Execute(func() {
+			atomic.AddUint32(&sum, ii)
+		})
+	}
+	l.Wait()
+	if sum != 45 {
+		t.Fatalf("wrong sum, expect: %d, want %d", 45, sum)
+	}
+
+	sum = uint32(0)
+	for i := 0; i < 10; i++ {
+		ii := uint32(i)
+		l.Execute(func() {
+			atomic.AddUint32(&sum, ii)
+		})
+	}
+	l.Wait()
+	if sum != 45 {
+		t.Fatalf("wrong sum, expect: %d, want %d", 45, sum)
+	}
+}
 
 func BenchmarkLimiter(b *testing.B) {
 	np := runtime.GOMAXPROCS(0)
