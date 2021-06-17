@@ -64,3 +64,32 @@ func TestAABB_Intersect(t *testing.T) {
 		t.Fatalf("not intersect")
 	}
 }
+
+func TestAABB_Add(t *testing.T) {
+
+	v1 := math.NewVector(1, 0, 0, 1)
+	v2 := math.NewVector(0, 1, 0, 1)
+	v3 := math.NewVector(0, 0, 1, 1)
+
+	aabb := primitive.NewAABB(v1, v2, v3)
+
+	v4 := math.NewVector(-1, -0.5, -0.5, 1)
+	v5 := math.NewVector(-0.5, -1, -0.5, 1)
+	v6 := math.NewVector(-0.5, -0.5, -1, 1)
+
+	aabb.Add(primitive.NewAABB(v4, v5, v6))
+	want := primitive.NewAABB(v1, v2, v3, v4, v5, v6)
+	if !aabb.Eq(want) {
+		t.Fatalf("AABB add does not work")
+	}
+}
+
+func BenchmarkVertexAABB(b *testing.B) {
+	v := primitive.NewRandomVertex()
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		v.AABB()
+	}
+}

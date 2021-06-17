@@ -59,3 +59,11 @@ func (aabb AABB) Add(aabb2 AABB) {
 	aabb.Max.Y = math.Max(aabb.Max.Y, aabb2.Max.Y)
 	aabb.Max.Z = math.Max(aabb.Max.Z, aabb2.Max.Z)
 }
+
+// Eq checks if two aabbs are equal
+func (aabb AABB) Eq(aabb2 AABB) bool {
+	if aabb.Min.Eq(aabb2.Min) && aabb.Max.Eq(aabb2.Max) {
+		return true
+	}
+	return false
+}

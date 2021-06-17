@@ -32,20 +32,14 @@ type TriangleMesh struct {
 // NewTriangleMesh returns a triangular mesh.
 func NewTriangleMesh(ts []*primitive.Triangle) *TriangleMesh {
 	// Compute AABB at loading time.
-	min := math.Vector{X: math.MaxFloat64, Y: math.MaxFloat64, Z: math.MaxFloat64, W: 1}
-	max := math.Vector{X: -math.MaxFloat64, Y: -math.MaxFloat64, Z: -math.MaxFloat64, W: 1}
-	for i := 0; i < len(ts); i++ {
-		min.X = math.Min(min.X, ts[i].V1.Pos.X, ts[i].V2.Pos.X, ts[i].V3.Pos.X)
-		min.Y = math.Min(min.Y, ts[i].V1.Pos.Y, ts[i].V2.Pos.Y, ts[i].V3.Pos.Y)
-		min.Z = math.Min(min.Z, ts[i].V1.Pos.Z, ts[i].V2.Pos.Z, ts[i].V3.Pos.Z)
-		max.X = math.Max(max.X, ts[i].V1.Pos.X, ts[i].V2.Pos.X, ts[i].V3.Pos.X)
-		max.Y = math.Max(max.Y, ts[i].V1.Pos.Y, ts[i].V2.Pos.Y, ts[i].V3.Pos.Y)
-		max.Z = math.Max(max.Z, ts[i].V1.Pos.Z, ts[i].V2.Pos.Z, ts[i].V3.Pos.Z)
+	aabb := ts[0].AABB()
+	for i := 1; i < len(ts); i++ {
+		aabb.Add(ts[i].AABB())
 	}
 
 	return &TriangleMesh{
 		Faces:   ts,
-		aabb:    primitive.AABB{Min: min, Max: max},
+		aabb:    aabb,
 		context: math.MatI,
 	}
 }
@@ -60,7 +54,7 @@ func (t *TriangleMesh) ModelMatrix() math.Matrix {
 	return t.context
 }
 
-// normalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
+// NormalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
 // depending on which transformation space. Here we use the 2nd form,
 // i.e. model space normal matrix to save some computation of camera
 // transforamtion in the shading process.
@@ -97,6 +91,30 @@ func (m *TriangleMesh) Translate(tx, ty, tz float64) {
 
 func (m *TriangleMesh) Rotate(dir math.Vector, angle float64) {
 	u := dir.Unit()
+	cosa := math.Cos(angle / 2)
+	sina := math.Sin(angle / 2)
+	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
+	m.context = q.ToRoMat().MulM(m.context)
+}
+
+func (m *TriangleMesh) RotateX(angle float64) {
+	u := math.NewVector(1, 0, 0, 0)
+	cosa := math.Cos(angle / 2)
+	sina := math.Sin(angle / 2)
+	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
+	m.context = q.ToRoMat().MulM(m.context)
+}
+
+func (m *TriangleMesh) RotateY(angle float64) {
+	u := math.NewVector(0, 1, 0, 0)
+	cosa := math.Cos(angle / 2)
+	sina := math.Sin(angle / 2)
+	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
+	m.context = q.ToRoMat().MulM(m.context)
+}
+
+func (m *TriangleMesh) RotateZ(angle float64) {
+	u := math.NewVector(0, 0, 1, 0)
 	cosa := math.Cos(angle / 2)
 	sina := math.Sin(angle / 2)
 	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
