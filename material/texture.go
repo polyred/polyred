@@ -5,6 +5,7 @@
 package material
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 
@@ -24,24 +25,23 @@ type Texture struct {
 	useMipmap bool
 	mipmap    []*image.RGBA
 	image     *image.RGBA
+	debug     bool
 }
 
 type TextureOption func(t *Texture)
 
 func WithImage(img *image.RGBA) TextureOption {
 	return func(t *Texture) {
-		if img.Bounds().Dx() != img.Bounds().Dy() {
-			panic("image width and height is not equal!")
-		}
-		if img.Bounds().Dx() < 1 {
+		if img.Bounds().Dx() < 1 || img.Bounds().Dy() < 1 {
 			panic("image width or height is less than 1!")
 		}
-		siz := img.Bounds().Dx()
-		if (siz&(siz-1)) != 0 || siz < 0 {
-			panic("image size is not a power of two!")
-		}
-
 		t.image = img
+	}
+}
+
+func WithDebug(enable bool) TextureOption {
+	return func(t *Texture) {
+		t.debug = enable
 	}
 }
 
@@ -61,19 +61,24 @@ func NewTexture(opts ...TextureOption) *Texture {
 		opt(t)
 	}
 
-	siz := t.image.Bounds().Dx()
-	if siz == 1 {
+	dx := t.image.Bounds().Dx()
+	dy := t.image.Bounds().Dy()
+	if dx == 1 && dy == 1 {
 		t.mipmap = []*image.RGBA{t.image}
 		return t
 	}
 
-	L := int(math.Log2(float64(siz)) + 1)
+	L := int(math.Log2(math.Max(float64(dx), float64(dy)))) + 1
 	t.mipmap = make([]*image.RGBA, L)
 	t.mipmap[0] = t.image
 
 	for i := 1; i < L; i++ {
-		size := siz / int(math.Pow(2, float64(i)))
-		t.mipmap[i] = utils.Resize(size, size, t.image)
+		width := dx / int(math.Pow(2, float64(i)))
+		height := dy / int(math.Pow(2, float64(i)))
+		t.mipmap[i] = utils.Resize(width, height, t.image)
+		if t.debug {
+			utils.Save(t.mipmap[i], fmt.Sprintf("%d.png", i))
+		}
 	}
 	return t
 }
@@ -140,13 +145,14 @@ func (t *Texture) Query(lod, u, v float64) color.RGBA {
 
 func (t *Texture) queryL0(u, v float64) color.RGBA {
 	tex := t.mipmap[0]
-	siz := float64(tex.Bounds().Dx())
-	if siz == 1 {
+	dx := float64(tex.Bounds().Dx())
+	dy := float64(tex.Bounds().Dy())
+	if dx == 1 && dy == 1 {
 		return tex.At(0, 0).(color.RGBA)
 	}
 
-	x := int(math.Floor(u * (siz - 1))) // very coarse approximation.
-	y := int(math.Floor(v * (siz - 1))) // very coarse approximation.
+	x := int(math.Floor(u * (dx - 1))) // very coarse approximation.
+	y := int(math.Floor(v * (dy - 1))) // very coarse approximation.
 	return tex.At(x, y).(color.RGBA)
 }
 
@@ -158,12 +164,13 @@ func (t *Texture) queryTrilinear(h, l int, p, u, v float64) color.RGBA {
 
 func (t *Texture) queryBilinear(lod int, u, v float64) color.RGBA {
 	buf := t.mipmap[lod]
-	siz := buf.Bounds().Dx()
-	if siz == 1 {
+	dx := buf.Bounds().Dx()
+	dy := buf.Bounds().Dy()
+	if dx == 1 && dy == 1 {
 		return buf.At(0, 0).(color.RGBA)
 	}
-	x := u * (float64(siz) - 1)
-	y := v * (float64(siz) - 1)
+	x := u * (float64(dx) - 1)
+	y := v * (float64(dy) - 1)
 
 	x0 := math.Floor(x)
 	y0 := math.Floor(y)
@@ -173,19 +180,19 @@ func (t *Texture) queryBilinear(lod int, u, v float64) color.RGBA {
 
 	var p1, p2, p3, p4 color.RGBA
 	p1 = buf.At(i, j).(color.RGBA)
-	if i < siz-1 {
+	if i < dx-1 {
 		p2 = buf.At(i+1, j).(color.RGBA)
 	} else {
 		p2 = buf.At(i, j).(color.RGBA)
 	}
 	interpo1 := math.LerpC(p1, p2, x-x0)
 
-	if j < siz-1 {
+	if j < dy-1 {
 		p3 = buf.At(i, j+1).(color.RGBA)
 	} else {
 		p3 = buf.At(i, j).(color.RGBA)
 	}
-	if i < siz-1 && j < siz-1 {
+	if i < dx-1 && j < dy-1 {
 		p4 = buf.At(i+1, j+1).(color.RGBA)
 	} else {
 		p4 = buf.At(i, j).(color.RGBA)

@@ -138,6 +138,11 @@ var (
 			io.MustLoadTexture("../testdata/ground.png"),
 			0.5, 0.5, 10, color.RGBA{R: 79, G: 116, B: 18, A: 255},
 		},
+		{
+			"pic",
+			io.MustLoadTexture("../testdata/pic.jpg"),
+			0.5, 0.5, 0, color.RGBA{R: 253, G: 168, B: 67, A: 255},
+		},
 	}
 )
 

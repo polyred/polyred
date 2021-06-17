@@ -99,10 +99,22 @@ func (r *Renderer) UpdateOptions(opts ...Option) {
 // wait waits the current rendering terminates
 func (r *Renderer) wait() {
 	atomic.StoreUint32(&r.stop, 1)
-	for atomic.LoadUint32(&r.running) == 0 {
+	for r.isRunning() {
 		runtime.Gosched()
 	}
-	atomic.StoreUint32(&r.stop, 1)
+	atomic.StoreUint32(&r.stop, 0)
+}
+
+func (r *Renderer) startRunning() {
+	atomic.StoreUint32(&r.running, 1)
+}
+
+func (r *Renderer) isRunning() bool {
+	return atomic.LoadUint32(&r.running) == 1
+}
+
+func (r *Renderer) stopRunning() {
+	atomic.StoreUint32(&r.running, 0)
 }
 
 func (r *Renderer) shouldStop() bool {
@@ -115,6 +127,9 @@ func (r *Renderer) GetScene() *Scene {
 
 // Render renders a scene.
 func (r *Renderer) Render() *image.RGBA {
+	r.startRunning()
+	defer r.stopRunning()
+
 	r.resetBufs()
 	var (
 		total      func()
