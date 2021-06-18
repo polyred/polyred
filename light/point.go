@@ -10,36 +10,31 @@ import (
 	"changkun.de/x/ddd/math"
 )
 
-type Light interface {
-	Itensity() float64
-	Position() math.Vector
-	Color() color.RGBA
-	CastShadow() bool
-}
+var _ Source = &Point{}
 
 // Point is a point light
 type Point struct {
-	itensity     float64
-	color        color.RGBA
 	pos          math.Vector
+	intensity    float64
+	color        color.RGBA
 	useShadowMap bool
 }
 
 type PointOption func(l *Point)
 
-func WithPoingLightItensity(I float64) PointOption {
+func WithPointLightIntensity(I float64) PointOption {
 	return func(l *Point) {
-		l.itensity = I
+		l.intensity = I
 	}
 }
 
-func WithPoingLightColor(c color.RGBA) PointOption {
+func WithPointLightColor(c color.RGBA) PointOption {
 	return func(l *Point) {
 		l.color = c
 	}
 }
 
-func WithPoingLightPosition(pos math.Vector) PointOption {
+func WithPointLightPosition(pos math.Vector) PointOption {
 	return func(l *Point) {
 		l.pos = pos
 	}
@@ -52,9 +47,9 @@ func WithShadowMap(enable bool) PointOption {
 }
 
 // NewPoint returns a new point light
-func NewPoint(opts ...PointOption) Light {
+func NewPoint(opts ...PointOption) Source {
 	l := &Point{
-		itensity:     1,
+		intensity:    1,
 		color:        color.RGBA{255, 255, 255, 255},
 		pos:          math.Vector{},
 		useShadowMap: false,
@@ -67,8 +62,8 @@ func NewPoint(opts ...PointOption) Light {
 	return l
 }
 
-func (l *Point) Itensity() float64 {
-	return l.itensity
+func (l *Point) Intensity() float64 {
+	return l.intensity
 }
 
 func (l *Point) Position() math.Vector {

@@ -13,6 +13,7 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
 - IO
   + [x] OBJ file loader
   + [ ] OBJ file exporter
+  + [x] Gamma correction
 - geometry
   + [x] triangle mesh
   + [x] quad mesh
@@ -38,7 +39,7 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
 - texturing
   + [x] isotropic mipmap
   + [ ] anisotropic mipmap
-  + [ ] arbitrary texture size
+  + [x] arbitrary texture size
 + material
   + [x] basic material
   + [x] Blinn-Phong material

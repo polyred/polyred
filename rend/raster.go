@@ -188,19 +188,22 @@ func (r *Renderer) passDeferred() {
 	}
 
 	r.renderCamera = r.scene.Camera
-
 	xstep := int(r.concurrentSize)
 	ystep := int(r.concurrentSize)
 	matView := r.renderCamera.ViewMatrix()
+	matViewInv := matView.Inv()
 	matProj := r.renderCamera.ProjMatrix()
+	matProjInv := matProj.Inv()
 	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
+	matVPInv := matVP.Inv()
+	matScreenToWorld := matViewInv.MulM(matProjInv).MulM(matVPInv)
 	uniforms := map[string]interface{}{
-		"matView":    matView,
-		"matViewInv": matView.Inv(),
-		"matProj":    matProj,
-		"matProjInv": matProj.Inv(),
-		"matVP":      matVP,
-		"matVPInv":   matVP.Inv(),
+		"matView":          matView,
+		"matViewInv":       matViewInv,
+		"matProj":          matProj,
+		"matProjInv":       matProjInv,
+		"matVP":            matVP,
+		"matScreenToWorld": matScreenToWorld,
 	}
 	for i := 0; i < r.width; i += xstep {
 		for j := 0; j < r.height; j += ystep {
@@ -242,7 +245,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
 			lod = math.Log2(siz)
 		}
 		col = info.mat.Texture().Query(lod, info.u, 1-info.v)
-		col = info.mat.FragmentShader(col, info.pos, info.n, r.renderCamera.Position(), r.scene.Lights)
+		col = info.mat.FragmentShader(col, info.pos, info.n, r.renderCamera.Position(), r.scene.LightSources, r.scene.LightEnv)
 	}
 
 	if r.useShadowMap && info.mat.ReceiveShadow() {
@@ -260,7 +263,6 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
 		b := uint8(float64(col.B) * w)
 		col = color.RGBA{r, g, b, col.A}
 	}
-
 	r.setFramebuf(x, y, col)
 }
 

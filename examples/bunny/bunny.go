@@ -28,13 +28,13 @@ func main() {
 		100, 600,
 	)
 	s.UseCamera(c)
-
-	l := light.NewPoint(
-		light.WithPoingLightItensity(200),
-		light.WithPoingLightColor(color.RGBA{255, 255, 255, 255}),
-		light.WithPoingLightPosition(math.NewVector(-200, 250, 600, 1)),
-	)
-	s.AddLight(l)
+	s.AddLight(light.NewPoint(
+		light.WithPointLightIntensity(200),
+		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
+		light.WithPointLightPosition(math.NewVector(-200, 250, 600, 1)),
+	), light.NewAmbient(
+		light.WithAmbientIntensity(0.7),
+	))
 
 	var done func()
 
@@ -53,7 +53,7 @@ func main() {
 
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)
 	m.UseMaterial(mat)

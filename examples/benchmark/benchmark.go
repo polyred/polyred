@@ -54,8 +54,7 @@ func main() {
 func bench(opt *benchOpts) {
 	result := testing.Benchmark(func(b *testing.B) {
 		s := rend.NewScene()
-
-		c := camera.NewPerspective(
+		s.UseCamera(camera.NewPerspective(
 			math.NewVector(0, 0.6, 0.9, 1),
 			math.NewVector(0, 0, 0, 1),
 			math.NewVector(0, 1, 0, 0),
@@ -63,47 +62,44 @@ func bench(opt *benchOpts) {
 			float64(opt.width)/float64(opt.height),
 			0.1,
 			2,
-		)
-		s.UseCamera(c)
+		))
 
 		s.AddLight(light.NewPoint(
-			light.WithPoingLightItensity(20),
-			light.WithPoingLightColor(color.RGBA{0, 0, 0, 255}),
-			light.WithPoingLightPosition(math.NewVector(4, 4, 2, 1)),
+			light.WithPointLightIntensity(7),
+			light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
+			light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
 			light.WithShadowMap(opt.shadowmap),
+		), light.NewAmbient(
+			light.WithAmbientIntensity(0.5),
 		))
 
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
 		data := io.MustLoadImage("../../testdata/bunny.png")
-		tex := material.NewTexture(
-			material.WithImage(data),
-			material.WithIsotropicMipMap(true),
-			material.WithGammaCorrection(opt.gammaCorrection),
-		)
-		mat := material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(tex),
-			material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		m.UseMaterial(material.NewBlinnPhong(
+			material.WithBlinnPhongTexture(material.NewTexture(
+				material.WithImage(data),
+				material.WithIsotropicMipMap(true),
+				material.WithGammaCorrection(opt.gammaCorrection),
+			)),
+			material.WithBlinnPhongFactors(0.6, 0.5),
 			material.WithBlinnPhongShininess(150),
 			material.WithBlinnPhongShadow(opt.shadowmap),
-		)
-		m.UseMaterial(mat)
+		))
 		m.Scale(2, 2, 2)
 		s.AddMesh(m)
 
 		m = io.MustLoadMesh("../../testdata/ground.obj")
 		data = io.MustLoadImage("../../testdata/ground.png")
-		tex = material.NewTexture(
-			material.WithImage(data),
-			material.WithIsotropicMipMap(true),
-			material.WithGammaCorrection(opt.gammaCorrection),
-		)
-		mat = material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(tex),
-			material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		m.UseMaterial(material.NewBlinnPhong(
+			material.WithBlinnPhongTexture(material.NewTexture(
+				material.WithImage(data),
+				material.WithIsotropicMipMap(true),
+				material.WithGammaCorrection(opt.gammaCorrection),
+			)),
+			material.WithBlinnPhongFactors(0.6, 0.5),
 			material.WithBlinnPhongShininess(150),
 			material.WithBlinnPhongShadow(opt.shadowmap),
-		)
-		m.UseMaterial(mat)
+		))
 		m.Scale(2, 2, 2)
 		s.AddMesh(m)
 

@@ -18,7 +18,7 @@ func NewBasicMaterial(c color.Color) Material {
 	)
 	return NewBlinnPhong(
 		WithBlinnPhongTexture(tex),
-		WithBlinnPhongFactors(0.5, 0.6, 10),
+		WithBlinnPhongFactors(0.6, 1),
 		WithBlinnPhongShininess(100),
 	)
 }

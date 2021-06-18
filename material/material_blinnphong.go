@@ -14,7 +14,6 @@ import (
 
 type BlinnPhongMaterial struct {
 	tex           *Texture
-	kAmb          float64
 	kDiff         float64
 	kSpec         float64
 	shininess     float64
@@ -33,9 +32,8 @@ func WithBlinnPhongTexture(tex *Texture) BlinnPhongMaterialOption {
 	}
 }
 
-func WithBlinnPhongFactors(Kamb, Kdiff, Kspec float64) BlinnPhongMaterialOption {
+func WithBlinnPhongFactors(Kdiff, Kspec float64) BlinnPhongMaterialOption {
 	return func(m *BlinnPhongMaterial) {
-		m.kAmb = Kamb
 		m.kDiff = Kdiff
 		m.kSpec = Kspec
 	}
@@ -56,7 +54,6 @@ func WithBlinnPhongShadow(enable bool) BlinnPhongMaterialOption {
 func NewBlinnPhong(opts ...BlinnPhongMaterialOption) Material {
 	t := &BlinnPhongMaterial{
 		tex:           nil,
-		kAmb:          0.5,
 		kDiff:         0.5,
 		kSpec:         1,
 		shininess:     1,
@@ -84,22 +81,52 @@ func (m *BlinnPhongMaterial) VertexShader(v primitive.Vertex, uniforms map[strin
 	}
 }
 
-func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, c math.Vector, ls []light.Light) color.RGBA {
-	D := ls[0].Position().Sub(x).Len()
-	L := ls[0].Position().Sub(x).Unit()
-	V := c.Sub(x).Unit()
-	H := L.Add(V).Unit()
-	p := m.shininess
-	La := m.kAmb
-	Ld := m.kDiff * n.Dot(L)
-	Ls := m.kSpec * math.Pow(n.Dot(H), p)
+func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, c math.Vector, ls []light.Source, es []light.Environment) color.RGBA {
+	LaR := 0.0
+	LaG := 0.0
+	LaB := 0.0
 
-	I := ls[0].Itensity() / D
+	for _, e := range es {
+		LaR += e.Intensity() * float64(col.R)
+		LaG += e.Intensity() * float64(col.G)
+		LaB += e.Intensity() * float64(col.B)
+	}
 
-	r := uint8(math.Clamp(math.Round((La+Ld)*float64(col.R)+Ls*float64(ls[0].Color().R)*I), 0, 255))
-	g := uint8(math.Clamp(math.Round((La+Ld)*float64(col.G)+Ls*float64(ls[0].Color().G)*I), 0, 255))
-	b := uint8(math.Clamp(math.Round((La+Ld)*float64(col.B)+Ls*float64(ls[0].Color().B)*I), 0, 255))
-	return color.RGBA{r, g, b, col.A}
+	LdR := 0.0
+	LdG := 0.0
+	LdB := 0.0
+
+	LsR := 0.0
+	LsG := 0.0
+	LsB := 0.0
+
+	for _, l := range ls {
+		L := l.Position().Sub(x).Unit()
+		V := c.Sub(x).Unit()
+		H := L.Add(V).Unit()
+		Ld := math.Clamp(n.Dot(L), 0, 1)
+		Ls := math.Pow(math.Clamp(n.Dot(H), 0, 1), m.shininess)
+		I := l.Intensity() / l.Position().Sub(x).Len()
+
+		LdR += Ld * float64(col.R) * I
+		LdG += Ld * float64(col.G) * I
+		LdB += Ld * float64(col.B) * I
+
+		LsR += Ls * float64(l.Color().R) * I
+		LsG += Ls * float64(l.Color().G) * I
+		LsB += Ls * float64(l.Color().B) * I
+	}
+
+	// The Blinn-Phong Reflection Model
+	r := LaR + m.kDiff*LdR + m.kSpec*LsR
+	g := LaG + m.kDiff*LdG + m.kSpec*LsG
+	b := LaB + m.kDiff*LdB + m.kSpec*LsB
+
+	return color.RGBA{
+		uint8(math.Clamp(r, 0, 0xff)),
+		uint8(math.Clamp(g, 0, 0xff)),
+		uint8(math.Clamp(b, 0, 0xff)),
+		uint8(math.Clamp(float64(col.A), 0, 0xff))}
 }
 
 func (m *BlinnPhongMaterial) ReceiveShadow() bool {

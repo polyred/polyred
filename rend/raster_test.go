@@ -37,12 +37,13 @@ func newscene() *rend.Renderer {
 	)
 	s.UseCamera(c)
 
-	l := light.NewPoint(
-		light.WithPoingLightItensity(20),
-		light.WithPoingLightColor(color.RGBA{0, 0, 0, 255}),
-		light.WithPoingLightPosition(math.NewVector(-2, 2.5, 6, 1)),
-	)
-	s.AddLight(l)
+	s.AddLight(light.NewPoint(
+		light.WithPointLightIntensity(5),
+		light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
+		light.WithPointLightPosition(math.NewVector(-2, 2.5, 6, 1)),
+	), light.NewAmbient(
+		light.WithAmbientIntensity(0.5),
+	))
 
 	m := io.MustLoadMesh("../testdata/bunny.obj")
 	data := io.MustLoadImage("../testdata/bunny.png")
@@ -52,8 +53,8 @@ func newscene() *rend.Renderer {
 	)
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.5, 0.6, 1),
-		material.WithBlinnPhongShininess(150),
+		material.WithBlinnPhongFactors(0.8, 1),
+		material.WithBlinnPhongShininess(100),
 	)
 	m.UseMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)

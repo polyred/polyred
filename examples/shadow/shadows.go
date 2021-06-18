@@ -5,8 +5,6 @@
 package main
 
 import (
-	"image/color"
-
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
@@ -20,7 +18,7 @@ func main() {
 	width, height, msaa, shadow := 960, 540, 3, true
 	s := rend.NewScene()
 
-	c := camera.NewPerspective(
+	s.UseCamera(camera.NewPerspective(
 		math.NewVector(0, 0.6, 0.9, 1),
 		math.NewVector(0, 0, 0, 1),
 		math.NewVector(0, 1, 0, 0),
@@ -28,21 +26,23 @@ func main() {
 		float64(width)/float64(height),
 		0.1,
 		2,
-	)
-	s.UseCamera(c)
+	))
 
-	s.AddLight(light.NewPoint(
-		light.WithPoingLightItensity(20),
-		light.WithPoingLightColor(color.RGBA{0, 0, 0, 255}),
-		light.WithPoingLightPosition(math.NewVector(4, 4, 2, 1)),
-		light.WithShadowMap(true),
-	))
-	s.AddLight(light.NewPoint(
-		light.WithPoingLightItensity(20),
-		light.WithPoingLightColor(color.RGBA{0, 0, 0, 255}),
-		light.WithPoingLightPosition(math.NewVector(-4, 4, -2, 1)),
-		light.WithShadowMap(true),
-	))
+	s.AddLight(
+		light.NewPoint(
+			light.WithPointLightIntensity(3),
+			light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
+			light.WithShadowMap(true),
+		),
+		light.NewPoint(
+			light.WithPointLightIntensity(3),
+			light.WithPointLightPosition(math.NewVector(-6, 4, 2, 1)),
+			light.WithShadowMap(true),
+		),
+		light.NewAmbient(
+			light.WithAmbientIntensity(0.7),
+		),
+	)
 
 	m := io.MustLoadMesh("../../testdata/bunny.obj")
 	data := io.MustLoadImage("../../testdata/bunny.png")
@@ -52,8 +52,8 @@ func main() {
 	)
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.5, 0.6, 1),
-		material.WithBlinnPhongShininess(150),
+		material.WithBlinnPhongFactors(0.6, 0.3),
+		material.WithBlinnPhongShininess(20),
 	)
 	m.UseMaterial(mat)
 	m.Scale(2, 2, 2)
@@ -67,8 +67,8 @@ func main() {
 	)
 	mat = material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.5, 0.6, 1),
-		material.WithBlinnPhongShininess(150),
+		material.WithBlinnPhongFactors(0.6, 0.3),
+		material.WithBlinnPhongShininess(20),
 		material.WithBlinnPhongShadow(true),
 	)
 	m.UseMaterial(mat)
@@ -82,5 +82,23 @@ func main() {
 		rend.WithShadowMap(shadow),
 		rend.WithDebug(true),
 	)
+
+	// cpu pprof
+	// f, err := os.Create(fmt.Sprintf("cpu-%v.pprof", time.Now().Format(time.RFC3339)))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// pprof.StartCPUProfile(f)
+	// defer pprof.StopCPUProfile()
+
+	// trace
+	// t, err := os.Create(fmt.Sprintf("trace-%v.trace", time.Now().Format(time.RFC3339)))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer t.Close()
+	// trace.Start(t)
+	// defer trace.Stop()
+
 	utils.Save(r.Render(), "./shadows.png")
 }

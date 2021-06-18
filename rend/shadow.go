@@ -26,15 +26,15 @@ type shadowInfo struct {
 }
 
 func (r *Renderer) initShadowMaps() {
-	r.shadowBufs = make([]shadowInfo, len(r.scene.Lights))
-	for i := 0; i < len(r.scene.Lights); i++ {
-		if !r.scene.Lights[i].CastShadow() {
+	r.shadowBufs = make([]shadowInfo, len(r.scene.LightSources))
+	for i := 0; i < len(r.scene.LightSources); i++ {
+		if !r.scene.LightSources[i].CastShadow() {
 			continue
 		}
 
 		// initialize scene camera
 		tm := camera.ViewMatrix(
-			r.scene.Lights[i].Position(),
+			r.scene.LightSources[i].Position(),
 			r.scene.Center(),
 			math.NewVector(0, 1, 0, 0),
 		).
@@ -58,9 +58,9 @@ func (r *Renderer) initShadowMaps() {
 		// aspect := ri / to
 		// fov := 2 * math.Atan(to/math.Abs(ne))
 
-		li := r.scene.Lights[i]
+		li := r.scene.LightSources[i]
 		var c camera.Interface
-		switch li.(type) {
+		switch l := li.(type) {
 		case *light.Point:
 			// TODO: why perspective camera does not work?
 			// c = camera.NewPerspective(
@@ -70,7 +70,7 @@ func (r *Renderer) initShadowMaps() {
 			// 	fov, aspect, 0.001, 100,
 			// )
 			c = camera.NewOrthographic(
-				r.scene.Lights[i].Position(),
+				l.Position(),
 				r.scene.Center(),
 				math.NewVector(0, 1, 0, 0),
 				le, ri, bo, to, ne, fa,
@@ -87,7 +87,7 @@ func (r *Renderer) initShadowMaps() {
 }
 
 func (r *Renderer) passShadows(index int) {
-	if !r.scene.Lights[index].CastShadow() {
+	if !r.scene.LightSources[index].CastShadow() {
 		return
 	}
 
@@ -216,30 +216,20 @@ func (r *Renderer) shadingVisibility(
 	info *gInfo,
 	uniforms map[string]interface{},
 ) bool {
-	if !r.scene.Lights[shadowIdx].CastShadow() {
+	if !r.scene.LightSources[shadowIdx].CastShadow() {
 		return true
 	}
 
 	matVP := uniforms["matVP"].(math.Matrix)
-	matVPInv := uniforms["matVPInv"].(math.Matrix)
-	matProjInv := uniforms["matProjInv"].(math.Matrix)
-	matViewInv := uniforms["matViewInv"].(math.Matrix)
+	matScreenToWorld := uniforms["matScreenToWorld"].(math.Matrix)
 	shadowMap := &r.shadowBufs[shadowIdx]
 
 	// transform scrren coordinate to light viewport
 	screenCoord := math.NewVector(float64(x), float64(y), info.z, 1).
-		Apply(matVPInv).
-		Apply(matProjInv).
-		Apply(matViewInv).
+		Apply(matScreenToWorld).
 		Apply(shadowMap.settings.Camera().ViewMatrix()).
 		Apply(shadowMap.settings.Camera().ProjMatrix()).
-		Apply(matVP)
-	screenCoord = screenCoord.Scale(
-		1/screenCoord.W,
-		1/screenCoord.W,
-		1/screenCoord.W,
-		1/screenCoord.W,
-	)
+		Apply(matVP).Pos()
 
 	lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
 	bufIdx := lightX + lightY*r.width
@@ -247,32 +237,31 @@ func (r *Renderer) shadingVisibility(
 	shadow := 0
 	if bufIdx > 0 && bufIdx < len(shadowMap.depths) {
 		shadowZ := shadowMap.depths[bufIdx]
-		bufIdx2 := lightX + 1 + lightY*r.width
-		bufIdx3 := lightX + (lightY+1)*r.width
-		bufIdx4 := lightX + 1 + (lightY+1)*r.width
-		if (bufIdx2 > 0 && bufIdx2 < len(shadowMap.depths)) &&
-			(bufIdx3 > 0 && bufIdx3 < len(shadowMap.depths)) &&
-			(bufIdx4 > 0 && bufIdx4 < len(shadowMap.depths)) {
-
-			bias := shadowMap.settings.Bias()
-			shadowZ1 := shadowZ
-			if screenCoord.Z < shadowZ1-bias {
-				shadow++
-			}
-
-			shadowZ2 := shadowMap.depths[bufIdx2]
-			if screenCoord.Z < shadowZ2-bias {
-				shadow++
-			}
-			shadowZ3 := shadowMap.depths[bufIdx3]
-			if screenCoord.Z < shadowZ3-bias {
-				shadow++
-			}
-			shadowZ4 := shadowMap.depths[bufIdx4]
-			if screenCoord.Z < shadowZ4-bias {
-				shadow++
-			}
+		bias := shadowMap.settings.Bias()
+		if screenCoord.Z < shadowZ-bias {
+			shadow++
 		}
+
+		// bufIdx2 := lightX + 1 + lightY*r.width
+		// bufIdx3 := lightX + (lightY+1)*r.width
+		// bufIdx4 := lightX + 1 + (lightY+1)*r.width
+		// if (bufIdx2 > 0 && bufIdx2 < len(shadowMap.depths)) &&
+		// 	(bufIdx3 > 0 && bufIdx3 < len(shadowMap.depths)) &&
+		// 	(bufIdx4 > 0 && bufIdx4 < len(shadowMap.depths)) {
+
+		// 	shadowZ2 := shadowMap.depths[bufIdx2]
+		// 	if screenCoord.Z < shadowZ2-bias {
+		// 		shadow++
+		// 	}
+		// 	shadowZ3 := shadowMap.depths[bufIdx3]
+		// 	if screenCoord.Z < shadowZ3-bias {
+		// 		shadow++
+		// 	}
+		// 	shadowZ4 := shadowMap.depths[bufIdx4]
+		// 	if screenCoord.Z < shadowZ4-bias {
+		// 		shadow++
+		// 	}
+		// }
 	}
 
 	return shadow > 0

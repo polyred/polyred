@@ -39,9 +39,11 @@ func loadScene(width, height int) *rend.Scene {
 	)
 	s.UseCamera(c)
 	s.AddLight(light.NewPoint(
-		light.WithPoingLightItensity(20),
-		light.WithPoingLightColor(color.RGBA{0, 0, 0, 255}),
-		light.WithPoingLightPosition(math.NewVector(-200, 250, 600, 1)),
+		light.WithPointLightIntensity(20),
+		light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
+		light.WithPointLightPosition(math.NewVector(-200, 250, 600, 1)),
+	), light.NewAmbient(
+		light.WithAmbientIntensity(0.5),
 	))
 
 	m := io.MustLoadMesh("../../testdata/bunny.obj")
@@ -52,7 +54,7 @@ func loadScene(width, height int) *rend.Scene {
 	)
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)
 	m.UseMaterial(mat)
@@ -68,7 +70,7 @@ func loadScene(width, height int) *rend.Scene {
 	)
 	mat = material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.5, 0.6, 1),
+		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)
 	m.UseMaterial(mat)

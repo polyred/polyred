@@ -20,5 +20,5 @@ type Material interface {
 		v primitive.Vertex,
 		uniforms map[string]interface{},
 	) primitive.Vertex
-	FragmentShader(col color.RGBA, x, n, camera math.Vector, ls []light.Light) color.RGBA
+	FragmentShader(col color.RGBA, x, n, camera math.Vector, ls []light.Source, es []light.Environment) color.RGBA
 }

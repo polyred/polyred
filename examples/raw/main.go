@@ -54,9 +54,11 @@ func main() {
 		)
 		s.UseCamera(c)
 		s.AddLight(light.NewPoint(
-			light.WithPoingLightItensity(10),
-			light.WithPoingLightColor(color.RGBA{255, 255, 255, 255}),
-			light.WithPoingLightPosition(math.NewVector(2, 2, 2, 1)),
+			light.WithPointLightIntensity(10),
+			light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
+			light.WithPointLightPosition(math.NewVector(2, 2, 2, 1)),
+		), light.NewAmbient(
+			light.WithAmbientIntensity(0.5),
 		))
 
 		m := io.MustLoadMesh(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))

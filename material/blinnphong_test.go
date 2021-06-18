@@ -19,10 +19,10 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	x := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 1}
 	n := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 0}.Unit()
 	c := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 1}
-	l := []light.Light{
+	l := []light.Source{
 		light.NewPoint(
-			light.WithPoingLightItensity(20),
-			light.WithPoingLightColor(
+			light.WithPointLightIntensity(20),
+			light.WithPointLightColor(
 				color.RGBA{
 					uint8(rand.Int()),
 					uint8(rand.Int()),
@@ -30,15 +30,28 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 					255,
 				},
 			),
-			light.WithPoingLightPosition(
+			light.WithPointLightPosition(
 				math.NewVector(rand.Float64(), rand.Float64(), rand.Float64(), 1),
+			),
+		),
+	}
+	a := []light.Environment{
+		light.NewAmbient(
+			light.WithAmbientIntensity(20),
+			light.WithAmbientColor(
+				color.RGBA{
+					uint8(rand.Int()),
+					uint8(rand.Int()),
+					uint8(rand.Int()),
+					255,
+				},
 			),
 		),
 	}
 
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(material.NewTexture()),
-		material.WithBlinnPhongFactors(0.5, 0.6, 200),
+		material.WithBlinnPhongFactors(0.6, 200),
 		material.WithBlinnPhongShininess(25),
 	)
 
@@ -46,7 +59,7 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	b.ResetTimer()
 	var cc color.RGBA
 	for i := 0; i < b.N; i++ {
-		cc = mat.FragmentShader(col, x, n, c, l)
+		cc = mat.FragmentShader(col, x, n, c, l, a)
 	}
 	_ = cc
 }

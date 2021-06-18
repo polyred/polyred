@@ -27,25 +27,16 @@ func main() {
 	)
 	s.UseCamera(c)
 
-	l := light.NewPoint(
-		light.WithPoingLightItensity(1),
-		light.WithPoingLightColor(color.RGBA{255, 255, 255, 255}),
-		light.WithPoingLightPosition(math.NewVector(-1.5, -1, 1, 1)),
-	)
-	s.AddLight(l)
+	s.AddLight(light.NewPoint(
+		light.WithPointLightIntensity(5),
+		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
+		light.WithPointLightPosition(math.NewVector(-1.5, -1, 1, 1)),
+	), light.NewAmbient(
+		light.WithAmbientIntensity(0.2),
+	))
 
-	var done func()
-
-	// load a mesh
-	done = utils.Timed("loading mesh")
 	m := io.MustLoadMesh("../../testdata/dragon.obj")
-	done()
-
-	done = utils.Timed("loading texture")
-	mat := material.NewBasicMaterial(color.RGBA{0, 128, 255, 255})
-	done()
-
-	m.UseMaterial(mat)
+	m.UseMaterial(material.NewBasicMaterial(color.RGBA{0, 128, 255, 255}))
 	m.Scale(1.5, 1.5, 1.5)
 	m.Translate(0, -0.1, -0.15)
 	s.AddMesh(m)
@@ -57,11 +48,5 @@ func main() {
 		rend.WithDebug(true),
 	)
 
-	done = utils.Timed("rendering")
-	buf := r.Render()
-	done()
-
-	done = utils.Timed("save")
-	utils.Save(buf, "dragon.png")
-	done()
+	utils.Save(r.Render(), "dragon.png")
 }

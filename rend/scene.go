@@ -5,6 +5,8 @@
 package rend
 
 import (
+	"fmt"
+
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/geometry"
 	"changkun.de/x/ddd/geometry/primitive"
@@ -14,9 +16,10 @@ import (
 
 // Scene represents a basic scene graph
 type Scene struct {
-	Meshes []*geometry.TriangleMesh
-	Lights []light.Light
-	Camera camera.Interface
+	Meshes       []*geometry.TriangleMesh
+	LightSources []light.Source
+	LightEnv     []light.Environment
+	Camera       camera.Interface
 
 	aabb *primitive.AABB
 }
@@ -31,9 +34,29 @@ func (s *Scene) AddMesh(m *geometry.TriangleMesh) {
 	s.Meshes = append(s.Meshes, m)
 }
 
-// AddLight adds a light to the scene graph
-func (s *Scene) AddLight(l light.Light) {
-	s.Lights = append(s.Lights, l)
+// AddLight is a wrapper of AddLightSource and AddLightEnvironment.
+func (s *Scene) AddLight(ls ...interface{}) error {
+	for _, l := range ls {
+		switch ll := l.(type) {
+		case *light.Point:
+			s.AddLightSource(ll)
+		case *light.Ambient:
+			s.AddLightEnvironment(ll)
+		default:
+			return fmt.Errorf("unsupported light type: %v", ll)
+		}
+	}
+	return nil
+}
+
+// AddLight adds a source light to the scene graph
+func (s *Scene) AddLightSource(l ...light.Source) {
+	s.LightSources = append(s.LightSources, l...)
+}
+
+// AddLightEnvironment adds an environment light to the scene graph
+func (s *Scene) AddLightEnvironment(l ...light.Environment) {
+	s.LightEnv = append(s.LightEnv, l...)
 }
 
 // UseCamera uses the given camera for rendering scene graph
