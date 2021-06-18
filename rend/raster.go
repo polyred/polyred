@@ -42,6 +42,7 @@ type Renderer struct {
 	concurrentSize int32
 	gomaxprocs     int
 	limiter        *utils.Limiter
+	workerPool     *utils.WorkerPool
 	lockBuf        []sync.Mutex
 	gBuf           []gInfo
 	frameBuf       *image.RGBA
@@ -77,6 +78,7 @@ func NewRenderer(opts ...Option) *Renderer {
 	r.gBuf = make([]gInfo, r.width*r.height)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, r.width, r.height))
 	r.limiter = utils.NewLimiter(r.gomaxprocs)
+	r.workerPool = utils.NewWorkerPool(uint64(r.gomaxprocs))
 
 	// initialize shadow maps
 	if r.scene != nil && r.useShadowMap {
@@ -155,6 +157,9 @@ func (r *Renderer) passForward() {
 	matProj := r.renderCamera.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
 	for m := range r.scene.Meshes {
+		r.workerPool.Add(uint64(len(r.scene.Meshes[m].Faces)))
+	}
+	for m := range r.scene.Meshes {
 		mesh := r.scene.Meshes[m]
 		uniforms := map[string]interface{}{
 			"matModel":  mesh.ModelMatrix(),
@@ -165,20 +170,14 @@ func (r *Renderer) passForward() {
 		}
 
 		length := len(mesh.Faces)
-		for i := 0; i < length; i += int(r.concurrentSize) {
+		for i := 0; i < length; i += 1 {
 			ii := i
-			r.limiter.Execute(func() {
-				for k := int32(0); k < r.concurrentSize; k++ {
-					if ii+int(k) >= length {
-						return
-					}
-
-					r.draw(uniforms, mesh.Faces[ii+int(k)], mesh.Material)
-				}
+			r.workerPool.Execute(func() {
+				r.draw(uniforms, mesh.Faces[ii], mesh.Material)
 			})
 		}
 	}
-	r.limiter.Wait()
+	r.workerPool.Wait()
 }
 
 func (r *Renderer) passDeferred() {
@@ -419,8 +418,10 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 
 // passGammaCorrect does a gamma correction that converts color from linear to sRGB space.
 func (r *Renderer) passGammaCorrect() {
-	for i := range r.frameBuf.Pix {
-		r.frameBuf.Pix[i] = uint8(color.ConvertLinear2sRGB(float64(r.frameBuf.Pix[i])/float64(0xff)) * 0xff)
+	for i := 0; i < len(r.frameBuf.Pix); i += 4 {
+		r.frameBuf.Pix[i+0] = uint8(color.ConvertLinear2sRGB(float64(r.frameBuf.Pix[i+0])/float64(0xff)) * 0xff)
+		r.frameBuf.Pix[i+1] = uint8(color.ConvertLinear2sRGB(float64(r.frameBuf.Pix[i+1])/float64(0xff)) * 0xff)
+		r.frameBuf.Pix[i+2] = uint8(color.ConvertLinear2sRGB(float64(r.frameBuf.Pix[i+2])/float64(0xff)) * 0xff)
 	}
 }
 

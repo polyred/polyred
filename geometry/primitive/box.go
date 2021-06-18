@@ -29,7 +29,7 @@ func NewAABB(vs ...math.Vector) AABB {
 // Intersect checks if the two given AABBs share an intersection.
 // If the two AABBs only share a single vertex or a 2D plane, then
 // it is also considered as an intersection and returns true.
-func (aabb AABB) Intersect(aabb2 AABB) bool {
+func (aabb *AABB) Intersect(aabb2 AABB) bool {
 	min := math.NewVector(
 		math.Max(aabb.Min.X, aabb2.Min.X),
 		math.Max(aabb.Min.Y, aabb2.Min.Y),
@@ -50,7 +50,7 @@ func (aabb AABB) Intersect(aabb2 AABB) bool {
 }
 
 // Add adds a given aabb to the current aabb
-func (aabb AABB) Add(aabb2 AABB) {
+func (aabb *AABB) Add(aabb2 AABB) {
 	aabb.Min.X = math.Min(aabb.Min.X, aabb2.Min.X)
 	aabb.Min.Y = math.Min(aabb.Min.Y, aabb2.Min.Y)
 	aabb.Min.Z = math.Min(aabb.Min.Z, aabb2.Min.Z)

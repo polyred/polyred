@@ -27,7 +27,7 @@ type benchOpts struct {
 }
 
 func (opt *benchOpts) String() string {
-	return fmt.Sprintf("%dx%d-MSAA%dx-ShadowMap-%v", opt.width, opt.height, opt.msaa, opt.shadowmap)
+	return fmt.Sprintf("%dx%d-MSAA%dx-ShadowMap-%v-gamma-%v", opt.width, opt.height, opt.msaa, opt.shadowmap, opt.gammaCorrection)
 }
 
 func main() {
@@ -36,18 +36,33 @@ func main() {
 		{960, 540, 1, true, false},
 		{960, 540, 4, false, false},
 		{960, 540, 4, true, false},
-		{1920, 1080, 1, false, false},
-		{1920, 1080, 1, true, false},
-		{1920, 1080, 4, false, false},
-		{1920, 1080, 4, true, false},
-		{1920 * 2, 1080 * 2, 1, false, false},
-		{1920 * 2, 1080 * 2, 1, true, false},
-		{1920 * 2, 1080 * 2, 4, false, false},
-		{1920 * 2, 1080 * 2, 4, true, false},
+		// {1920, 1080, 1, false, false},
+		// {1920, 1080, 1, true, false},
+		// {1920, 1080, 4, false, false},
+		// {1920, 1080, 4, true, false},
+		// {1920 * 2, 1080 * 2, 1, false, false},
+		// {1920 * 2, 1080 * 2, 1, true, false},
+		// {1920 * 2, 1080 * 2, 4, false, false},
+		// {1920 * 2, 1080 * 2, 4, true, false},
+
+		{960, 540, 1, false, true},
+		{960, 540, 1, true, true},
+		{960, 540, 4, false, true},
+		{960, 540, 4, true, true},
+		// {1920, 1080, 1, false, true},
+		// {1920, 1080, 1, true, true},
+		// {1920, 1080, 4, false, true},
+		// {1920, 1080, 4, true, true},
+		// {1920 * 2, 1080 * 2, 1, false, true},
+		// {1920 * 2, 1080 * 2, 1, true, true},
+		// {1920 * 2, 1080 * 2, 4, false, true},
+		// {1920 * 2, 1080 * 2, 4, true, true},
 	}
 
 	for _, opt := range opts {
-		bench(opt)
+		for i := 0; i < 5; i++ {
+			bench(opt)
+		}
 	}
 }
 
@@ -122,5 +137,5 @@ func bench(opt *benchOpts) {
 	})
 
 	ns := time.Duration(result.NsPerOp())
-	fmt.Printf("BenchmarkRasterizer-%v\t%v\t%+v/op\t%v fps\n", opt, result.N, ns, 1/(time.Duration(ns)).Seconds())
+	fmt.Printf("BenchmarkRasterizer-%v\t%v\t%+v ns/op\t%v fps\n", opt, result.N, result.NsPerOp(), 1/(time.Duration(ns)).Seconds())
 }

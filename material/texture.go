@@ -71,8 +71,10 @@ func NewTexture(opts ...TextureOption) *Texture {
 
 	// Gamma correction, assume input space in sRGB and converting it to linear.
 	if t.correctGamma {
-		for i := range t.image.Pix {
-			t.image.Pix[i] = uint8(color.ConvertSRGB2Linear(float64(t.image.Pix[i])/float64(0xff)) * 0xff)
+		for i := 0; i < len(t.image.Pix); i += 4 {
+			t.image.Pix[i+0] = uint8(color.ConvertSRGB2Linear(float64(t.image.Pix[i+0])/float64(0xff)) * 0xff)
+			t.image.Pix[i+1] = uint8(color.ConvertSRGB2Linear(float64(t.image.Pix[i+1])/float64(0xff)) * 0xff)
+			t.image.Pix[i+2] = uint8(color.ConvertSRGB2Linear(float64(t.image.Pix[i+2])/float64(0xff)) * 0xff)
 		}
 	}
 

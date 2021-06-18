@@ -5,6 +5,11 @@
 package main
 
 import (
+	"fmt"
+	"os"
+	"runtime/pprof"
+	"time"
+
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
@@ -16,6 +21,7 @@ import (
 
 func main() {
 	width, height, msaa, shadow := 960, 540, 3, true
+	debug := false
 	s := rend.NewScene()
 
 	s.UseCamera(camera.NewPerspective(
@@ -80,16 +86,16 @@ func main() {
 		rend.WithMSAA(msaa),
 		rend.WithScene(s),
 		rend.WithShadowMap(shadow),
-		rend.WithDebug(true),
+		rend.WithDebug(debug),
 	)
 
 	// cpu pprof
-	// f, err := os.Create(fmt.Sprintf("cpu-%v.pprof", time.Now().Format(time.RFC3339)))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// pprof.StartCPUProfile(f)
-	// defer pprof.StopCPUProfile()
+	f, err := os.Create(fmt.Sprintf("cpu-%v.pprof", time.Now().Format(time.RFC3339)))
+	if err != nil {
+		panic(err)
+	}
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
 
 	// trace
 	// t, err := os.Create(fmt.Sprintf("trace-%v.trace", time.Now().Format(time.RFC3339)))
@@ -99,6 +105,8 @@ func main() {
 	// defer t.Close()
 	// trace.Start(t)
 	// defer trace.Stop()
-
-	utils.Save(r.Render(), "./shadows.png")
+	buf := r.Render()
+	if debug {
+		utils.Save(buf, "./shadows.png")
+	}
 }

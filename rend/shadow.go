@@ -118,6 +118,10 @@ func (r *Renderer) passShadows(index int) {
 	matProj := c.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
 	for m := range r.scene.Meshes {
+		r.workerPool.Add(uint64(len(r.scene.Meshes[m].Faces)))
+	}
+
+	for m := range r.scene.Meshes {
 		mesh := r.scene.Meshes[m]
 		uniforms := map[string]interface{}{
 			"matModel":  mesh.ModelMatrix(),
@@ -128,19 +132,14 @@ func (r *Renderer) passShadows(index int) {
 		}
 
 		length := len(mesh.Faces)
-		for i := 0; i < length; i += int(r.concurrentSize) {
+		for i := 0; i < length; i++ {
 			ii := i
-			r.limiter.Execute(func() {
-				for k := int32(0); k < r.concurrentSize; k++ {
-					if ii+int(k) >= length {
-						return
-					}
-					r.drawDepth(index, uniforms, mesh.Faces[ii+int(k)], mesh.Material)
-				}
+			r.workerPool.Execute(func() {
+				r.drawDepth(index, uniforms, mesh.Faces[ii], mesh.Material)
 			})
 		}
 	}
-	r.limiter.Wait()
+	r.workerPool.Wait()
 }
 
 func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {
