@@ -44,11 +44,15 @@ func main() {
 	done()
 
 	done = utils.Timed("loading texture")
-	t := io.MustLoadTexture("../../testdata/bunny.png")
+	data := io.MustLoadImage("../../testdata/bunny.png")
+	tex := material.NewTexture(
+		material.WithImage(data),
+		material.WithIsotropicMipMap(true),
+	)
 	done()
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(t),
+		material.WithBlinnPhongTexture(tex),
 		material.WithBlinnPhongFactors(0.5, 0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)

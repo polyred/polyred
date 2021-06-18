@@ -23,6 +23,7 @@ import (
 type benchOpts struct {
 	width, height, msaa int
 	shadowmap           bool
+	gammaCorrection     bool
 }
 
 func (opt *benchOpts) String() string {
@@ -31,18 +32,18 @@ func (opt *benchOpts) String() string {
 
 func main() {
 	opts := []*benchOpts{
-		// {960, 540, 1, false},
-		// {960, 540, 1, true},
-		// {960, 540, 4, false},
-		// {960, 540, 4, true},
-		// {1920, 1080, 1, false},
-		// {1920, 1080, 1, true},
-		// {1920, 1080, 4, false},
-		{1920, 1080, 4, true},
-		// {1920 * 2, 1080 * 2, 1, false},
-		// {1920 * 2, 1080 * 2, 1, true},
-		// {1920 * 2, 1080 * 2, 4, false},
-		// {1920 * 2, 1080 * 2, 4, true},
+		{960, 540, 1, false, false},
+		{960, 540, 1, true, false},
+		{960, 540, 4, false, false},
+		{960, 540, 4, true, false},
+		{1920, 1080, 1, false, false},
+		{1920, 1080, 1, true, false},
+		{1920, 1080, 4, false, false},
+		{1920, 1080, 4, true, false},
+		{1920 * 2, 1080 * 2, 1, false, false},
+		{1920 * 2, 1080 * 2, 1, true, false},
+		{1920 * 2, 1080 * 2, 4, false, false},
+		{1920 * 2, 1080 * 2, 4, true, false},
 	}
 
 	for _, opt := range opts {
@@ -73,18 +74,29 @@ func bench(opt *benchOpts) {
 		))
 
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
-		tex := io.MustLoadTexture("../../testdata/bunny.png")
+		data := io.MustLoadImage("../../testdata/bunny.png")
+		tex := material.NewTexture(
+			material.WithImage(data),
+			material.WithIsotropicMipMap(true),
+			material.WithGammaCorrection(opt.gammaCorrection),
+		)
 		mat := material.NewBlinnPhong(
 			material.WithBlinnPhongTexture(tex),
 			material.WithBlinnPhongFactors(0.5, 0.6, 1),
 			material.WithBlinnPhongShininess(150),
+			material.WithBlinnPhongShadow(opt.shadowmap),
 		)
 		m.UseMaterial(mat)
 		m.Scale(2, 2, 2)
 		s.AddMesh(m)
 
 		m = io.MustLoadMesh("../../testdata/ground.obj")
-		tex = io.MustLoadTexture("../../testdata/ground.png")
+		data = io.MustLoadImage("../../testdata/ground.png")
+		tex = material.NewTexture(
+			material.WithImage(data),
+			material.WithIsotropicMipMap(true),
+			material.WithGammaCorrection(opt.gammaCorrection),
+		)
 		mat = material.NewBlinnPhong(
 			material.WithBlinnPhongTexture(tex),
 			material.WithBlinnPhongFactors(0.5, 0.6, 1),
@@ -101,6 +113,7 @@ func bench(opt *benchOpts) {
 			rend.WithScene(s),
 			rend.WithShadowMap(opt.shadowmap),
 			rend.WithDebug(false),
+			rend.WithGammaCorrection(opt.gammaCorrection),
 		)
 
 		var buf *image.RGBA

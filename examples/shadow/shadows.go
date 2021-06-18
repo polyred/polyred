@@ -45,7 +45,11 @@ func main() {
 	))
 
 	m := io.MustLoadMesh("../../testdata/bunny.obj")
-	tex := io.MustLoadTexture("../../testdata/bunny.png")
+	data := io.MustLoadImage("../../testdata/bunny.png")
+	tex := material.NewTexture(
+		material.WithImage(data),
+		material.WithIsotropicMipMap(true),
+	)
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
 		material.WithBlinnPhongFactors(0.5, 0.6, 1),
@@ -56,7 +60,11 @@ func main() {
 	s.AddMesh(m)
 
 	m = io.MustLoadMesh("../../testdata/ground.obj")
-	tex = io.MustLoadTexture("../../testdata/ground.png")
+	data = io.MustLoadImage("../../testdata/ground.png")
+	tex = material.NewTexture(
+		material.WithImage(data),
+		material.WithIsotropicMipMap(true),
+	)
 	mat = material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
 		material.WithBlinnPhongFactors(0.5, 0.6, 1),

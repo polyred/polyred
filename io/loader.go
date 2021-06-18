@@ -13,7 +13,6 @@ import (
 	"os"
 
 	"changkun.de/x/ddd/geometry"
-	"changkun.de/x/ddd/material"
 )
 
 // MustLoadMesh loads a given file to a triangle mesh.
@@ -30,8 +29,8 @@ func MustLoadMesh(path string) *geometry.TriangleMesh {
 	return m
 }
 
-// MustLoadTexture loads a given file into a texture.
-func MustLoadTexture(path string) *material.Texture {
+// MustLoadImage loads a given file into a texture.
+func MustLoadImage(path string) *image.RGBA {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(fmt.Errorf("loader: cannot open file %s, err: %v", path, err))
@@ -49,8 +48,5 @@ func MustLoadTexture(path string) *material.Texture {
 		draw.Draw(data, data.Bounds(), img, img.Bounds().Min, draw.Src)
 	}
 
-	return material.NewTexture(
-		material.WithImage(data),
-		material.WithIsotropicMipMap(true),
-	)
+	return data
 }

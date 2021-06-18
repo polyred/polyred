@@ -7,11 +7,11 @@ package rend
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"runtime"
 	"sync"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/color"
 	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
@@ -28,6 +28,7 @@ type Renderer struct {
 	width        int
 	height       int
 	msaa         int
+	correctGamma bool
 	useShadowMap bool
 	debug        bool
 	scene        *Scene
@@ -259,6 +260,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
 		b := uint8(float64(col.B) * w)
 		col = color.RGBA{r, g, b, col.A}
 	}
+
 	r.setFramebuf(x, y, col)
 }
 
@@ -268,6 +270,9 @@ func (r *Renderer) passAntialiasing() {
 		defer done()
 	}
 
+	if r.correctGamma {
+		r.passGammaCorrect()
+	}
 	r.outBuf = utils.Resize(r.width/r.msaa, r.height/r.msaa, r.frameBuf)
 }
 
@@ -386,10 +391,10 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 				W: 1,
 			}
 			col := color.RGBA{
-				R: uint8(math.Clamp(w1*float64(t1.Col.R)+w2*float64(t2.Col.R)+w3*float64(t3.Col.R), 0, 255)),
-				G: uint8(math.Clamp(w1*float64(t1.Col.G)+w2*float64(t2.Col.G)+w3*float64(t3.Col.G), 0, 255)),
-				B: uint8(math.Clamp(w1*float64(t1.Col.B)+w2*float64(t2.Col.B)+w3*float64(t3.Col.B), 0, 255)),
-				A: uint8(math.Clamp(w1*float64(t1.Col.A)+w2*float64(t2.Col.A)+w3*float64(t3.Col.A), 0, 255)),
+				R: uint8(math.Clamp(w1*float64(t1.Col.R)+w2*float64(t2.Col.R)+w3*float64(t3.Col.R), 0, 0xff)),
+				G: uint8(math.Clamp(w1*float64(t1.Col.G)+w2*float64(t2.Col.G)+w3*float64(t3.Col.G), 0, 0xff)),
+				B: uint8(math.Clamp(w1*float64(t1.Col.B)+w2*float64(t2.Col.B)+w3*float64(t3.Col.B), 0, 0xff)),
+				A: uint8(math.Clamp(w1*float64(t1.Col.A)+w2*float64(t2.Col.A)+w3*float64(t3.Col.A), 0, 0xff)),
 			}
 
 			// update G-buffer
@@ -407,6 +412,13 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			r.gBuf[idx].mat = mat
 			r.lockBuf[idx].Unlock()
 		}
+	}
+}
+
+// passGammaCorrect does a gamma correction that converts color from linear to sRGB space.
+func (r *Renderer) passGammaCorrect() {
+	for i := range r.frameBuf.Pix {
+		r.frameBuf.Pix[i] = uint8(color.ConvertLinear2sRGB(float64(r.frameBuf.Pix[i])/float64(0xff)) * 0xff)
 	}
 }
 

@@ -7,6 +7,7 @@ package color
 import (
 	"fmt"
 	"image/color"
+	"math"
 	"strings"
 )
 
@@ -41,4 +42,34 @@ func Equal(c1, c2 color.RGBA) bool {
 		return true
 	}
 	return false
+}
+
+// Linear2Gamma applies gamma correction to v and lies in [0.0, 1.0].
+func Linear2Gamma(v float64) float64 {
+	return math.Min(math.Max(ConvertLinear2sRGB(v), 0), 1)
+}
+
+// Gamma2Linear applies inverse gamma correction v and lies in [0.0, 1.0].
+func Gamma2Linear(v float64) float64 {
+	return math.Min(math.Max(ConvertSRGB2Linear(v), 0), 1)
+}
+
+// ConvertLinear2sRGB is a sRGB encoder
+func ConvertLinear2sRGB(v float64) float64 {
+	if v <= 0.0031308 {
+		v *= 12.92
+	} else {
+		v = 1.055*math.Pow(v, 1/2.4) - 0.055
+	}
+	return v
+}
+
+// ConvertSRGB2Linear is a sRGB decoder
+func ConvertSRGB2Linear(v float64) float64 {
+	if v <= 0.04045 {
+		v /= 12.92
+	} else {
+		v = math.Pow((v+0.055)/1.055, 2.4)
+	}
+	return v
 }

@@ -12,7 +12,7 @@ import (
 	"changkun.de/x/ddd/utils"
 )
 
-type Option func(opts *Renderer)
+type Option func(r *Renderer)
 
 func WithSize(width, height int) Option {
 	return func(r *Renderer) {
@@ -42,6 +42,12 @@ func WithMSAA(n int) Option {
 func WithShadowMap(enable bool) Option {
 	return func(r *Renderer) {
 		r.useShadowMap = enable
+	}
+}
+
+func WithGammaCorrection(enable bool) Option {
+	return func(r *Renderer) {
+		r.correctGamma = enable
 	}
 }
 

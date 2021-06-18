@@ -7,8 +7,8 @@ package material
 import (
 	"fmt"
 	"image"
-	"image/color"
 
+	"changkun.de/x/ddd/color"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/utils"
 )
@@ -22,10 +22,11 @@ var defaultTexture = &image.RGBA{
 // Texture represents a power-of-two 2D texture. The power-of-two means
 // that the texture width and height must be a power of two. e.g. 1024x1024.
 type Texture struct {
-	useMipmap bool
-	mipmap    []*image.RGBA
-	image     *image.RGBA
-	debug     bool
+	correctGamma bool
+	useMipmap    bool
+	mipmap       []*image.RGBA
+	image        *image.RGBA
+	debug        bool
 }
 
 type TextureOption func(t *Texture)
@@ -36,6 +37,12 @@ func WithImage(img *image.RGBA) TextureOption {
 			panic("image width or height is less than 1!")
 		}
 		t.image = img
+	}
+}
+
+func WithGammaCorrection(enable bool) TextureOption {
+	return func(t *Texture) {
+		t.correctGamma = enable
 	}
 }
 
@@ -53,12 +60,20 @@ func WithIsotropicMipMap(enable bool) TextureOption {
 
 func NewTexture(opts ...TextureOption) *Texture {
 	t := &Texture{
-		useMipmap: true,
-		image:     defaultTexture,
-		mipmap:    []*image.RGBA{},
+		correctGamma: false,
+		useMipmap:    true,
+		image:        defaultTexture,
+		mipmap:       []*image.RGBA{},
 	}
 	for _, opt := range opts {
 		opt(t)
+	}
+
+	// Gamma correction, assume input space in sRGB and converting it to linear.
+	if t.correctGamma {
+		for i := range t.image.Pix {
+			t.image.Pix[i] = uint8(color.ConvertSRGB2Linear(float64(t.image.Pix[i])/float64(0xff)) * 0xff)
+		}
 	}
 
 	dx := t.image.Bounds().Dx()
