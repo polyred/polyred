@@ -59,13 +59,11 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
   + [ ] Glossy material
   + [ ] Micofacet material
 - lighting
-  + [ ] point light
+  + [x] point light
   + [ ] directional light
-  + [ ] shadow mapping
+  + [x] shadow mapping
 - general
   + [x] concurrent processing
-
-![](./examples/teaser.png)
 
 ## License
 
