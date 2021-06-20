@@ -76,13 +76,20 @@ func (r *Renderer) UpdateOptions(opts ...Option) {
 		opt(r)
 	}
 
+	w := r.width * r.msaa
+	h := r.height * r.msaa
+
 	// calibrate rendering size
-	r.width *= r.msaa
-	r.height *= r.msaa
-	r.lockBuf = make([]sync.Mutex, r.width*r.height)
-	r.gBuf = make([]gInfo, r.width*r.height)
-	r.frameBuf = image.NewRGBA(image.Rect(0, 0, r.width, r.height))
+	r.lockBuf = make([]sync.Mutex, w*h)
+	r.gBuf = make([]gInfo, w*h)
+	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
 	r.limiter = utils.NewLimiter(r.gomaxprocs)
+
+	// initialize shadow maps
+	if r.scene != nil && r.useShadowMap {
+		r.initShadowMaps()
+	}
+
 	r.resetGBuf()
 	r.resetFrameBuf()
 }

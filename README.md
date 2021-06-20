@@ -1,6 +1,9 @@
-# ddd
+<img src="./examples/teaser.png" alt="logo" height="255" align="right" />
 
-A software hybrid renderer written in pure Go.
+
+# ddd [![Go Reference](https://pkg.go.dev/badge/github.com/changkun/ddd.svg)](https://pkg.go.dev/changkun.de/x/ddd) [![Latest relsease](https://img.shields.io/github/v/tag/changkun/ddd?label=latest)](https://github.com/changkun/ddd/releases)
+
+Software hybrid rendering facilities written in pure Go.
 
 ```go
 import "changkun.de/x/ddd"
@@ -22,21 +25,29 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
   + [ ] built-in geometries
     * [x] plane
     * [ ] cube
-- hybrid rendering:
+- rendering facilities:
   + [ ] scene graph
-  + [x] rasterization
+  + [x] rasterization pass
     * [ ] clipping
     * [x] backface culling
     * [x] viewfrustum culling
     * [x] occlusion culling
-  + [x] depth test 
+  + [x] depth test and z-buffer pass
   + [ ] alpha test
-  + [x] deferred shading
+  + [x] deferred shading pass
   + [ ] ambient occlusion
   + [ ] ray tracing
-  + anti-aliasing
+  + anti-aliasing pass
     * [x] MSAA
+  + [ ] denoising
 - texturing
+  + [ ] filters
+    + [ ] linear
+    + [ ] bilinear
+    + [ ] trilinear
+    + [ ] barycentric
+    + [ ] cubic
+    + [ ] custom
   + [x] isotropic mipmap
   + [ ] anisotropic mipmap
   + [x] arbitrary texture size
@@ -55,14 +66,6 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
   + [x] concurrent processing
 
 ![](./examples/teaser.png)
-
-
-## More Examples
-
-| Example | Code |
-|:-------:|:-----:|
-|<img src="./examples/bunny/bunny.png" width="300px"/>|[bunny](./examples/bunny/bunny.go)|
-|<img src="./examples/dragon/dragon.png" width="300px"/>|[dragon](./examples/dragon/dragon.go)|
 
 ## License
 

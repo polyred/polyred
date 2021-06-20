@@ -69,14 +69,13 @@ func NewRenderer(opts ...Option) *Renderer {
 		opt(r)
 	}
 
-	// calibrate rendering size
-	r.width *= r.msaa
-	r.height *= r.msaa
+	w := r.width * r.msaa
+	h := r.height * r.msaa
 
 	// initialize rendering caches
-	r.lockBuf = make([]sync.Mutex, r.width*r.height)
-	r.gBuf = make([]gInfo, r.width*r.height)
-	r.frameBuf = image.NewRGBA(image.Rect(0, 0, r.width, r.height))
+	r.lockBuf = make([]sync.Mutex, w*h)
+	r.gBuf = make([]gInfo, w*h)
+	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
 	r.limiter = utils.NewLimiter(r.gomaxprocs)
 	r.workerPool = utils.NewWorkerPool(uint64(r.gomaxprocs))
 
@@ -152,10 +151,12 @@ func (r *Renderer) passForward() {
 		defer done()
 	}
 
+	w := r.width * r.msaa
+	h := r.height * r.msaa
 	r.renderCamera = r.scene.Camera
 	matView := r.renderCamera.ViewMatrix()
 	matProj := r.renderCamera.ProjMatrix()
-	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
+	matVP := math.ViewportMatrix(float64(w), float64(h))
 	for m := range r.scene.Meshes {
 		r.workerPool.Add(uint64(len(r.scene.Meshes[m].Faces)))
 	}
@@ -185,7 +186,8 @@ func (r *Renderer) passDeferred() {
 		done := utils.Timed("deferred pass (shading)")
 		defer done()
 	}
-
+	w := r.width * r.msaa
+	h := r.height * r.msaa
 	r.renderCamera = r.scene.Camera
 	xstep := int(r.concurrentSize)
 	ystep := int(r.concurrentSize)
@@ -193,7 +195,7 @@ func (r *Renderer) passDeferred() {
 	matViewInv := matView.Inv()
 	matProj := r.renderCamera.ProjMatrix()
 	matProjInv := matProj.Inv()
-	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
+	matVP := math.ViewportMatrix(float64(w), float64(h))
 	matVPInv := matVP.Inv()
 	matScreenToWorld := matViewInv.MulM(matProjInv).MulM(matVPInv)
 	uniforms := map[string]interface{}{
@@ -204,8 +206,8 @@ func (r *Renderer) passDeferred() {
 		"matVP":            matVP,
 		"matScreenToWorld": matScreenToWorld,
 	}
-	for i := 0; i < r.width; i += xstep {
-		for j := 0; j < r.height; j += ystep {
+	for i := 0; i < w; i += xstep {
+		for j := 0; j < h; j += ystep {
 			ii := i
 			jj := j
 			r.limiter.Execute(func() {
@@ -223,7 +225,8 @@ func (r *Renderer) passDeferred() {
 }
 
 func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
-	idx := x + r.width*y
+	w := r.width * r.msaa
+	idx := x + w*y
 	if idx >= len(r.gBuf) {
 		return
 	}
@@ -247,7 +250,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
 		col = info.mat.FragmentShader(col, info.pos, info.n, r.renderCamera.Position(), r.scene.LightSources, r.scene.LightEnv)
 	}
 
-	if r.useShadowMap && info.mat.ReceiveShadow() {
+	if r.useShadowMap && info.mat != nil && info.mat.ReceiveShadow() {
 		visibles := 0.0
 		ns := len(r.shadowBufs)
 		for i := 0; i < ns; i++ {
@@ -274,14 +277,16 @@ func (r *Renderer) passAntialiasing() {
 	if r.correctGamma {
 		r.passGammaCorrect()
 	}
-	r.outBuf = utils.Resize(r.width/r.msaa, r.height/r.msaa, r.frameBuf)
+	r.outBuf = utils.Resize(r.width, r.height, r.frameBuf)
 }
 
 func (r *Renderer) setFramebuf(x, y int, c color.RGBA) {
-	idx := x + y*r.width
+	w := r.width * r.msaa
+	h := r.height * r.msaa
+	idx := x + y*w
 
 	r.lockBuf[idx].Lock()
-	r.frameBuf.Set(x, r.height-y, c)
+	r.frameBuf.Set(x, h-y, c)
 	r.lockBuf[idx].Unlock()
 }
 
@@ -334,9 +339,11 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 	ymin := int(math.Round(aabb.Min.Y) - 1)
 	ymax := int(math.Round(aabb.Max.Y) + 1)
 
+	w := r.width * r.msaa
+	h := r.height * r.msaa
 	for x := xmin; x <= xmax; x++ {
 		for y := ymin; y <= ymax; y++ {
-			if x < 0 || x >= r.width || y < 0 || y >= r.height {
+			if x < 0 || x >= w || y < 0 || y >= h {
 				continue
 			}
 
@@ -399,7 +406,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			}
 
 			// update G-buffer
-			idx := x + y*r.width
+			idx := x + y*w
 			r.lockBuf[idx].Lock()
 			r.gBuf[idx].ok = true
 			r.gBuf[idx].z = z
@@ -426,7 +433,8 @@ func (r *Renderer) passGammaCorrect() {
 }
 
 func (r *Renderer) depthTest(x, y int, z float64) bool {
-	idx := x + y*r.width
+	w := r.width * r.msaa
+	idx := x + y*w
 
 	r.lockBuf[idx].Lock()
 	defer r.lockBuf[idx].Unlock()
@@ -435,7 +443,7 @@ func (r *Renderer) depthTest(x, y int, z float64) bool {
 
 func (r *Renderer) inViewport(v1, v2, v3 math.Vector) bool {
 	viewportAABB := primitive.NewAABB(
-		math.NewVector(float64(r.width), float64(r.height), 1, 1),
+		math.NewVector(float64(r.width*r.msaa), float64(r.height*r.msaa), 1, 1),
 		math.NewVector(0, 0, 0, 1),
 		math.NewVector(0, 0, -1, 1),
 	)

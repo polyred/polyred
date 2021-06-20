@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package bunny
+package gopher
 
 import (
 	"image/color"
@@ -16,49 +16,38 @@ import (
 	"changkun.de/x/ddd/utils"
 )
 
-func NewBunnyScene(width, height int) interface{} {
+func NewGopherScene(width, height int) interface{} {
 	s := rend.NewScene()
 	c := camera.NewPerspective(
-		math.NewVector(-550, 194, 734, 1),
-		math.NewVector(-1000, 0, 0, 1),
-		math.NewVector(0, 1, 1, 0),
+		math.NewVector(1, 1, 2, 1),
+		math.NewVector(0, 0, 0, 1),
+		math.NewVector(0, 1, 0, 0),
 		45,
 		float64(width)/float64(height),
-		100, 600,
+		0.01, 600,
 	)
 	s.UseCamera(c)
 	s.AddLight(light.NewPoint(
-		light.WithPointLightIntensity(200),
+		light.WithPointLightIntensity(10),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-		light.WithPointLightPosition(math.NewVector(-200, 250, 600, 1)),
+		light.WithPointLightPosition(math.NewVector(0, 0, 5, 1)),
 	), light.NewAmbient(
 		light.WithAmbientIntensity(0.7),
 	))
 
-	var done func()
-
-	// load a mesh
-	done = utils.Timed("loading mesh")
-	m := io.MustLoadMesh("../testdata/bunny.obj")
+	done := utils.Timed("loading mesh")
+	m := io.MustLoadMesh("../testdata/gopher.obj")
 	done()
 
-	done = utils.Timed("loading texture")
-	data := io.MustLoadImage("../testdata/bunny.png")
-	tex := material.NewTexture(
-		material.WithImage(data),
-		material.WithIsotropicMipMap(true),
-	)
-	done()
+	m.RotateY(-math.Pi / 2)
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(tex),
+		material.WithBlinnPhongTexture(material.NewTexture()),
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)
 	m.UseMaterial(mat)
-	m.Scale(1500, 1500, 1500)
-	m.Translate(-700, -5, 350)
+	m.Normalize()
 	s.AddMesh(m)
-
 	return s
 }

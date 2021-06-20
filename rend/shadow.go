@@ -26,6 +26,8 @@ type shadowInfo struct {
 }
 
 func (r *Renderer) initShadowMaps() {
+	w := r.width * r.msaa
+	h := r.width * r.msaa
 	r.shadowBufs = make([]shadowInfo, len(r.scene.LightSources))
 	for i := 0; i < len(r.scene.LightSources); i++ {
 		if !r.scene.LightSources[i].CastShadow() {
@@ -81,8 +83,8 @@ func (r *Renderer) initShadowMaps() {
 		r.shadowBufs[i].settings = light.NewShadowMap(
 			light.WithShadowMapCamera(c),
 		)
-		r.shadowBufs[i].depths = make([]float64, r.width*r.height)
-		r.shadowBufs[i].lock = make([]sync.Mutex, r.width*r.height)
+		r.shadowBufs[i].depths = make([]float64, w*h)
+		r.shadowBufs[i].lock = make([]sync.Mutex, w*h)
 	}
 }
 
@@ -91,14 +93,16 @@ func (r *Renderer) passShadows(index int) {
 		return
 	}
 
+	w := r.width * r.msaa
+	h := r.height * r.msaa
 	if r.debug {
 		done := utils.Timed("forward pass (shadow)")
 		defer done()
 		defer func() {
-			img := image.NewRGBA(image.Rect(0, 0, r.width, r.height))
-			for i := 0; i < r.width; i++ {
-				for j := 0; j < r.height; j++ {
-					z := r.shadowBufs[index].depths[i+(r.height-j-1)*r.width]
+			img := image.NewRGBA(image.Rect(0, 0, w, h))
+			for i := 0; i < w; i++ {
+				for j := 0; j < h; j++ {
+					z := r.shadowBufs[index].depths[i+(h-j-1)*w]
 					img.Set(i, j, color.RGBA{
 						uint8(z * 255),
 						uint8(z * 255),
@@ -116,7 +120,7 @@ func (r *Renderer) passShadows(index int) {
 	c := r.shadowBufs[index].settings.Camera()
 	matView := c.ViewMatrix()
 	matProj := c.ProjMatrix()
-	matVP := math.ViewportMatrix(float64(r.width), float64(r.height))
+	matVP := math.ViewportMatrix(float64(w), float64(h))
 	for m := range r.scene.Meshes {
 		r.workerPool.Add(uint64(len(r.scene.Meshes[m].Faces)))
 	}
@@ -171,10 +175,11 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 	xmax := int(math.Round(aabb.Max.X) + 1)
 	ymin := int(math.Round(aabb.Min.Y) - 1)
 	ymax := int(math.Round(aabb.Max.Y) + 1)
-
+	w := r.width * r.msaa
+	h := r.height * r.msaa
 	for x := xmin; x <= xmax; x++ {
 		for y := ymin; y <= ymax; y++ {
-			if x < 0 || x >= r.width || y < 0 || y >= r.height {
+			if x < 0 || x >= w || y < 0 || y >= h {
 				continue
 			}
 
@@ -192,7 +197,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 			}
 
 			// update shadow map
-			idx := x + y*r.width
+			idx := x + y*w
 			r.shadowBufs[index].lock[idx].Lock()
 			r.shadowBufs[index].depths[idx] = z
 			r.shadowBufs[index].lock[idx].Unlock()
@@ -201,7 +206,8 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 }
 
 func (r *Renderer) shadowDepthTest(index int, x, y int, z float64) bool {
-	idx := x + y*r.width
+	w := r.width * r.msaa
+	idx := x + y*w
 	buf := r.shadowBufs[index]
 
 	buf.lock[idx].Lock()
@@ -231,7 +237,8 @@ func (r *Renderer) shadingVisibility(
 		Apply(matVP).Pos()
 
 	lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
-	bufIdx := lightX + lightY*r.width
+	w := r.width * r.msaa
+	bufIdx := lightX + lightY*w
 
 	shadow := 0
 	if bufIdx > 0 && bufIdx < len(shadowMap.depths) {

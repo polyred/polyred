@@ -5,7 +5,6 @@
 package utils_test
 
 import (
-	"fmt"
 	"sync/atomic"
 	"testing"
 
@@ -17,7 +16,6 @@ func TestLimiterV2(t *testing.T) {
 	l.Add(10)
 	sum := uint32(0)
 	for i := 0; i < 10; i++ {
-		fmt.Println(i)
 		ii := uint32(i)
 		l.Execute(func() {
 			atomic.AddUint32(&sum, ii)

@@ -16,6 +16,7 @@ import (
 
 // Scene represents a basic scene graph
 type Scene struct {
+	Name         string
 	Meshes       []*geometry.TriangleMesh
 	LightSources []light.Source
 	LightEnv     []light.Environment
@@ -26,7 +27,7 @@ type Scene struct {
 
 // NewScene returns a new scene graph
 func NewScene() *Scene {
-	return &Scene{}
+	return &Scene{Name: "default_scene"}
 }
 
 // AddMesh adds a mesh to the scene graph
