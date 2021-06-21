@@ -18,13 +18,18 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
   + [ ] OBJ file exporter
   + [x] Gamma correction
 - geometry
-  + [x] triangle mesh
+  + [ ] buffered mesh
+  + [x] triangle soup
+  + [ ] triangle mesh
   + [x] quad mesh
   + [ ] quad dominant mesh
   + [ ] half-edge mesh
   + [ ] built-in geometries
     * [x] plane
     * [ ] cube
+  + [ ] geometry processing algorithms
+    * [ ] smooth normals
+    * [ ] 
 - rendering facilities:
   + [x] scene graph
   + [x] rasterization pass

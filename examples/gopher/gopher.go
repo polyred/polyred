@@ -8,6 +8,7 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
@@ -41,7 +42,7 @@ func NewGopherScene(width, height int) interface{} {
 	m.RotateY(-math.Pi / 2)
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(material.NewTexture()),
+		material.WithBlinnPhongTexture(image.NewTexture()),
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)

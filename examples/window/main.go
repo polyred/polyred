@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/internal/win"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
@@ -49,9 +50,9 @@ func loadScene(width, height int) *scene.Scene {
 
 	m := io.MustLoadMesh("../../testdata/bunny.obj")
 	data := io.MustLoadImage("../../testdata/bunny.png")
-	tex := material.NewTexture(
-		material.WithImage(data),
-		material.WithIsotropicMipMap(true),
+	tex := image.NewTexture(
+		image.WithData(data),
+		image.WithIsotropicMipMap(true),
 	)
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
@@ -65,9 +66,9 @@ func loadScene(width, height int) *scene.Scene {
 
 	m = io.MustLoadMesh("../../testdata/ground.obj")
 	data = io.MustLoadImage("../../testdata/ground.png")
-	tex = material.NewTexture(
-		material.WithImage(data),
-		material.WithIsotropicMipMap(true),
+	tex = image.NewTexture(
+		image.WithData(data),
+		image.WithIsotropicMipMap(true),
 	)
 	mat = material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),

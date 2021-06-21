@@ -2,23 +2,22 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package material_test
+package image_test
 
 import (
 	"fmt"
-	"image"
 	"testing"
 
 	"changkun.de/x/ddd/color"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/io"
-	"changkun.de/x/ddd/material"
 )
 
-func mustLoadTexture(path string) *material.Texture {
+func mustLoadTexture(path string) *image.Texture {
 	data := io.MustLoadImage(path)
-	return material.NewTexture(
-		material.WithImage(data),
-		material.WithIsotropicMipMap(true),
+	return image.NewTexture(
+		image.WithData(data),
+		image.WithIsotropicMipMap(true),
 	)
 }
 
@@ -33,61 +32,61 @@ var (
 	}
 	tests = []struct {
 		name string
-		tex  *material.Texture
+		tex  *image.Texture
 		u    float64
 		v    float64
 		lod  float64
 		want color.RGBA
 	}{
-		{"1x1", material.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", material.NewTexture(), 1, 1, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", material.NewTexture(), 0.5, 0.5, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", material.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", image.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", image.NewTexture(), 1, 1, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", image.NewTexture(), 0.5, 0.5, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", image.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
 		{
 			"2x2",
-			material.NewTexture(
-				material.WithImage(data),
-				material.WithIsotropicMipMap(true),
+			image.NewTexture(
+				image.WithData(data),
+				image.WithIsotropicMipMap(true),
 			),
 			0, 0, 0, color.RGBA{255, 255, 255, 255},
 		},
 		{
 			"2x2",
-			material.NewTexture(
-				material.WithImage(data),
-				material.WithIsotropicMipMap(true),
+			image.NewTexture(
+				image.WithData(data),
+				image.WithIsotropicMipMap(true),
 			),
 			0, 1, 0, color.RGBA{0, 0, 0, 0},
 		},
 		{
 			"2x2",
-			material.NewTexture(
-				material.WithImage(data),
-				material.WithIsotropicMipMap(true),
+			image.NewTexture(
+				image.WithData(data),
+				image.WithIsotropicMipMap(true),
 			),
 			1, 0, 0, color.RGBA{0, 0, 0, 0},
 		},
 		{
 			"2x2",
-			material.NewTexture(
-				material.WithImage(data),
-				material.WithIsotropicMipMap(true),
+			image.NewTexture(
+				image.WithData(data),
+				image.WithIsotropicMipMap(true),
 			),
 			1, 1, 0, color.RGBA{255, 255, 255, 255},
 		},
 		{
 			"2x2",
-			material.NewTexture(
-				material.WithImage(data),
-				material.WithIsotropicMipMap(true),
+			image.NewTexture(
+				image.WithData(data),
+				image.WithIsotropicMipMap(true),
 			),
 			1, 1, 1.5, color.RGBA{191, 191, 191, 191},
 		},
 		{
 			"2x2",
-			material.NewTexture(
-				material.WithImage(data),
-				material.WithIsotropicMipMap(true),
+			image.NewTexture(
+				image.WithData(data),
+				image.WithIsotropicMipMap(true),
 			),
 			0.5, 0.5, 0, color.RGBA{127, 127, 127, 127},
 		},

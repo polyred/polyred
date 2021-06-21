@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"testing"
 
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
@@ -50,7 +51,7 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	}
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(material.NewTexture()),
+		material.WithBlinnPhongTexture(image.NewTexture()),
 		material.WithBlinnPhongFactors(0.6, 200),
 		material.WithBlinnPhongShininess(25),
 	)

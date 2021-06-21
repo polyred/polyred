@@ -473,9 +473,9 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 // passGammaCorrect does a gamma correction that converts color from linear to sRGB space.
 func (r *Renderer) passGammaCorrect() {
 	for i := 0; i < len(r.frameBuf.Pix); i += 4 {
-		r.frameBuf.Pix[i+0] = uint8(color.ConvertLinear2sRGB(float64(r.frameBuf.Pix[i+0])/float64(0xff)) * 0xff)
-		r.frameBuf.Pix[i+1] = uint8(color.ConvertLinear2sRGB(float64(r.frameBuf.Pix[i+1])/float64(0xff)) * 0xff)
-		r.frameBuf.Pix[i+2] = uint8(color.ConvertLinear2sRGB(float64(r.frameBuf.Pix[i+2])/float64(0xff)) * 0xff)
+		r.frameBuf.Pix[i+0] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+0])/float64(0xff)) * 0xff)
+		r.frameBuf.Pix[i+1] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+1])/float64(0xff)) * 0xff)
+		r.frameBuf.Pix[i+2] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+2])/float64(0xff)) * 0xff)
 	}
 }
 

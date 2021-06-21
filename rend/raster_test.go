@@ -6,7 +6,6 @@ package rend_test
 
 import (
 	"fmt"
-	"image"
 	"image/color"
 	"os"
 	"runtime"
@@ -16,6 +15,7 @@ import (
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/geometry"
 	"changkun.de/x/ddd/geometry/primitive"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
@@ -49,9 +49,9 @@ func newscene(w, h int) *scene.Scene {
 
 	m := io.MustLoadMesh("../testdata/bunny.obj")
 	data := io.MustLoadImage("../testdata/bunny.png")
-	tex := material.NewTexture(
-		material.WithImage(data),
-		material.WithIsotropicMipMap(true),
+	tex := image.NewTexture(
+		image.WithData(data),
+		image.WithIsotropicMipMap(true),
 	)
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),

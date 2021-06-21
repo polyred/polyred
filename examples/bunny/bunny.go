@@ -8,6 +8,7 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
@@ -43,9 +44,9 @@ func NewBunnyScene(width, height int) interface{} {
 
 	done = utils.Timed("loading texture")
 	data := io.MustLoadImage("../testdata/bunny.png")
-	tex := material.NewTexture(
-		material.WithImage(data),
-		material.WithIsotropicMipMap(true),
+	tex := image.NewTexture(
+		image.WithData(data),
+		image.WithIsotropicMipMap(true),
 	)
 	done()
 

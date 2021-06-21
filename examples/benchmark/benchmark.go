@@ -6,12 +6,12 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"image/color"
 	"testing"
 	"time"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
@@ -90,12 +90,14 @@ func bench(opt *benchOpts) {
 		))
 
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
-		data := io.MustLoadImage("../../testdata/bunny.png")
+		data := io.MustLoadImage(
+			"../../testdata/bunny.png",
+			io.WithGammaCorrection(true),
+		)
 		m.SetMaterial(material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(material.NewTexture(
-				material.WithImage(data),
-				material.WithIsotropicMipMap(true),
-				material.WithGammaCorrection(opt.gammaCorrection),
+			material.WithBlinnPhongTexture(image.NewTexture(
+				image.WithData(data),
+				image.WithIsotropicMipMap(true),
 			)),
 			material.WithBlinnPhongFactors(0.6, 0.5),
 			material.WithBlinnPhongShininess(150),
@@ -107,10 +109,9 @@ func bench(opt *benchOpts) {
 		m = io.MustLoadMesh("../../testdata/ground.obj")
 		data = io.MustLoadImage("../../testdata/ground.png")
 		m.SetMaterial(material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(material.NewTexture(
-				material.WithImage(data),
-				material.WithIsotropicMipMap(true),
-				material.WithGammaCorrection(opt.gammaCorrection),
+			material.WithBlinnPhongTexture(image.NewTexture(
+				image.WithData(data),
+				image.WithIsotropicMipMap(true),
 			)),
 			material.WithBlinnPhongFactors(0.6, 0.5),
 			material.WithBlinnPhongShininess(150),

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package material
+package image
 
 import (
 	"fmt"
 	"image"
+	"image/color"
 
-	"changkun.de/x/ddd/color"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/utils"
 )
@@ -22,27 +22,20 @@ var defaultTexture = &image.RGBA{
 // Texture represents a power-of-two 2D texture. The power-of-two means
 // that the texture width and height must be a power of two. e.g. 1024x1024.
 type Texture struct {
-	correctGamma bool
-	useMipmap    bool
-	mipmap       []*image.RGBA
-	image        *image.RGBA
-	debug        bool
+	useMipmap bool
+	mipmap    []*image.RGBA
+	image     *image.RGBA
+	debug     bool
 }
 
 type TextureOption func(t *Texture)
 
-func WithImage(img *image.RGBA) TextureOption {
+func WithData(data *image.RGBA) TextureOption {
 	return func(t *Texture) {
-		if img.Bounds().Dx() < 1 || img.Bounds().Dy() < 1 {
+		if data.Bounds().Dx() < 1 || data.Bounds().Dy() < 1 {
 			panic("image width or height is less than 1!")
 		}
-		t.image = img
-	}
-}
-
-func WithGammaCorrection(enable bool) TextureOption {
-	return func(t *Texture) {
-		t.correctGamma = enable
+		t.image = data
 	}
 }
 
@@ -60,22 +53,12 @@ func WithIsotropicMipMap(enable bool) TextureOption {
 
 func NewTexture(opts ...TextureOption) *Texture {
 	t := &Texture{
-		correctGamma: false,
-		useMipmap:    true,
-		image:        defaultTexture,
-		mipmap:       []*image.RGBA{},
+		useMipmap: true,
+		image:     defaultTexture,
+		mipmap:    []*image.RGBA{},
 	}
 	for _, opt := range opts {
 		opt(t)
-	}
-
-	// Gamma correction, assume input space in sRGB and converting it to linear.
-	if t.correctGamma {
-		for i := 0; i < len(t.image.Pix); i += 4 {
-			t.image.Pix[i+0] = uint8(color.ConvertSRGB2Linear(float64(t.image.Pix[i+0])/float64(0xff)) * 0xff)
-			t.image.Pix[i+1] = uint8(color.ConvertSRGB2Linear(float64(t.image.Pix[i+1])/float64(0xff)) * 0xff)
-			t.image.Pix[i+2] = uint8(color.ConvertSRGB2Linear(float64(t.image.Pix[i+2])/float64(0xff)) * 0xff)
-		}
 	}
 
 	dx := t.image.Bounds().Dx()

@@ -8,25 +8,26 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/geometry/primitive"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/math"
 )
 
 type BlinnPhongMaterial struct {
-	tex           *Texture
+	tex           *image.Texture
 	kDiff         float64
 	kSpec         float64
 	shininess     float64
 	receiveShadow bool
 }
 
-func (m *BlinnPhongMaterial) Texture() *Texture {
+func (m *BlinnPhongMaterial) Texture() *image.Texture {
 	return m.tex
 }
 
 type BlinnPhongMaterialOption func(m *BlinnPhongMaterial)
 
-func WithBlinnPhongTexture(tex *Texture) BlinnPhongMaterialOption {
+func WithBlinnPhongTexture(tex *image.Texture) BlinnPhongMaterialOption {
 	return func(m *BlinnPhongMaterial) {
 		m.tex = tex
 	}

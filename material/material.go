@@ -8,6 +8,7 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/geometry/primitive"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/math"
 )
@@ -15,7 +16,7 @@ import (
 // Material is an interface that represents a mesh material
 type Material interface {
 	ReceiveShadow() bool
-	Texture() *Texture
+	Texture() *image.Texture
 	VertexShader(
 		v primitive.Vertex,
 		uniforms map[string]interface{},
