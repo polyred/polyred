@@ -17,7 +17,7 @@ import (
 // Scene represents a basic scene graph
 type Scene struct {
 	Name         string
-	Meshes       []*geometry.TriangleMesh
+	Meshes       []geometry.Mesh
 	LightSources []light.Source
 	LightEnv     []light.Environment
 	Camera       camera.Interface
@@ -31,7 +31,7 @@ func NewScene() *Scene {
 }
 
 // AddMesh adds a mesh to the scene graph
-func (s *Scene) AddMesh(m *geometry.TriangleMesh) {
+func (s *Scene) AddMesh(m geometry.Mesh) {
 	s.Meshes = append(s.Meshes, m)
 }
 

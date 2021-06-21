@@ -122,26 +122,35 @@ func (r *Renderer) passShadows(index int) {
 	matProj := c.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(w), float64(h))
 	for m := range r.scene.Meshes {
-		r.workerPool.Add(uint64(len(r.scene.Meshes[m].Faces)))
+		r.workerPool.Add(r.scene.Meshes[m].NumTriangles())
 	}
 
 	for m := range r.scene.Meshes {
 		mesh := r.scene.Meshes[m]
 		uniforms := map[string]interface{}{
-			"matModel":  mesh.ModelMatrix(),
-			"matView":   matView,
-			"matProj":   matProj,
-			"matVP":     matVP,
-			"matNormal": mesh.NormalMatrix(),
+			"matModel": mesh.ModelMatrix(),
+			"matView":  matView,
+			"matProj":  matProj,
+			"matVP":    matVP,
+			// NormalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
+			// depending on which transformation space. Here we use the 2nd form,
+			// i.e. model space normal matrix to save some computation of camera
+			// transforamtion in the shading process.
+			// The reason we need normal matrix is that normals are transformed
+			// incorrectly using MVP matrices. However, a normal matrix helps us
+			// to fix the problem.
+			"matNormal": mesh.ModelMatrix().Inv().T(),
 		}
 
-		length := len(mesh.Faces)
-		for i := 0; i < length; i++ {
-			ii := i
-			r.workerPool.Execute(func() {
-				r.drawDepth(index, uniforms, mesh.Faces[ii], mesh.Material)
+		mesh.Faces(func(f primitive.Face, m material.Material) bool {
+			f.Triangles(func(t *primitive.Triangle) bool {
+				r.workerPool.Execute(func() {
+					r.drawDepth(index, uniforms, t, m)
+				})
+				return true
 			})
-		}
+			return true
+		})
 	}
 	r.workerPool.Wait()
 }

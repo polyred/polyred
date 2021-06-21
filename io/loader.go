@@ -16,7 +16,7 @@ import (
 )
 
 // MustLoadMesh loads a given file to a triangle mesh.
-func MustLoadMesh(path string) *geometry.TriangleMesh {
+func MustLoadMesh(path string) geometry.Mesh {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(fmt.Errorf("loader: cannot open file %s, err: %v", path, err))

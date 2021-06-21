@@ -1,3 +1,7 @@
+// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
+
 package geometry
 
 import (
@@ -7,7 +11,7 @@ import (
 	"changkun.de/x/ddd/math"
 )
 
-func NewPlane(width, height float64) *TriangleMesh {
+func NewPlane(width, height float64) Mesh {
 	v1 := primitive.Vertex{
 		Pos: math.NewVector(-0.5*width, 0, -0.5*height, 1),
 		UV:  math.NewVector(0, 1, 0, 1),
@@ -32,7 +36,7 @@ func NewPlane(width, height float64) *TriangleMesh {
 		Nor: math.NewVector(0, 1, 0, 0),
 		Col: color.RGBA{0, 0, 0, 255},
 	}
-	return NewTriangleMesh([]*primitive.Triangle{
+	return NewTriangleSoup([]*primitive.Triangle{
 		{V1: v1, V2: v2, V3: v3},
 		{V1: v1, V2: v3, V3: v4},
 	})

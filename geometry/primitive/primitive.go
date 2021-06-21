@@ -36,6 +36,16 @@ func (v *Vertex) AABB() AABB {
 	}
 }
 
+type Face interface {
+	AABB() AABB
+	Vertices(func(v *Vertex) bool)
+	Triangles(func(t *Triangle) bool)
+}
+
+var (
+	_ Face = &Triangle{}
+)
+
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
 	V1, V2, V3 Vertex
@@ -79,6 +89,16 @@ func (t *Triangle) AABB() AABB {
 	}
 
 	return *t.aabb
+}
+
+func (t *Triangle) Vertices(f func(v *Vertex) bool) {
+	if !f(&t.V1) || !f(&t.V2) || !f(&t.V3) {
+		return
+	}
+}
+
+func (t *Triangle) Triangles(f func(*Triangle) bool) {
+	f(t)
 }
 
 func (t *Triangle) FaceNormal() math.Vector {

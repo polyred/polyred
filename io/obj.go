@@ -17,7 +17,7 @@ import (
 )
 
 // LoadOBJ loads a .obj file to a TriangleMesh object
-func LoadOBJ(data io.Reader) (*geometry.TriangleMesh, error) {
+func LoadOBJ(data io.Reader) (geometry.Mesh, error) {
 
 	vs := make([]math.Vector, 1)
 	vts := make([]math.Vector, 1, 1024)
@@ -82,7 +82,7 @@ func LoadOBJ(data io.Reader) (*geometry.TriangleMesh, error) {
 			}
 		}
 	}
-	return geometry.NewTriangleMesh(tris), s.Err()
+	return geometry.NewTriangleSoup(tris), s.Err()
 }
 
 func parseFloats(items []string) []float64 {

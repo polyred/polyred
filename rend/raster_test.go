@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
@@ -187,15 +188,29 @@ func BenchmarkDraw(b *testing.B) {
 			"matView":   matView,
 			"matProj":   matProj,
 			"matVP":     matVP,
-			"matNormal": r.GetScene().Meshes[0].NormalMatrix(),
+			"matNormal": r.GetScene().Meshes[0].ModelMatrix().Inv().T(),
 		}
 
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
+			var (
+				ts  = []*primitive.Triangle{}
+				mat material.Material
+				nt  = r.GetScene().Meshes[0].NumTriangles()
+			)
+
+			r.GetScene().Meshes[0].Faces(func(f primitive.Face, m material.Material) bool {
+				mat = m
+				f.Triangles(func(t *primitive.Triangle) bool {
+					ts = append(ts, t)
+					return true
+				})
+				return true
+			})
+
 			b.ReportAllocs()
 			b.ResetTimer()
-			mat := r.GetScene().Meshes[0].Material
 			for i := 0; i < b.N; i++ {
-				f := r.GetScene().Meshes[0].Faces[i%(len(r.GetScene().Meshes[0].Faces))]
+				f := ts[i%int(nt)]
 				rend.Draw(r, uniforms, f, mat)
 			}
 		})
