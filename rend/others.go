@@ -49,10 +49,6 @@ func (r *Renderer) shouldStop() bool {
 	return atomic.LoadUint32(&r.stop) == 1
 }
 
-func (r *Renderer) GetScene() *Scene {
-	return r.scene
-}
-
 func defaultVertexShader(v primitive.Vertex, uniforms map[string]interface{}) primitive.Vertex {
 	matModel := uniforms["matModel"].(math.Matrix)
 	matView := uniforms["matView"].(math.Matrix)

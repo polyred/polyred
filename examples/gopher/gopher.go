@@ -12,22 +12,21 @@ import (
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/scene"
 	"changkun.de/x/ddd/utils"
 )
 
 func NewGopherScene(width, height int) interface{} {
-	s := rend.NewScene()
-	c := camera.NewPerspective(
+	s := scene.NewScene()
+	s.SetCamera(camera.NewPerspective(
 		math.NewVector(1, 1, 2, 1),
 		math.NewVector(0, 0, 0, 1),
 		math.NewVector(0, 1, 0, 0),
 		45,
 		float64(width)/float64(height),
 		0.01, 600,
-	)
-	s.UseCamera(c)
-	s.AddLight(light.NewPoint(
+	))
+	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(10),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
 		light.WithPointLightPosition(math.NewVector(0, 0, 5, 1)),
@@ -46,8 +45,9 @@ func NewGopherScene(width, height int) interface{} {
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)
-	m.UseMaterial(mat)
+	m.SetMaterial(mat)
 	m.Normalize()
-	s.AddMesh(m)
+	s.Add(m)
+
 	return s
 }

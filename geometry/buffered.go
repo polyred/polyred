@@ -5,9 +5,22 @@
 package geometry
 
 type BufferedMesh struct {
-	positions []float64
-	normals   []float64
-	uvs       []float64
-	color     []float64
-	vbo       []int64
+	vbo        []int64
+	attributes map[string][]float64
+}
+
+func NewBufferedMesh() *BufferedMesh {
+	return &BufferedMesh{}
+}
+
+func (bm *BufferedMesh) SetVertexBuffer(vbo []int64) {
+	bm.vbo = vbo
+}
+
+func (bm *BufferedMesh) SetAttribute(name string, buf []float64) {
+	bm.attributes[name] = buf
+}
+
+func (bm *BufferedMesh) GetAttribute(name string) []float64 {
+	return bm.attributes[name]
 }

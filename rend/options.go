@@ -9,6 +9,10 @@ import (
 	"image/color"
 	"sync"
 
+	"changkun.de/x/ddd/light"
+	"changkun.de/x/ddd/math"
+	"changkun.de/x/ddd/object"
+	"changkun.de/x/ddd/scene"
 	"changkun.de/x/ddd/utils"
 )
 
@@ -21,7 +25,7 @@ func WithSize(width, height int) Option {
 	}
 }
 
-func WithScene(s *Scene) Option {
+func WithScene(s *scene.Scene) Option {
 	return func(r *Renderer) {
 		r.scene = s
 	}
@@ -84,6 +88,24 @@ func (r *Renderer) UpdateOptions(opts ...Option) {
 	r.gBuf = make([]gInfo, w*h)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
 	r.limiter = utils.NewLimiter(r.gomaxprocs)
+
+	r.lightSources = []light.Source{}
+	r.lightEnv = []light.Environment{}
+	if r.scene != nil {
+		r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+			if o.Type() != object.TypeLight {
+				return true
+			}
+
+			switch l := o.(type) {
+			case light.Source:
+				r.lightSources = append(r.lightSources, l)
+			case light.Environment:
+				r.lightEnv = append(r.lightEnv, l)
+			}
+			return true
+		})
+	}
 
 	// initialize shadow maps
 	if r.scene != nil && r.useShadowMap {

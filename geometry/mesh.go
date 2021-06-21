@@ -10,23 +10,18 @@ import (
 	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
+	"changkun.de/x/ddd/object"
 )
 
 type Mesh interface {
-	Rotate(r math.Vector, a float64)
-	RotateX(a float64)
-	RotateY(a float64)
-	RotateZ(a float64)
-	Translate(x, y, z float64)
-	Scale(x, y, z float64)
+	object.Object
+
 	AABB() primitive.AABB
 	Normalize()
-
-	UseMaterial(m material.Material)
+	SetMaterial(m material.Material)
+	GetMaterial() material.Material
 	NumTriangles() uint64
 	Faces(func(f primitive.Face, m material.Material) bool)
-	GetMaterial() material.Material
-	ModelMatrix() math.Matrix
 }
 
 func NewBufferedMeshFromTriangleSoup(m *TriangleSoup) {
@@ -45,13 +40,12 @@ type TriangleSoup struct {
 	material material.Material
 	// aabb must be transformed when applying the context.
 	aabb primitive.AABB
-	// context is a transformation context (model matrix) that accumulates
-	// applied transformation matrices (multiplied from left side) for the
-	// given mesh.
-	// context is a persistant status for the given mesh and can be reused
-	// for each of the rendering frame unless the mesh intentionally calls
-	// ResetContext() method.
-	context math.Matrix
+
+	math.TransformContext
+}
+
+func (f *TriangleSoup) Type() object.Type {
+	return object.TypeMesh
 }
 
 func (f *TriangleSoup) NumTriangles() uint64 {
@@ -78,77 +72,16 @@ func NewTriangleSoup(ts []*primitive.Triangle) *TriangleSoup {
 		aabb.Add(ts[i].AABB())
 	}
 
-	return &TriangleSoup{
-		faces:   ts,
-		aabb:    aabb,
-		context: math.MatI,
+	ret := &TriangleSoup{
+		faces: ts,
+		aabb:  aabb,
 	}
+	ret.ResetContext()
+	return ret
 }
 
-func (t *TriangleSoup) UseMaterial(mat material.Material) {
+func (t *TriangleSoup) SetMaterial(mat material.Material) {
 	t.material = mat
-}
-
-// modelMatrix returns the transformation context as the model matrix
-// for the current frame (or at call time).
-func (t *TriangleSoup) ModelMatrix() math.Matrix {
-	return t.context
-}
-
-func (t *TriangleSoup) ResetContext() {
-	t.context = math.MatI
-}
-
-// Scale sets the scale matrix.
-func (m *TriangleSoup) Scale(sx, sy, sz float64) {
-	m.context = math.NewMatrix(
-		sx, 0, 0, 0,
-		0, sy, 0, 0,
-		0, 0, sz, 0,
-		0, 0, 0, 1,
-	).MulM(m.context)
-}
-
-// SetTranslate sets the translate matrix.
-func (m *TriangleSoup) Translate(tx, ty, tz float64) {
-	m.context = math.NewMatrix(
-		1, 0, 0, tx,
-		0, 1, 0, ty,
-		0, 0, 1, tz,
-		0, 0, 0, 1,
-	).MulM(m.context)
-}
-
-func (m *TriangleSoup) Rotate(dir math.Vector, angle float64) {
-	u := dir.Unit()
-	cosa := math.Cos(angle / 2)
-	sina := math.Sin(angle / 2)
-	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
-	m.context = q.ToRoMat().MulM(m.context)
-}
-
-func (m *TriangleSoup) RotateX(angle float64) {
-	u := math.NewVector(1, 0, 0, 0)
-	cosa := math.Cos(angle / 2)
-	sina := math.Sin(angle / 2)
-	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
-	m.context = q.ToRoMat().MulM(m.context)
-}
-
-func (m *TriangleSoup) RotateY(angle float64) {
-	u := math.NewVector(0, 1, 0, 0)
-	cosa := math.Cos(angle / 2)
-	sina := math.Sin(angle / 2)
-	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
-	m.context = q.ToRoMat().MulM(m.context)
-}
-
-func (m *TriangleSoup) RotateZ(angle float64) {
-	u := math.NewVector(0, 0, 1, 0)
-	cosa := math.Cos(angle / 2)
-	sina := math.Sin(angle / 2)
-	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
-	m.context = q.ToRoMat().MulM(m.context)
 }
 
 func (m *TriangleSoup) AABB() primitive.AABB {

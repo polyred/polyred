@@ -12,9 +12,13 @@ import (
 
 	"changkun.de/x/ddd/camera"
 	"changkun.de/x/ddd/color"
+	"changkun.de/x/ddd/geometry"
 	"changkun.de/x/ddd/geometry/primitive"
+	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
+	"changkun.de/x/ddd/object"
+	"changkun.de/x/ddd/scene"
 	"changkun.de/x/ddd/utils"
 )
 
@@ -31,7 +35,7 @@ type Renderer struct {
 	correctGamma bool
 	useShadowMap bool
 	debug        bool
-	scene        *Scene
+	scene        *scene.Scene
 	background   color.RGBA
 
 	// scheduling, use for hard interruption.
@@ -39,6 +43,8 @@ type Renderer struct {
 	stop    uint32 // atomic
 
 	// rendering caches
+	lightSources   []light.Source
+	lightEnv       []light.Environment
 	concurrentSize int32
 	gomaxprocs     int
 	limiter        *utils.Limiter
@@ -64,6 +70,8 @@ func NewRenderer(opts ...Option) *Renderer {
 		scene:          nil,
 		gomaxprocs:     runtime.GOMAXPROCS(0),
 		concurrentSize: 64,
+		lightSources:   []light.Source{},
+		lightEnv:       []light.Environment{},
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -79,8 +87,24 @@ func NewRenderer(opts ...Option) *Renderer {
 	r.limiter = utils.NewLimiter(r.gomaxprocs)
 	r.workerPool = utils.NewWorkerPool(uint64(r.gomaxprocs))
 
+	if r.scene != nil {
+		r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+			if o.Type() != object.TypeLight {
+				return true
+			}
+
+			switch l := o.(type) {
+			case light.Source:
+				r.lightSources = append(r.lightSources, l)
+			case light.Environment:
+				r.lightEnv = append(r.lightEnv, l)
+			}
+			return true
+		})
+	}
 	// initialize shadow maps
 	if r.scene != nil && r.useShadowMap {
+
 		r.initShadowMaps()
 	}
 
@@ -153,15 +177,27 @@ func (r *Renderer) passForward() {
 
 	w := r.width * r.msaa
 	h := r.height * r.msaa
-	r.renderCamera = r.scene.Camera
+	r.renderCamera = r.scene.GetCamera()
 	matView := r.renderCamera.ViewMatrix()
 	matProj := r.renderCamera.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(w), float64(h))
-	for m := range r.scene.Meshes {
-		r.workerPool.Add(r.scene.Meshes[m].NumTriangles())
-	}
-	for m := range r.scene.Meshes {
-		mesh := r.scene.Meshes[m]
+
+	r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		if o.Type() != object.TypeMesh {
+			return true
+		}
+
+		mesh := o.(geometry.Mesh)
+		r.workerPool.Add(mesh.NumTriangles())
+		return true
+	})
+
+	r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		if o.Type() != object.TypeMesh {
+			return true
+		}
+
+		mesh := o.(geometry.Mesh)
 		uniforms := map[string]interface{}{
 			"matModel": mesh.ModelMatrix(),
 			"matView":  matView,
@@ -178,15 +214,16 @@ func (r *Renderer) passForward() {
 		}
 
 		mesh.Faces(func(f primitive.Face, m material.Material) bool {
-			r.workerPool.Execute(func() {
-				f.Triangles(func(t *primitive.Triangle) bool {
+			f.Triangles(func(t *primitive.Triangle) bool {
+				r.workerPool.Execute(func() {
 					r.draw(uniforms, t, m)
-					return true
 				})
+				return true
 			})
 			return true
 		})
-	}
+		return true
+	})
 	r.workerPool.Wait()
 }
 
@@ -197,7 +234,7 @@ func (r *Renderer) passDeferred() {
 	}
 	w := r.width * r.msaa
 	h := r.height * r.msaa
-	r.renderCamera = r.scene.Camera
+	r.renderCamera = r.scene.GetCamera()
 	xstep := int(r.concurrentSize)
 	ystep := int(r.concurrentSize)
 	matView := r.renderCamera.ViewMatrix()
@@ -255,8 +292,9 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
 			}
 			lod = math.Log2(siz)
 		}
+
 		col = info.mat.Texture().Query(lod, info.u, 1-info.v)
-		col = info.mat.FragmentShader(col, info.pos, info.n, r.renderCamera.Position(), r.scene.LightSources, r.scene.LightEnv)
+		col = info.mat.FragmentShader(col, info.pos, info.n, r.renderCamera.Position(), r.lightSources, r.lightEnv)
 	}
 
 	if r.useShadowMap && info.mat != nil && info.mat.ReceiveShadow() {
@@ -330,7 +368,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 	t1Z := 1.0
 	t2Z := 1.0
 	t3Z := 1.0
-	if _, ok := r.renderCamera.(camera.Perspective); ok {
+	if _, ok := r.renderCamera.(*camera.Perspective); ok {
 		t1Z = 1 / t1.Pos.Z
 		t2Z = 1 / t2.Pos.Z
 		t3Z = 1 / t3.Pos.Z
@@ -373,7 +411,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			// Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 			// Department of Computer Science, University of North Carolina at Chapel Hill (2002).
 			Z := 1.0
-			if _, ok := r.renderCamera.(camera.Perspective); ok {
+			if _, ok := r.renderCamera.(*camera.Perspective); ok {
 				Z = w1*t1Z + w2*t2Z + w3*t3Z
 			}
 

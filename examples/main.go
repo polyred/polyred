@@ -13,8 +13,9 @@ import (
 	"runtime/trace"
 	"time"
 
-	"changkun.de/x/ddd/examples/gopher"
+	"changkun.de/x/ddd/examples/mcguire"
 	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/scene"
 	"changkun.de/x/ddd/utils"
 )
 
@@ -35,8 +36,8 @@ func main() {
 		// {"bunny", bunny.NewBunnyScene, 960, 540, 2, false, true, false, false, false},
 		// {"dragon", dragon.NewDragonScene, 960, 540, 2, false, true, false, false, false},
 		// {"shadow", shadow.NewShadowScene, 960, 540, 2, true, false, true, false, false},
-		{"gopher", gopher.NewGopherScene, 1000, 1000, 2, true, false, false, false, false},
-		// {"mcguire", mcguire.NewMcGuireScene, 540, 540, 2, false, true, false, false, false},
+		// {"gopher", gopher.NewGopherScene, 1000, 1000, 2, true, false, false, false, false},
+		{"mcguire", mcguire.NewMcGuireScene, 540, 540, 2, false, true, false, false, false},
 	}
 
 	for _, example := range examples {
@@ -85,15 +86,15 @@ func render(settings *sceneExample) {
 		rend.WithDebug(settings.Debug),
 	)
 	switch ss := s.(type) {
-	case *rend.Scene:
+	case *scene.Scene:
 		r.UpdateOptions(
 			rend.WithScene(ss),
 		)
 		utils.Save(r.Render(), fmt.Sprintf("./%s/%s.png", settings.Name, settings.Name))
-	case []*rend.Scene:
+	case []*mcguire.Scene:
 		for _, sss := range ss {
 			r.UpdateOptions(
-				rend.WithScene(sss),
+				rend.WithScene(sss.Scene),
 			)
 			log.Printf("scene name: %s", sss.Name)
 			utils.Save(r.Render(), fmt.Sprintf("./%s/%s.png", settings.Name, sss.Name))

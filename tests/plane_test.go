@@ -13,28 +13,28 @@ import (
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/scene"
 	"changkun.de/x/ddd/utils"
 )
 
 func TestPlane(t *testing.T) {
-	s := rend.NewScene()
-	c := camera.NewPerspective(
+	s := scene.NewScene()
+	s.SetCamera(camera.NewPerspective(
 		math.NewVector(2, 2, 2, 1),
 		math.NewVector(0, 0, 0, 1),
 		math.NewVector(0, 1, 0, 0),
 		45,
 		1,
 		0.1, 10,
-	)
-	s.UseCamera(c)
-	s.AddLightSource(light.NewPoint(
+	))
+	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(1),
 		light.WithPointLightColor(color.RGBA{0, 128, 255, 255}),
 		light.WithPointLightPosition(math.NewVector(2, 2, 2, 1)),
 	))
 
 	m := geometry.NewPlane(1, 1)
-	s.AddMesh(m)
+	s.Add(m)
 
 	r := rend.NewRenderer(
 		rend.WithSize(500, 500),

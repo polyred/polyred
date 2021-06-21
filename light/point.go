@@ -8,12 +8,18 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/math"
+	"changkun.de/x/ddd/object"
 )
 
-var _ Source = &Point{}
+var (
+	_ Source        = &Point{}
+	_ object.Object = &Point{}
+)
 
 // Point is a point light
 type Point struct {
+	math.TransformContext
+
 	pos          math.Vector
 	intensity    float64
 	color        color.RGBA
@@ -58,8 +64,13 @@ func NewPoint(opts ...PointOption) Source {
 	for _, opt := range opts {
 		opt(l)
 	}
+	l.ResetContext()
 
 	return l
+}
+
+func (l *Point) Type() object.Type {
+	return object.TypeLight
 }
 
 func (l *Point) Intensity() float64 {

@@ -21,12 +21,13 @@ import (
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/scene"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"golang.design/x/mainthread"
 )
 
-func loadScene(width, height int) *rend.Scene {
-	s := rend.NewScene()
+func loadScene(width, height int) *scene.Scene {
+	s := scene.NewScene()
 
 	c := camera.NewPerspective(
 		math.NewVector(-0.5, 0.5, 0.5, 1),
@@ -37,8 +38,8 @@ func loadScene(width, height int) *rend.Scene {
 		0.1,
 		3,
 	)
-	s.UseCamera(c)
-	s.AddLight(light.NewPoint(
+	s.SetCamera(c)
+	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(20),
 		light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
 		light.WithPointLightPosition(math.NewVector(-200, 250, 600, 1)),
@@ -57,10 +58,10 @@ func loadScene(width, height int) *rend.Scene {
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)
-	m.UseMaterial(mat)
+	m.SetMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 	m.Translate(0, -0, -0.4)
-	s.AddMesh(m)
+	s.Add(m)
 
 	m = io.MustLoadMesh("../../testdata/ground.obj")
 	data = io.MustLoadImage("../../testdata/ground.png")
@@ -73,10 +74,10 @@ func loadScene(width, height int) *rend.Scene {
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 	)
-	m.UseMaterial(mat)
+	m.SetMaterial(mat)
 	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
 	m.Translate(0, -0, -0.4)
-	s.AddMesh(m)
+	s.Add(m)
 
 	return s
 }

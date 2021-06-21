@@ -4,11 +4,21 @@
 
 package light
 
-import "image/color"
+import (
+	"image/color"
 
-var _ Environment = &Ambient{}
+	"changkun.de/x/ddd/math"
+	"changkun.de/x/ddd/object"
+)
+
+var (
+	_ Environment   = &Ambient{}
+	_ object.Object = &Ambient{}
+)
 
 type Ambient struct {
+	math.TransformContext // not used
+
 	color     color.RGBA
 	intensity float64
 }
@@ -36,8 +46,13 @@ func NewAmbient(opts ...AmbientOption) *Ambient {
 	for _, opt := range opts {
 		opt(a)
 	}
+	a.ResetContext()
 
 	return a
+}
+
+func (l *Ambient) Type() object.Type {
+	return object.TypeLight
 }
 
 func (a *Ambient) Color() color.RGBA {

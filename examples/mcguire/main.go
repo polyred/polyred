@@ -15,8 +15,13 @@ import (
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/scene"
 )
+
+type Scene struct {
+	Name  string
+	Scene *scene.Scene
+}
 
 func NewMcGuireScene(w, h int) interface{} {
 	models := []string{
@@ -173,17 +178,19 @@ func NewMcGuireScene(w, h int) interface{} {
 		log.Fatalf("cannot get home dir: %v", err)
 	}
 
-	scenes := make([]*rend.Scene, len(models))
+	scenes := make([]*Scene, len(models))
 	for i, model := range models {
-		s := rend.NewScene()
-		s.Name = model
-		s.UseCamera(camera.NewPerspective(
+		s := &Scene{
+			Scene: scene.NewScene(),
+			Name:  model,
+		}
+		s.Scene.SetCamera(camera.NewPerspective(
 			math.NewVector(1, 1, 2, 1),
 			math.NewVector(0, 0, 0, 1),
 			math.NewVector(0, 1, 0, 0),
 			50, float64(w)/float64(h), 0.1, 100,
 		))
-		s.AddLight(light.NewPoint(
+		s.Scene.Add(light.NewPoint(
 			light.WithPointLightIntensity(5),
 			light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
 			light.WithPointLightPosition(math.NewVector(2, 2, 2, 1)),
@@ -193,8 +200,8 @@ func NewMcGuireScene(w, h int) interface{} {
 
 		m := io.MustLoadMesh(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
 		m.Normalize()
-		m.UseMaterial(material.NewBasicMaterial(color.RGBA{0, 128, 255, 255}))
-		s.AddMesh(m)
+		m.SetMaterial(material.NewBasicMaterial(color.RGBA{0, 128, 255, 255}))
+		s.Scene.Add(m)
 
 		scenes[i] = s
 	}

@@ -26,7 +26,7 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
     * [x] plane
     * [ ] cube
 - rendering facilities:
-  + [ ] scene graph
+  + [x] scene graph
   + [x] rasterization pass
     * [ ] clipping
     * [x] backface culling

@@ -10,12 +10,12 @@ import (
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/scene"
 )
 
 func NewShadowScene(w, h int) interface{} {
-	s := rend.NewScene()
-	s.UseCamera(camera.NewPerspective(
+	s := scene.NewScene()
+	s.SetCamera(camera.NewPerspective(
 		math.NewVector(0, 0.6, 0.9, 1),
 		math.NewVector(0, 0, 0, 1),
 		math.NewVector(0, 1, 0, 0),
@@ -25,7 +25,7 @@ func NewShadowScene(w, h int) interface{} {
 		2,
 	))
 
-	s.AddLight(
+	s.Add(
 		light.NewPoint(
 			light.WithPointLightIntensity(3),
 			light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
@@ -52,9 +52,9 @@ func NewShadowScene(w, h int) interface{} {
 		material.WithBlinnPhongFactors(0.6, 0.3),
 		material.WithBlinnPhongShininess(20),
 	)
-	m.UseMaterial(mat)
+	m.SetMaterial(mat)
 	m.Scale(2, 2, 2)
-	s.AddMesh(m)
+	s.Add(m)
 
 	m = io.MustLoadMesh("../testdata/ground.obj")
 	data = io.MustLoadImage("../testdata/ground.png")
@@ -68,9 +68,9 @@ func NewShadowScene(w, h int) interface{} {
 		material.WithBlinnPhongShininess(20),
 		material.WithBlinnPhongShadow(true),
 	)
-	m.UseMaterial(mat)
+	m.SetMaterial(mat)
 	m.Scale(2, 2, 2)
-	s.AddMesh(m)
+	s.Add(m)
 
 	return s
 }

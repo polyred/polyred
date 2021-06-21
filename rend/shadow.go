@@ -11,16 +11,74 @@ import (
 	"sync"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/geometry"
 	"changkun.de/x/ddd/geometry/primitive"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
+	"changkun.de/x/ddd/object"
 	"changkun.de/x/ddd/utils"
 )
 
+type ShadowType int
+
+const (
+	ShadowTypeHard ShadowType = iota // hard shadow mapping
+	ShadowTypePCF                    // percentage closer filtering
+	ShadowTypePCSS                   // percentage closer soft shadows
+	ShadowTypeVSSM                   // variance soft shadow mapping
+	ShadowTypeMSM                    // moment shadow mapping
+)
+
+type ShadowMap struct {
+	typ    ShadowType
+	camera camera.Interface
+	bias   float64
+}
+
+type ShadowMapOption func(sm *ShadowMap)
+
+func WithShadowMapType(typ ShadowType) ShadowMapOption {
+	return func(sm *ShadowMap) {
+		sm.typ = typ
+	}
+}
+
+func WithShadowMapCamera(c camera.Interface) ShadowMapOption {
+	return func(sm *ShadowMap) {
+		sm.camera = c
+	}
+}
+
+func WithShadowMapBias(bias float64) ShadowMapOption {
+	return func(sm *ShadowMap) {
+		sm.bias = bias
+	}
+}
+
+func NewShadowMap(opts ...ShadowMapOption) *ShadowMap {
+	sm := &ShadowMap{
+		typ:    ShadowTypeHard,
+		camera: nil, // default left nil to allow rasterizer decide at runtime
+		bias:   0.03,
+	}
+	for _, opt := range opts {
+		opt(sm)
+	}
+	return sm
+}
+
+func (sm *ShadowMap) Camera() camera.Interface {
+	return sm.camera
+}
+
+func (sm *ShadowMap) Bias() float64 {
+	return sm.bias
+}
+
 type shadowInfo struct {
 	active   bool
-	settings *light.ShadowMap
+	settings *ShadowMap
 	depths   []float64
 	lock     []sync.Mutex
 }
@@ -28,20 +86,20 @@ type shadowInfo struct {
 func (r *Renderer) initShadowMaps() {
 	w := r.width * r.msaa
 	h := r.width * r.msaa
-	r.shadowBufs = make([]shadowInfo, len(r.scene.LightSources))
-	for i := 0; i < len(r.scene.LightSources); i++ {
-		if !r.scene.LightSources[i].CastShadow() {
+	r.shadowBufs = make([]shadowInfo, len(r.lightSources))
+	for i := 0; i < len(r.lightSources); i++ {
+		if !r.lightSources[i].CastShadow() {
 			continue
 		}
 
 		// initialize scene camera
 		tm := camera.ViewMatrix(
-			r.scene.LightSources[i].Position(),
+			r.lightSources[i].Position(),
 			r.scene.Center(),
 			math.NewVector(0, 1, 0, 0),
 		).
-			MulM(r.scene.Camera.ViewMatrix().Inv()).
-			MulM(r.scene.Camera.ProjMatrix().Inv())
+			MulM(r.scene.GetCamera().ViewMatrix().Inv()).
+			MulM(r.scene.GetCamera().ProjMatrix().Inv())
 		v1 := math.NewVector(1, 1, 1, 1).Apply(tm).Pos()
 		v2 := math.NewVector(1, 1, -1, 1).Apply(tm).Pos()
 		v3 := math.NewVector(1, -1, 1, 1).Apply(tm).Pos()
@@ -60,7 +118,7 @@ func (r *Renderer) initShadowMaps() {
 		// aspect := ri / to
 		// fov := 2 * math.Atan(to/math.Abs(ne))
 
-		li := r.scene.LightSources[i]
+		li := r.lightSources[i]
 		var c camera.Interface
 		switch l := li.(type) {
 		case *light.Point:
@@ -80,8 +138,8 @@ func (r *Renderer) initShadowMaps() {
 		default:
 		}
 		r.shadowBufs[i].active = true
-		r.shadowBufs[i].settings = light.NewShadowMap(
-			light.WithShadowMapCamera(c),
+		r.shadowBufs[i].settings = NewShadowMap(
+			WithShadowMapCamera(c),
 		)
 		r.shadowBufs[i].depths = make([]float64, w*h)
 		r.shadowBufs[i].lock = make([]sync.Mutex, w*h)
@@ -89,7 +147,7 @@ func (r *Renderer) initShadowMaps() {
 }
 
 func (r *Renderer) passShadows(index int) {
-	if !r.scene.LightSources[index].CastShadow() {
+	if !r.lightSources[index].CastShadow() {
 		return
 	}
 
@@ -121,12 +179,22 @@ func (r *Renderer) passShadows(index int) {
 	matView := c.ViewMatrix()
 	matProj := c.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(w), float64(h))
-	for m := range r.scene.Meshes {
-		r.workerPool.Add(r.scene.Meshes[m].NumTriangles())
-	}
+	r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		if o.Type() != object.TypeMesh {
+			return true
+		}
 
-	for m := range r.scene.Meshes {
-		mesh := r.scene.Meshes[m]
+		mesh := o.(geometry.Mesh)
+		r.workerPool.Add(mesh.NumTriangles())
+		return true
+	})
+
+	r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		if o.Type() != object.TypeMesh {
+			return true
+		}
+
+		mesh := o.(geometry.Mesh)
 		uniforms := map[string]interface{}{
 			"matModel": mesh.ModelMatrix(),
 			"matView":  matView,
@@ -151,7 +219,8 @@ func (r *Renderer) passShadows(index int) {
 			})
 			return true
 		})
-	}
+		return true
+	})
 	r.workerPool.Wait()
 }
 
@@ -230,7 +299,7 @@ func (r *Renderer) shadingVisibility(
 	info *gInfo,
 	uniforms map[string]interface{},
 ) bool {
-	if !r.scene.LightSources[shadowIdx].CastShadow() {
+	if !r.lightSources[shadowIdx].CastShadow() {
 		return true
 	}
 

@@ -8,17 +8,22 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/math"
+	"changkun.de/x/ddd/object"
 )
 
 // Environment represents the abstraction of environment lighting.
 // Such as ambient light, etc.
 type Environment interface {
+	object.Object
+
 	Color() color.RGBA
 	Intensity() float64
 }
 
 // Source represents the abstraction of a light source.
 type Source interface {
+	object.Object
+
 	Color() color.RGBA
 	Intensity() float64
 	Position() math.Vector

@@ -4,9 +4,19 @@
 
 package camera
 
-import "changkun.de/x/ddd/math"
+import (
+	"changkun.de/x/ddd/math"
+	"changkun.de/x/ddd/object"
+)
+
+var (
+	_ Interface = &Orthographic{}
+	_ Interface = &Perspective{}
+)
 
 type Interface interface {
+	object.Object
+
 	Position() math.Vector
 	ViewMatrix() math.Matrix
 	ProjMatrix() math.Matrix
@@ -42,6 +52,8 @@ func ViewMatrix(pos, lookAt, up math.Vector) math.Matrix {
 }
 
 type Perspective struct {
+	math.TransformContext
+
 	position math.Vector
 	lookAt   math.Vector
 	up       math.Vector
@@ -51,15 +63,24 @@ type Perspective struct {
 	far      float64
 }
 
-func NewPerspective(pos, lookAt, up math.Vector, fov, aspect, near, far float64) Perspective {
-	return Perspective{pos, lookAt, up, fov, aspect, near, far}
+func NewPerspective(pos, lookAt, up math.Vector, fov, aspect, near, far float64) Interface {
+	c := &Perspective{
+		position: pos, lookAt: lookAt, up: up,
+		fov: fov, aspect: aspect, near: near, far: far,
+	}
+	c.ResetContext()
+	return c
 }
 
-func (c Perspective) Position() math.Vector {
+func (c *Perspective) Type() object.Type {
+	return object.TypeCamera
+}
+
+func (c *Perspective) Position() math.Vector {
 	return c.position
 }
 
-func (c Perspective) ViewMatrix() math.Matrix {
+func (c *Perspective) ViewMatrix() math.Matrix {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
 	u := lxu.Cross(l).Unit()
@@ -87,7 +108,7 @@ func (c Perspective) ViewMatrix() math.Matrix {
 	return TrTt // Tr.MulM(Tt)
 }
 
-func (c Perspective) ProjMatrix() math.Matrix {
+func (c *Perspective) ProjMatrix() math.Matrix {
 	aspect := c.aspect
 	fov := (c.fov * math.Pi) / 180
 	n := c.near
@@ -101,6 +122,8 @@ func (c Perspective) ProjMatrix() math.Matrix {
 }
 
 type Orthographic struct {
+	math.TransformContext
+
 	position math.Vector
 	lookAt   math.Vector
 	up       math.Vector
@@ -115,8 +138,8 @@ type Orthographic struct {
 func NewOrthographic(
 	pos, lookAt, up math.Vector,
 	left, right, bottom, top, near, far float64,
-) Orthographic {
-	return Orthographic{
+) Interface {
+	c := &Orthographic{
 		position: pos,
 		lookAt:   lookAt,
 		up:       up,
@@ -127,13 +150,19 @@ func NewOrthographic(
 		near:     near,
 		far:      far,
 	}
+	c.ResetContext()
+	return c
 }
 
-func (c Orthographic) Position() math.Vector {
+func (c *Orthographic) Type() object.Type {
+	return object.TypeCamera
+}
+
+func (c *Orthographic) Position() math.Vector {
 	return c.position
 }
 
-func (c Orthographic) ViewMatrix() math.Matrix {
+func (c *Orthographic) ViewMatrix() math.Matrix {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
 	u := lxu.Cross(l).Unit()
@@ -161,7 +190,7 @@ func (c Orthographic) ViewMatrix() math.Matrix {
 	return TrTt // Tr.MulM(Tt)
 }
 
-func (c Orthographic) ProjMatrix() math.Matrix {
+func (c *Orthographic) ProjMatrix() math.Matrix {
 	l := c.left
 	r := c.right
 	t := c.top

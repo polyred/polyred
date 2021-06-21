@@ -17,6 +17,7 @@ import (
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/rend"
+	"changkun.de/x/ddd/scene"
 	"changkun.de/x/ddd/utils"
 )
 
@@ -68,8 +69,8 @@ func main() {
 
 func bench(opt *benchOpts) {
 	result := testing.Benchmark(func(b *testing.B) {
-		s := rend.NewScene()
-		s.UseCamera(camera.NewPerspective(
+		s := scene.NewScene()
+		s.SetCamera(camera.NewPerspective(
 			math.NewVector(0, 0.6, 0.9, 1),
 			math.NewVector(0, 0, 0, 1),
 			math.NewVector(0, 1, 0, 0),
@@ -79,7 +80,7 @@ func bench(opt *benchOpts) {
 			2,
 		))
 
-		s.AddLight(light.NewPoint(
+		s.Add(light.NewPoint(
 			light.WithPointLightIntensity(7),
 			light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
 			light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
@@ -90,7 +91,7 @@ func bench(opt *benchOpts) {
 
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
 		data := io.MustLoadImage("../../testdata/bunny.png")
-		m.UseMaterial(material.NewBlinnPhong(
+		m.SetMaterial(material.NewBlinnPhong(
 			material.WithBlinnPhongTexture(material.NewTexture(
 				material.WithImage(data),
 				material.WithIsotropicMipMap(true),
@@ -101,11 +102,11 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongShadow(opt.shadowmap),
 		))
 		m.Scale(2, 2, 2)
-		s.AddMesh(m)
+		s.Add(m)
 
 		m = io.MustLoadMesh("../../testdata/ground.obj")
 		data = io.MustLoadImage("../../testdata/ground.png")
-		m.UseMaterial(material.NewBlinnPhong(
+		m.SetMaterial(material.NewBlinnPhong(
 			material.WithBlinnPhongTexture(material.NewTexture(
 				material.WithImage(data),
 				material.WithIsotropicMipMap(true),
@@ -116,7 +117,7 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongShadow(opt.shadowmap),
 		))
 		m.Scale(2, 2, 2)
-		s.AddMesh(m)
+		s.Add(m)
 
 		r := rend.NewRenderer(
 			rend.WithSize(opt.width, opt.height),
