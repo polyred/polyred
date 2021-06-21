@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
@@ -200,7 +201,12 @@ func NewMcGuireScene(w, h int) interface{} {
 
 		m := io.MustLoadMesh(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
 		m.Normalize()
-		m.SetMaterial(material.NewBasicMaterial(color.RGBA{0, 128, 255, 255}))
+		m.SetMaterial(material.NewBlinnPhong(
+			material.WithBlinnPhongTexture(image.NewColorTexture(color.RGBA{0, 128, 255, 255})),
+			material.WithBlinnPhongFactors(0.6, 1),
+			material.WithBlinnPhongShininess(100),
+			material.WithBlinnPhongFlatShading(false),
+		))
 		s.Scene.Add(m)
 
 		scenes[i] = s

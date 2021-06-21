@@ -5,6 +5,7 @@
 package utils_test
 
 import (
+	"runtime"
 	"sync/atomic"
 	"testing"
 
@@ -38,4 +39,20 @@ func TestLimiterV2(t *testing.T) {
 	if sum != 45 {
 		t.Fatalf("wrong sum, expect: %d, want %d", 45, sum)
 	}
+
+	if l.Running() != 0 {
+		t.Fatalf("wrong counter inside the pool")
+	}
+}
+
+func BenchmarkLimiterV2(b *testing.B) {
+	np := runtime.GOMAXPROCS(0)
+	l := utils.NewWorkerPool(uint64(np))
+	b.ReportAllocs()
+	b.ResetTimer()
+	l.Add(uint64(b.N))
+	for i := 0; i < b.N; i++ {
+		l.Execute(f)
+	}
+	l.Wait()
 }

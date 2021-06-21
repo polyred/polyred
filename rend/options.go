@@ -13,7 +13,6 @@ import (
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/object"
 	"changkun.de/x/ddd/scene"
-	"changkun.de/x/ddd/utils"
 )
 
 type Option func(r *Renderer)
@@ -87,7 +86,6 @@ func (r *Renderer) UpdateOptions(opts ...Option) {
 	r.lockBuf = make([]sync.Mutex, w*h)
 	r.gBuf = make([]gInfo, w*h)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
-	r.limiter = utils.NewLimiter(r.gomaxprocs)
 
 	r.lightSources = []light.Source{}
 	r.lightEnv = []light.Environment{}

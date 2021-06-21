@@ -45,7 +45,7 @@ func NewShadowScene(w, h int) interface{} {
 	m := io.MustLoadMesh("../testdata/bunny.obj")
 	data := io.MustLoadImage("../testdata/bunny.png")
 	tex := image.NewTexture(
-		image.WithData(data),
+		image.WithSource(data),
 		image.WithIsotropicMipMap(true),
 	)
 	mat := material.NewBlinnPhong(
@@ -60,7 +60,7 @@ func NewShadowScene(w, h int) interface{} {
 	m = io.MustLoadMesh("../testdata/ground.obj")
 	data = io.MustLoadImage("../testdata/ground.png")
 	tex = image.NewTexture(
-		image.WithData(data),
+		image.WithSource(data),
 		image.WithIsotropicMipMap(true),
 	)
 	mat = material.NewBlinnPhong(

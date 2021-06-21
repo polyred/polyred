@@ -8,6 +8,7 @@ import (
 	"image/color"
 
 	"changkun.de/x/ddd/camera"
+	"changkun.de/x/ddd/image"
 	"changkun.de/x/ddd/io"
 	"changkun.de/x/ddd/light"
 	"changkun.de/x/ddd/material"
@@ -33,7 +34,13 @@ func NewDragonScene(w, h int) interface{} {
 	))
 
 	m := io.MustLoadMesh("../testdata/dragon.obj")
-	m.SetMaterial(material.NewBasicMaterial(color.RGBA{0, 128, 255, 255}))
+	m.SetMaterial(material.NewBlinnPhong(
+		material.WithBlinnPhongTexture(
+			image.NewColorTexture(color.RGBA{0, 128, 255, 255}),
+		),
+		material.WithBlinnPhongFactors(0.6, 1),
+		material.WithBlinnPhongShininess(100),
+	))
 	m.Scale(1.5, 1.5, 1.5)
 	m.Translate(0, -0.1, -0.15)
 	s.Add(m)

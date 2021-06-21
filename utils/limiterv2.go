@@ -46,23 +46,9 @@ func NewWorkerPool(limit uint64) *WorkerPool {
 		}
 	}()
 	go func() {
-		Fanout(func(m int) int { return rand.Intn(m) }, taskQueue, workers...)
+		fanout(func(m int) int { return rand.Intn(m) }, taskQueue, workers...)
 	}()
 	return p
-}
-
-// Fanout implements a generic fan-out for variadic channels
-func Fanout(randomizer func(max int) int, in <-chan funcdata, outs ...chan funcdata) {
-	l := len(outs)
-	for v := range in {
-		i := randomizer(l)
-		if i < 0 || i > l {
-			i = rand.Intn(l)
-		}
-		go func(v funcdata) {
-			outs[i] <- v
-		}(v)
-	}
 }
 
 func (p *WorkerPool) Execute(f func()) {
@@ -82,4 +68,20 @@ func (p *WorkerPool) Done() {
 
 func (p *WorkerPool) Wait() {
 	<-p.done
+}
+
+func (p *WorkerPool) Running() uint64 {
+	return atomic.LoadUint64(&p.running)
+}
+
+// fanout implements a generic fan-out for variadic channels
+func fanout(randomizer func(max int) int, in <-chan funcdata, outs ...chan funcdata) {
+	l := len(outs)
+	for v := range in {
+		i := randomizer(l)
+		if i < 0 || i > l {
+			i = rand.Intn(l)
+		}
+		outs[i] <- v
+	}
 }

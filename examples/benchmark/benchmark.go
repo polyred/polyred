@@ -33,10 +33,10 @@ func (opt *benchOpts) String() string {
 
 func main() {
 	opts := []*benchOpts{
-		{960, 540, 1, false, false},
-		{960, 540, 1, true, false},
-		{960, 540, 4, false, false},
-		{960, 540, 4, true, false},
+		// {960, 540, 1, false, false},
+		// {960, 540, 1, true, false},
+		// {960, 540, 4, false, false},
+		// {960, 540, 4, true, false},
 		// {1920, 1080, 1, false, false},
 		// {1920, 1080, 1, true, false},
 		// {1920, 1080, 4, false, false},
@@ -92,11 +92,12 @@ func bench(opt *benchOpts) {
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
 		data := io.MustLoadImage(
 			"../../testdata/bunny.png",
-			io.WithGammaCorrection(true),
+			// FIXME: looks like have some issue
+			io.WithGammaCorrection(opt.gammaCorrection),
 		)
 		m.SetMaterial(material.NewBlinnPhong(
 			material.WithBlinnPhongTexture(image.NewTexture(
-				image.WithData(data),
+				image.WithSource(data),
 				image.WithIsotropicMipMap(true),
 			)),
 			material.WithBlinnPhongFactors(0.6, 0.5),
@@ -110,7 +111,7 @@ func bench(opt *benchOpts) {
 		data = io.MustLoadImage("../../testdata/ground.png")
 		m.SetMaterial(material.NewBlinnPhong(
 			material.WithBlinnPhongTexture(image.NewTexture(
-				image.WithData(data),
+				image.WithSource(data),
 				image.WithIsotropicMipMap(true),
 			)),
 			material.WithBlinnPhongFactors(0.6, 0.5),

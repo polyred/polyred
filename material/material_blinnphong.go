@@ -18,6 +18,7 @@ type BlinnPhongMaterial struct {
 	kDiff         float64
 	kSpec         float64
 	shininess     float64
+	flatShading   bool
 	receiveShadow bool
 }
 
@@ -46,6 +47,12 @@ func WithBlinnPhongShininess(p float64) BlinnPhongMaterialOption {
 	}
 }
 
+func WithBlinnPhongFlatShading(enable bool) BlinnPhongMaterialOption {
+	return func(m *BlinnPhongMaterial) {
+		m.flatShading = enable
+	}
+}
+
 func WithBlinnPhongShadow(enable bool) BlinnPhongMaterialOption {
 	return func(m *BlinnPhongMaterial) {
 		m.receiveShadow = enable
@@ -58,6 +65,7 @@ func NewBlinnPhong(opts ...BlinnPhongMaterialOption) Material {
 		kDiff:         0.5,
 		kSpec:         1,
 		shininess:     1,
+		flatShading:   false,
 		receiveShadow: false,
 	}
 	for _, opt := range opts {
@@ -73,16 +81,16 @@ func (m *BlinnPhongMaterial) VertexShader(v primitive.Vertex, uniforms map[strin
 	matVP := uniforms["matVP"].(math.Matrix)
 	matNormal := uniforms["matNormal"].(math.Matrix)
 
-	pos := v.Pos.Apply(matModel).Apply(matView).Apply(matProj).Apply(matVP)
+	pos := v.Pos.Apply(matModel).Apply(matView).Apply(matProj).Apply(matVP).Pos()
 	return primitive.Vertex{
-		Pos: pos.Scale(1/pos.W, 1/pos.W, 1/pos.W, 1/pos.W),
+		Pos: pos,
 		Col: v.Col,
 		UV:  v.UV,
 		Nor: v.Nor.Apply(matNormal),
 	}
 }
 
-func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, c math.Vector, ls []light.Source, es []light.Environment) color.RGBA {
+func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vector, ls []light.Source, es []light.Environment) color.RGBA {
 	LaR := 0.0
 	LaG := 0.0
 	LaB := 0.0
@@ -100,6 +108,10 @@ func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, c math.Vector,
 	LsR := 0.0
 	LsG := 0.0
 	LsB := 0.0
+
+	if m.flatShading {
+		n = fN
+	}
 
 	for _, l := range ls {
 		L := l.Position().Sub(x).Unit()

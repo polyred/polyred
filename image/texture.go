@@ -19,6 +19,15 @@ var defaultTexture = &image.RGBA{
 	Rect:   image.Rect(0, 0, 1, 1),
 }
 
+func NewColorTexture(c color.RGBA) *Texture {
+	data := &image.RGBA{
+		Pix:    []uint8{c.R, c.G, c.B, c.A},
+		Stride: 4,
+		Rect:   image.Rect(0, 0, 1, 1),
+	}
+	return NewTexture(WithSource(data))
+}
+
 // Texture represents a power-of-two 2D texture. The power-of-two means
 // that the texture width and height must be a power of two. e.g. 1024x1024.
 type Texture struct {
@@ -30,7 +39,7 @@ type Texture struct {
 
 type TextureOption func(t *Texture)
 
-func WithData(data *image.RGBA) TextureOption {
+func WithSource(data *image.RGBA) TextureOption {
 	return func(t *Texture) {
 		if data.Bounds().Dx() < 1 || data.Bounds().Dy() < 1 {
 			panic("image width or height is less than 1!")

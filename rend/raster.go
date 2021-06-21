@@ -47,7 +47,6 @@ type Renderer struct {
 	lightEnv       []light.Environment
 	concurrentSize int32
 	gomaxprocs     int
-	limiter        *utils.Limiter
 	workerPool     *utils.WorkerPool
 	lockBuf        []sync.Mutex
 	gBuf           []gInfo
@@ -84,7 +83,6 @@ func NewRenderer(opts ...Option) *Renderer {
 	r.lockBuf = make([]sync.Mutex, w*h)
 	r.gBuf = make([]gInfo, w*h)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
-	r.limiter = utils.NewLimiter(r.gomaxprocs)
 	r.workerPool = utils.NewWorkerPool(uint64(r.gomaxprocs))
 
 	if r.scene != nil {
@@ -104,7 +102,6 @@ func NewRenderer(opts ...Option) *Renderer {
 	}
 	// initialize shadow maps
 	if r.scene != nil && r.useShadowMap {
-
 		r.initShadowMaps()
 	}
 
@@ -160,13 +157,13 @@ func (r *Renderer) Render() *image.RGBA {
 
 // gInfo is the geometry information collected in a forward pass.
 type gInfo struct {
-	ok     bool
-	z      float64
-	u, v   float64
-	du, dv float64
-	n, pos math.Vector
-	col    color.RGBA
-	mat    material.Material
+	ok         bool
+	z          float64
+	u, v       float64
+	du, dv     float64
+	n, fN, pos math.Vector
+	col        color.RGBA
+	mat        material.Material
 }
 
 func (r *Renderer) passForward() {
@@ -216,7 +213,7 @@ func (r *Renderer) passForward() {
 		mesh.Faces(func(f primitive.Face, m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
 				r.workerPool.Execute(func() {
-					r.draw(uniforms, t, m)
+					r.draw(uniforms, t, mesh.ModelMatrix(), m)
 				})
 				return true
 			})
@@ -235,8 +232,6 @@ func (r *Renderer) passDeferred() {
 	w := r.width * r.msaa
 	h := r.height * r.msaa
 	r.renderCamera = r.scene.GetCamera()
-	xstep := int(r.concurrentSize)
-	ystep := int(r.concurrentSize)
 	matView := r.renderCamera.ViewMatrix()
 	matViewInv := matView.Inv()
 	matProj := r.renderCamera.ProjMatrix()
@@ -252,22 +247,50 @@ func (r *Renderer) passDeferred() {
 		"matVP":            matVP,
 		"matScreenToWorld": matScreenToWorld,
 	}
-	for i := 0; i < w; i += xstep {
-		for j := 0; j < h; j += ystep {
+
+	r.concurrentSize = 100
+	blockSize := int(r.concurrentSize)
+	wsteps := w / blockSize
+	hsteps := h / blockSize
+
+	r.workerPool.Add(uint64(wsteps*hsteps) + 2)
+	for i := 0; i < wsteps*blockSize; i += blockSize {
+		for j := 0; j < hsteps*blockSize; j += blockSize {
 			ii := i
 			jj := j
-			r.limiter.Execute(func() {
-				for k := 0; k < xstep; k++ {
-					for l := 0; l < ystep; l++ {
+			r.workerPool.Execute(func() {
+				for k := 0; k < blockSize; k++ {
+					for l := 0; l < blockSize; l++ {
 						x := ii + k
 						y := jj + l
+
 						r.shade(x, y, uniforms)
 					}
 				}
 			})
 		}
 	}
-	r.limiter.Wait()
+	r.workerPool.Execute(func() {
+		for i := wsteps * blockSize; i < w; i++ {
+			for j := 0; j < hsteps*blockSize; j++ {
+				r.shade(i, j, uniforms)
+			}
+		}
+	})
+	r.workerPool.Execute(func() {
+		for i := 0; i < wsteps*blockSize; i++ {
+			for j := hsteps * blockSize; j < h; j++ {
+				r.shade(i, j, uniforms)
+			}
+		}
+		for i := wsteps * blockSize; i < w; i++ {
+			for j := hsteps * blockSize; j < h; j++ {
+				r.shade(i, j, uniforms)
+			}
+		}
+	})
+
+	r.workerPool.Wait()
 }
 
 func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
@@ -294,7 +317,9 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
 		}
 
 		col = info.mat.Texture().Query(lod, info.u, 1-info.v)
-		col = info.mat.FragmentShader(col, info.pos, info.n, r.renderCamera.Position(), r.lightSources, r.lightEnv)
+		col = info.mat.FragmentShader(
+			col, info.pos, info.n, info.fN,
+			r.renderCamera.Position(), r.lightSources, r.lightEnv)
 	}
 
 	if r.useShadowMap && info.mat != nil && info.mat.ReceiveShadow() {
@@ -321,9 +346,7 @@ func (r *Renderer) passAntialiasing() {
 		defer done()
 	}
 
-	if r.correctGamma {
-		r.passGammaCorrect()
-	}
+	r.passGammaCorrect()
 	r.outBuf = utils.Resize(r.width, r.height, r.frameBuf)
 }
 
@@ -337,11 +360,14 @@ func (r *Renderer) setFramebuf(x, y int, c color.RGBA) {
 	r.lockBuf[idx].Unlock()
 }
 
-func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {
-	matModel := uniforms["matModel"].(math.Matrix)
-	m1 := tri.V1.Pos.Apply(matModel)
-	m2 := tri.V1.Pos.Apply(matModel)
-	m3 := tri.V1.Pos.Apply(matModel)
+func (r *Renderer) draw(
+	uniforms map[string]interface{},
+	tri *primitive.Triangle,
+	modelMatrix math.Matrix,
+	mat material.Material) {
+	m1 := tri.V1.Pos.Apply(modelMatrix)
+	m2 := tri.V2.Pos.Apply(modelMatrix)
+	m3 := tri.V3.Pos.Apply(modelMatrix)
 
 	var t1, t2, t3 primitive.Vertex
 	if mat != nil {
@@ -385,6 +411,8 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 	xmax := int(math.Round(aabb.Max.X) + 1)
 	ymin := int(math.Round(aabb.Min.Y) - 1)
 	ymax := int(math.Round(aabb.Max.Y) + 1)
+
+	fN := m2.Sub(m1).Cross(m3.Sub(m1)).Unit()
 
 	w := r.width * r.msaa
 	h := r.height * r.msaa
@@ -462,6 +490,7 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 			r.gBuf[idx].du = du
 			r.gBuf[idx].dv = dv
 			r.gBuf[idx].n = n
+			r.gBuf[idx].fN = fN
 			r.gBuf[idx].pos = pos
 			r.gBuf[idx].col = col
 			r.gBuf[idx].mat = mat
@@ -472,10 +501,14 @@ func (r *Renderer) draw(uniforms map[string]interface{}, tri *primitive.Triangle
 
 // passGammaCorrect does a gamma correction that converts color from linear to sRGB space.
 func (r *Renderer) passGammaCorrect() {
+	if !r.correctGamma {
+		return
+	}
+
 	for i := 0; i < len(r.frameBuf.Pix); i += 4 {
-		r.frameBuf.Pix[i+0] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+0])/float64(0xff)) * 0xff)
-		r.frameBuf.Pix[i+1] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+1])/float64(0xff)) * 0xff)
-		r.frameBuf.Pix[i+2] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+2])/float64(0xff)) * 0xff)
+		r.frameBuf.Pix[i+0] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+0])/0xff) * 0xff)
+		r.frameBuf.Pix[i+1] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+1])/0xff) * 0xff)
+		r.frameBuf.Pix[i+2] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+2])/0xff) * 0xff)
 	}
 }
 

@@ -39,13 +39,13 @@ func NewBunnyScene(width, height int) interface{} {
 
 	// load a mesh
 	done = utils.Timed("loading mesh")
-	m := io.MustLoadMesh("../testdata/bunny.obj")
+	m := io.MustLoadMesh("../testdata/bunny-smooth.obj")
 	done()
 
 	done = utils.Timed("loading texture")
 	data := io.MustLoadImage("../testdata/bunny.png")
 	tex := image.NewTexture(
-		image.WithData(data),
+		image.WithSource(data),
 		image.WithIsotropicMipMap(true),
 	)
 	done()
@@ -54,6 +54,7 @@ func NewBunnyScene(width, height int) interface{} {
 		material.WithBlinnPhongTexture(tex),
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
+		material.WithBlinnPhongFlatShading(true),
 	)
 	m.SetMaterial(mat)
 	m.Scale(1500, 1500, 1500)

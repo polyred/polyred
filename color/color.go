@@ -13,6 +13,10 @@ import (
 
 type RGBA = color.RGBA
 
+var (
+	White = color.RGBA{255, 255, 255, 255}
+)
+
 func FromHex(x string) color.RGBA {
 	x = strings.Trim(x, "#")
 	var r, g, b, a uint8

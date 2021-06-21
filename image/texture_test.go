@@ -16,7 +16,7 @@ import (
 func mustLoadTexture(path string) *image.Texture {
 	data := io.MustLoadImage(path)
 	return image.NewTexture(
-		image.WithData(data),
+		image.WithSource(data),
 		image.WithIsotropicMipMap(true),
 	)
 }
@@ -45,7 +45,7 @@ var (
 		{
 			"2x2",
 			image.NewTexture(
-				image.WithData(data),
+				image.WithSource(data),
 				image.WithIsotropicMipMap(true),
 			),
 			0, 0, 0, color.RGBA{255, 255, 255, 255},
@@ -53,7 +53,7 @@ var (
 		{
 			"2x2",
 			image.NewTexture(
-				image.WithData(data),
+				image.WithSource(data),
 				image.WithIsotropicMipMap(true),
 			),
 			0, 1, 0, color.RGBA{0, 0, 0, 0},
@@ -61,7 +61,7 @@ var (
 		{
 			"2x2",
 			image.NewTexture(
-				image.WithData(data),
+				image.WithSource(data),
 				image.WithIsotropicMipMap(true),
 			),
 			1, 0, 0, color.RGBA{0, 0, 0, 0},
@@ -69,7 +69,7 @@ var (
 		{
 			"2x2",
 			image.NewTexture(
-				image.WithData(data),
+				image.WithSource(data),
 				image.WithIsotropicMipMap(true),
 			),
 			1, 1, 0, color.RGBA{255, 255, 255, 255},
@@ -77,7 +77,7 @@ var (
 		{
 			"2x2",
 			image.NewTexture(
-				image.WithData(data),
+				image.WithSource(data),
 				image.WithIsotropicMipMap(true),
 			),
 			1, 1, 1.5, color.RGBA{191, 191, 191, 191},
@@ -85,7 +85,7 @@ var (
 		{
 			"2x2",
 			image.NewTexture(
-				image.WithData(data),
+				image.WithSource(data),
 				image.WithIsotropicMipMap(true),
 			),
 			0.5, 0.5, 0, color.RGBA{127, 127, 127, 127},

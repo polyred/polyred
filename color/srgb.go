@@ -50,7 +50,7 @@ func FromsRGB2Linear(v float64) float64 {
 var once sync.Once
 
 const (
-	useLut  = true
+	useLut  = false
 	lutSize = 1024 // keep a power of 2
 )
 
