@@ -4,8 +4,6 @@
 
 package geometry
 
-import "changkun.de/x/ddd/math"
-
-type Ray struct {
-	Ori, Dir math.Vector
+type TriangleMesh struct {
+	// TODO:
 }

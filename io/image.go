@@ -67,15 +67,16 @@ func LoadImage(path string, opts ...ReadImageOption) (*image.RGBA, error) {
 	}
 	// Gamma correction, assume input space in sRGB and converting it to linear.
 	if option.gammaCorrection {
-		limiter := utils.NewLimiter(runtime.GOMAXPROCS(0))
+		pool := utils.NewWorkerPool(uint64(runtime.GOMAXPROCS(0)))
 		batch := 1 << 12 // empirical
 		length := len(data.Pix)
 		batcheEnd := length / (4 * batch)
+		pool.Add(uint64(batcheEnd) + 1)
 
 		// All batches with equal sizes
 		for i := 0; i < batcheEnd*(4*batch); i += 4 * batch {
 			offset := i
-			limiter.Execute(func() {
+			pool.Execute(func() {
 				for j := 0; j < 4*batch; j += 4 {
 					data.Pix[offset+j+0] = uint8(color.FromsRGB2Linear(float64(data.Pix[offset+j+0])/0xff)*0xff + 0.5)
 					data.Pix[offset+j+1] = uint8(color.FromsRGB2Linear(float64(data.Pix[offset+j+1])/0xff)*0xff + 0.5)
@@ -83,7 +84,7 @@ func LoadImage(path string, opts ...ReadImageOption) (*image.RGBA, error) {
 				}
 			})
 		}
-		limiter.Execute(func() {
+		pool.Execute(func() {
 			for i := batcheEnd * (4 * batch); i < length; i += 4 {
 				data.Pix[i+0] = uint8(color.FromsRGB2Linear(float64(data.Pix[i+0])/0xff)*0xff + 0.5)
 				data.Pix[i+1] = uint8(color.FromsRGB2Linear(float64(data.Pix[i+1])/0xff)*0xff + 0.5)
@@ -91,7 +92,7 @@ func LoadImage(path string, opts ...ReadImageOption) (*image.RGBA, error) {
 			}
 		})
 
-		limiter.Wait()
+		pool.Wait()
 	}
 
 	return data, nil

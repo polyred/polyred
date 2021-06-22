@@ -4,7 +4,10 @@
 
 package primitive
 
+import "changkun.de/x/ddd/math"
+
 type Face interface {
+	Normal() math.Vector
 	AABB() AABB
 	Vertices(func(v *Vertex) bool)
 	Triangles(func(t *Triangle) bool)

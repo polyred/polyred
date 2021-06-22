@@ -248,7 +248,6 @@ func (r *Renderer) passDeferred() {
 		"matScreenToWorld": matScreenToWorld,
 	}
 
-	r.concurrentSize = 100
 	blockSize := int(r.concurrentSize)
 	wsteps := w / blockSize
 	hsteps := h / blockSize
@@ -505,11 +504,29 @@ func (r *Renderer) passGammaCorrect() {
 		return
 	}
 
-	for i := 0; i < len(r.frameBuf.Pix); i += 4 {
-		r.frameBuf.Pix[i+0] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+0])/0xff) * 0xff)
-		r.frameBuf.Pix[i+1] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+1])/0xff) * 0xff)
-		r.frameBuf.Pix[i+2] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+2])/0xff) * 0xff)
+	batch := 128 // empirical
+	length := len(r.frameBuf.Pix)
+	batcheEnd := length / (4 * batch)
+	r.workerPool.Add(uint64(batcheEnd) + 1)
+
+	for i := 0; i < batcheEnd*(4*batch); i += 4 * batch {
+		offset := i
+		r.workerPool.Execute(func() {
+			for j := 0; j < 4*batch; j += 4 {
+				r.frameBuf.Pix[offset+j+0] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[offset+j+0])/0xff)*0xff + 0.5)
+				r.frameBuf.Pix[offset+j+1] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[offset+j+1])/0xff)*0xff + 0.5)
+				r.frameBuf.Pix[offset+j+2] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[offset+j+2])/0xff)*0xff + 0.5)
+			}
+		})
 	}
+	r.workerPool.Execute(func() {
+		for i := batcheEnd * (4 * batch); i < length; i += 4 {
+			r.frameBuf.Pix[i+0] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+0])/0xff)*0xff + 0.5)
+			r.frameBuf.Pix[i+1] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+1])/0xff)*0xff + 0.5)
+			r.frameBuf.Pix[i+2] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+2])/0xff)*0xff + 0.5)
+		}
+	})
+	r.workerPool.Wait()
 }
 
 func (r *Renderer) depthTest(x, y int, z float64) bool {

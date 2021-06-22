@@ -64,13 +64,13 @@ func LoadOBJ(data io.Reader) (geometry.Mesh, error) {
 				t.V2.Nor = vns[fvns[i2]]
 				t.V3.Nor = vns[fvns[i3]]
 				if t.V1.Nor.IsZero() {
-					t.V1.Nor = t.FaceNormal()
+					t.V1.Nor = t.Normal()
 				}
 				if t.V2.Nor.IsZero() {
-					t.V1.Nor = t.FaceNormal()
+					t.V1.Nor = t.Normal()
 				}
 				if t.V3.Nor.IsZero() {
-					t.V1.Nor = t.FaceNormal()
+					t.V1.Nor = t.Normal()
 				}
 				t.V1.UV = vts[fvts[i1]]
 				t.V2.UV = vts[fvts[i2]]

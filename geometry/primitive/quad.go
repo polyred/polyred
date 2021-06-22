@@ -11,6 +11,7 @@ var _ Face = &Quad{}
 // Quad is a quadrilateral that contains four vertices
 type Quad struct {
 	v1, v2, v3, v4 Vertex
+	normal         math.Vector
 	aabb           *AABB
 }
 
@@ -53,4 +54,8 @@ func (q *Quad) Vertices(f func(v *Vertex) bool) {
 func (q *Quad) Triangles(f func(*Triangle) bool) {
 	f(NewTriangle(&q.v1, &q.v2, &q.v3))
 	f(NewTriangle(&q.v1, &q.v3, &q.v4))
+}
+
+func (q *Quad) Normal() math.Vector {
+	return q.normal
 }

@@ -63,7 +63,7 @@ func (t *Triangle) Triangles(f func(*Triangle) bool) {
 	f(t)
 }
 
-func (t *Triangle) FaceNormal() math.Vector {
+func (t *Triangle) Normal() math.Vector {
 	if t.faceNormal.IsZero() {
 		v2v1 := t.V1.Pos.Sub(t.V2.Pos)
 		v2v3 := t.V3.Pos.Sub(t.V2.Pos)

@@ -10,10 +10,13 @@ import (
 	"changkun.de/x/ddd/math"
 )
 
+var _ Face = &Polygon{}
+
 // Polygon is a polygon that contains multiple vertices.
 type Polygon struct {
-	vs   []Vertex
-	aabb *AABB
+	vs     []Vertex
+	normal math.Vector
+	aabb   *AABB
 }
 
 func NewPolygon(vs ...*Vertex) (*Polygon, error) {
@@ -49,4 +52,43 @@ func NewPolygon(vs ...*Vertex) (*Polygon, error) {
 	max := math.NewVector(xmax, ymax, zmax, 1)
 	p.aabb = &AABB{min, max}
 	return p, nil
+}
+
+func (p *Polygon) AABB() AABB {
+	if p.aabb == nil {
+		min := math.NewVector(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
+		max := math.NewVector(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
+
+		for i := 0; i < len(p.vs); i++ {
+			min.X = math.Min(min.X, p.vs[i].Pos.X)
+			min.Y = math.Min(min.Y, p.vs[i].Pos.X)
+			min.Z = math.Min(min.Z, p.vs[i].Pos.Y)
+			max.X = math.Max(max.X, p.vs[i].Pos.Y)
+			max.Y = math.Max(max.Y, p.vs[i].Pos.Z)
+			max.Z = math.Max(max.Z, p.vs[i].Pos.Z)
+		}
+		p.aabb = &AABB{min, max}
+	}
+	return *p.aabb
+}
+
+func (p *Polygon) Normal() math.Vector {
+	return p.normal
+}
+
+func (p *Polygon) Triangles(iter func(t *Triangle) bool) {
+	for i := 0; i < len(p.vs); i += 3 {
+		tri := &Triangle{V1: p.vs[i], V2: p.vs[i+1], V3: p.vs[i+2]}
+		if !iter(tri) {
+			return
+		}
+	}
+}
+
+func (p *Polygon) Vertices(iter func(v *Vertex) bool) {
+	for i := 0; i < len(p.vs); i++ {
+		if !iter(&p.vs[i]) {
+			return
+		}
+	}
 }

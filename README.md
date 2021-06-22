@@ -18,10 +18,10 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
   + [ ] OBJ file exporter
   + [x] Gamma correction
 - geometry
-  + [ ] buffered mesh
+  + [x] buffered mesh
   + [x] triangle soup
   + [ ] triangle mesh
-  + [x] quad mesh
+  + [ ] quad mesh
   + [ ] quad dominant mesh
   + [ ] half-edge mesh
   + [ ] built-in geometries
@@ -29,7 +29,6 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
     * [ ] cube
   + [ ] geometry processing algorithms
     * [ ] smooth normals
-    * [ ] 
 - rendering facilities:
   + [x] scene graph
   + [x] rasterization pass
@@ -46,11 +45,11 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
     * [x] MSAA
   + [ ] denoising
 - texturing
-  + [ ] filters
-    + [ ] linear
-    + [ ] bilinear
-    + [ ] trilinear
-    + [ ] barycentric
+  + filters
+    + [x] linear
+    + [x] bilinear
+    + [x] trilinear
+    + [x] barycentric
     + [ ] cubic
     + [ ] custom
   + [x] isotropic mipmap

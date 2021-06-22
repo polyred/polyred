@@ -43,8 +43,8 @@ func TestTriangle_FaceNormal(t *testing.T) {
 	v2 := primitive.NewRandomVertex()
 	v3 := primitive.NewRandomVertex()
 
-	n1 := primitive.NewTriangle(v1, v2, v3).FaceNormal()
-	n2 := (&primitive.Triangle{V1: *v1, V2: *v2, V3: *v3}).FaceNormal()
+	n1 := primitive.NewTriangle(v1, v2, v3).Normal()
+	n2 := (&primitive.Triangle{V1: *v1, V2: *v2, V3: *v3}).Normal()
 	if !n1.Eq(n2) {
 		t.Errorf("face normals are not equal")
 	}
@@ -87,7 +87,7 @@ func BenchmarkTriangle_FaceNormal(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			tri.FaceNormal()
+			tri.Normal()
 		}
 	})
 
@@ -96,7 +96,7 @@ func BenchmarkTriangle_FaceNormal(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			tri.FaceNormal()
+			tri.Normal()
 		}
 	})
 }

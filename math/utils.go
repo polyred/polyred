@@ -12,6 +12,7 @@ var (
 	Tan        = math.Tan
 	Abs        = math.Abs
 	Atan       = math.Atan
+	Atan2      = math.Atan2
 	Pi         = math.Pi
 	MaxInt64   = math.MaxInt64
 	MaxFloat64 = math.MaxFloat64
