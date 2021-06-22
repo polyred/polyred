@@ -47,9 +47,9 @@ func main() {
 		// {1920 * 2, 1080 * 2, 4, true, false},
 
 		{960, 540, 1, false, true},
-		{960, 540, 1, true, true},
-		{960, 540, 4, false, true},
-		{960, 540, 4, true, true},
+		// {960, 540, 1, true, true},
+		// {960, 540, 4, false, true},
+		// {960, 540, 4, true, true},
 		// {1920, 1080, 1, false, true},
 		// {1920, 1080, 1, true, true},
 		// {1920, 1080, 4, false, true},
@@ -92,7 +92,6 @@ func bench(opt *benchOpts) {
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
 		data := io.MustLoadImage(
 			"../../testdata/bunny.png",
-			// FIXME: looks like have some issue
 			io.WithGammaCorrection(opt.gammaCorrection),
 		)
 		m.SetMaterial(material.NewBlinnPhong(
@@ -108,7 +107,8 @@ func bench(opt *benchOpts) {
 		s.Add(m)
 
 		m = io.MustLoadMesh("../../testdata/ground.obj")
-		data = io.MustLoadImage("../../testdata/ground.png")
+		data = io.MustLoadImage("../../testdata/ground.png",
+			io.WithGammaCorrection(opt.gammaCorrection))
 		m.SetMaterial(material.NewBlinnPhong(
 			material.WithBlinnPhongTexture(image.NewTexture(
 				image.WithSource(data),
