@@ -14,12 +14,13 @@ import (
 )
 
 type BlinnPhongMaterial struct {
-	tex           *image.Texture
-	kDiff         float64
-	kSpec         float64
-	shininess     float64
-	flatShading   bool
-	receiveShadow bool
+	tex              *image.Texture
+	kDiff            float64
+	kSpec            float64
+	shininess        float64
+	flatShading      bool
+	receiveShadow    bool
+	ambientOcclusion bool
 }
 
 func (m *BlinnPhongMaterial) Texture() *image.Texture {
@@ -53,6 +54,12 @@ func WithBlinnPhongFlatShading(enable bool) BlinnPhongMaterialOption {
 	}
 }
 
+func WithBlinnPhongAmbientOcclusion(enable bool) BlinnPhongMaterialOption {
+	return func(m *BlinnPhongMaterial) {
+		m.ambientOcclusion = enable
+	}
+}
+
 func WithBlinnPhongShadow(enable bool) BlinnPhongMaterialOption {
 	return func(m *BlinnPhongMaterial) {
 		m.receiveShadow = enable
@@ -61,12 +68,13 @@ func WithBlinnPhongShadow(enable bool) BlinnPhongMaterialOption {
 
 func NewBlinnPhong(opts ...BlinnPhongMaterialOption) Material {
 	t := &BlinnPhongMaterial{
-		tex:           nil,
-		kDiff:         0.5,
-		kSpec:         1,
-		shininess:     1,
-		flatShading:   false,
-		receiveShadow: false,
+		tex:              nil,
+		kDiff:            0.5,
+		kSpec:            1,
+		shininess:        1,
+		flatShading:      false,
+		receiveShadow:    false,
+		ambientOcclusion: false,
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -144,4 +152,8 @@ func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec
 
 func (m *BlinnPhongMaterial) ReceiveShadow() bool {
 	return m.receiveShadow
+}
+
+func (m *BlinnPhongMaterial) AmbientOcclusion() bool {
+	return m.ambientOcclusion
 }

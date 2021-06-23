@@ -16,6 +16,7 @@ import (
 // Material is an interface that represents a mesh material
 type Material interface {
 	ReceiveShadow() bool
+	AmbientOcclusion() bool
 	Texture() *image.Texture
 	VertexShader(
 		v primitive.Vertex,

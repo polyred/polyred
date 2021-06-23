@@ -26,7 +26,7 @@ func NewDragonScene(w, h int) interface{} {
 	))
 
 	s.Add(light.NewPoint(
-		light.WithPointLightIntensity(5),
+		light.WithPointLightIntensity(2),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
 		light.WithPointLightPosition(math.NewVector(-1.5, -1, 1, 1)),
 	), light.NewAmbient(
@@ -43,6 +43,7 @@ func NewDragonScene(w, h int) interface{} {
 	))
 	m.Scale(1.5, 1.5, 1.5)
 	m.Translate(0, -0.1, -0.15)
+	m.Normalize()
 	s.Add(m)
 
 	return s

@@ -14,7 +14,6 @@ import (
 	"changkun.de/x/ddd/material"
 	"changkun.de/x/ddd/math"
 	"changkun.de/x/ddd/scene"
-	"changkun.de/x/ddd/utils"
 )
 
 func NewGopherScene(width, height int) interface{} {
@@ -28,17 +27,14 @@ func NewGopherScene(width, height int) interface{} {
 		0.01, 600,
 	))
 	s.Add(light.NewPoint(
-		light.WithPointLightIntensity(10),
+		light.WithPointLightIntensity(5),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
 		light.WithPointLightPosition(math.NewVector(0, 0, 5, 1)),
 	), light.NewAmbient(
 		light.WithAmbientIntensity(0.7),
 	))
 
-	done := utils.Timed("loading mesh")
 	m := io.MustLoadMesh("../testdata/gopher.obj")
-	done()
-
 	m.RotateY(-math.Pi / 2)
 
 	mat := material.NewBlinnPhong(
@@ -46,6 +42,7 @@ func NewGopherScene(width, height int) interface{} {
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 		material.WithBlinnPhongFlatShading(true),
+		material.WithBlinnPhongAmbientOcclusion(true),
 	)
 	m.SetMaterial(mat)
 	m.Normalize()

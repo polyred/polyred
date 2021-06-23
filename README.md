@@ -39,7 +39,9 @@ _Caution: experiment, expect it to break at any time. Use it at your own risk._
   + [x] depth test and z-buffer pass
   + [ ] alpha test
   + [x] deferred shading pass
-  + [ ] ambient occlusion
+  + ambient occlusion
+    + [x] screen-space ambient occlusion (SSAO)
+    + [ ] horizon-based ambient occlusion (HBAO)
   + [ ] ray tracing
   + anti-aliasing pass
     * [x] MSAA

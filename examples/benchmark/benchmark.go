@@ -46,14 +46,14 @@ func main() {
 		// {1920 * 2, 1080 * 2, 4, false, false},
 		// {1920 * 2, 1080 * 2, 4, true, false},
 
-		{960, 540, 1, false, true},
+		// {960, 540, 1, false, true},
 		// {960, 540, 1, true, true},
 		// {960, 540, 4, false, true},
 		// {960, 540, 4, true, true},
 		// {1920, 1080, 1, false, true},
 		// {1920, 1080, 1, true, true},
 		// {1920, 1080, 4, false, true},
-		// {1920, 1080, 4, true, true},
+		{1920, 1080, 4, true, true},
 		// {1920 * 2, 1080 * 2, 1, false, true},
 		// {1920 * 2, 1080 * 2, 1, true, true},
 		// {1920 * 2, 1080 * 2, 4, false, true},
@@ -102,6 +102,7 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongFactors(0.6, 0.5),
 			material.WithBlinnPhongShininess(150),
 			material.WithBlinnPhongShadow(opt.shadowmap),
+			material.WithBlinnPhongAmbientOcclusion(true),
 		))
 		m.Scale(2, 2, 2)
 		s.Add(m)

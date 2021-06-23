@@ -13,9 +13,8 @@ import (
 	"runtime/trace"
 	"time"
 
-	"changkun.de/x/ddd/examples/bunny"
+	"changkun.de/x/ddd/examples/gopher"
 	"changkun.de/x/ddd/examples/mcguire"
-	"changkun.de/x/ddd/examples/shadow"
 	"changkun.de/x/ddd/rend"
 	"changkun.de/x/ddd/scene"
 	"changkun.de/x/ddd/utils"
@@ -35,10 +34,10 @@ type sceneExample struct {
 
 func main() {
 	examples := []sceneExample{
-		{"bunny", bunny.NewBunnyScene, 960, 540, 2, false, true, true, true, true},
-		// {"dragon", dragon.NewDragonScene, 960, 540, 2, false, true, false, false, false},
-		{"shadow", shadow.NewShadowScene, 960, 540, 2, true, false, true, false, false},
-		// {"gopher", gopher.NewGopherScene, 1000, 1000, 2, true, false, false, false, false},
+		// {"bunny", bunny.NewBunnyScene, 960, 540, 2, false, true, true, true, true},
+		// {"dragon", dragon.NewDragonScene, 500, 500, 2, false, true, false, false, false},
+		// {"shadow", shadow.NewShadowScene, 960, 540, 2, true, false, true, false, false},
+		{"gopher", gopher.NewGopherScene, 500, 500, 1, true, false, false, false, false},
 		// {"mcguire", mcguire.NewMcGuireScene, 540, 540, 2, false, true, false, false, false},
 	}
 
