@@ -7,8 +7,8 @@ package geometry
 import (
 	"image/color"
 
-	"changkun.de/x/ddd/geometry/primitive"
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/geometry/primitive"
+	"changkun.de/x/polyred/math"
 )
 
 func NewPlane(width, height float64) Mesh {

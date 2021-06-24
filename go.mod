@@ -1,4 +1,4 @@
-module changkun.de/x/ddd
+module changkun.de/x/polyred
 
 go 1.17
 

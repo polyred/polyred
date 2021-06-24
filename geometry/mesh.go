@@ -7,9 +7,9 @@ package geometry
 import (
 	_ "image/jpeg" // for jpg encoding
 
-	"changkun.de/x/ddd/geometry/primitive"
-	"changkun.de/x/ddd/material"
-	"changkun.de/x/ddd/object"
+	"changkun.de/x/polyred/geometry/primitive"
+	"changkun.de/x/polyred/material"
+	"changkun.de/x/polyred/object"
 )
 
 type Mesh interface {

@@ -5,8 +5,8 @@
 package camera
 
 import (
-	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/object"
+	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/object"
 )
 
 var (

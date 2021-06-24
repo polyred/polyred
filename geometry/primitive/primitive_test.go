@@ -7,7 +7,7 @@ package primitive_test
 import (
 	"testing"
 
-	"changkun.de/x/ddd/geometry/primitive"
+	"changkun.de/x/polyred/geometry/primitive"
 )
 
 func TestVertex_AABB(t *testing.T) {

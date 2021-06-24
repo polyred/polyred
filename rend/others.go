@@ -8,8 +8,8 @@ import (
 	"runtime"
 	"sync/atomic"
 
-	"changkun.de/x/ddd/geometry/primitive"
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/geometry/primitive"
+	"changkun.de/x/polyred/math"
 )
 
 func (r *Renderer) resetGBuf() {

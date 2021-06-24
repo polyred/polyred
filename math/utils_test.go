@@ -9,7 +9,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/math"
 )
 
 func BenchmarkApproxEq(b *testing.B) {

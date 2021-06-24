@@ -2,5 +2,5 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-// Package ddd is a software hybrid renderer.
-package ddd // import "changkun.de/x/ddd"
+// Package polyred is a software renderer.
+package polyred // import "changkun.de/x/polyred"

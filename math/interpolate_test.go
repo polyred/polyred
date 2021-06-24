@@ -8,7 +8,7 @@ import (
 	"image/color"
 	"testing"
 
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/math"
 )
 
 func TestLerp(t *testing.T) {

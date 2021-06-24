@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"changkun.de/x/ddd/utils"
+	"changkun.de/x/polyred/utils"
 )
 
 var (

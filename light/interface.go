@@ -7,8 +7,8 @@ package light
 import (
 	"image/color"
 
-	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/object"
+	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/object"
 )
 
 // Environment represents the abstraction of environment lighting.

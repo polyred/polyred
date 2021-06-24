@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"changkun.de/x/ddd/color"
+	"changkun.de/x/polyred/color"
 )
 
 func BenchmarkFromHex(b *testing.B) {

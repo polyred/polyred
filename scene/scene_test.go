@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"changkun.de/x/ddd/geometry"
-	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/object"
-	"changkun.de/x/ddd/scene"
+	"changkun.de/x/polyred/geometry"
+	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/object"
+	"changkun.de/x/polyred/scene"
 )
 
 func TestScene(t *testing.T) {

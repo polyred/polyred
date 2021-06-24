@@ -7,7 +7,7 @@ package math_test
 import (
 	"testing"
 
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/math"
 )
 
 func TestNewMatrix(t *testing.T) {

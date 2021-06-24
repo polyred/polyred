@@ -8,7 +8,7 @@ import (
 	"image/color"
 	"math/rand"
 
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/math"
 )
 
 // Vertex is a vertex that contains the necessary information for

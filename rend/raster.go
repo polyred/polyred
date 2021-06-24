@@ -10,16 +10,16 @@ import (
 	"runtime"
 	"sync"
 
-	"changkun.de/x/ddd/camera"
-	"changkun.de/x/ddd/color"
-	"changkun.de/x/ddd/geometry"
-	"changkun.de/x/ddd/geometry/primitive"
-	"changkun.de/x/ddd/light"
-	"changkun.de/x/ddd/material"
-	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/object"
-	"changkun.de/x/ddd/scene"
-	"changkun.de/x/ddd/utils"
+	"changkun.de/x/polyred/camera"
+	"changkun.de/x/polyred/color"
+	"changkun.de/x/polyred/geometry"
+	"changkun.de/x/polyred/geometry/primitive"
+	"changkun.de/x/polyred/light"
+	"changkun.de/x/polyred/material"
+	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/object"
+	"changkun.de/x/polyred/scene"
+	"changkun.de/x/polyred/utils"
 )
 
 // 1 second / 60fps = 16.6666 ms/frame

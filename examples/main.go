@@ -13,11 +13,11 @@ import (
 	"runtime/trace"
 	"time"
 
-	"changkun.de/x/ddd/examples/gopher"
-	"changkun.de/x/ddd/examples/mcguire"
-	"changkun.de/x/ddd/rend"
-	"changkun.de/x/ddd/scene"
-	"changkun.de/x/ddd/utils"
+	"changkun.de/x/polyred/examples/gopher"
+	"changkun.de/x/polyred/examples/mcguire"
+	"changkun.de/x/polyred/rend"
+	"changkun.de/x/polyred/scene"
+	"changkun.de/x/polyred/utils"
 )
 
 type sceneExample struct {

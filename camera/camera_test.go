@@ -7,8 +7,8 @@ package camera_test
 import (
 	"testing"
 
-	"changkun.de/x/ddd/camera"
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/camera"
+	"changkun.de/x/polyred/math"
 )
 
 func BenchmarkCamera(b *testing.B) {

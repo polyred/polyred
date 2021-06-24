@@ -10,7 +10,7 @@ import (
 	_ "image/png"
 	"os"
 
-	"changkun.de/x/ddd/geometry"
+	"changkun.de/x/polyred/geometry"
 )
 
 // MustLoadMesh loads a given file to a triangle mesh.

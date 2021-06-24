@@ -7,8 +7,8 @@ package primitive_test
 import (
 	"testing"
 
-	"changkun.de/x/ddd/geometry/primitive"
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/geometry/primitive"
+	"changkun.de/x/polyred/math"
 )
 
 func TestNewAABB(t *testing.T) {

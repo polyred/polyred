@@ -7,14 +7,14 @@ package bunny
 import (
 	"image/color"
 
-	"changkun.de/x/ddd/camera"
-	"changkun.de/x/ddd/image"
-	"changkun.de/x/ddd/io"
-	"changkun.de/x/ddd/light"
-	"changkun.de/x/ddd/material"
-	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/scene"
-	"changkun.de/x/ddd/utils"
+	"changkun.de/x/polyred/camera"
+	"changkun.de/x/polyred/image"
+	"changkun.de/x/polyred/io"
+	"changkun.de/x/polyred/light"
+	"changkun.de/x/polyred/material"
+	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/scene"
+	"changkun.de/x/polyred/utils"
 )
 
 func NewBunnyScene(width, height int) interface{} {

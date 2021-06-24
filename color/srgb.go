@@ -3,7 +3,7 @@ package color
 import (
 	"sync"
 
-	"changkun.de/x/ddd/math"
+	"changkun.de/x/polyred/math"
 )
 
 // FromLinear2sRGB converts a given value from linear space to

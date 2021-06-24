@@ -4,7 +4,7 @@
 
 package primitive
 
-import "changkun.de/x/ddd/math"
+import "changkun.de/x/polyred/math"
 
 // AABB an axis aligned bounding box
 type AABB struct {

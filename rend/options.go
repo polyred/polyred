@@ -9,10 +9,10 @@ import (
 	"image/color"
 	"sync"
 
-	"changkun.de/x/ddd/light"
-	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/object"
-	"changkun.de/x/ddd/scene"
+	"changkun.de/x/polyred/light"
+	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/object"
+	"changkun.de/x/polyred/scene"
 )
 
 type Option func(r *Renderer)

@@ -9,8 +9,8 @@ import (
 	"image"
 	"image/color"
 
-	"changkun.de/x/ddd/math"
-	"changkun.de/x/ddd/utils"
+	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/utils"
 )
 
 var defaultTexture = &image.RGBA{
