@@ -36,35 +36,44 @@ s.SetCamera(camera.NewPerspective(
 
 // Add lights
 s.Add(light.NewPoint(
+    light.WithPointLightIntensity(7),
+    light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
     light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
     light.WithShadowMap(true)),
-    light.NewAmbient())
+    light.NewAmbient(light.WithAmbientIntensity(0.5)))
 
 // Load models and setup materials
 m := io.MustLoadMesh("bunny.obj")
 m.SetMaterial(material.NewBlinnPhong(
-    material.WithBlinnPhongTexture(image.NewTexture(
-        image.WithSource(io.MustLoadImage("bunny.png",
-        io.WithGammaCorrection(true))),
-        image.WithIsotropicMipMap(true),
-    )),
+    material.WithBlinnPhongTexture(
+        image.NewTexture(
+            image.WithSource(io.MustLoadImage("bunny.png",
+                io.WithGammaCorrection(true)),
+            ),
+            image.WithIsotropicMipMap(true),
+        ),
+    ),
     material.WithBlinnPhongFactors(0.6, 0.5),
     material.WithBlinnPhongShininess(150),
     material.WithBlinnPhongShadow(true),
     material.WithBlinnPhongAmbientOcclusion(true),
 ))
+m.Scale(2, 2, 2)
 s.Add(m)
 m = io.MustLoadMesh("ground.obj")
 m.SetMaterial(material.NewBlinnPhong(
     material.WithBlinnPhongTexture(image.NewTexture(
         image.WithSource(io.MustLoadImage("ground.png",
-        io.WithGammaCorrection(opt.gammaCorrection))),
+            io.WithGammaCorrection(true)),
+        ),
         image.WithIsotropicMipMap(true),
-    )),
+    ),
+    ),
     material.WithBlinnPhongFactors(0.6, 0.5),
     material.WithBlinnPhongShininess(150),
     material.WithBlinnPhongShadow(true),
 ))
+m.Scale(2, 2, 2)
 s.Add(m)
 
 // Create the renderer then render the scene graph!
