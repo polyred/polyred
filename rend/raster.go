@@ -337,7 +337,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
 		col = color.RGBA{r, g, b, col.A}
 	}
 
-	if info.mat.AmbientOcclusion() {
+	if info.mat != nil && info.mat.AmbientOcclusion() {
 		// FIXME: naive and super slow SSAO implementation. Optimize
 		// when denoiser is avaliable.
 		total := 0.0
