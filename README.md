@@ -2,7 +2,7 @@
 
 # polyred [![Go Reference](https://pkg.go.dev/badge/github.com/changkun/polyred.svg)](https://pkg.go.dev/changkun.de/x/polyred) [![Latest relsease](https://img.shields.io/github/v/tag/changkun/polyred?label=polyred)](https://github.com/changkun/polyred/releases) ![polyred](https://github.com/changkun/polyred/workflows/polyred/badge.svg?branch=master) ![](https://changkun.de/urlstat?mode=github&repo=changkun/polyred)
 
-Software graphics facilities in pure Go.
+3D graphics facilities in pure Go.
 
 ```go
 import "changkun.de/x/polyred"
@@ -12,7 +12,7 @@ _Caution: experimenting, expect it to break at any time. Use it at your own risk
 
 ## About
 
-`polyred` is a software graphics facility written in pure Go. It implements
+`polyred` is a 3D graphics facility written in pure Go. It implements
 the rasterization as well as ray tracing pipelines for hybrid
 rendering. Although it is a software implementation, it remains fast as it
 is optimized to utilize the full power of CPUs. The project aims to
