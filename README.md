@@ -13,11 +13,11 @@ _Caution: experimenting, expect it to break at any time. Use it at your own risk
 ## About
 
 `polyred` is a software graphics facility written in pure Go. It implements
-the classic rasterization as well as ray tracing pipelines for hybrid
+the rasterization as well as ray tracing pipelines for hybrid
 rendering. Although it is a software implementation, it remains fast as it
-is optimized to utilize the full power of the CPU. The project aims to
-provide a software fallback for real-time and offline rendering in
-graphics research. See a full [features list](./docs/features.md).
+is optimized to utilize the full power of CPUs. The project aims to
+provide a software fallback for real-time and offline geometry processing, rendering, and
+etc in graphics research. See a full [features list](./docs/features.md).
 
 ## Getting started
 
@@ -83,7 +83,6 @@ The rendered results:
 ![](./examples/teaser.png)
 
 See more full examples in the [`examples` folder](./examples).
-
 
 ## Contributes
 
