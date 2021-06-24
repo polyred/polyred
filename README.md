@@ -82,7 +82,9 @@ The rendered results:
 
 ![](./examples/teaser.png)
 
-See more full examples in the [`examples` folder](./examples).
+See more full examples in the [`examples` folder](./examples), and a 
+connecting project [polywine](https://changkun.de/s/polywine) to put
+polyred results on a window.
 
 ## Contributes
 
