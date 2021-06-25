@@ -2,6 +2,9 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
+// Package camera provides a camera abstraction for perspective and
+// orthographic camera and their utilities, such as viewing transformation
+// matrices.
 package camera
 
 import (
@@ -9,11 +12,14 @@ import (
 	"changkun.de/x/polyred/object"
 )
 
+// Interface assertion
 var (
 	_ Interface = &Orthographic{}
 	_ Interface = &Perspective{}
 )
 
+// Interface is a camera interface that represents either orthographic
+// or perspective camera.
 type Interface interface {
 	object.Object
 
@@ -22,35 +28,30 @@ type Interface interface {
 	ProjMatrix() math.Matrix
 }
 
-// ViewMatrix is a handy function for computing view matrix.
+// ViewMatrix is a handy function for computing view matrix without
+// instantiating all required camera parameters. The camera view matrix
+// is determined via its position, look at position, and a up direction.
 func ViewMatrix(pos, lookAt, up math.Vector) math.Matrix {
+	if lookAt.W != 1 {
+		panic("camera: misuse of ViewMatrix")
+	}
+
 	l := lookAt.Sub(pos).Unit()
 	lxu := l.Cross(up).Unit()
 	u := lxu.Cross(l).Unit()
 	x := pos.X
 	y := pos.Y
 	z := pos.Z
-	// Tr := math.NewMatrix(
-	// 	lxu.X, lxu.Y, lxu.Z, 0,
-	// 	u.X, u.Y, u.Z, 0,
-	// 	-l.X, -l.Y, -l.Z, 0,
-	// 	0, 0, 0, 1,
-	// )
-	// Tt := math.NewMatrix(
-	// 	1, 0, 0, -x,
-	// 	0, 1, 0, -y,
-	// 	0, 0, 1, -z,
-	// 	0, 0, 0, 1,
-	// )
 	TrTt := math.NewMatrix(
 		lxu.X, lxu.Y, lxu.Z, -lxu.X*x-lxu.Y*y-lxu.Z*z,
 		u.X, u.Y, u.Z, -u.X*x-u.Y*y-u.Z*z,
 		-l.X, -l.Y, -l.Z, l.X*x+l.Y*y+l.Z*z,
 		0, 0, 0, 1,
 	)
-	return TrTt // Tr.MulM(Tt)
+	return TrTt
 }
 
+// Perspective prepresents a perspective camera.
 type Perspective struct {
 	math.TransformContext
 
@@ -63,7 +64,14 @@ type Perspective struct {
 	far      float64
 }
 
+// NewPerspective creates a new perspective camera with the provided
+// camera parameters. Note that the lookAt parameter must be a position
+// instead of direction (i.e. the w component of the vector must be 1).
 func NewPerspective(pos, lookAt, up math.Vector, fov, aspect, near, far float64) Interface {
+	if lookAt.W != 1 {
+		panic("camera: misuse of perspective camera")
+	}
+
 	c := &Perspective{
 		position: pos, lookAt: lookAt, up: up,
 		fov: fov, aspect: aspect, near: near, far: far,
@@ -72,14 +80,17 @@ func NewPerspective(pos, lookAt, up math.Vector, fov, aspect, near, far float64)
 	return c
 }
 
+// Type returns the object type, i.e. object.TypeCamera
 func (c *Perspective) Type() object.Type {
 	return object.TypeCamera
 }
 
+// Position returns the position of the given perspective camera.
 func (c *Perspective) Position() math.Vector {
 	return c.position
 }
 
+// ViewMatrix returns the view matrix of the given camera.
 func (c *Perspective) ViewMatrix() math.Matrix {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
@@ -87,27 +98,16 @@ func (c *Perspective) ViewMatrix() math.Matrix {
 	x := c.position.X
 	y := c.position.Y
 	z := c.position.Z
-	// Tr := math.NewMatrix(
-	// 	lxu.X, lxu.Y, lxu.Z, 0,
-	// 	u.X, u.Y, u.Z, 0,
-	// 	-l.X, -l.Y, -l.Z, 0,
-	// 	0, 0, 0, 1,
-	// )
-	// Tt := math.NewMatrix(
-	// 	1, 0, 0, -x,
-	// 	0, 1, 0, -y,
-	// 	0, 0, 1, -z,
-	// 	0, 0, 0, 1,
-	// )
 	TrTt := math.NewMatrix(
 		lxu.X, lxu.Y, lxu.Z, -lxu.X*x-lxu.Y*y-lxu.Z*z,
 		u.X, u.Y, u.Z, -u.X*x-u.Y*y-u.Z*z,
 		-l.X, -l.Y, -l.Z, l.X*x+l.Y*y+l.Z*z,
 		0, 0, 0, 1,
 	)
-	return TrTt // Tr.MulM(Tt)
+	return TrTt
 }
 
+// ProjMatrix returns the projection matrix of the given camera.
 func (c *Perspective) ProjMatrix() math.Matrix {
 	aspect := c.aspect
 	fov := (c.fov * math.Pi) / 180
@@ -121,6 +121,7 @@ func (c *Perspective) ProjMatrix() math.Matrix {
 	)
 }
 
+// Orthographic represents a orthographic camera.
 type Orthographic struct {
 	math.TransformContext
 
@@ -135,10 +136,17 @@ type Orthographic struct {
 	far      float64
 }
 
+// NewOrthographic creates an orthographic camera with the provided
+// camera parameters. Note that the lookAt parameter must be a position
+// instead of direction (i.e. the w component of the vector must be 1).
 func NewOrthographic(
 	pos, lookAt, up math.Vector,
 	left, right, bottom, top, near, far float64,
 ) Interface {
+	if lookAt.W != 1 {
+		panic("camera: misuse of orthographic camera")
+	}
+
 	c := &Orthographic{
 		position: pos,
 		lookAt:   lookAt,
@@ -154,14 +162,17 @@ func NewOrthographic(
 	return c
 }
 
+// Type returns the object type, i.e. object.TypeCamera
 func (c *Orthographic) Type() object.Type {
 	return object.TypeCamera
 }
 
+// Position returns the position of the given orthographic camera.
 func (c *Orthographic) Position() math.Vector {
 	return c.position
 }
 
+// ViewMatrix returns the view matrix of the given camera.
 func (c *Orthographic) ViewMatrix() math.Matrix {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
@@ -169,27 +180,16 @@ func (c *Orthographic) ViewMatrix() math.Matrix {
 	x := c.position.X
 	y := c.position.Y
 	z := c.position.Z
-	// Tr := math.NewMatrix(
-	// 	lxu.X, lxu.Y, lxu.Z, 0,
-	// 	u.X, u.Y, u.Z, 0,
-	// 	-l.X, -l.Y, -l.Z, 0,
-	// 	0, 0, 0, 1,
-	// )
-	// Tt := math.NewMatrix(
-	// 	1, 0, 0, -x,
-	// 	0, 1, 0, -y,
-	// 	0, 0, 1, -z,
-	// 	0, 0, 0, 1,
-	// )
 	TrTt := math.NewMatrix(
 		lxu.X, lxu.Y, lxu.Z, -lxu.X*x-lxu.Y*y-lxu.Z*z,
 		u.X, u.Y, u.Z, -u.X*x-u.Y*y-u.Z*z,
 		-l.X, -l.Y, -l.Z, l.X*x+l.Y*y+l.Z*z,
 		0, 0, 0, 1,
 	)
-	return TrTt // Tr.MulM(Tt)
+	return TrTt
 }
 
+// ProjMatrix returns the projection matrix of the given camera.
 func (c *Orthographic) ProjMatrix() math.Matrix {
 	l := c.left
 	r := c.right
