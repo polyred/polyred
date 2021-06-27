@@ -30,12 +30,12 @@ func NewShadowScene(w, h int) interface{} {
 		light.NewPoint(
 			light.WithPointLightIntensity(3),
 			light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
-			light.WithShadowMap(true),
+			light.WithPointLightShadowMap(true),
 		),
 		light.NewPoint(
 			light.WithPointLightIntensity(3),
 			light.WithPointLightPosition(math.NewVector(-6, 4, 2, 1)),
-			light.WithShadowMap(true),
+			light.WithPointLightShadowMap(true),
 		),
 		light.NewAmbient(
 			light.WithAmbientIntensity(0.7),

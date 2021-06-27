@@ -46,7 +46,7 @@ func WithPointLightPosition(pos math.Vector) PointOption {
 	}
 }
 
-func WithShadowMap(enable bool) PointOption {
+func WithPointLightShadowMap(enable bool) PointOption {
 	return func(l *Point) {
 		l.useShadowMap = enable
 	}

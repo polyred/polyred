@@ -36,7 +36,7 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 		light.WithPointLightIntensity(lightI),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
 		light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
-		light.WithShadowMap(true)),
+		light.WithPointLightShadowMap(true)),
 		light.NewAmbient(light.WithAmbientIntensity(0.5)))
 
 	m := io.MustLoadMesh("../../testdata/bunny.obj")

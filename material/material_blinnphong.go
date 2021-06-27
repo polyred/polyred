@@ -122,12 +122,24 @@ func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec
 	}
 
 	for _, l := range ls {
-		L := l.Position().Sub(x).Unit()
+		var (
+			L math.Vector
+			I float64
+		)
+		switch ll := l.(type) {
+		case *light.Point:
+			Ldir := ll.Position().Sub(x)
+			L = Ldir.Unit()
+			I = ll.Intensity() / Ldir.Len()
+		case *light.Directional:
+			L = ll.Dir().Scale(-1, -1, -1, 1)
+			I = ll.Intensity()
+		}
+
 		V := c.Sub(x).Unit()
 		H := L.Add(V).Unit()
 		Ld := math.Clamp(n.Dot(L), 0, 1)
 		Ls := math.Pow(math.Clamp(n.Dot(H), 0, 1), m.shininess)
-		I := l.Intensity() / l.Position().Sub(x).Len()
 
 		LdR += Ld * float64(col.R) * I
 		LdG += Ld * float64(col.G) * I

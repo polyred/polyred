@@ -84,7 +84,7 @@ func bench(opt *benchOpts) {
 			light.WithPointLightIntensity(7),
 			light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
 			light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
-			light.WithShadowMap(opt.shadowmap),
+			light.WithPointLightShadowMap(opt.shadowmap),
 		), light.NewAmbient(
 			light.WithAmbientIntensity(0.5),
 		))

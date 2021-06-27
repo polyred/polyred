@@ -16,19 +16,22 @@
     * [ ] cube
   + [ ] geometry processing algorithms
     * [ ] smooth normals
+    * [ ] curvature
+    * [ ] quadric error simplification
+    * [ ] melax simplification
+    * [ ] uv parameterization
 - rendering facilities:
   + [x] scene graph
+  + [ ] primitive pass
+  + [x] deferred shading pass
+  + [x] abstract concurrent screen pass
+  + [x] depth test and z-buffer pass
   + [x] rasterization pass
     * [ ] clipping
     * [x] backface culling
     * [x] viewfrustum culling
     * [x] occlusion culling
-  + [x] depth test and z-buffer pass
   + [ ] alpha test
-  + [x] deferred shading pass
-  + ambient occlusion
-    + [x] screen-space ambient occlusion (SSAO)
-    + [ ] horizon-based ambient occlusion (HBAO)
   + [ ] ray tracing
   + anti-aliasing pass
     * [x] MSAA
@@ -47,16 +50,21 @@
 + material
   + [x] basic material
   + [x] Blinn-Phong material
+  + [x] Diffuse material
   + [ ] Lambertian material
-  + [ ] Diffuse material
   + [ ] Glossy material
   + [ ] Micofacet material
 - lighting
   + [x] point light
-  + [ ] directional light
+  + [x] directional light
+  + [ ] area light
+  + [ ] spot light
+- local shading
   + [x] shadow mapping
-- general
-  + [x] concurrent processing
+- global illumination
+  + ambient occlusion
+    + [x] screen-space ambient occlusion (SSAO)
+    + [ ] horizon-based ambient occlusion (HBAO)
 
 
 ## License

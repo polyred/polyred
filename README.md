@@ -1,4 +1,4 @@
-<img src="./examples/favicon.png" alt="logo" height="200" align="right" />
+<img src="./examples/favicon.png" alt="logo" height="255" align="right" />
 
 # polyred [![Go Reference](https://pkg.go.dev/badge/github.com/changkun/polyred.svg)](https://pkg.go.dev/changkun.de/x/polyred) [![Latest relsease](https://img.shields.io/github/v/tag/changkun/polyred?label=polyred)](https://github.com/changkun/polyred/releases) ![polyred](https://github.com/changkun/polyred/workflows/polyred/badge.svg?branch=master) ![](https://changkun.de/urlstat?mode=github&repo=changkun/polyred)
 
@@ -39,7 +39,7 @@ s.Add(light.NewPoint(
     light.WithPointLightIntensity(7),
     light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
     light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
-    light.WithShadowMap(true)),
+    light.WithPointLightShadowMap(true)),
     light.NewAmbient(light.WithAmbientIntensity(0.5)))
 
 // Load models and setup materials

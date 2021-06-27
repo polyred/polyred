@@ -17,7 +17,7 @@ import (
 type FragmentShader func(x, y int, col color.RGBA) color.RGBA
 
 // ScreenPass is a concurrent executor of the given shader that travel
-// though all pixels. Each pixel executes the given shader exactly once.
+// through all pixels. Each pixel executes the given shader exactly once.
 // One should not manipulate the given image buffer in the shader. Instead,
 // return the resulting color in the shader can avoid data race.
 func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
