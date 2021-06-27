@@ -250,17 +250,21 @@ func (r *Renderer) passDeferred() {
 		"matScreenToWorld": matScreenToWorld,
 	}
 
+	ao := ambientOcclusionPass{
+		w:       r.width * r.msaa,
+		h:       r.height * r.msaa,
+		gbuffer: r.gBuf,
+	}
+
 	r.ScreenPass(r.frameBuf, func(x, y int, col color.RGBA) color.RGBA {
-		return r.shade(x, h-y, uniforms)
+		col = r.shade(x, h-y-1, uniforms)
+		return ao.Shade(x, h-y-1, col)
 	})
 }
 
 func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) color.RGBA {
 	w := r.width * r.msaa
 	idx := x + w*y
-	if idx >= len(r.gBuf) {
-		return color.Discard
-	}
 	info := &r.gBuf[idx]
 	if !info.ok {
 		return r.background
@@ -298,49 +302,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) color.RGBA {
 		b := uint8(float64(col.B) * w)
 		col = color.RGBA{r, g, b, col.A}
 	}
-
-	if info.mat != nil && info.mat.AmbientOcclusion() {
-		// FIXME: naive and super slow SSAO implementation. Optimize
-		// when denoiser is avaliable.
-		total := 0.0
-		for a := 0.0; a < math.Pi*2-1e-4; a += math.Pi / 4 {
-			total += math.Pi/2 - r.maxElevationAngle(x, y, math.Cos(a), math.Sin(a))
-		}
-		total /= (math.Pi / 2) * 8
-		total = math.Pow(total, 10000)
-
-		col = color.RGBA{
-			uint8(total * float64(col.R)),
-			uint8(total * float64(col.G)),
-			uint8(total * float64(col.B)), col.A}
-	}
-
 	return col
-}
-
-func (r *Renderer) maxElevationAngle(x, y int, dirX, dirY float64) float64 {
-	p := math.NewVector(float64(x), float64(y), 0, 1)
-	dir := math.NewVector(dirX, dirY, 0, 0)
-	maxangle := 0.0
-	w := float64(r.width * r.msaa)
-	h := float64(r.height * r.msaa)
-	for t := 0.0; t < 100; t += 1 {
-		cur := p.Add(dir.Scale(t, t, 1, 1))
-		if cur.X >= w || cur.Y >= h || cur.X < 0 || cur.Y < 0 {
-			return maxangle
-		}
-
-		distance := p.Sub(cur).Len()
-		if distance < 1 {
-			continue
-		}
-		shadeIdx := int(cur.X) + int(w)*int(cur.Y)
-		traceIdx := int(p.X) + int(w)*int(p.Y)
-
-		elevation := r.gBuf[shadeIdx].z - r.gBuf[traceIdx].z
-		maxangle = math.Max(maxangle, math.Atan(elevation/distance))
-	}
-	return maxangle
 }
 
 func (r *Renderer) passAntialiasing() {
