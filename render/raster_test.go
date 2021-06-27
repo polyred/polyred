@@ -169,6 +169,14 @@ func BenchmarkAntiAliasingPass(b *testing.B) {
 	}
 }
 
+func BenchmarkAntiGammaCorrection(b *testing.B) {
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		render.PassGammaCorrect(r)
+	}
+}
+
 func BenchmarkResetBuf(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {

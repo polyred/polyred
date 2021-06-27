@@ -250,60 +250,20 @@ func (r *Renderer) passDeferred() {
 		"matScreenToWorld": matScreenToWorld,
 	}
 
-	blockSize := int(r.concurrentSize)
-	wsteps := w / blockSize
-	hsteps := h / blockSize
-
-	r.workerPool.Add(uint64(wsteps*hsteps) + 2)
-	for i := 0; i < wsteps*blockSize; i += blockSize {
-		for j := 0; j < hsteps*blockSize; j += blockSize {
-			ii := i
-			jj := j
-			r.workerPool.Execute(func() {
-				for k := 0; k < blockSize; k++ {
-					for l := 0; l < blockSize; l++ {
-						x := ii + k
-						y := jj + l
-
-						r.shade(x, y, uniforms)
-					}
-				}
-			})
-		}
-	}
-	r.workerPool.Execute(func() {
-		for i := wsteps * blockSize; i < w; i++ {
-			for j := 0; j < hsteps*blockSize; j++ {
-				r.shade(i, j, uniforms)
-			}
-		}
+	r.ScreenPass(r.frameBuf, func(x, y int, col color.RGBA) color.RGBA {
+		return r.shade(x, h-y, uniforms)
 	})
-	r.workerPool.Execute(func() {
-		for i := 0; i < wsteps*blockSize; i++ {
-			for j := hsteps * blockSize; j < h; j++ {
-				r.shade(i, j, uniforms)
-			}
-		}
-		for i := wsteps * blockSize; i < w; i++ {
-			for j := hsteps * blockSize; j < h; j++ {
-				r.shade(i, j, uniforms)
-			}
-		}
-	})
-
-	r.workerPool.Wait()
 }
 
-func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
+func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) color.RGBA {
 	w := r.width * r.msaa
 	idx := x + w*y
 	if idx >= len(r.gBuf) {
-		return
+		return color.Discard
 	}
 	info := &r.gBuf[idx]
 	if !info.ok {
-		r.setFramebuf(x, y, r.background)
-		return
+		return r.background
 	}
 
 	col := info.col
@@ -355,7 +315,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) {
 			uint8(total * float64(col.B)), col.A}
 	}
 
-	r.setFramebuf(x, y, col)
+	return col
 }
 
 func (r *Renderer) maxElevationAngle(x, y int, dirX, dirY float64) float64 {
@@ -391,16 +351,6 @@ func (r *Renderer) passAntialiasing() {
 
 	r.passGammaCorrect()
 	r.outBuf = utils.Resize(r.width, r.height, r.frameBuf)
-}
-
-func (r *Renderer) setFramebuf(x, y int, c color.RGBA) {
-	w := r.width * r.msaa
-	h := r.height * r.msaa
-	idx := x + y*w
-
-	r.lockBuf[idx].Lock()
-	r.frameBuf.Set(x, h-y, c)
-	r.lockBuf[idx].Unlock()
 }
 
 func (r *Renderer) draw(
@@ -548,29 +498,12 @@ func (r *Renderer) passGammaCorrect() {
 		return
 	}
 
-	batch := 128 // empirical
-	length := len(r.frameBuf.Pix)
-	batcheEnd := length / (4 * batch)
-	r.workerPool.Add(uint64(batcheEnd) + 1)
-
-	for i := 0; i < batcheEnd*(4*batch); i += 4 * batch {
-		offset := i
-		r.workerPool.Execute(func() {
-			for j := 0; j < 4*batch; j += 4 {
-				r.frameBuf.Pix[offset+j+0] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[offset+j+0])/0xff)*0xff + 0.5)
-				r.frameBuf.Pix[offset+j+1] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[offset+j+1])/0xff)*0xff + 0.5)
-				r.frameBuf.Pix[offset+j+2] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[offset+j+2])/0xff)*0xff + 0.5)
-			}
-		})
-	}
-	r.workerPool.Execute(func() {
-		for i := batcheEnd * (4 * batch); i < length; i += 4 {
-			r.frameBuf.Pix[i+0] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+0])/0xff)*0xff + 0.5)
-			r.frameBuf.Pix[i+1] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+1])/0xff)*0xff + 0.5)
-			r.frameBuf.Pix[i+2] = uint8(color.FromLinear2sRGB(float64(r.frameBuf.Pix[i+2])/0xff)*0xff + 0.5)
-		}
+	r.ScreenPass(r.frameBuf, func(x, y int, col color.RGBA) color.RGBA {
+		r := uint8(color.FromLinear2sRGB(float64(col.R)/0xff)*0xff + 0.5)
+		g := uint8(color.FromLinear2sRGB(float64(col.G)/0xff)*0xff + 0.5)
+		b := uint8(color.FromLinear2sRGB(float64(col.B)/0xff)*0xff + 0.5)
+		return color.RGBA{r, g, b, col.A}
 	})
-	r.workerPool.Wait()
 }
 
 func (r *Renderer) depthTest(x, y int, z float64) bool {

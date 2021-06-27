@@ -52,10 +52,12 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 						buf.Pix[4*idx+3],
 					}
 					col := shade(x, y, old)
-					buf.Pix[4*idx+0] = col.R
-					buf.Pix[4*idx+1] = col.G
-					buf.Pix[4*idx+2] = col.B
-					buf.Pix[4*idx+3] = col.A
+					if col != color.Discard {
+						buf.Pix[4*idx+0] = col.R
+						buf.Pix[4*idx+1] = col.G
+						buf.Pix[4*idx+2] = col.B
+						buf.Pix[4*idx+3] = col.A
+					}
 				}
 			}
 		})
@@ -81,10 +83,12 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 							buf.Pix[4*idx+3],
 						}
 						col := shade(x, y, old)
-						buf.Pix[4*idx+0] = col.R
-						buf.Pix[4*idx+1] = col.G
-						buf.Pix[4*idx+2] = col.B
-						buf.Pix[4*idx+3] = col.A
+						if col != color.Discard {
+							buf.Pix[4*idx+0] = col.R
+							buf.Pix[4*idx+1] = col.G
+							buf.Pix[4*idx+2] = col.B
+							buf.Pix[4*idx+3] = col.A
+						}
 					}
 				}
 			})
@@ -103,10 +107,12 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 					buf.Pix[4*idx+3],
 				}
 				col := shade(x, y, old)
-				buf.Pix[4*idx+0] = col.R
-				buf.Pix[4*idx+1] = col.G
-				buf.Pix[4*idx+2] = col.B
-				buf.Pix[4*idx+3] = col.A
+				if col != color.Discard {
+					buf.Pix[4*idx+0] = col.R
+					buf.Pix[4*idx+1] = col.G
+					buf.Pix[4*idx+2] = col.B
+					buf.Pix[4*idx+3] = col.A
+				}
 			}
 		}
 	}, func() {
@@ -121,10 +127,12 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 					buf.Pix[4*idx+3],
 				}
 				col := shade(x, y, old)
-				buf.Pix[4*idx+0] = col.R
-				buf.Pix[4*idx+1] = col.G
-				buf.Pix[4*idx+2] = col.B
-				buf.Pix[4*idx+3] = col.A
+				if col != color.Discard {
+					buf.Pix[4*idx+0] = col.R
+					buf.Pix[4*idx+1] = col.G
+					buf.Pix[4*idx+2] = col.B
+					buf.Pix[4*idx+3] = col.A
+				}
 			}
 		}
 		for x := wsteps * blockSize; x < w; x++ {
@@ -138,10 +146,12 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 					buf.Pix[4*idx+3],
 				}
 				col := shade(x, y, old)
-				buf.Pix[4*idx+0] = col.R
-				buf.Pix[4*idx+1] = col.G
-				buf.Pix[4*idx+2] = col.B
-				buf.Pix[4*idx+3] = col.A
+				if col != color.Discard {
+					buf.Pix[4*idx+0] = col.R
+					buf.Pix[4*idx+1] = col.G
+					buf.Pix[4*idx+2] = col.B
+					buf.Pix[4*idx+3] = col.A
+				}
 			}
 		}
 	})

@@ -29,4 +29,8 @@ var (
 	PassAntiAliasing = func(r *Renderer) {
 		r.passAntialiasing()
 	}
+	PassGammaCorrect = func(r *Renderer) {
+		r.correctGamma = true
+		r.passGammaCorrect()
+	}
 )

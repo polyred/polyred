@@ -7,6 +7,8 @@ package render_test
 import (
 	"fmt"
 	"image"
+	"math/rand"
+	"sync/atomic"
 	"testing"
 
 	"changkun.de/x/polyred/color"
@@ -36,10 +38,19 @@ func TestScreenPass(t *testing.T) {
 		)
 		img := image.NewRGBA(image.Rect(0, 0, tt.w, tt.h))
 
+		counter := uint32(0)
 		r.ScreenPass(img, func(x, y int, col color.RGBA) color.RGBA {
-			return color.RGBA{R: uint8(x), G: uint8(y), B: 255, A: 255}
+			atomic.AddUint32(&counter, 1)
+			r := uint8(rand.Int())
+			g := uint8(rand.Int())
+			b := uint8(rand.Int())
+			return color.RGBA{R: r, G: g, B: b, A: 255}
 		})
-		utils.Save(img, fmt.Sprintf("%d.png", i))
+
+		if counter != uint32(tt.w)*uint32(tt.h) {
+			t.Errorf("#%d incorrect execution number, want %d, got %d", i, tt.w*tt.h, counter)
+			utils.Save(img, fmt.Sprintf("%d.png", i))
+		}
 	}
 }
 

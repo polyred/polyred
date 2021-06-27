@@ -14,7 +14,8 @@ import (
 type RGBA = color.RGBA
 
 var (
-	White = color.RGBA{255, 255, 255, 255}
+	White   = color.RGBA{255, 255, 255, 255}
+	Discard = color.RGBA{0, 0, 0, 0}
 )
 
 func FromHex(x string) color.RGBA {
