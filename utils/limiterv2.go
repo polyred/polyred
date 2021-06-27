@@ -51,8 +51,10 @@ func NewWorkerPool(limit uint64) *WorkerPool {
 	return p
 }
 
-func (p *WorkerPool) Execute(f func()) {
-	p.taskQueues <- funcdata{fn: f}
+func (p *WorkerPool) Execute(fs ...func()) {
+	for i := range fs {
+		p.taskQueues <- funcdata{fn: fs[i]}
+	}
 }
 
 func (p *WorkerPool) Add(numTasks uint64) uint64 {

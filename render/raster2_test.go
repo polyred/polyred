@@ -7,64 +7,40 @@ package render_test
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"testing"
 
+	"changkun.de/x/polyred/color"
 	"changkun.de/x/polyred/render"
+	"changkun.de/x/polyred/utils"
 )
 
 func TestScreenPass(t *testing.T) {
-	// smaller than concurrent size
-	w, h := 100, 100
-	r := render.NewRenderer(
-		render.WithSize(w, h),
-		render.WithConcurrency(128),
-	)
-	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	tests := []struct {
+		w int
+		h int
+	}{
+		// smaller than concurrent size
+		{100, 100},
+		// w is smaller than concurrent size
+		{100, 200},
+		// h is smaller than concurrent size
+		{200, 100},
+		// both greater than concurrent size
+		{200, 200},
+	}
 
-	r.ScreenPass(img, func(x, y int) color.RGBA {
-		return color.RGBA{R: uint8(x), G: uint8(y), B: uint8(x), A: uint8(y)}
-	})
-	// utils.Save(img, "1.png")
+	for i, tt := range tests {
+		r := render.NewRenderer(
+			render.WithSize(tt.w, tt.h),
+			render.WithConcurrency(128),
+		)
+		img := image.NewRGBA(image.Rect(0, 0, tt.w, tt.h))
 
-	// w is smaller than concurrent size
-	w, h = 100, 200
-	r = render.NewRenderer(
-		render.WithSize(w, h),
-		render.WithConcurrency(128),
-	)
-	img = image.NewRGBA(image.Rect(0, 0, w, h))
-
-	r.ScreenPass(img, func(x, y int) color.RGBA {
-		return color.RGBA{R: uint8(x), G: uint8(y), B: uint8(x), A: uint8(y)}
-	})
-	// utils.Save(img, "2.png")
-
-	// h is smaller than concurrent size
-	w, h = 200, 100
-	r = render.NewRenderer(
-		render.WithSize(w, h),
-		render.WithConcurrency(128),
-	)
-	img = image.NewRGBA(image.Rect(0, 0, w, h))
-
-	r.ScreenPass(img, func(x, y int) color.RGBA {
-		return color.RGBA{R: uint8(x), G: uint8(y), B: uint8(x), A: uint8(y)}
-	})
-	// utils.Save(img, "3.png")
-
-	// both greater than concurrent size
-	w, h = 200, 200
-	r = render.NewRenderer(
-		render.WithSize(w, h),
-		render.WithConcurrency(128),
-	)
-	img = image.NewRGBA(image.Rect(0, 0, w, h))
-
-	r.ScreenPass(img, func(x, y int) color.RGBA {
-		return color.RGBA{R: uint8(x), G: uint8(y), B: uint8(x), A: uint8(y)}
-	})
-	// utils.Save(img, "4.png")
+		r.ScreenPass(img, func(x, y int, col color.RGBA) color.RGBA {
+			return color.RGBA{R: uint8(x), G: uint8(y), B: 255, A: 255}
+		})
+		utils.Save(img, fmt.Sprintf("%d.png", i))
+	}
 }
 
 func BenchmarkScreenPass_Size(b *testing.B) {
@@ -81,7 +57,7 @@ func BenchmarkScreenPass_Size(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.ScreenPass(img, func(x, y int) color.RGBA {
+				r.ScreenPass(img, func(x, y int, col color.RGBA) color.RGBA {
 					return color.RGBA{uint8(x), uint8(y), uint8(x), uint8(y)}
 				})
 			}
@@ -90,8 +66,14 @@ func BenchmarkScreenPass_Size(b *testing.B) {
 }
 
 func BenchmarkScreenPass_Block(b *testing.B) {
+	// Notes & Observations:
+	//
+	// On Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with 16 cores.
+	// If the block size == 32, and the shader computes but simply returns
+	// a color to set, a screen pass requires ~2ms. For a 60fps goal,
+	// one must optimize the fragment shader down to 14ms.
 	ww, hh := 1920, 1080
-	for i := 1; i < 1024; i *= 2 {
+	for i := 1; i <= 1024; i *= 2 {
 		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
 		r := render.NewRenderer(
 			render.WithSize(ww, hh),
@@ -101,8 +83,8 @@ func BenchmarkScreenPass_Block(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.ScreenPass(img, func(x, y int) color.RGBA {
-					return color.RGBA{uint8(x), uint8(y), uint8(x), uint8(y)}
+				r.ScreenPass(img, func(x, y int, col color.RGBA) color.RGBA {
+					return color.RGBA{255, 255, 255, 255}
 				})
 			}
 		})

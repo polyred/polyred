@@ -10,10 +10,23 @@ import (
 	"changkun.de/x/polyred/color"
 )
 
-type FragmentShader func(x, y int) color.RGBA
+// FragmentShader is a shader that executes on a frame buffer.
+// The x and y are the row and column of the current executing pixel,
+// and the col is the original color of the pixel at the frame buffer.
+type FragmentShader func(x, y int, col color.RGBA) color.RGBA
 
-// ScreenPass traserval all pixels of the given image buffer
+// ScreenPass is a concurrent executor of the given shader that travel
+// though all pixels. Each pixel executes the given shader exactly once.
+// One should not manipulate the given image buffer in the shader. Instead,
+// return the resulting color in the shader can avoid data race.
 func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
+	if shade == nil {
+		return
+	}
+
+	// Because the shader executes exactly on each pixel once, there is
+	// no need to lock the pixel while reading or writing.
+
 	w := buf.Bounds().Dx()
 	h := buf.Bounds().Dy()
 
@@ -24,17 +37,25 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 
 	if wsteps == 0 && hsteps == 0 {
 		r.workerPool.Add(1)
+
+		// Note: sadly that the executing function will escape to the
+		// heap which increases the memory allocation. No workaround.
 		r.workerPool.Execute(func() {
 			for x := 0; x < w; x++ {
 				for y := 0; y < h; y++ {
-					col := shade(x, y)
 					idx := x + w*y
-					r.lockBuf[idx].Lock()
+
+					old := color.RGBA{
+						buf.Pix[4*idx+0],
+						buf.Pix[4*idx+1],
+						buf.Pix[4*idx+2],
+						buf.Pix[4*idx+3],
+					}
+					col := shade(x, y, old)
 					buf.Pix[4*idx+0] = col.R
 					buf.Pix[4*idx+1] = col.G
 					buf.Pix[4*idx+2] = col.B
 					buf.Pix[4*idx+3] = col.A
-					r.lockBuf[idx].Unlock()
 				}
 			}
 		})
@@ -51,57 +72,76 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 					for l := 0; l < blockSize; l++ {
 						x := ii + k
 						y := jj + l
-
-						col := shade(x, y)
 						idx := x + w*y
-						r.lockBuf[idx].Lock()
+
+						old := color.RGBA{
+							buf.Pix[4*idx+0],
+							buf.Pix[4*idx+1],
+							buf.Pix[4*idx+2],
+							buf.Pix[4*idx+3],
+						}
+						col := shade(x, y, old)
 						buf.Pix[4*idx+0] = col.R
 						buf.Pix[4*idx+1] = col.G
 						buf.Pix[4*idx+2] = col.B
 						buf.Pix[4*idx+3] = col.A
-						r.lockBuf[idx].Unlock()
 					}
 				}
 			})
 		}
 	}
+
 	r.workerPool.Execute(func() {
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := 0; y < hsteps*blockSize; y++ {
-				col := shade(x, y)
 				idx := x + w*y
-				r.lockBuf[idx].Lock()
+
+				old := color.RGBA{
+					buf.Pix[4*idx+0],
+					buf.Pix[4*idx+1],
+					buf.Pix[4*idx+2],
+					buf.Pix[4*idx+3],
+				}
+				col := shade(x, y, old)
 				buf.Pix[4*idx+0] = col.R
 				buf.Pix[4*idx+1] = col.G
 				buf.Pix[4*idx+2] = col.B
 				buf.Pix[4*idx+3] = col.A
-				r.lockBuf[idx].Unlock()
 			}
 		}
-	})
-	r.workerPool.Execute(func() {
+	}, func() {
 		for x := 0; x < wsteps*blockSize; x++ {
 			for y := hsteps * blockSize; y < h; y++ {
-				col := shade(x, y)
 				idx := x + w*y
-				r.lockBuf[idx].Lock()
+
+				old := color.RGBA{
+					buf.Pix[4*idx+0],
+					buf.Pix[4*idx+1],
+					buf.Pix[4*idx+2],
+					buf.Pix[4*idx+3],
+				}
+				col := shade(x, y, old)
 				buf.Pix[4*idx+0] = col.R
 				buf.Pix[4*idx+1] = col.G
 				buf.Pix[4*idx+2] = col.B
 				buf.Pix[4*idx+3] = col.A
-				r.lockBuf[idx].Unlock()
 			}
 		}
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := hsteps * blockSize; y < h; y++ {
-				col := shade(x, y)
 				idx := x + w*y
-				r.lockBuf[idx].Lock()
+
+				old := color.RGBA{
+					buf.Pix[4*idx+0],
+					buf.Pix[4*idx+1],
+					buf.Pix[4*idx+2],
+					buf.Pix[4*idx+3],
+				}
+				col := shade(x, y, old)
 				buf.Pix[4*idx+0] = col.R
 				buf.Pix[4*idx+1] = col.G
 				buf.Pix[4*idx+2] = col.B
 				buf.Pix[4*idx+3] = col.A
-				r.lockBuf[idx].Unlock()
 			}
 		}
 	})
