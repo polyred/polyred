@@ -6,10 +6,14 @@ package math
 
 import "image/color"
 
+// Lerp computes a linear interpolation between two given numbers
+// regarding the given t parameter.
 func Lerp(from float64, to float64, t float64) float64 {
 	return from + t*(to-from)
 }
 
+// LerpV computes a linear interpolation between two given vectors
+// regarding the given t parameter.
 func LerpV(from Vector, to Vector, t float64) Vector {
 	return Vector{
 		Lerp(from.X, to.X, t),
@@ -19,6 +23,8 @@ func LerpV(from Vector, to Vector, t float64) Vector {
 	}
 }
 
+// LerpC computes a linear interpolation between two given colors
+// regarding the given t parameter.
 func LerpC(from color.RGBA, to color.RGBA, t float64) color.RGBA {
 	return color.RGBA{
 		uint8(Lerp(float64(from.R), float64(to.R), t)),
@@ -26,4 +32,20 @@ func LerpC(from color.RGBA, to color.RGBA, t float64) color.RGBA {
 		uint8(Lerp(float64(from.B), float64(to.B), t)),
 		uint8(Lerp(float64(from.A), float64(to.A), t)),
 	}
+}
+
+// Barycoord computes the barycentric coordinates of a given position
+// regards to the given three positions. It is a 2D only computation.
+func Barycoord(x, y int, t1, t2, t3 Vector) (w1, w2, w3 float64) {
+	ap := NewVector(float64(x)-t1.X, float64(y)-t1.Y, 0, 0)
+	ab := NewVector(t2.X-t1.X, t2.Y-t1.Y, 0, 0)
+	ac := NewVector(t3.X-t1.X, t3.Y-t1.Y, 0, 0)
+	bc := NewVector(t3.X-t2.X, t3.Y-t2.Y, 0, 0)
+	bp := NewVector(float64(x)-t2.X, float64(y)-t2.Y, 0, 0)
+	Sabc := ab.Cross(ac).Z
+	Sabp := ab.Cross(ap).Z
+	Sapc := ap.Cross(ac).Z
+	Sbcp := bc.Cross(bp).Z
+	w1, w2, w3 = Sbcp/Sabc, Sapc/Sabc, Sabp/Sabc
+	return
 }

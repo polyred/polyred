@@ -213,7 +213,9 @@ func (r *Renderer) passForward() {
 		mesh.Faces(func(f primitive.Face, m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
 				r.workerPool.Execute(func() {
-					r.draw(uniforms, t, mesh.ModelMatrix(), m)
+					if t.IsValid() {
+						r.draw(uniforms, t, mesh.ModelMatrix(), m)
+					}
 				})
 				return true
 			})
@@ -463,7 +465,7 @@ func (r *Renderer) draw(
 				continue
 			}
 
-			w1, w2, w3 := r.barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
+			w1, w2, w3 := math.Barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
 			if w1 < 0 || w2 < 0 || w3 < 0 {
@@ -491,8 +493,8 @@ func (r *Renderer) draw(
 			// Compute du dv
 			var du, dv float64
 			if mat != nil && mat.Texture().UseMipmap() {
-				w1x, w2x, w3x := r.barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
-				w1y, w2y, w3y := r.barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
+				w1x, w2x, w3x := math.Barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
+				w1y, w2y, w3y := math.Barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
 				uvdU := (w1x*t1.UV.X + w2x*t2.UV.X + w3x*t3.UV.X) / Z
 				uvdX := (w1x*t1.UV.Y + w2x*t2.UV.Y + w3x*t3.UV.Y) / Z
 				uvdV := (w1y*t1.UV.X + w2y*t2.UV.X + w3y*t3.UV.X) / Z
@@ -588,25 +590,4 @@ func (r *Renderer) inViewport(v1, v2, v3 math.Vector) bool {
 	)
 	triangleAABB := primitive.NewAABB(v1, v2, v3)
 	return viewportAABB.Intersect(triangleAABB)
-}
-
-func (r *Renderer) barycoord(x, y int, t1, t2, t3 math.Vector) (w1, w2, w3 float64) {
-	if t1.X == t2.X && t2.X == t3.X { // not a triangle
-		return -1, -1, -1
-	}
-	if t1.Y == t2.Y && t2.Y == t3.Y { // not a triangle
-		return -1, -1, -1
-	}
-
-	ap := math.Vector{X: float64(x) - t1.X, Y: float64(y) - t1.Y, Z: 0, W: 0}
-	ab := math.Vector{X: t2.X - t1.X, Y: t2.Y - t1.Y, Z: 0, W: 0}
-	ac := math.Vector{X: t3.X - t1.X, Y: t3.Y - t1.Y, Z: 0, W: 0}
-	bc := math.Vector{X: t3.X - t2.X, Y: t3.Y - t2.Y, Z: 0, W: 0}
-	bp := math.Vector{X: float64(x) - t2.X, Y: float64(y) - t2.Y, Z: 0, W: 0}
-	Sabc := ab.Cross(ac).Z
-	Sabp := ab.Cross(ap).Z
-	Sapc := ap.Cross(ac).Z
-	Sbcp := bc.Cross(bp).Z
-	w1, w2, w3 = Sbcp/Sabc, Sapc/Sabc, Sabp/Sabc
-	return
 }

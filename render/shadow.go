@@ -213,7 +213,9 @@ func (r *Renderer) passShadows(index int) {
 		mesh.Faces(func(f primitive.Face, m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
 				r.workerPool.Execute(func() {
-					r.drawDepth(index, uniforms, t, m)
+					if t.IsValid() {
+						r.drawDepth(index, uniforms, t, m)
+					}
 				})
 				return true
 			})
@@ -261,7 +263,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 				continue
 			}
 
-			w1, w2, w3 := r.barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
+			w1, w2, w3 := math.Barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
 			if w1 < 0 || w2 < 0 || w3 < 0 {

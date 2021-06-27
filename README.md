@@ -1,4 +1,4 @@
-<img src="./examples/favicon.png" alt="logo" height="150" align="right" />
+<img src="./examples/favicon.png" alt="logo" height="200" align="right" />
 
 # polyred [![Go Reference](https://pkg.go.dev/badge/github.com/changkun/polyred.svg)](https://pkg.go.dev/changkun.de/x/polyred) [![Latest relsease](https://img.shields.io/github/v/tag/changkun/polyred?label=polyred)](https://github.com/changkun/polyred/releases) ![polyred](https://github.com/changkun/polyred/workflows/polyred/badge.svg?branch=master) ![](https://changkun.de/urlstat?mode=github&repo=changkun/polyred)
 

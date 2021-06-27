@@ -43,9 +43,9 @@ func (v Vector) Sub(u Vector) Vector {
 // IsZero asserts the x, y, z components of the given vector, and returns
 // true if it is a zero vector or point.
 func (v Vector) IsZero() bool {
-	if ApproxEq(v.X, v.X, DefaultEpsilon) &&
-		ApproxEq(v.Y, v.Y, DefaultEpsilon) &&
-		ApproxEq(v.Z, v.Z, DefaultEpsilon) {
+	if ApproxEq(v.X, 0, DefaultEpsilon) &&
+		ApproxEq(v.Y, 0, DefaultEpsilon) &&
+		ApproxEq(v.Z, 0, DefaultEpsilon) {
 		return true
 	}
 	return false
@@ -66,10 +66,6 @@ func (v Vector) Translate(x, y, z float64) Vector {
 
 // Dot implements dot product of two vectors
 func (v Vector) Dot(u Vector) float64 {
-	// if !ApproxEq(v.W, 0, DefaultEpsilon) || !ApproxEq(u.W, 0, DefaultEpsilon) {
-	// 	panic("v or u is not a vector")
-	// }
-
 	return v.X*u.X + v.Y*u.Y + v.Z*u.Z + v.W*u.W
 }
 
@@ -87,17 +83,11 @@ func (v Vector) Cross(u Vector) Vector {
 
 // Len computes the length of the given Vector
 func (v Vector) Len() float64 {
-	// if !ApproxEq(v.W, 0, DefaultEpsilon) {
-	// 	panic("v is not a vector")
-	// }
 	return math.Sqrt(v.Dot(v))
 }
 
 // Unit normalizes this vector to an unit vector
 func (v Vector) Unit() Vector {
-	// if !ApproxEq(v.W, 0, DefaultEpsilon) {
-	// 	panic("v is not a vector")
-	// }
 	n := 1.0 / v.Len()
 	return Vector{v.X * n, v.Y * n, v.Z * n, v.W * n}
 }
