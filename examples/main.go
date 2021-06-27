@@ -15,14 +15,14 @@ import (
 
 	"changkun.de/x/polyred/examples/gopher"
 	"changkun.de/x/polyred/examples/mcguire"
-	"changkun.de/x/polyred/rend"
+	"changkun.de/x/polyred/render"
 	"changkun.de/x/polyred/scene"
 	"changkun.de/x/polyred/utils"
 )
 
 type sceneExample struct {
 	Name          string
-	Func          func(w, h int) interface{} // *rend.Scene or []*rend.Scene
+	Func          func(w, h int) interface{} // *render.Scene or []*render.Scene
 	Width, Height int
 	MSAA          int
 	ShadowMap     bool
@@ -43,11 +43,11 @@ func main() {
 
 	for _, example := range examples {
 		log.Printf("rendering... %s under settings: %#v", example.Name, example)
-		render(&example)
+		rend(&example)
 	}
 }
 
-func render(settings *sceneExample) {
+func rend(settings *sceneExample) {
 	if settings.CPUProf {
 		f, err := os.Create(fmt.Sprintf("%s-cpu-%v.pprof", settings.Name, time.Now().Format(time.RFC3339)))
 		if err != nil {
@@ -80,22 +80,22 @@ func render(settings *sceneExample) {
 	}
 
 	s := settings.Func(settings.Width, settings.Height)
-	r := rend.NewRenderer(
-		rend.WithSize(int(settings.Width), int(settings.Height)),
-		rend.WithMSAA(settings.MSAA),
-		rend.WithShadowMap(settings.ShadowMap),
-		rend.WithDebug(settings.Debug),
+	r := render.NewRenderer(
+		render.WithSize(int(settings.Width), int(settings.Height)),
+		render.WithMSAA(settings.MSAA),
+		render.WithShadowMap(settings.ShadowMap),
+		render.WithDebug(settings.Debug),
 	)
 	switch ss := s.(type) {
 	case *scene.Scene:
 		r.UpdateOptions(
-			rend.WithScene(ss),
+			render.WithScene(ss),
 		)
 		utils.Save(r.Render(), fmt.Sprintf("./%s/%s.png", settings.Name, settings.Name))
 	case []*mcguire.Scene:
 		for _, sss := range ss {
 			r.UpdateOptions(
-				rend.WithScene(sss.Scene),
+				render.WithScene(sss.Scene),
 			)
 			log.Printf("scene name: %s", sss.Name)
 			utils.Save(r.Render(), fmt.Sprintf("./%s/%s.png", settings.Name, sss.Name))

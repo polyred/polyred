@@ -11,6 +11,8 @@ import (
 	"changkun.de/x/polyred/math"
 )
 
+// NewPlane returns a triangle soup that represents a plane with the
+// given width and height.
 func NewPlane(width, height float64) Mesh {
 	v1 := primitive.Vertex{
 		Pos: math.NewVector(-0.5*width, 0, -0.5*height, 1),

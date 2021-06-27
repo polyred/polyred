@@ -1,4 +1,4 @@
-<img src="./examples/favicon.png" alt="logo" height="245" align="right" />
+<img src="./examples/favicon.png" alt="logo" height="150" align="right" />
 
 # polyred [![Go Reference](https://pkg.go.dev/badge/github.com/changkun/polyred.svg)](https://pkg.go.dev/changkun.de/x/polyred) [![Latest relsease](https://img.shields.io/github/v/tag/changkun/polyred?label=polyred)](https://github.com/changkun/polyred/releases) ![polyred](https://github.com/changkun/polyred/workflows/polyred/badge.svg?branch=master) ![](https://changkun.de/urlstat?mode=github&repo=changkun/polyred)
 
@@ -77,12 +77,12 @@ m.Scale(2, 2, 2)
 s.Add(m)
 
 // Create the renderer then render the scene graph!
-r := rend.NewRenderer(
-    rend.WithSize(1920, 1080),
-    rend.WithMSAA(2),
-    rend.WithScene(s),
-    rend.WithShadowMap(true),
-    rend.WithGammaCorrection(true),
+r := render.NewRenderer(
+    render.WithSize(1920, 1080),
+    render.WithMSAA(2),
+    render.WithScene(s),
+    render.WithShadowMap(true),
+    render.WithGammaCorrection(true),
 )
 utils.Save(r.Render(), "./render.png")
 ```

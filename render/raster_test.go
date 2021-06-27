@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package rend_test
+package render_test
 
 import (
 	"fmt"
@@ -21,24 +21,24 @@ import (
 	"changkun.de/x/polyred/material"
 	"changkun.de/x/polyred/math"
 	"changkun.de/x/polyred/object"
-	"changkun.de/x/polyred/rend"
+	"changkun.de/x/polyred/render"
 	"changkun.de/x/polyred/scene"
 	"changkun.de/x/polyred/utils"
 )
 
 var (
 	s *scene.Scene
-	r *rend.Renderer
+	r *render.Renderer
 )
 
 func init() {
 	w, h, msaa := 1920, 1080, 2
 	s = newscene(w, h)
-	r = rend.NewRenderer(
-		rend.WithSize(w, h),
-		rend.WithMSAA(msaa),
-		rend.WithScene(s),
-		rend.WithBackground(color.RGBA{0, 127, 255, 255}),
+	r = render.NewRenderer(
+		render.WithSize(w, h),
+		render.WithMSAA(msaa),
+		render.WithScene(s),
+		render.WithBackground(color.RGBA{0, 127, 255, 255}),
 	)
 }
 
@@ -84,11 +84,11 @@ func newscene(w, h int) *scene.Scene {
 func TestRasterizer(t *testing.T) {
 	w, h, msaa := 1920, 1080, 2
 	s := newscene(w, h)
-	r := rend.NewRenderer(
-		rend.WithSize(w, h),
-		rend.WithMSAA(msaa),
-		rend.WithScene(s),
-		rend.WithBackground(color.RGBA{0, 127, 255, 255}),
+	r := render.NewRenderer(
+		render.WithSize(w, h),
+		render.WithMSAA(msaa),
+		render.WithScene(s),
+		render.WithBackground(color.RGBA{0, 127, 255, 255}),
 	)
 
 	f, err := os.Create("cpu.pprof")
@@ -119,7 +119,7 @@ func TestRasterizer(t *testing.T) {
 func BenchmarkRasterizer(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
 		r.UpdateOptions(
-			rend.WithConcurrency(int32(block)),
+			render.WithConcurrency(int32(block)),
 		)
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
@@ -134,13 +134,13 @@ func BenchmarkRasterizer(b *testing.B) {
 func BenchmarkForwardPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
 		r.UpdateOptions(
-			rend.WithConcurrency(int32(block)),
+			render.WithConcurrency(int32(block)),
 		)
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				rend.PassForward(r)
+				render.PassForward(r)
 			}
 		})
 	}
@@ -149,13 +149,13 @@ func BenchmarkForwardPass(b *testing.B) {
 func BenchmarkDeferredPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
 		r.UpdateOptions(
-			rend.WithConcurrency(int32(block)),
+			render.WithConcurrency(int32(block)),
 		)
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				rend.PassDeferred(r)
+				render.PassDeferred(r)
 			}
 		})
 	}
@@ -165,7 +165,7 @@ func BenchmarkAntiAliasingPass(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		rend.PassAntiAliasing(r)
+		render.PassAntiAliasing(r)
 	}
 }
 
@@ -175,8 +175,8 @@ func BenchmarkResetBuf(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				rend.ResetGBuf(r)
-				rend.ResetFrameBuf(r)
+				render.ResetGBuf(r)
+				render.ResetFrameBuf(r)
 			}
 		})
 	}
@@ -229,7 +229,7 @@ func BenchmarkDraw(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				f := ts[i%int(nt)]
-				rend.Draw(r, uniforms, f, modelMat, mat)
+				render.Draw(r, uniforms, f, modelMat, mat)
 			}
 		})
 	}

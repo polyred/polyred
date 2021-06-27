@@ -12,7 +12,7 @@ import (
 	"changkun.de/x/polyred/geometry"
 	"changkun.de/x/polyred/light"
 	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/rend"
+	"changkun.de/x/polyred/render"
 	"changkun.de/x/polyred/scene"
 	"changkun.de/x/polyred/utils"
 )
@@ -36,11 +36,11 @@ func TestPlane(t *testing.T) {
 	m := geometry.NewPlane(1, 1)
 	s.Add(m)
 
-	r := rend.NewRenderer(
-		rend.WithSize(500, 500),
-		rend.WithMSAA(2),
-		rend.WithScene(s),
-		rend.WithBackground(color.FromHex("#181818")),
+	r := render.NewRenderer(
+		render.WithSize(500, 500),
+		render.WithMSAA(2),
+		render.WithScene(s),
+		render.WithBackground(color.FromHex("#181818")),
 	)
 	utils.Save(r.Render(), "plane.png")
 }

@@ -16,7 +16,7 @@ import (
 	"changkun.de/x/polyred/light"
 	"changkun.de/x/polyred/material"
 	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/rend"
+	"changkun.de/x/polyred/render"
 	"changkun.de/x/polyred/scene"
 	"changkun.de/x/polyred/utils"
 )
@@ -122,13 +122,13 @@ func bench(opt *benchOpts) {
 		m.Scale(2, 2, 2)
 		s.Add(m)
 
-		r := rend.NewRenderer(
-			rend.WithSize(opt.width, opt.height),
-			rend.WithMSAA(opt.msaa),
-			rend.WithScene(s),
-			rend.WithShadowMap(opt.shadowmap),
-			rend.WithDebug(false),
-			rend.WithGammaCorrection(opt.gammaCorrection),
+		r := render.NewRenderer(
+			render.WithSize(opt.width, opt.height),
+			render.WithMSAA(opt.msaa),
+			render.WithScene(s),
+			render.WithShadowMap(opt.shadowmap),
+			render.WithDebug(false),
+			render.WithGammaCorrection(opt.gammaCorrection),
 		)
 
 		var buf *image.RGBA

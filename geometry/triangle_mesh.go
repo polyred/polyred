@@ -4,6 +4,7 @@
 
 package geometry
 
+// TriangleMesh represents a triangulated mesh
 type TriangleMesh struct {
-	// TODO:
+	BufferedMesh
 }

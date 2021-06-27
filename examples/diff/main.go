@@ -15,7 +15,7 @@ import (
 	"changkun.de/x/polyred/light"
 	"changkun.de/x/polyred/material"
 	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/rend"
+	"changkun.de/x/polyred/render"
 	"changkun.de/x/polyred/scene"
 	"changkun.de/x/polyred/utils"
 )
@@ -82,21 +82,21 @@ func main() {
 	width, height, msaa := 500, 500, 1
 	Igoal := 7
 	goal := loadScene(width, height, float64(Igoal))
-	goalR := rend.NewRenderer(
-		rend.WithSize(width, height),
-		rend.WithMSAA(msaa),
-		rend.WithScene(goal),
-		rend.WithShadowMap(true),
-		rend.WithGammaCorrection(true),
+	goalR := render.NewRenderer(
+		render.WithSize(width, height),
+		render.WithMSAA(msaa),
+		render.WithScene(goal),
+		render.WithShadowMap(true),
+		render.WithGammaCorrection(true),
 	)
 	goalImg := goalR.Render()
 	utils.Save(goalImg, "goal.png")
 
-	searchR := rend.NewRenderer(
-		rend.WithSize(width, height),
-		rend.WithMSAA(msaa),
-		rend.WithShadowMap(true),
-		rend.WithGammaCorrection(true),
+	searchR := render.NewRenderer(
+		render.WithSize(width, height),
+		render.WithMSAA(msaa),
+		render.WithShadowMap(true),
+		render.WithGammaCorrection(true),
 	)
 
 	// naive random search.
@@ -105,7 +105,7 @@ func main() {
 		Isearch := rand.Float64() * 10
 		searchS := loadScene(width, height, Isearch)
 		searchR.UpdateOptions(
-			rend.WithScene(searchS),
+			render.WithScene(searchS),
 		)
 		searchImg := searchR.Render()
 		utils.Save(searchImg, "search.png")
