@@ -62,12 +62,13 @@ m.Scale(2, 2, 2)
 s.Add(m)
 m = io.MustLoadMesh("ground.obj")
 m.SetMaterial(material.NewBlinnPhong(
-    material.WithBlinnPhongTexture(image.NewTexture(
-        image.WithSource(io.MustLoadImage("ground.png",
-            io.WithGammaCorrection(true)),
+    material.WithBlinnPhongTexture(
+        image.NewTexture(
+            image.WithSource(io.MustLoadImage("ground.png",
+                io.WithGammaCorrection(true)),
+            ),
+            image.WithIsotropicMipMap(true),
         ),
-        image.WithIsotropicMipMap(true),
-    ),
     ),
     material.WithBlinnPhongFactors(0.6, 0.5),
     material.WithBlinnPhongShininess(150),
