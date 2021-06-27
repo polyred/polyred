@@ -68,7 +68,7 @@ func NewRenderer(opts ...Option) *Renderer {
 		debug:          false,
 		scene:          nil,
 		gomaxprocs:     runtime.GOMAXPROCS(0),
-		concurrentSize: 64,
+		concurrentSize: 32,
 		lightSources:   []light.Source{},
 		lightEnv:       []light.Environment{},
 	}

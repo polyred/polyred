@@ -33,6 +33,7 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 	blockSize := int(r.concurrentSize)
 	wsteps := w / blockSize
 	hsteps := h / blockSize
+
 	defer r.workerPool.Wait()
 
 	if wsteps == 0 && hsteps == 0 {
@@ -43,20 +44,10 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 		r.workerPool.Execute(func() {
 			for x := 0; x < w; x++ {
 				for y := 0; y < h; y++ {
-					idx := x + w*y
-
-					old := color.RGBA{
-						buf.Pix[4*idx+0],
-						buf.Pix[4*idx+1],
-						buf.Pix[4*idx+2],
-						buf.Pix[4*idx+3],
-					}
+					old := buf.RGBAAt(x, y)
 					col := shade(x, y, old)
 					if col != color.Discard {
-						buf.Pix[4*idx+0] = col.R
-						buf.Pix[4*idx+1] = col.G
-						buf.Pix[4*idx+2] = col.B
-						buf.Pix[4*idx+3] = col.A
+						buf.Set(x, y, col)
 					}
 				}
 			}
@@ -74,20 +65,10 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 					for l := 0; l < blockSize; l++ {
 						x := ii + k
 						y := jj + l
-						idx := x + w*y
-
-						old := color.RGBA{
-							buf.Pix[4*idx+0],
-							buf.Pix[4*idx+1],
-							buf.Pix[4*idx+2],
-							buf.Pix[4*idx+3],
-						}
+						old := buf.RGBAAt(x, y)
 						col := shade(x, y, old)
 						if col != color.Discard {
-							buf.Pix[4*idx+0] = col.R
-							buf.Pix[4*idx+1] = col.G
-							buf.Pix[4*idx+2] = col.B
-							buf.Pix[4*idx+3] = col.A
+							buf.Set(x, y, col)
 						}
 					}
 				}
@@ -98,59 +79,29 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade FragmentShader) {
 	r.workerPool.Execute(func() {
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := 0; y < hsteps*blockSize; y++ {
-				idx := x + w*y
-
-				old := color.RGBA{
-					buf.Pix[4*idx+0],
-					buf.Pix[4*idx+1],
-					buf.Pix[4*idx+2],
-					buf.Pix[4*idx+3],
-				}
+				old := buf.RGBAAt(x, y)
 				col := shade(x, y, old)
 				if col != color.Discard {
-					buf.Pix[4*idx+0] = col.R
-					buf.Pix[4*idx+1] = col.G
-					buf.Pix[4*idx+2] = col.B
-					buf.Pix[4*idx+3] = col.A
+					buf.Set(x, y, col)
 				}
 			}
 		}
 	}, func() {
 		for x := 0; x < wsteps*blockSize; x++ {
 			for y := hsteps * blockSize; y < h; y++ {
-				idx := x + w*y
-
-				old := color.RGBA{
-					buf.Pix[4*idx+0],
-					buf.Pix[4*idx+1],
-					buf.Pix[4*idx+2],
-					buf.Pix[4*idx+3],
-				}
+				old := buf.RGBAAt(x, y)
 				col := shade(x, y, old)
 				if col != color.Discard {
-					buf.Pix[4*idx+0] = col.R
-					buf.Pix[4*idx+1] = col.G
-					buf.Pix[4*idx+2] = col.B
-					buf.Pix[4*idx+3] = col.A
+					buf.Set(x, y, col)
 				}
 			}
 		}
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := hsteps * blockSize; y < h; y++ {
-				idx := x + w*y
-
-				old := color.RGBA{
-					buf.Pix[4*idx+0],
-					buf.Pix[4*idx+1],
-					buf.Pix[4*idx+2],
-					buf.Pix[4*idx+3],
-				}
+				old := buf.RGBAAt(x, y)
 				col := shade(x, y, old)
 				if col != color.Discard {
-					buf.Pix[4*idx+0] = col.R
-					buf.Pix[4*idx+1] = col.G
-					buf.Pix[4*idx+2] = col.B
-					buf.Pix[4*idx+3] = col.A
+					buf.Set(x, y, col)
 				}
 			}
 		}
