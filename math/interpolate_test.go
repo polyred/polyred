@@ -87,7 +87,7 @@ func BenchmarkBarycoord(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			ww1, ww2, ww3 = math.Barycoord(x, y, v1, v2, v3)
+			ww1, ww2, ww3 = math.Barycoord(math.NewVector(float64(x), float64(y), 0, 1), v1, v2, v3)
 		}
 		b.StopTimer()
 		w1, w2, w3 = ww1, ww2, ww3
@@ -99,7 +99,7 @@ func BenchmarkBarycoord(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			ww1, ww2, ww3 = math.Barycoord(x, y, v1, v2, v3)
+			ww1, ww2, ww3 = math.Barycoord(math.NewVector(float64(x), float64(y), 0, 1), v1, v2, v3)
 		}
 		b.StopTimer()
 		w1, w2, w3 = ww1, ww2, ww3
