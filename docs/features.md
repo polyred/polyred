@@ -27,7 +27,7 @@
   + [x] abstract concurrent screen pass
   + [x] depth test and z-buffer pass
   + [x] rasterization pass
-    * [ ] clipping
+    * [x] clipping
     * [x] backface culling
     * [x] viewfrustum culling
     * [x] occlusion culling

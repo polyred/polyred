@@ -4,7 +4,9 @@
 
 package math
 
-import "image/color"
+import (
+	"image/color"
+)
 
 // Lerp computes a linear interpolation between two given numbers
 // regarding the given t parameter.
@@ -35,17 +37,35 @@ func LerpC(from color.RGBA, to color.RGBA, t float64) color.RGBA {
 }
 
 // Barycoord computes the barycentric coordinates of a given position
-// regards to the given three positions. It is a 2D only computation.
-func Barycoord(x, y int, t1, t2, t3 Vector) (w1, w2, w3 float64) {
-	ap := NewVector(float64(x)-t1.X, float64(y)-t1.Y, 0, 0)
+// regards to the given three positions.
+func Barycoord(p, t1, t2, t3 Vector) (w1, w2, w3 float64) {
+	ap := NewVector(p.X-t1.X, p.Y-t1.Y, 0, 0)
 	ab := NewVector(t2.X-t1.X, t2.Y-t1.Y, 0, 0)
 	ac := NewVector(t3.X-t1.X, t3.Y-t1.Y, 0, 0)
 	bc := NewVector(t3.X-t2.X, t3.Y-t2.Y, 0, 0)
-	bp := NewVector(float64(x)-t2.X, float64(y)-t2.Y, 0, 0)
+	bp := NewVector(p.X-t2.X, p.Y-t2.Y, 0, 0)
 	Sabc := ab.Cross(ac).Z
 	Sabp := ab.Cross(ap).Z
 	Sapc := ap.Cross(ac).Z
 	Sbcp := bc.Cross(bp).Z
 	w1, w2, w3 = Sbcp/Sabc, Sapc/Sabc, Sabp/Sabc
 	return
+}
+
+// IsInsideTriangle tests three given vertices and a position p, returns
+// true if p is inside the three vertices, or false otherwise.
+func IsInsideTriangle(v1, v2, v3, p Vector) bool {
+	AB := NewVector(v2.X, v2.Y, 0, 1).Sub(NewVector(v1.X, v1.Y, 0, 1))
+	AP := p.Sub(NewVector(v1.X, v1.Y, 0, 1))
+	if AB.Cross(AP).Z < 0 {
+		return false
+	}
+	BC := NewVector(v3.X, v3.Y, 0, 1).Sub(NewVector(v2.X, v2.Y, 0, 1))
+	BP := p.Sub(NewVector(v2.X, v2.Y, 0, 1))
+	if BC.Cross(BP).Z < 0 {
+		return false
+	}
+	CA := NewVector(v1.X, v1.Y, 0, 1).Sub(NewVector(v3.X, v3.Y, 0, 1))
+	CP := p.Sub(NewVector(v3.X, v3.Y, 0, 1))
+	return CA.Cross(CP).Dot(NewVector(0, 0, 1, 0)) >= 0
 }

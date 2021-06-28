@@ -196,10 +196,13 @@ func (r *Renderer) passForward() {
 
 		mesh := o.(geometry.Mesh)
 		uniforms := map[string]interface{}{
-			"matModel": mesh.ModelMatrix(),
-			"matView":  matView,
-			"matProj":  matProj,
-			"matVP":    matVP,
+			"matModel":   mesh.ModelMatrix(),
+			"matView":    matView,
+			"matViewInv": matView.Inv(),
+			"matProj":    matProj,
+			"matProjInv": matProj.Inv(),
+			"matVP":      matVP,
+			"matVPInv":   matVP.Inv(),
 			// NormalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
 			// depending on which transformation space. Here we use the 2nd form,
 			// i.e. model space normal matrix to save some computation of camera
@@ -320,10 +323,6 @@ func (r *Renderer) draw(
 	tri *primitive.Triangle,
 	modelMatrix math.Matrix,
 	mat material.Material) {
-	m1 := tri.V1.Pos.Apply(modelMatrix)
-	m2 := tri.V2.Pos.Apply(modelMatrix)
-	m3 := tri.V3.Pos.Apply(modelMatrix)
-
 	var t1, t2, t3 primitive.Vertex
 	if mat != nil {
 		t1 = mat.VertexShader(tri.V1, uniforms)
@@ -344,6 +343,42 @@ func (r *Renderer) draw(
 	if !r.inViewport(t1.Pos, t2.Pos, t3.Pos) {
 		return
 	}
+
+	w := r.width * r.msaa
+	h := r.height * r.msaa
+
+	// t1 is outside the viewfrustum
+	outside := func(v *math.Vector, w, h float64) bool {
+		if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
+			return true
+		}
+		return false
+	}
+
+	if outside(&t1.Pos, float64(w), float64(h)) || outside(&t2.Pos, float64(w), float64(h)) || outside(&t3.Pos, float64(w), float64(h)) {
+		tris := r.clipTriangle(&t1, &t2, &t3, float64(w), float64(h))
+		for _, tri := range tris {
+			r.drawClipped(&tri.V1, &tri.V2, &tri.V3, uniforms, mat)
+		}
+		return
+	}
+
+	r.drawClipped(&t1, &t2, &t3, uniforms, mat)
+}
+func (r *Renderer) drawClipped(
+	t1, t2, t3 *primitive.Vertex,
+	uniforms map[string]interface{},
+	mat material.Material) {
+
+	matViewInv := uniforms["matViewInv"].(math.Matrix)
+	matProjInv := uniforms["matProjInv"].(math.Matrix)
+	matVPInv := uniforms["matVPInv"].(math.Matrix)
+	m1 := t1.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
+	m2 := t2.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
+	m3 := t3.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
+
+	w := r.width * r.msaa
+	h := r.height * r.msaa
 
 	// Perspective corrected interpolation
 	t1Z := 1.0
@@ -369,15 +404,14 @@ func (r *Renderer) draw(
 
 	fN := m2.Sub(m1).Cross(m3.Sub(m1)).Unit()
 
-	w := r.width * r.msaa
-	h := r.height * r.msaa
 	for x := xmin; x <= xmax; x++ {
 		for y := ymin; y <= ymax; y++ {
 			if x < 0 || x >= w || y < 0 || y >= h {
 				continue
 			}
 
-			w1, w2, w3 := math.Barycoord(x, y, t1.Pos, t2.Pos, t3.Pos)
+			w1, w2, w3 := math.Barycoord(math.NewVector(float64(x), float64(y), 0, 1),
+				t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
 			if w1 < 0 || w2 < 0 || w3 < 0 {
@@ -405,8 +439,8 @@ func (r *Renderer) draw(
 			// Compute du dv
 			var du, dv float64
 			if mat != nil && mat.Texture().UseMipmap() {
-				w1x, w2x, w3x := math.Barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
-				w1y, w2y, w3y := math.Barycoord(x+1, y, t1.Pos, t2.Pos, t3.Pos)
+				w1x, w2x, w3x := math.Barycoord(math.NewVector(float64(x+1), float64(y), 0, 1), t1.Pos, t2.Pos, t3.Pos)
+				w1y, w2y, w3y := math.Barycoord(math.NewVector(float64(x), float64(y+1), 0, 1), t1.Pos, t2.Pos, t3.Pos)
 				uvdU := (w1x*t1.UV.X + w2x*t2.UV.X + w3x*t3.UV.X) / Z
 				uvdX := (w1x*t1.UV.Y + w2x*t2.UV.Y + w3x*t3.UV.Y) / Z
 				uvdV := (w1y*t1.UV.X + w2y*t2.UV.X + w3y*t3.UV.X) / Z
