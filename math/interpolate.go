@@ -38,12 +38,12 @@ func LerpC(from color.RGBA, to color.RGBA, t float64) color.RGBA {
 
 // Barycoord computes the barycentric coordinates of a given position
 // regards to the given three positions.
-func Barycoord(p, t1, t2, t3 Vector) (w1, w2, w3 float64) {
-	ap := NewVector(p.X-t1.X, p.Y-t1.Y, 0, 0)
+func Barycoord(x, y float64, t1, t2, t3 Vector) (w1, w2, w3 float64) {
+	ap := NewVector(x-t1.X, y-t1.Y, 0, 0)
 	ab := NewVector(t2.X-t1.X, t2.Y-t1.Y, 0, 0)
 	ac := NewVector(t3.X-t1.X, t3.Y-t1.Y, 0, 0)
 	bc := NewVector(t3.X-t2.X, t3.Y-t2.Y, 0, 0)
-	bp := NewVector(p.X-t2.X, p.Y-t2.Y, 0, 0)
+	bp := NewVector(x-t2.X, y-t2.Y, 0, 0)
 	Sabc := ab.Cross(ac).Z
 	Sabp := ab.Cross(ap).Z
 	Sapc := ap.Cross(ac).Z

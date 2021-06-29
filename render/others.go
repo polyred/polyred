@@ -53,12 +53,9 @@ func defaultVertexShader(v primitive.Vertex, uniforms map[string]interface{}) pr
 	matModel := uniforms["matModel"].(math.Matrix)
 	matView := uniforms["matView"].(math.Matrix)
 	matProj := uniforms["matProj"].(math.Matrix)
-	matVP := uniforms["matVP"].(math.Matrix)
 	matNormal := uniforms["matNormal"].(math.Matrix)
-
-	pos := v.Pos.Apply(matModel).Apply(matView).Apply(matProj).Apply(matVP)
 	return primitive.Vertex{
-		Pos: pos.Scale(1/pos.W, 1/pos.W, 1/pos.W, 1/pos.W),
+		Pos: matProj.MulM(matView).MulM(matModel).MulV(v.Pos),
 		Col: v.Col,
 		UV:  v.UV,
 		Nor: v.Nor.Apply(matNormal),

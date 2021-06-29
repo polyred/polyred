@@ -217,7 +217,7 @@ func (r *Renderer) passForward() {
 			f.Triangles(func(t *primitive.Triangle) bool {
 				r.workerPool.Execute(func() {
 					if t.IsValid() {
-						r.draw(uniforms, t, mesh.ModelMatrix(), m)
+						r.draw(uniforms, t, m)
 					}
 				})
 				return true
@@ -321,7 +321,6 @@ func (r *Renderer) passAntialiasing() {
 func (r *Renderer) draw(
 	uniforms map[string]interface{},
 	tri *primitive.Triangle,
-	modelMatrix math.Matrix,
 	mat material.Material) {
 	var t1, t2, t3 primitive.Vertex
 	if mat != nil {
@@ -333,6 +332,18 @@ func (r *Renderer) draw(
 		t2 = defaultVertexShader(tri.V2, uniforms)
 		t3 = defaultVertexShader(tri.V3, uniforms)
 	}
+
+	matVP := uniforms["matVP"].(math.Matrix)
+
+	// For perspective corrected interpolation, see below.
+	recipw := math.NewVector(1, 1, 1, 0)
+	if _, ok := r.renderCamera.(*camera.Perspective); ok {
+		recipw = math.NewVector(-1/t1.Pos.W, -1/t2.Pos.W, -1/t3.Pos.W, 0)
+	}
+
+	t1.Pos = t1.Pos.Apply(matVP).Pos()
+	t2.Pos = t2.Pos.Apply(matVP).Pos()
+	t3.Pos = t3.Pos.Apply(matVP).Pos()
 
 	// Backface culling
 	if t2.Pos.Sub(t1.Pos).Cross(t3.Pos.Sub(t1.Pos)).Z < 0 {
@@ -356,17 +367,19 @@ func (r *Renderer) draw(
 	}
 
 	if outside(&t1.Pos, float64(w), float64(h)) || outside(&t2.Pos, float64(w), float64(h)) || outside(&t3.Pos, float64(w), float64(h)) {
-		tris := r.clipTriangle(&t1, &t2, &t3, float64(w), float64(h))
+		tris := r.clipTriangle(&t1, &t2, &t3, float64(w), float64(h), recipw)
 		for _, tri := range tris {
-			r.drawClipped(&tri.V1, &tri.V2, &tri.V3, uniforms, mat)
+			r.drawClipped(&tri.V1, &tri.V2, &tri.V3, recipw, uniforms, mat)
 		}
 		return
 	}
 
-	r.drawClipped(&t1, &t2, &t3, uniforms, mat)
+	r.drawClipped(&t1, &t2, &t3, recipw, uniforms, mat)
 }
+
 func (r *Renderer) drawClipped(
 	t1, t2, t3 *primitive.Vertex,
+	recipw math.Vector,
 	uniforms map[string]interface{},
 	mat material.Material) {
 
@@ -380,22 +393,8 @@ func (r *Renderer) drawClipped(
 	w := r.width * r.msaa
 	h := r.height * r.msaa
 
-	// Perspective corrected interpolation
-	t1Z := 1.0
-	t2Z := 1.0
-	t3Z := 1.0
-	if _, ok := r.renderCamera.(*camera.Perspective); ok {
-		t1Z = 1 / t1.Pos.Z
-		t2Z = 1 / t2.Pos.Z
-		t3Z = 1 / t3.Pos.Z
-
-		t1.UV = t1.UV.Scale(t1Z, t1Z, 0, 1)
-		t2.UV = t2.UV.Scale(t2Z, t2Z, 0, 1)
-		t3.UV = t3.UV.Scale(t3Z, t3Z, 0, 1)
-	}
-
-	// Compute AABB make the AABB a little bigger that align with pixels
-	// to contain the entire triangle
+	// Compute AABB make the AABB a little bigger that align with
+	// pixels to contain the entire triangle
 	aabb := primitive.NewAABB(t1.Pos, t2.Pos, t3.Pos)
 	xmin := int(math.Round(aabb.Min.X) - 1)
 	xmax := int(math.Round(aabb.Max.X) + 1)
@@ -410,11 +409,13 @@ func (r *Renderer) drawClipped(
 				continue
 			}
 
-			w1, w2, w3 := math.Barycoord(math.NewVector(float64(x), float64(y), 0, 1),
-				t1.Pos, t2.Pos, t3.Pos)
+			x0 := float64(x) + 0.5
+			y0 := float64(y) + 0.5
+
+			w1, w2, w3 := math.Barycoord(x0, y0, t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
-			if w1 < 0 || w2 < 0 || w3 < 0 {
+			if w1 < -math.DefaultEpsilon || w2 < -math.DefaultEpsilon || w3 < -math.DefaultEpsilon {
 				continue
 			}
 
@@ -427,29 +428,37 @@ func (r *Renderer) drawClipped(
 			// Perspective corrected interpolation. See:
 			// Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 			// Department of Computer Science, University of North Carolina at Chapel Hill (2002).
-			Z := 1.0
+			wc1, wc2, wc3 := recipw.X*w1, recipw.Y*w2, recipw.Z*w3
+			norm := 1.0
 			if _, ok := r.renderCamera.(*camera.Perspective); ok {
-				Z = w1*t1Z + w2*t2Z + w3*t3Z
+				norm = 1 / (wc1 + wc2 + wc3)
 			}
 
 			// UV interpolation
-			uvX := (w1*t1.UV.X + w2*t2.UV.X + w3*t3.UV.X) / Z
-			uvY := (w1*t1.UV.Y + w2*t2.UV.Y + w3*t3.UV.Y) / Z
+			uvX := (wc1*t1.UV.X + wc2*t2.UV.X + wc3*t3.UV.X) * norm
+			uvY := (wc1*t1.UV.Y + wc2*t2.UV.Y + wc3*t3.UV.Y) * norm
 
 			// Compute du dv
 			var du, dv float64
 			if mat != nil && mat.Texture().UseMipmap() {
-				w1x, w2x, w3x := math.Barycoord(math.NewVector(float64(x+1), float64(y), 0, 1), t1.Pos, t2.Pos, t3.Pos)
-				w1y, w2y, w3y := math.Barycoord(math.NewVector(float64(x), float64(y+1), 0, 1), t1.Pos, t2.Pos, t3.Pos)
-				uvdU := (w1x*t1.UV.X + w2x*t2.UV.X + w3x*t3.UV.X) / Z
-				uvdX := (w1x*t1.UV.Y + w2x*t2.UV.Y + w3x*t3.UV.Y) / Z
-				uvdV := (w1y*t1.UV.X + w2y*t2.UV.X + w3y*t3.UV.X) / Z
-				uvdY := (w1y*t1.UV.Y + w2y*t2.UV.Y + w3y*t3.UV.Y) / Z
+				w1x, w2x, w3x := math.Barycoord(x0+1, y0, t1.Pos, t2.Pos, t3.Pos)
+				wc1x, wc2x, wc3x := recipw.X*w1x, recipw.Y*w2x, recipw.Z*w3x
+				normx := 1 / (wc1x + wc2x + wc3x)
+
+				w1y, w2y, w3y := math.Barycoord(x0, y0+1, t1.Pos, t2.Pos, t3.Pos)
+				wc1y, wc2y, wc3y := recipw.X*w1y, recipw.Y*w2y, recipw.Z*w3y
+				normy := 1 / (wc1y + wc2y + wc3y)
+
+				uvdU := (wc1x*t1.UV.X + wc2x*t2.UV.X + wc3x*t3.UV.X) * normx
+				uvdX := (wc1x*t1.UV.Y + wc2x*t2.UV.Y + wc3x*t3.UV.Y) * normx
+
+				uvdV := (wc1y*t1.UV.X + wc2y*t2.UV.X + wc3y*t3.UV.X) * normy
+				uvdY := (wc1y*t1.UV.Y + wc2y*t2.UV.Y + wc3y*t3.UV.Y) * normy
 				du = (uvdU-uvX)*(uvdU-uvX) + (uvdX-uvY)*(uvdX-uvY)
 				dv = (uvdV-uvX)*(uvdV-uvX) + (uvdY-uvY)*(uvdY-uvY)
 			}
 
-			// normal interpolation
+			// normal interpolation (normals are in model space, no need for perspective correction)
 			n := (math.Vector{
 				X: (w1*t1.Nor.X + w2*t2.Nor.X + w3*t3.Nor.X),
 				Y: (w1*t1.Nor.Y + w2*t2.Nor.Y + w3*t3.Nor.Y),
@@ -463,10 +472,10 @@ func (r *Renderer) drawClipped(
 				W: 1,
 			}
 			col := color.RGBA{
-				R: uint8(math.Clamp(w1*float64(t1.Col.R)+w2*float64(t2.Col.R)+w3*float64(t3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(w1*float64(t1.Col.G)+w2*float64(t2.Col.G)+w3*float64(t3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(w1*float64(t1.Col.B)+w2*float64(t2.Col.B)+w3*float64(t3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(w1*float64(t1.Col.A)+w2*float64(t2.Col.A)+w3*float64(t3.Col.A), 0, 0xff)),
+				R: uint8(math.Clamp((wc1*float64(t1.Col.R)+wc2*float64(t2.Col.R)+wc3*float64(t3.Col.R))*norm, 0, 0xff)),
+				G: uint8(math.Clamp((wc1*float64(t1.Col.G)+wc2*float64(t2.Col.G)+wc3*float64(t3.Col.G))*norm, 0, 0xff)),
+				B: uint8(math.Clamp((wc1*float64(t1.Col.B)+wc2*float64(t2.Col.B)+wc3*float64(t3.Col.B))*norm, 0, 0xff)),
+				A: uint8(math.Clamp((wc1*float64(t1.Col.A)+wc2*float64(t2.Col.A)+wc3*float64(t3.Col.A))*norm, 0, 0xff)),
 			}
 
 			// update G-buffer

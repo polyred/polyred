@@ -31,6 +31,7 @@
     * [x] backface culling
     * [x] viewfrustum culling
     * [x] occlusion culling
+    * [x] perspective correct interpolation
   + [ ] alpha test
   + [ ] ray tracing
   + anti-aliasing pass

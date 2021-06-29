@@ -119,7 +119,7 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongShininess(150),
 			material.WithBlinnPhongShadow(opt.shadowmap),
 		))
-		m.Scale(5, 5, 5)
+		m.Scale(2, 2, 2)
 		s.Add(m)
 
 		r := render.NewRenderer(

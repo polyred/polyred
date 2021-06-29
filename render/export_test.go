@@ -12,7 +12,7 @@ import (
 
 var (
 	Draw = func(r *Renderer, uniforms map[string]interface{}, tri *primitive.Triangle, modelMatrix math.Matrix, m material.Material) {
-		r.draw(uniforms, tri, modelMatrix, m)
+		r.draw(uniforms, tri, m)
 	}
 	ResetGBuf = func(r *Renderer) {
 		r.resetGBuf()

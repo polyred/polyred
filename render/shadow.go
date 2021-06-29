@@ -263,8 +263,10 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 			if x < 0 || x >= w || y < 0 || y >= h {
 				continue
 			}
+			x0 := float64(x) + 0.5
+			y0 := float64(y) + 0.5
 
-			w1, w2, w3 := math.Barycoord(math.NewVector(float64(x), float64(y), 0, 1), t1.Pos, t2.Pos, t3.Pos)
+			w1, w2, w3 := math.Barycoord(x0, y0, t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
 			if w1 < 0 || w2 < 0 || w3 < 0 {

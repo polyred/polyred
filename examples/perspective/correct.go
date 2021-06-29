@@ -17,18 +17,14 @@ import (
 func main() {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVector(2, 2, 2, 1),
+		math.NewVector(0, 3, 3, 1),
 		math.NewVector(0, 0, 0, 1),
 		math.NewVector(0, 1, 0, 0),
 		45,
 		1,
 		0.1, 10,
 	))
-	s.Add(light.NewPoint(
-		light.WithPointLightIntensity(10),
-		light.WithPointLightColor(color.RGBA{0, 128, 255, 255}),
-		light.WithPointLightPosition(math.NewVector(2, 2, 2, 1)),
-	))
+	s.Add(light.NewAmbient(light.WithAmbientIntensity(1)))
 
 	m := geometry.NewPlane(1, 1)
 	m.SetMaterial(material.NewBlinnPhong(
@@ -39,8 +35,7 @@ func main() {
 		material.WithBlinnPhongFactors(0.6, 0.5),
 		material.WithBlinnPhongShininess(150),
 	))
-	m.Scale(2, 2, 2)
-	m.Rotate(math.NewVector(0, 1, 0, 0), math.Pi/4)
+	// m.Scale(3, 3, 3)
 	s.Add(m)
 
 	r := render.NewRenderer(

@@ -74,6 +74,19 @@ func BenchmarkLerpC(b *testing.B) {
 	globalC = r
 }
 
+func TestBarycoord(t *testing.T) {
+	x, y := 5., 5.
+	v1 := math.NewVector(0, 0, 0, 1)
+	v2 := math.NewVector(20, 0, 0, 1)
+	v3 := math.NewVector(0, 20, 0, 1)
+
+	w1, w2, w3 = math.Barycoord(x, y, v1, v2, v3)
+
+	if w1 != 0.5 || w2 != 0.25 || w3 != 0.25 {
+		t.Fatalf("barycentric coordinates does not match: %f, %f, %f", w1, w2, w3)
+	}
+}
+
 var w1, w2, w3 float64
 
 func BenchmarkBarycoord(b *testing.B) {
@@ -81,27 +94,25 @@ func BenchmarkBarycoord(b *testing.B) {
 	v2 := math.NewVector(20, 0, 0, 1)
 	v3 := math.NewVector(0, 20, 0, 1)
 	b.Run("inside", func(b *testing.B) {
-		x := 10
-		y := 10
-		p := math.NewVector(float64(x), float64(y), 0, 1)
+		x := 10.0
+		y := 10.0
 		var ww1, ww2, ww3 float64
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			ww1, ww2, ww3 = math.Barycoord(p, v1, v2, v3)
+			ww1, ww2, ww3 = math.Barycoord(x, y, v1, v2, v3)
 		}
 		b.StopTimer()
 		w1, w2, w3 = ww1, ww2, ww3
 	})
 	b.Run("outside", func(b *testing.B) {
-		x := 20
-		y := 20
-		p := math.NewVector(float64(x), float64(y), 0, 1)
+		x := 20.0
+		y := 20.0
 		var ww1, ww2, ww3 float64
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			ww1, ww2, ww3 = math.Barycoord(p, v1, v2, v3)
+			ww1, ww2, ww3 = math.Barycoord(x, y, v1, v2, v3)
 		}
 		b.StopTimer()
 		w1, w2, w3 = ww1, ww2, ww3

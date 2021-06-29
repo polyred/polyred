@@ -63,22 +63,16 @@ func sutherlandHodgman(points []math.Vector, w, h float64) []math.Vector {
 	return output
 }
 
-func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float64) []*primitive.Triangle {
-	w1 := v1.Pos
-	w2 := v2.Pos
-	w3 := v3.Pos
-	p1 := w1.Vec()
-	p2 := w2.Vec()
-	p3 := w3.Vec()
-	points := []math.Vector{w1, w2, w3}
-	newPoints := sutherlandHodgman(points, w, h)
+func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float64, recipw math.Vector) []*primitive.Triangle {
+	p1 := v1.Pos
+	p2 := v2.Pos
+	p3 := v3.Pos
+	clips := sutherlandHodgman([]math.Vector{p1, p2, p3}, w, h)
 	var result []*primitive.Triangle
-	for i := 2; i < len(newPoints); i++ {
-		b1w1, b1w2, b1w3 := math.Barycoord(newPoints[0], p1, p2, p3)
-		b2w1, b2w2, b2w3 := math.Barycoord(newPoints[i-1], p1, p2, p3)
-		b3w1, b3w2, b3w3 := math.Barycoord(newPoints[i], p1, p2, p3)
-
-		// FIXME: Perspective corrected interpolation?
+	for i := 2; i < len(clips); i++ {
+		b1w1, b1w2, b1w3 := math.Barycoord(clips[0].X, clips[0].Y, p1, p2, p3)
+		b2w1, b2w2, b2w3 := math.Barycoord(clips[i-1].X, clips[i-1].Y, p1, p2, p3)
+		b3w1, b3w2, b3w3 := math.Barycoord(clips[i].X, clips[i].Y, p1, p2, p3)
 
 		t1 := primitive.Vertex{
 			Pos: math.Vector{

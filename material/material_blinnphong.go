@@ -86,10 +86,9 @@ func (m *BlinnPhongMaterial) VertexShader(v primitive.Vertex, uniforms map[strin
 	matModel := uniforms["matModel"].(math.Matrix)
 	matView := uniforms["matView"].(math.Matrix)
 	matProj := uniforms["matProj"].(math.Matrix)
-	matVP := uniforms["matVP"].(math.Matrix)
 	matNormal := uniforms["matNormal"].(math.Matrix)
 
-	pos := v.Pos.Apply(matModel).Apply(matView).Apply(matProj).Apply(matVP).Pos()
+	pos := matProj.MulM(matView).MulM(matModel).MulV(v.Pos)
 	return primitive.Vertex{
 		Pos: pos,
 		Col: v.Col,
