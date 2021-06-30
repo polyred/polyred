@@ -5,10 +5,8 @@
 package render
 
 import (
-	"fmt"
-	"image/color"
-
 	"changkun.de/x/polyred/camera"
+	"changkun.de/x/polyred/color"
 	"changkun.de/x/polyred/geometry/primitive"
 	"changkun.de/x/polyred/math"
 	"changkun.de/x/polyred/shader"
@@ -86,7 +84,6 @@ func (r *Renderer) Draw(buf *Buffer, prog shader.Program,
 		r.rasterize(buf, prog, &v1, &v2, &v3, recipw)
 		return
 	}
-	fmt.Println(v1, v2, v3)
 
 	// Clipping into smaller triangles
 	r.drawClip(buf, prog, &v1, &v2, &v3, recipw)
@@ -280,90 +277,126 @@ func (r *Renderer) rasterize(buf *Buffer, prog shader.Program,
 				continue
 			}
 
-			// Interpolating UV
-			uvX := r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bc)
-			uvY := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bc)
-
-			diff := true
-			var du, dv float64
-			if diff {
-				bcx := math.Barycoord(x0+1, y0, v1.Pos, v2.Pos, v3.Pos)
-				bcy := math.Barycoord(x0, y0+1, v1.Pos, v2.Pos, v3.Pos)
-
-				uvdU := r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bcx)
-				uvdX := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcx)
-				uvdV := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
-				uvdY := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
-
-				du = (uvdU-uvX)*(uvdU-uvX) + (uvdX-uvY)*(uvdX-uvY)
-				dv = (uvdV-uvX)*(uvdV-uvX) + (uvdY-uvY)*(uvdY-uvY)
-			}
-
-			// Interpolating normals
-
-			// Interpolating colors
-			cr := r.interpolate([3]float64{float64(v1.Col.R), float64(v2.Col.R), float64(v3.Col.R)}, recipw, bc)
-			cg := r.interpolate([3]float64{float64(v1.Col.G), float64(v2.Col.G), float64(v3.Col.G)}, recipw, bc)
-			cb := r.interpolate([3]float64{float64(v1.Col.B), float64(v2.Col.B), float64(v3.Col.B)}, recipw, bc)
-			ca := r.interpolate([3]float64{float64(v1.Col.A), float64(v2.Col.A), float64(v3.Col.A)}, recipw, bc)
-
-			col := color.RGBA{
-				R: uint8(math.Clamp(cr, 0, 0xff)),
-				G: uint8(math.Clamp(cg, 0, 0xff)),
-				B: uint8(math.Clamp(cb, 0, 0xff)),
-				A: uint8(math.Clamp(ca, 0, 0xff)),
-			}
-
-			// Interpolating custom varyings
 			frag := primitive.Fragment{
 				X:     x,
 				Y:     y,
 				Depth: z,
-				UV:    math.NewVec4(uvX, uvY, 0, 1),
-				Col:   col,
 			}
-			for name := range v1.AttrSmooth {
-				switch val1 := v1.AttrSmooth[name].(type) {
-				case float64:
-					frag.AttrSmooth[name] = r.interpolate([3]float64{
-						val1, v2.AttrSmooth[name].(float64), v3.AttrSmooth[name].(float64),
-					}, recipw, bc)
-				case math.Vec4:
-					x := r.interpolate([3]float64{
-						val1.X,
-						v2.AttrSmooth[name].(math.Vec4).X,
-						v3.AttrSmooth[name].(math.Vec4).X,
-					}, recipw, bc)
-					y := r.interpolate([3]float64{
-						val1.Y,
-						v2.AttrSmooth[name].(math.Vec4).Y,
-						v3.AttrSmooth[name].(math.Vec4).Y,
-					}, recipw, bc)
-					z := r.interpolate([3]float64{
-						val1.Z,
-						v2.AttrSmooth[name].(math.Vec4).Z,
-						v3.AttrSmooth[name].(math.Vec4).Z,
-					}, recipw, bc)
-					w := r.interpolate([3]float64{
-						val1.W,
-						v2.AttrSmooth[name].(math.Vec4).W,
-						v3.AttrSmooth[name].(math.Vec4).W,
-					}, recipw, bc)
-					frag.AttrSmooth[name] = math.NewVec4(x, y, z, w)
+
+			// Interpolating UV
+			uvX := r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bc)
+			uvY := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bc)
+			frag.UV = math.NewVec2(uvX, uvY)
+
+			bcx := math.Barycoord(x0+1, y0, v1.Pos, v2.Pos, v3.Pos)
+			bcy := math.Barycoord(x0, y0+1, v1.Pos, v2.Pos, v3.Pos)
+
+			uvdU := r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bcx)
+			uvdX := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcx)
+			uvdV := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
+			uvdY := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
+			frag.Du = math.Sqrt((uvdU-uvX)*(uvdU-uvX) + (uvdX-uvY)*(uvdX-uvY))
+			frag.Dv = math.Sqrt((uvdV-uvX)*(uvdV-uvX) + (uvdY-uvY)*(uvdY-uvY))
+
+			// Interpolate normal
+			if !v1.Nor.IsZero() && !v2.Nor.IsZero() && !v3.Nor.IsZero() {
+				nx := r.interpolate([3]float64{v1.Nor.X, v2.Nor.X, v3.Nor.X}, recipw, bc)
+				ny := r.interpolate([3]float64{v1.Nor.Y, v2.Nor.Y, v3.Nor.Y}, recipw, bc)
+				nz := r.interpolate([3]float64{v1.Nor.Z, v2.Nor.Z, v3.Nor.Z}, recipw, bc)
+				frag.Nor = math.NewVec4(nx, ny, nz, 0)
+			}
+
+			// Interpolate colors
+			if v1.Col != color.Discard || v2.Col != color.Discard || v3.Col != color.Discard {
+				cr := r.interpolate([3]float64{float64(v1.Col.R), float64(v2.Col.R), float64(v3.Col.R)}, recipw, bc)
+				cg := r.interpolate([3]float64{float64(v1.Col.G), float64(v2.Col.G), float64(v3.Col.G)}, recipw, bc)
+				cb := r.interpolate([3]float64{float64(v1.Col.B), float64(v2.Col.B), float64(v3.Col.B)}, recipw, bc)
+				ca := r.interpolate([3]float64{float64(v1.Col.A), float64(v2.Col.A), float64(v3.Col.A)}, recipw, bc)
+				frag.Col = color.RGBA{
+					R: uint8(math.Clamp(cr, 0, 0xff)),
+					G: uint8(math.Clamp(cg, 0, 0xff)),
+					B: uint8(math.Clamp(cb, 0, 0xff)),
+					A: uint8(math.Clamp(ca, 0, 0xff)),
 				}
 			}
 
-			col = prog.FragmentShader(frag)
+			// Interpolate custom varying
+			if len(v1.AttrSmooth) > 0 {
+				r.interpoVaryings(v1.AttrSmooth, v2.AttrSmooth, v3.AttrSmooth, frag.AttrSmooth, recipw, bc)
+			}
+
+			frag.Col = prog.FragmentShader(frag)
+
+			// TODO: alpha test and blending?
 
 			buf.Set(x, y, FragmentInfo{
-				Ok:    true,
-				Depth: z,
-				U:     uvX,
-				V:     uvY,
-				Du:    du,
-				Dv:    dv,
-				Col:   col,
+				Ok:       true,
+				Fragment: frag,
 			})
+		}
+	}
+}
+
+// interpoVaryings perspective correct interpolates
+func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
+	recipw, bc [3]float64) {
+	for name := range v1 {
+		switch val1 := v1[name].(type) {
+		case float64:
+			frag[name] = r.interpolate([3]float64{
+				val1, v2[name].(float64), v3[name].(float64),
+			}, recipw, bc)
+		case math.Vec2:
+			x := r.interpolate([3]float64{
+				val1.X,
+				v2[name].(math.Vec4).X,
+				v3[name].(math.Vec4).X,
+			}, recipw, bc)
+			y := r.interpolate([3]float64{
+				val1.Y,
+				v2[name].(math.Vec4).Y,
+				v3[name].(math.Vec4).Y,
+			}, recipw, bc)
+			frag[name] = math.NewVec2(x, y)
+		case math.Vec3:
+			x := r.interpolate([3]float64{
+				val1.X,
+				v2[name].(math.Vec4).X,
+				v3[name].(math.Vec4).X,
+			}, recipw, bc)
+			y := r.interpolate([3]float64{
+				val1.Y,
+				v2[name].(math.Vec4).Y,
+				v3[name].(math.Vec4).Y,
+			}, recipw, bc)
+			z := r.interpolate([3]float64{
+				val1.Z,
+				v2[name].(math.Vec4).Z,
+				v3[name].(math.Vec4).Z,
+			}, recipw, bc)
+			frag[name] = math.NewVec3(x, y, z)
+		case math.Vec4:
+			x := r.interpolate([3]float64{
+				val1.X,
+				v2[name].(math.Vec4).X,
+				v3[name].(math.Vec4).X,
+			}, recipw, bc)
+			y := r.interpolate([3]float64{
+				val1.Y,
+				v2[name].(math.Vec4).Y,
+				v3[name].(math.Vec4).Y,
+			}, recipw, bc)
+			z := r.interpolate([3]float64{
+				val1.Z,
+				v2[name].(math.Vec4).Z,
+				v3[name].(math.Vec4).Z,
+			}, recipw, bc)
+			w := r.interpolate([3]float64{
+				val1.W,
+				v2[name].(math.Vec4).W,
+				v3[name].(math.Vec4).W,
+			}, recipw, bc)
+			frag[name] = math.NewVec4(x, y, z, w)
 		}
 	}
 }
@@ -379,9 +412,8 @@ func (r *Renderer) interpolate(varying, recipw, barycoord [3]float64) float64 {
 	recipw[1] *= barycoord[1]
 	recipw[2] *= barycoord[2]
 	norm := 1.0
-	if _, ok := r.renderCamera.(*camera.Perspective); ok {
+	if r.renderPerspect {
 		norm = 1 / (recipw[0] + recipw[1] + recipw[2])
 	}
-	return norm * (recipw[0]*varying[0] +
-		recipw[1]*varying[1] + recipw[2]*varying[2])
+	return norm * (recipw[0]*varying[0] + recipw[1]*varying[1] + recipw[2]*varying[2])
 }

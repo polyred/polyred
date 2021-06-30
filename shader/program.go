@@ -27,7 +27,7 @@ type Program interface {
 
 var _ Program = &BasicShader{}
 
-// BasicShader is a shader that does the minimum
+// BasicShader is a shader that does the minimum shading.
 type BasicShader struct {
 	ModelMatrix      math.Mat4
 	ViewMatrix       math.Mat4

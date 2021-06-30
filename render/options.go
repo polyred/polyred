@@ -9,6 +9,7 @@ import (
 	"image/color"
 	"sync"
 
+	"changkun.de/x/polyred/camera"
 	"changkun.de/x/polyred/light"
 	"changkun.de/x/polyred/math"
 	"changkun.de/x/polyred/object"
@@ -21,6 +22,15 @@ func WithSize(width, height int) Option {
 	return func(r *Renderer) {
 		r.width = width
 		r.height = height
+	}
+}
+
+func WithCamera(cam camera.Interface) Option {
+	return func(r *Renderer) {
+		r.renderCamera = cam
+		if _, ok := cam.(*camera.Perspective); ok {
+			r.renderPerspect = true
+		}
 	}
 }
 

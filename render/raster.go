@@ -52,6 +52,7 @@ type Renderer struct {
 	gBuf           []gInfo
 	frameBuf       *image.RGBA
 	renderCamera   camera.Interface
+	renderPerspect bool
 	shadowBufs     []shadowInfo
 	outBuf         *image.RGBA
 }

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-// Package camera provides a camera abstraction for perspective and
-// orthographic camera and their utilities, such as viewing transformation
-// matrices.
+// Package camera provides a camera abstraction for perspective
+// and orthographic camera and their utilities, such as viewing
+// transformation matrices.
 package camera
 
 import (
@@ -87,10 +87,12 @@ func (c *Perspective) Type() object.Type {
 
 // Position returns the position of the given perspective camera.
 func (c *Perspective) Position() math.Vec4 {
-	return c.position
+	return c.position.Apply(c.ModelMatrix())
 }
 
-// ViewMatrix returns the view matrix of the given camera.
+// ViewMatrix returns the view matrix of the given camera. The view
+// matrix transforms and places the camera up to +Y and towards -Z axis
+// at origin.
 func (c *Perspective) ViewMatrix() math.Mat4 {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
@@ -108,6 +110,8 @@ func (c *Perspective) ViewMatrix() math.Mat4 {
 }
 
 // ProjMatrix returns the projection matrix of the given camera.
+// After applying projection matrix, the z values are sitting in range
+// of [-1, 1] where 1 is the near plane and -1 is the far plane.
 func (c *Perspective) ProjMatrix() math.Mat4 {
 	aspect := c.aspect
 	fov := (c.fov * math.Pi) / 180
@@ -169,10 +173,12 @@ func (c *Orthographic) Type() object.Type {
 
 // Position returns the position of the given orthographic camera.
 func (c *Orthographic) Position() math.Vec4 {
-	return c.position
+	return c.position.Apply(c.ModelMatrix())
 }
 
-// ViewMatrix returns the view matrix of the given camera.
+// ViewMatrix returns the view matrix of the given camera. The view
+// matrix transforms and places the camera up to +Y and towards -Z axis
+// at origin.
 func (c *Orthographic) ViewMatrix() math.Mat4 {
 	l := c.lookAt.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()

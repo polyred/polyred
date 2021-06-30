@@ -43,6 +43,8 @@
   + [ ] Alpha testing
   + [ ] Alpha blending
   + [ ] Skeletal animation
+  + [ ] Rendering statistics (TODO: what should we do about this?)
+  + [x] GUI window
 - texturing
   + filters
     + [x] linear

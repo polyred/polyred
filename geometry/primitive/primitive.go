@@ -25,7 +25,9 @@ type Vertex struct {
 type Fragment struct {
 	X, Y       int
 	Depth      float64
-	UV         math.Vec4
+	UV         math.Vec2
+	Du         float64
+	Dv         float64
 	Nor        math.Vec4
 	Col        color.RGBA
 	AttrSmooth map[string]interface{}

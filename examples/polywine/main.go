@@ -1,47 +1,75 @@
-// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
-// Use of this source code is governed by a GPLv3 license that
-// can be found in the LICENSE file.
+// Copyright 2021 Changkun Ou. All rights reserved.
+// Use of this source code is governed by a license
+// that can be found in the LICENSE file.
 
-package tests
+package main
 
 import (
+	"fmt"
 	"image"
 	"math/rand"
-	"testing"
-	"time"
+	"runtime"
 
 	"changkun.de/x/polyred/camera"
 	"changkun.de/x/polyred/color"
 	"changkun.de/x/polyred/geometry/primitive"
+	"changkun.de/x/polyred/gui"
 	"changkun.de/x/polyred/math"
 	"changkun.de/x/polyred/render"
 	"changkun.de/x/polyred/shader"
-	"changkun.de/x/polyred/utils"
+	"golang.design/x/mainthread"
 )
 
-func init() {
-	rand.Seed(time.Now().Unix())
-}
-
-func prepare(num int) (*render.Renderer, *render.Buffer, shader.Program, []uint64, []*primitive.Vertex) {
+func main() { mainthread.Init(fn) }
+func fn() {
+	width, height := 400, 400
+	w := gui.NewWindow(
+		gui.WithTitle(fmt.Sprintf("polyred - %dx%d", width, height)),
+		gui.WithSize(width, height),
+		gui.WithFPS(),
+	)
 	cam := camera.NewPerspective(
 		math.NewVec4(0, 3, 3, 1),
 		math.NewVec4(0, 0, 0, 1),
 		math.NewVec4(0, 1, 0, 0),
 		45,
-		1,
+		float64(width)/float64(height),
 		0.1, 10,
 	)
 	r := render.NewRenderer(
-		render.WithSize(500, 500),
+		render.WithSize(width, height),
 		render.WithCamera(cam),
+		render.WithThreadLimit(runtime.GOMAXPROCS(0)),
 	)
-	buf := render.NewBuffer(image.Rect(0, 0, 500, 500))
 	prog := &shader.BasicShader{
 		ModelMatrix:      math.Mat4I,
 		ViewMatrix:       cam.ViewMatrix(),
 		ProjectionMatrix: cam.ProjMatrix(),
 	}
+	buf := render.NewBuffer(image.Rect(0, 0, width, height))
+	idx, tri := geo(1000)
+
+	w.MainLoop(func() *image.RGBA {
+		buf.Clear()
+		cam.RotateX(math.Pi / 100)
+		cam.RotateY(math.Pi / 100)
+		prog.ModelMatrix = cam.ModelMatrix()
+
+		// 1. Render Primitives
+		r.PrimitivePass(buf, prog, idx, tri)
+
+		// 2. Render Screen-space Effects
+		r.ScreenPass(buf.Image(), func(frag primitive.Fragment) color.RGBA {
+			if frag.Col == color.Discard {
+				return color.Black
+			}
+			return frag.Col
+		})
+		return buf.Image()
+	})
+}
+
+func geo(num int) ([]uint64, []*primitive.Vertex) {
 	idx := make([]uint64, num*3)
 	tri := make([]*primitive.Vertex, num*3)
 	for i := uint64(0); i < uint64(num*3); i += 3 {
@@ -67,39 +95,5 @@ func prepare(num int) (*render.Renderer, *render.Buffer, shader.Program, []uint6
 			Col: color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), 255},
 		}
 	}
-
-	return r, buf, prog, idx, tri
-}
-
-func TestShader(t *testing.T) {
-	r, buf, prog, idx, tri := prepare(100)
-
-	// 1. Render Primitives
-	r.PrimitivePass(buf, prog, idx, tri)
-
-	// 2. Render Screen-space Effects
-	r.ScreenPass(buf.Image(), func(frag primitive.Fragment) color.RGBA {
-		if frag.Col == color.Discard {
-			return color.White
-		}
-		return frag.Col
-	})
-
-	utils.Save(buf.Image(), "./shader.png")
-}
-
-func BenchmarkShaderPrograms(b *testing.B) {
-	r, buf, prog, idx, tri := prepare(1000)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		r.PrimitivePass(buf, prog, idx, tri)
-		r.ScreenPass(buf.Image(), func(frag primitive.Fragment) color.RGBA {
-			if frag.Col == color.Discard {
-				return color.White
-			}
-			return frag.Col
-		})
-	}
+	return idx, tri
 }

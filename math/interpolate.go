@@ -10,8 +10,12 @@ import (
 
 // Lerp computes a linear interpolation between two given numbers
 // regarding the given t parameter.
-func Lerp(from float64, to float64, t float64) float64 {
+func Lerp(from, to, t float64) float64 {
 	return from + t*(to-from)
+}
+
+func LerpInt(from, to int, t float64) int {
+	return int(float64(from) + t*float64(to-from))
 }
 
 // LerpV computes a linear interpolation between two given vectors

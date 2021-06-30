@@ -9,22 +9,13 @@ import (
 	"image/color"
 	"sync"
 
-	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/geometry/primitive"
 )
 
 // FragmentInfo is a collection regarding the relevant geometry information of a fragment.
 type FragmentInfo struct {
-	Ok     bool                   // true if ok for access or false otherwise
-	X, Y   int                    // pixel coordinates
-	Depth  float64                // Depth value
-	U      float64                // U coordinate
-	V      float64                // V coordinate
-	Du     float64                // Derivative at U direction
-	Dv     float64                // Derivative at V direction
-	N      math.Vec4              // Normal
-	Fn     math.Vec4              // Face normal
-	Col    color.RGBA             // Color
-	Custom map[string]interface{} // Custom geometry information
+	Ok bool // true if ok for access or false otherwise
+	primitive.Fragment
 }
 
 // Buffer is a rendering buffer that supports concurrent-safe
@@ -40,13 +31,26 @@ type Buffer struct {
 }
 
 func NewBuffer(r image.Rectangle) *Buffer {
-	return &Buffer{
+	buf := &Buffer{
 		lock:      make([]sync.Mutex, r.Dx()*r.Dy()),
 		depth:     image.NewRGBA(r),
 		color:     image.NewRGBA(r),
 		fragments: make([]FragmentInfo, r.Dx()*r.Dy()),
 		stride:    r.Dx(),
 		rect:      r,
+	}
+	return buf
+}
+
+func (b *Buffer) Clear() {
+	for i := range b.depth.Pix {
+		b.depth.Pix[i] = 0
+	}
+	for i := range b.color.Pix {
+		b.color.Pix[i] = 0
+	}
+	for i := range b.fragments {
+		b.fragments[i] = FragmentInfo{}
 	}
 }
 
