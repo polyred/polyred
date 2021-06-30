@@ -32,7 +32,7 @@ func TestScene(t *testing.T) {
 	g1.Scale(2, 2, 2)
 	g1.Translate(1, 2, 3)
 
-	s.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+	s.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		fmt.Println(o, modelMatrix)
 		return true
 	})

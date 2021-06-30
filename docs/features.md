@@ -23,6 +23,7 @@
 - rendering facilities:
   + [x] scene graph
   + [ ] primitive pass
+  + [ ] shader programming
   + [x] deferred shading pass
   + [x] abstract concurrent screen pass
   + [x] depth test and z-buffer pass
@@ -37,6 +38,11 @@
   + anti-aliasing pass
     * [x] MSAA
   + [ ] denoising
+  + [ ] Tangent space normal mapping
+  + [ ] Physically-based rendering (PBR)
+  + [ ] Alpha testing
+  + [ ] Alpha blending
+  + [ ] Skeletal animation
 - texturing
   + filters
     + [x] linear

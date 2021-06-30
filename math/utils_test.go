@@ -18,7 +18,7 @@ func BenchmarkApproxEq(b *testing.B) {
 
 	var bb bool
 	for i := 0; i < b.N; i++ {
-		bb = math.ApproxEq(v1, v2, math.DefaultEpsilon)
+		bb = math.ApproxEq(v1, v2, math.Epsilon)
 	}
 	_ = bb
 }
@@ -34,9 +34,9 @@ func BenchmarkClamp(b *testing.B) {
 }
 
 func BenchmarkClampV(b *testing.B) {
-	v := math.Vector{128, 128, 128, 255}
+	v := math.Vec4{128, 128, 128, 255}
 
-	var bb math.Vector
+	var bb math.Vec4
 	for i := 0; i < b.N; i++ {
 		bb = math.ClampV(v, 0, 255)
 	}
@@ -82,7 +82,7 @@ func BenchmarkMax(b *testing.B) {
 func BenchmarkViewportMatrix(b *testing.B) {
 	w, h := 1920.0, 1080.0
 
-	var m math.Matrix
+	var m math.Mat4
 	for i := 0; i < b.N; i++ {
 		m = math.ViewportMatrix(w, h)
 	}

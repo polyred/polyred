@@ -23,10 +23,10 @@ func NewBezierCurve(cp ...*primitive.Vertex) *BezierCurve {
 	return bc
 }
 
-func (bc *BezierCurve) At(t float64) math.Vector {
+func (bc *BezierCurve) At(t float64) math.Vec4 {
 	n := len(bc.controlPoints)
 
-	tc := make([]math.Vector, n)
+	tc := make([]math.Vec4, n)
 	for i := range bc.controlPoints {
 		tc[i] = bc.controlPoints[i].Pos
 	}

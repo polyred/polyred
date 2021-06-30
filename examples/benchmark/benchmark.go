@@ -61,7 +61,7 @@ func main() {
 	}
 
 	for _, opt := range opts {
-		for i := 0; i < 5; i++ {
+		for i := 0; i < 1; i++ {
 			bench(opt)
 		}
 	}
@@ -71,9 +71,9 @@ func bench(opt *benchOpts) {
 	result := testing.Benchmark(func(b *testing.B) {
 		s := scene.NewScene()
 		s.SetCamera(camera.NewPerspective(
-			math.NewVector(0, 0.6, 0.9, 1),
-			math.NewVector(0, 0, 0, 1),
-			math.NewVector(0, 1, 0, 0),
+			math.NewVec4(0, 0.6, 0.9, 1),
+			math.NewVec4(0, 0, 0, 1),
+			math.NewVec4(0, 1, 0, 0),
 			45,
 			float64(opt.width)/float64(opt.height),
 			0.1,
@@ -83,10 +83,11 @@ func bench(opt *benchOpts) {
 		s.Add(light.NewPoint(
 			light.WithPointLightIntensity(7),
 			light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
-			light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
+			light.WithPointLightPosition(math.NewVec4(4, 4, 2, 1)),
 			light.WithPointLightShadowMap(opt.shadowmap),
 		), light.NewAmbient(
 			light.WithAmbientIntensity(0.5),
+			light.WithAmbientColor(color.RGBA{255, 255, 255, 255}),
 		))
 
 		m := io.MustLoadMesh("../../testdata/bunny.obj")
@@ -102,7 +103,7 @@ func bench(opt *benchOpts) {
 			material.WithBlinnPhongFactors(0.6, 0.5),
 			material.WithBlinnPhongShininess(150),
 			material.WithBlinnPhongShadow(opt.shadowmap),
-			// material.WithBlinnPhongAmbientOcclusion(true),
+			material.WithBlinnPhongAmbientOcclusion(true),
 		))
 		m.Scale(2, 2, 2)
 		s.Add(m)
@@ -127,7 +128,7 @@ func bench(opt *benchOpts) {
 			render.WithMSAA(opt.msaa),
 			render.WithScene(s),
 			render.WithShadowMap(opt.shadowmap),
-			render.WithDebug(false),
+			render.WithDebug(true),
 			render.WithGammaCorrection(opt.gammaCorrection),
 		)
 

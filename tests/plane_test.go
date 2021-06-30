@@ -20,9 +20,9 @@ import (
 func TestPlane(t *testing.T) {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVector(2, 2, 2, 1),
-		math.NewVector(0, 0, 0, 1),
-		math.NewVector(0, 1, 0, 0),
+		math.NewVec4(2, 2, 2, 1),
+		math.NewVec4(0, 0, 0, 1),
+		math.NewVec4(0, 1, 0, 0),
 		45,
 		1,
 		0.1, 10,
@@ -30,7 +30,7 @@ func TestPlane(t *testing.T) {
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(1),
 		light.WithPointLightColor(color.RGBA{0, 128, 255, 255}),
-		light.WithPointLightPosition(math.NewVector(2, 2, 2, 1)),
+		light.WithPointLightPosition(math.NewVec4(2, 2, 2, 1)),
 	))
 
 	m := geometry.NewPlane(1, 1)

@@ -15,7 +15,7 @@ var _ Face = &Polygon{}
 // Polygon is a polygon that contains multiple vertices.
 type Polygon struct {
 	vs     []Vertex
-	normal math.Vector
+	normal math.Vec4
 	aabb   *AABB
 }
 
@@ -48,16 +48,16 @@ func NewPolygon(vs ...*Vertex) (*Polygon, error) {
 		zmin = math.Min(zmin, vs[i].Pos.Z)
 		p.vs[i] = *vs[i]
 	}
-	min := math.NewVector(xmin, ymin, zmin, 1)
-	max := math.NewVector(xmax, ymax, zmax, 1)
+	min := math.NewVec4(xmin, ymin, zmin, 1)
+	max := math.NewVec4(xmax, ymax, zmax, 1)
 	p.aabb = &AABB{min, max}
 	return p, nil
 }
 
 func (p *Polygon) AABB() AABB {
 	if p.aabb == nil {
-		min := math.NewVector(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
-		max := math.NewVector(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
+		min := math.NewVec4(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
+		max := math.NewVec4(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
 
 		for i := 0; i < len(p.vs); i++ {
 			min.X = math.Min(min.X, p.vs[i].Pos.X)
@@ -72,7 +72,7 @@ func (p *Polygon) AABB() AABB {
 	return *p.aabb
 }
 
-func (p *Polygon) Normal() math.Vector {
+func (p *Polygon) Normal() math.Vec4 {
 	return p.normal
 }
 

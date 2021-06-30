@@ -13,7 +13,7 @@ import (
 
 var (
 	global  float64
-	globalV math.Vector
+	globalV math.Vec4
 	globalC color.RGBA
 )
 
@@ -34,9 +34,9 @@ func BenchmarkLerp(b *testing.B) {
 
 func TestLerpV(t *testing.T) {
 	tt := 0.5
-	v1 := math.Vector{0, 0, 0, 1}
-	v2 := math.Vector{1, 1, 1, 1}
-	want := math.Vector{0.5, 0.5, 0.5, 1}
+	v1 := math.Vec4{0, 0, 0, 1}
+	v2 := math.Vec4{1, 1, 1, 1}
+	want := math.Vec4{0.5, 0.5, 0.5, 1}
 	if vv := math.LerpV(v1, v2, tt); !vv.Eq(want) {
 		t.Fatalf("LerpV want %v, got %v", want, vv)
 	}
@@ -44,9 +44,9 @@ func TestLerpV(t *testing.T) {
 
 func BenchmarkLerpV(b *testing.B) {
 	t := 0.5
-	v1 := math.Vector{0, 0, 0, 1}
-	v2 := math.Vector{1, 1, 1, 1}
-	var r math.Vector
+	v1 := math.Vec4{0, 0, 0, 1}
+	v2 := math.Vec4{1, 1, 1, 1}
+	var r math.Vec4
 	for i := 0; i < b.N; i++ {
 		r = math.LerpV(v1, v2, t)
 	}
@@ -76,45 +76,39 @@ func BenchmarkLerpC(b *testing.B) {
 
 func TestBarycoord(t *testing.T) {
 	x, y := 5., 5.
-	v1 := math.NewVector(0, 0, 0, 1)
-	v2 := math.NewVector(20, 0, 0, 1)
-	v3 := math.NewVector(0, 20, 0, 1)
+	v1 := math.NewVec4(0, 0, 0, 1)
+	v2 := math.NewVec4(20, 0, 0, 1)
+	v3 := math.NewVec4(0, 20, 0, 1)
 
-	w1, w2, w3 = math.Barycoord(x, y, v1, v2, v3)
+	barycoords := math.Barycoord(x, y, v1, v2, v3)
 
-	if w1 != 0.5 || w2 != 0.25 || w3 != 0.25 {
-		t.Fatalf("barycentric coordinates does not match: %f, %f, %f", w1, w2, w3)
+	if barycoords[0] != 0.5 || barycoords[1] != 0.25 || barycoords[2] != 0.25 {
+		t.Fatalf("barycentric coordinates does not match: %v", barycoords)
 	}
 }
 
-var w1, w2, w3 float64
-
 func BenchmarkBarycoord(b *testing.B) {
-	v1 := math.NewVector(0, 0, 0, 1)
-	v2 := math.NewVector(20, 0, 0, 1)
-	v3 := math.NewVector(0, 20, 0, 1)
+	v1 := math.NewVec4(0, 0, 0, 1)
+	v2 := math.NewVec4(20, 0, 0, 1)
+	v3 := math.NewVec4(0, 20, 0, 1)
 	b.Run("inside", func(b *testing.B) {
 		x := 10.0
 		y := 10.0
-		var ww1, ww2, ww3 float64
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			ww1, ww2, ww3 = math.Barycoord(x, y, v1, v2, v3)
+			_ = math.Barycoord(x, y, v1, v2, v3)
 		}
 		b.StopTimer()
-		w1, w2, w3 = ww1, ww2, ww3
 	})
 	b.Run("outside", func(b *testing.B) {
 		x := 20.0
 		y := 20.0
-		var ww1, ww2, ww3 float64
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			ww1, ww2, ww3 = math.Barycoord(x, y, v1, v2, v3)
+			_ = math.Barycoord(x, y, v1, v2, v3)
 		}
 		b.StopTimer()
-		w1, w2, w3 = ww1, ww2, ww3
 	})
 }

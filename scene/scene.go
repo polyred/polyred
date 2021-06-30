@@ -43,22 +43,22 @@ func (s *Scene) GetCamera() camera.Interface {
 	return s.camera
 }
 
-func (s *Scene) IterObjects(iter func(o object.Object, modelMatrix math.Matrix) bool) {
+func (s *Scene) IterObjects(iter func(o object.Object, modelMatrix math.Mat4) bool) {
 
 	for i := range s.root.children {
-		s.root.children[i].IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		s.root.children[i].IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 			iter(o, s.root.ModelMatrix().MulM(modelMatrix))
 			return true
 		})
 	}
 }
 
-func (s *Scene) Center() math.Vector {
+func (s *Scene) Center() math.Vec4 {
 	aabb := &primitive.AABB{
-		Min: math.NewVector(0, 0, 0, 1),
-		Max: math.NewVector(0, 0, 0, 1),
+		Min: math.NewVec4(0, 0, 0, 1),
+		Max: math.NewVec4(0, 0, 0, 1),
 	}
-	s.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+	s.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
@@ -111,10 +111,10 @@ func (g *Group) Add(geo ...object.Object) *Group {
 	return g
 }
 
-func (g *Group) IterObjects(iter func(o object.Object, modelMatrix math.Matrix) bool) {
+func (g *Group) IterObjects(iter func(o object.Object, modelMatrix math.Mat4) bool) {
 	iter(g.object, g.ModelMatrix().MulM(g.object.ModelMatrix()))
 	for i := range g.children {
-		g.children[i].IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		g.children[i].IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 			return iter(o, g.ModelMatrix().MulM(o.ModelMatrix()))
 		})
 	}

@@ -146,7 +146,7 @@ func (t *Texture) Query(lod, u, v float64) color.RGBA {
 	}
 
 	p := lod - float64(h)
-	if math.ApproxEq(p, 0, math.DefaultEpsilon) {
+	if math.ApproxEq(p, 0, math.Epsilon) {
 		return t.queryBilinear(h, u, v)
 	}
 	return t.queryTrilinear(h, l, p, u, v)

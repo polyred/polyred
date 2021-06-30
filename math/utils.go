@@ -25,8 +25,8 @@ var (
 	Modf       = math.Modf
 )
 
-// DefaultEpsilon is a default epsilon value for computation.
-const DefaultEpsilon = 1e-7
+// Epsilon is a default epsilon value for computation.
+const Epsilon = 1e-7
 
 // ApproxEq approximately compares v1 and v2.
 func ApproxEq(v1, v2, epsilon float64) bool {
@@ -39,8 +39,8 @@ func Clamp(n, min, max float64) float64 {
 }
 
 // ClampV clamps a vector in [min, max].
-func ClampV(v Vector, min, max float64) Vector {
-	return Vector{
+func ClampV(v Vec4, min, max float64) Vec4 {
+	return Vec4{
 		Clamp(v.X, min, max),
 		Clamp(v.Y, min, max),
 		Clamp(v.Z, min, max),
@@ -67,8 +67,8 @@ func Max(xs ...float64) float64 {
 }
 
 // ViewportMatrix returns the viewport matrix.
-func ViewportMatrix(w, h float64) Matrix {
-	return Matrix{
+func ViewportMatrix(w, h float64) Mat4 {
+	return Mat4{
 		w / 2, 0, 0, w / 2,
 		0, h / 2, 0, h / 2,
 		0, 0, 1, 0,

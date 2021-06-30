@@ -17,9 +17,9 @@ import (
 func NewShadowScene(w, h int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVector(0, 0.6, 0.9, 1),
-		math.NewVector(0, 0, 0, 1),
-		math.NewVector(0, 1, 0, 0),
+		math.NewVec4(0, 0.6, 0.9, 1),
+		math.NewVec4(0, 0, 0, 1),
+		math.NewVec4(0, 1, 0, 0),
 		45,
 		float64(w)/float64(h),
 		0.1,
@@ -29,12 +29,12 @@ func NewShadowScene(w, h int) interface{} {
 	s.Add(
 		light.NewPoint(
 			light.WithPointLightIntensity(3),
-			light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
+			light.WithPointLightPosition(math.NewVec4(4, 4, 2, 1)),
 			light.WithPointLightShadowMap(true),
 		),
 		light.NewPoint(
 			light.WithPointLightIntensity(3),
-			light.WithPointLightPosition(math.NewVector(-6, 4, 2, 1)),
+			light.WithPointLightPosition(math.NewVec4(-6, 4, 2, 1)),
 			light.WithPointLightShadowMap(true),
 		),
 		light.NewAmbient(

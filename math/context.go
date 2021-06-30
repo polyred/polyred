@@ -11,20 +11,20 @@ package math
 // for each of the rendering frame unless the mesh intentionally calls
 // ResetContext() method.
 type TransformContext struct {
-	context Matrix
+	context Mat4
 }
 
-func (ctx *TransformContext) ModelMatrix() Matrix {
+func (ctx *TransformContext) ModelMatrix() Mat4 {
 	return ctx.context
 }
 
 func (ctx *TransformContext) ResetContext() {
-	ctx.context = MatI
+	ctx.context = Mat4I
 }
 
 // Scale sets the scale matrix.
 func (ctx *TransformContext) Scale(sx, sy, sz float64) {
-	ctx.context = NewMatrix(
+	ctx.context = NewMat4(
 		sx, 0, 0, 0,
 		0, sy, 0, 0,
 		0, 0, sz, 0,
@@ -34,7 +34,7 @@ func (ctx *TransformContext) Scale(sx, sy, sz float64) {
 
 // SetTranslate sets the translate matrix.
 func (ctx *TransformContext) Translate(tx, ty, tz float64) {
-	ctx.context = NewMatrix(
+	ctx.context = NewMat4(
 		1, 0, 0, tx,
 		0, 1, 0, ty,
 		0, 0, 1, tz,
@@ -42,7 +42,7 @@ func (ctx *TransformContext) Translate(tx, ty, tz float64) {
 	).MulM(ctx.context)
 }
 
-func (ctx *TransformContext) Rotate(dir Vector, angle float64) {
+func (ctx *TransformContext) Rotate(dir Vec4, angle float64) {
 	u := dir.Unit()
 	cosa := Cos(angle / 2)
 	sina := Sin(angle / 2)
@@ -51,7 +51,7 @@ func (ctx *TransformContext) Rotate(dir Vector, angle float64) {
 }
 
 func (ctx *TransformContext) RotateX(angle float64) {
-	u := NewVector(1, 0, 0, 0)
+	u := NewVec4(1, 0, 0, 0)
 	cosa := Cos(angle / 2)
 	sina := Sin(angle / 2)
 	q := NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
@@ -59,7 +59,7 @@ func (ctx *TransformContext) RotateX(angle float64) {
 }
 
 func (ctx *TransformContext) RotateY(angle float64) {
-	u := NewVector(0, 1, 0, 0)
+	u := NewVec4(0, 1, 0, 0)
 	cosa := Cos(angle / 2)
 	sina := Sin(angle / 2)
 	q := NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
@@ -67,7 +67,7 @@ func (ctx *TransformContext) RotateY(angle float64) {
 }
 
 func (ctx *TransformContext) RotateZ(angle float64) {
-	u := NewVector(0, 0, 1, 0)
+	u := NewVec4(0, 0, 1, 0)
 	cosa := Cos(angle / 2)
 	sina := Sin(angle / 2)
 	q := NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)

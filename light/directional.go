@@ -21,8 +21,8 @@ var (
 type Directional struct {
 	math.TransformContext
 
-	pos          math.Vector
-	dir          math.Vector
+	pos          math.Vec4
+	dir          math.Vec4
 	intensity    float64
 	color        color.RGBA
 	useShadowMap bool
@@ -30,13 +30,13 @@ type Directional struct {
 
 type DirectionalOption func(d *Directional)
 
-func WithDirectionalLightPosition(pos math.Vector) DirectionalOption {
+func WithDirectionalLightPosition(pos math.Vec4) DirectionalOption {
 	return func(d *Directional) {
 		d.pos = pos
 	}
 }
 
-func WithDirectionalLightDirection(dir math.Vector) DirectionalOption {
+func WithDirectionalLightDirection(dir math.Vec4) DirectionalOption {
 	return func(d *Directional) {
 		d.dir = dir
 	}
@@ -65,8 +65,8 @@ func NewDirectional(opts ...DirectionalOption) Source {
 	d := &Directional{
 		intensity:    1,
 		color:        color.RGBA{255, 255, 255, 255},
-		pos:          math.Vector{},
-		dir:          math.NewVector(0, -1, 0, 0),
+		pos:          math.Vec4{},
+		dir:          math.NewVec4(0, -1, 0, 0),
 		useShadowMap: false,
 	}
 	for _, opt := range opts {
@@ -85,11 +85,11 @@ func (d *Directional) Intensity() float64 {
 	return d.intensity
 }
 
-func (d *Directional) Position() math.Vector {
+func (d *Directional) Position() math.Vec4 {
 	return d.pos
 }
 
-func (d *Directional) Dir() math.Vector {
+func (d *Directional) Dir() math.Vec4 {
 	return d.dir
 }
 

@@ -83,7 +83,7 @@ func (m *TriangleSoup) AABB() primitive.AABB {
 	return primitive.AABB{Min: min, Max: max}
 }
 
-func (m *TriangleSoup) Center() math.Vector {
+func (m *TriangleSoup) Center() math.Vec4 {
 	aabb := m.AABB()
 	return aabb.Min.Add(aabb.Max).Pos()
 }

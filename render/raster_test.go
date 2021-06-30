@@ -45,9 +45,9 @@ func init() {
 func newscene(w, h int) *scene.Scene {
 	s := scene.NewScene()
 	c := camera.NewPerspective(
-		math.NewVector(0, 1.5, 1, 1),
-		math.NewVector(0, 0, -0.5, 1),
-		math.NewVector(0, 1, 0, 0),
+		math.NewVec4(0, 1.5, 1, 1),
+		math.NewVec4(0, 0, -0.5, 1),
+		math.NewVec4(0, 1, 0, 0),
 		45,
 		float64(w)/float64(h),
 		0.1,
@@ -58,7 +58,7 @@ func newscene(w, h int) *scene.Scene {
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(5),
 		light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
-		light.WithPointLightPosition(math.NewVector(-2, 2.5, 6, 1)),
+		light.WithPointLightPosition(math.NewVec4(-2, 2.5, 6, 1)),
 	), light.NewAmbient(
 		light.WithAmbientIntensity(0.5),
 	))
@@ -74,7 +74,7 @@ func newscene(w, h int) *scene.Scene {
 		material.WithBlinnPhongShininess(100),
 	)
 	m.SetMaterial(mat)
-	m.Rotate(math.NewVector(0, 1, 0, 0), -math.Pi/6)
+	m.Rotate(math.NewVec4(0, 1, 0, 0), -math.Pi/6)
 	m.Scale(4, 4, 4)
 	m.Translate(0.1, 0, -0.2)
 	s.Add(m)
@@ -198,9 +198,9 @@ func BenchmarkDraw(b *testing.B) {
 
 		var (
 			mesh     geometry.Mesh
-			modelMat math.Matrix
+			modelMat math.Mat4
 		)
-		s.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		s.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 			if o.Type() == object.TypeMesh {
 				mesh = o.(geometry.Mesh)
 				modelMat = modelMatrix

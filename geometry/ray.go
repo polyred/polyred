@@ -7,5 +7,5 @@ package geometry
 import "changkun.de/x/polyred/math"
 
 type Ray struct {
-	Ori, Dir math.Vector
+	Ori, Dir math.Vec4
 }

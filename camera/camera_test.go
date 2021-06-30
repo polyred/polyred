@@ -12,15 +12,15 @@ import (
 )
 
 func TestViewMatrix(t *testing.T) {
-	pos := math.NewVector(-550, 194, 734, 1)
-	lookAt := math.NewVector(-1000, 0, 0, 1)
-	up := math.NewVector(0, 1, 1, 0)
+	pos := math.NewVec4(-550, 194, 734, 1)
+	lookAt := math.NewVec4(-1000, 0, 0, 1)
+	up := math.NewVec4(0, 1, 1, 0)
 	fov := 45.0
 	aspect := 1.6
 	near := -100.0
 	far := -600.0
 
-	want := math.NewMatrix(
+	want := math.NewMat4(
 		0.6469966392206304, 0.5391638660171921, -0.5391638660171921, 646.9966392206305,
 		-0.5669309063966456, 0.8130082437851895, 0.13269115610921495, -566.9309063966456,
 		0.5098869445372056, 0.21981792720048418, 0.8316822606451308, -372.6616376949569,
@@ -47,15 +47,15 @@ func TestViewMatrix(t *testing.T) {
 }
 
 func TestProjMatrix(t *testing.T) {
-	pos := math.NewVector(-550, 194, 734, 1)
-	lookAt := math.NewVector(-1000, 0, 0, 1)
-	up := math.NewVector(0, 1, 1, 0)
+	pos := math.NewVec4(-550, 194, 734, 1)
+	lookAt := math.NewVec4(-1000, 0, 0, 1)
+	up := math.NewVec4(0, 1, 1, 0)
 	fov := 45.0
 	aspect := 1.6
 	near := -100.0
 	far := -600.0
 
-	want := math.NewMatrix(
+	want := math.NewMat4(
 		-1.5088834764831844, 0, 0, 0,
 		0, -2.414213562373095, 0, 0,
 		0, 0, -1.4, 240,
@@ -74,7 +74,7 @@ func TestProjMatrix(t *testing.T) {
 	bottom := -0.5
 	near = 0.0
 	far = -3.0
-	want = math.NewMatrix(
+	want = math.NewMat4(
 		2, 0, 0, 0,
 		0, 1.3333333, 0, -0.3333333,
 		0, 0, 0.6666666, 1,
@@ -90,9 +90,9 @@ func TestProjMatrix(t *testing.T) {
 func BenchmarkCamera(b *testing.B) {
 	w, h := 1920, 1080
 	c1 := camera.NewPerspective(
-		math.NewVector(-0.5, 0.5, 0.5, 1),
-		math.NewVector(0, 0, -0.5, 1),
-		math.NewVector(0, 1, 0, 0),
+		math.NewVec4(-0.5, 0.5, 0.5, 1),
+		math.NewVec4(0, 0, -0.5, 1),
+		math.NewVec4(0, 1, 0, 0),
 		45,
 		float64(w)/float64(h),
 		-0.1,
@@ -101,7 +101,7 @@ func BenchmarkCamera(b *testing.B) {
 
 	b.Run("Perspective_ViewMatrix", func(b *testing.B) {
 		b.ReportAllocs()
-		var m math.Matrix
+		var m math.Mat4
 		for i := 0; i < b.N; i++ {
 			m = c1.ViewMatrix()
 		}
@@ -109,7 +109,7 @@ func BenchmarkCamera(b *testing.B) {
 	})
 	b.Run("Perspective_ProjMatrix", func(b *testing.B) {
 		b.ReportAllocs()
-		var m math.Matrix
+		var m math.Mat4
 		for i := 0; i < b.N; i++ {
 			m = c1.ProjMatrix()
 		}
@@ -117,15 +117,15 @@ func BenchmarkCamera(b *testing.B) {
 	})
 
 	c2 := camera.NewOrthographic(
-		math.NewVector(-0.5, 0.5, 0.5, 1),
-		math.NewVector(0, 0, -0.5, 1),
-		math.NewVector(0, 1, 0, 0),
+		math.NewVec4(-0.5, 0.5, 0.5, 1),
+		math.NewVec4(0, 0, -0.5, 1),
+		math.NewVec4(0, 1, 0, 0),
 		-10, 10, -10, 10, 10, -10,
 	)
 
 	b.Run("Orthographic_ViewMatrix", func(b *testing.B) {
 		b.ReportAllocs()
-		var m math.Matrix
+		var m math.Mat4
 		for i := 0; i < b.N; i++ {
 			m = c2.ViewMatrix()
 		}
@@ -133,7 +133,7 @@ func BenchmarkCamera(b *testing.B) {
 	})
 	b.Run("Orthographic_ProjMatrix", func(b *testing.B) {
 		b.ReportAllocs()
-		var m math.Matrix
+		var m math.Mat4
 		for i := 0; i < b.N; i++ {
 			m = c2.ProjMatrix()
 		}

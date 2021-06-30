@@ -71,8 +71,8 @@ func (bm *BufferedMesh) Type() object.Type {
 
 func (bm *BufferedMesh) AABB() primitive.AABB {
 	if bm.aabb == nil {
-		min := math.NewVector(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
-		max := math.NewVector(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
+		min := math.NewVec4(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
+		max := math.NewVec4(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
 		attr := bm.GetAttribute(AttributePos)
 		for _, vIndex := range bm.vbo {
 			x := attr.Values[attr.Stride*int(vIndex)+0]
@@ -104,7 +104,7 @@ func (bm *BufferedMesh) Normalize() {
 		x := attr.Values[attr.Stride*int(vIndex)+0]
 		y := attr.Values[attr.Stride*int(vIndex)+1]
 		z := attr.Values[attr.Stride*int(vIndex)+2]
-		v := math.NewVector(x, y, z, 1).Apply(bm.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+		v := math.NewVec4(x, y, z, 1).Apply(bm.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
 		attr.Values[attr.Stride*int(vIndex)+0] = v.X
 		attr.Values[attr.Stride*int(vIndex)+1] = v.Y
 		attr.Values[attr.Stride*int(vIndex)+2] = v.Z
@@ -158,9 +158,9 @@ func (bm *BufferedMesh) Faces(iter func(primitive.Face, material.Material) bool)
 			v = attrUV.Values[bm.vbo[i]+1]
 		}
 		v1 := primitive.Vertex{
-			Pos: math.NewVector(px, py, pz, 1),
-			Nor: math.NewVector(nx, ny, nz, 0),
-			UV:  math.NewVector(u, v, 0, 1),
+			Pos: math.NewVec4(px, py, pz, 1),
+			Nor: math.NewVec4(nx, ny, nz, 0),
+			UV:  math.NewVec4(u, v, 0, 1),
 			Col: color.RGBA{cr, cb, cg, ca},
 		}
 
@@ -183,9 +183,9 @@ func (bm *BufferedMesh) Faces(iter func(primitive.Face, material.Material) bool)
 			v = attrUV.Values[bm.vbo[i+1]+1]
 		}
 		v2 := primitive.Vertex{
-			Pos: math.NewVector(px, py, pz, 1),
-			Nor: math.NewVector(nx, ny, nz, 0),
-			UV:  math.NewVector(u, v, 0, 1),
+			Pos: math.NewVec4(px, py, pz, 1),
+			Nor: math.NewVec4(nx, ny, nz, 0),
+			UV:  math.NewVec4(u, v, 0, 1),
 			Col: color.RGBA{cr, cb, cg, ca},
 		}
 
@@ -208,9 +208,9 @@ func (bm *BufferedMesh) Faces(iter func(primitive.Face, material.Material) bool)
 			v = attrUV.Values[bm.vbo[i+2]+1]
 		}
 		v3 := primitive.Vertex{
-			Pos: math.NewVector(px, py, pz, 1),
-			Nor: math.NewVector(nx, ny, nz, 0),
-			UV:  math.NewVector(u, v, 0, 1),
+			Pos: math.NewVec4(px, py, pz, 1),
+			Nor: math.NewVec4(nx, ny, nz, 0),
+			UV:  math.NewVec4(u, v, 0, 1),
 			Col: color.RGBA{cr, cb, cg, ca},
 		}
 

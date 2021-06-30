@@ -47,7 +47,7 @@ type Renderer struct {
 	lightEnv       []light.Environment
 	concurrentSize int32
 	gomaxprocs     int
-	workerPool     *utils.WorkerPool
+	sched          *utils.WorkerPool
 	lockBuf        []sync.Mutex
 	gBuf           []gInfo
 	frameBuf       *image.RGBA
@@ -83,10 +83,10 @@ func NewRenderer(opts ...Option) *Renderer {
 	r.lockBuf = make([]sync.Mutex, w*h)
 	r.gBuf = make([]gInfo, w*h)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
-	r.workerPool = utils.NewWorkerPool(uint64(r.gomaxprocs))
+	r.sched = utils.NewWorkerPool(uint64(r.gomaxprocs))
 
 	if r.scene != nil {
-		r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 			if o.Type() != object.TypeLight {
 				return true
 			}
@@ -161,7 +161,7 @@ type gInfo struct {
 	z          float64
 	u, v       float64
 	du, dv     float64
-	n, fN, pos math.Vector
+	n, fN, pos math.Vec4
 	col        color.RGBA
 	mat        material.Material
 }
@@ -179,17 +179,17 @@ func (r *Renderer) passForward() {
 	matProj := r.renderCamera.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(w), float64(h))
 
-	r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
 
 		mesh := o.(geometry.Mesh)
-		r.workerPool.Add(mesh.NumTriangles())
+		r.sched.Add(mesh.NumTriangles())
 		return true
 	})
 
-	r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
@@ -215,7 +215,7 @@ func (r *Renderer) passForward() {
 
 		mesh.Faces(func(f primitive.Face, m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
-				r.workerPool.Execute(func() {
+				r.sched.Execute(func() {
 					if t.IsValid() {
 						r.draw(uniforms, t, m)
 					}
@@ -226,7 +226,7 @@ func (r *Renderer) passForward() {
 		})
 		return true
 	})
-	r.workerPool.Wait()
+	r.sched.Wait()
 }
 
 func (r *Renderer) passDeferred() {
@@ -333,12 +333,12 @@ func (r *Renderer) draw(
 		t3 = defaultVertexShader(tri.V3, uniforms)
 	}
 
-	matVP := uniforms["matVP"].(math.Matrix)
+	matVP := uniforms["matVP"].(math.Mat4)
 
 	// For perspective corrected interpolation, see below.
-	recipw := math.NewVector(1, 1, 1, 0)
+	recipw := math.NewVec4(1, 1, 1, 0)
 	if _, ok := r.renderCamera.(*camera.Perspective); ok {
-		recipw = math.NewVector(-1/t1.Pos.W, -1/t2.Pos.W, -1/t3.Pos.W, 0)
+		recipw = math.NewVec4(-1/t1.Pos.W, -1/t2.Pos.W, -1/t3.Pos.W, 0)
 	}
 
 	t1.Pos = t1.Pos.Apply(matVP).Pos()
@@ -359,7 +359,7 @@ func (r *Renderer) draw(
 	h := r.height * r.msaa
 
 	// t1 is outside the viewfrustum
-	outside := func(v *math.Vector, w, h float64) bool {
+	outside := func(v *math.Vec4, w, h float64) bool {
 		if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
 			return true
 		}
@@ -379,13 +379,13 @@ func (r *Renderer) draw(
 
 func (r *Renderer) drawClipped(
 	t1, t2, t3 *primitive.Vertex,
-	recipw math.Vector,
+	recipw math.Vec4,
 	uniforms map[string]interface{},
 	mat material.Material) {
 
-	matViewInv := uniforms["matViewInv"].(math.Matrix)
-	matProjInv := uniforms["matProjInv"].(math.Matrix)
-	matVPInv := uniforms["matVPInv"].(math.Matrix)
+	matViewInv := uniforms["matViewInv"].(math.Mat4)
+	matProjInv := uniforms["matProjInv"].(math.Mat4)
+	matVPInv := uniforms["matVPInv"].(math.Mat4)
 	m1 := t1.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
 	m2 := t2.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
 	m3 := t3.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
@@ -412,15 +412,15 @@ func (r *Renderer) drawClipped(
 			x0 := float64(x) + 0.5
 			y0 := float64(y) + 0.5
 
-			w1, w2, w3 := math.Barycoord(x0, y0, t1.Pos, t2.Pos, t3.Pos)
+			bc := math.Barycoord(x0, y0, t1.Pos, t2.Pos, t3.Pos)
 
 			// Is inside triangle?
-			if w1 < -math.DefaultEpsilon || w2 < -math.DefaultEpsilon || w3 < -math.DefaultEpsilon {
+			if bc[0] < -math.Epsilon || bc[1] < -math.Epsilon || bc[2] < -math.Epsilon {
 				continue
 			}
 
 			// Z-test
-			z := w1*t1.Pos.Z + w2*t2.Pos.Z + w3*t3.Pos.Z
+			z := bc[0]*t1.Pos.Z + bc[1]*t2.Pos.Z + bc[2]*t3.Pos.Z
 			if !r.depthTest(x, y, z) {
 				continue
 			}
@@ -428,7 +428,7 @@ func (r *Renderer) drawClipped(
 			// Perspective corrected interpolation. See:
 			// Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 			// Department of Computer Science, University of North Carolina at Chapel Hill (2002).
-			wc1, wc2, wc3 := recipw.X*w1, recipw.Y*w2, recipw.Z*w3
+			wc1, wc2, wc3 := recipw.X*bc[0], recipw.Y*bc[1], recipw.Z*bc[2]
 			norm := 1.0
 			if _, ok := r.renderCamera.(*camera.Perspective); ok {
 				norm = 1 / (wc1 + wc2 + wc3)
@@ -441,12 +441,12 @@ func (r *Renderer) drawClipped(
 			// Compute du dv
 			var du, dv float64
 			if mat != nil && mat.Texture().UseMipmap() {
-				w1x, w2x, w3x := math.Barycoord(x0+1, y0, t1.Pos, t2.Pos, t3.Pos)
-				wc1x, wc2x, wc3x := recipw.X*w1x, recipw.Y*w2x, recipw.Z*w3x
+				bcx := math.Barycoord(x0+1, y0, t1.Pos, t2.Pos, t3.Pos)
+				wc1x, wc2x, wc3x := recipw.X*bcx[0], recipw.Y*bcx[1], recipw.Z*bcx[2]
 				normx := 1 / (wc1x + wc2x + wc3x)
 
-				w1y, w2y, w3y := math.Barycoord(x0, y0+1, t1.Pos, t2.Pos, t3.Pos)
-				wc1y, wc2y, wc3y := recipw.X*w1y, recipw.Y*w2y, recipw.Z*w3y
+				bcy := math.Barycoord(x0, y0+1, t1.Pos, t2.Pos, t3.Pos)
+				wc1y, wc2y, wc3y := recipw.X*bcy[0], recipw.Y*bcy[1], recipw.Z*bcy[2]
 				normy := 1 / (wc1y + wc2y + wc3y)
 
 				uvdU := (wc1x*t1.UV.X + wc2x*t2.UV.X + wc3x*t3.UV.X) * normx
@@ -459,16 +459,16 @@ func (r *Renderer) drawClipped(
 			}
 
 			// normal interpolation (normals are in model space, no need for perspective correction)
-			n := (math.Vector{
-				X: (w1*t1.Nor.X + w2*t2.Nor.X + w3*t3.Nor.X),
-				Y: (w1*t1.Nor.Y + w2*t2.Nor.Y + w3*t3.Nor.Y),
-				Z: (w1*t1.Nor.Z + w2*t2.Nor.Z + w3*t3.Nor.Z),
+			n := (math.Vec4{
+				X: (bc[0]*t1.Nor.X + bc[1]*t2.Nor.X + bc[2]*t3.Nor.X),
+				Y: (bc[0]*t1.Nor.Y + bc[1]*t2.Nor.Y + bc[2]*t3.Nor.Y),
+				Z: (bc[0]*t1.Nor.Z + bc[1]*t2.Nor.Z + bc[2]*t3.Nor.Z),
 				W: 0,
 			}).Unit()
-			pos := math.Vector{
-				X: (w1*m1.X + w2*m1.X + w3*m1.X),
-				Y: (w1*m2.Y + w2*m2.Y + w3*m2.Y),
-				Z: (w1*m3.Z + w2*m3.Z + w3*m3.Z),
+			pos := math.Vec4{
+				X: (bc[0]*m1.X + bc[1]*m1.X + bc[2]*m1.X),
+				Y: (bc[0]*m2.Y + bc[1]*m2.Y + bc[2]*m2.Y),
+				Z: (bc[0]*m3.Z + bc[1]*m3.Z + bc[2]*m3.Z),
 				W: 1,
 			}
 			col := color.RGBA{
@@ -520,11 +520,11 @@ func (r *Renderer) depthTest(x, y int, z float64) bool {
 	return !(r.gBuf[idx].ok && z <= r.gBuf[idx].z)
 }
 
-func (r *Renderer) inViewport(v1, v2, v3 math.Vector) bool {
+func (r *Renderer) inViewport(v1, v2, v3 math.Vec4) bool {
 	viewportAABB := primitive.NewAABB(
-		math.NewVector(float64(r.width*r.msaa), float64(r.height*r.msaa), 1, 1),
-		math.NewVector(0, 0, 0, 1),
-		math.NewVector(0, 0, -1, 1),
+		math.NewVec4(float64(r.width*r.msaa), float64(r.height*r.msaa), 1, 1),
+		math.NewVec4(0, 0, 0, 1),
+		math.NewVec4(0, 0, -1, 1),
 	)
 	triangleAABB := primitive.NewAABB(v1, v2, v3)
 	return viewportAABB.Intersect(triangleAABB)

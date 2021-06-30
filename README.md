@@ -12,12 +12,40 @@ _Caution: experimenting, expect it to break at any time. Use it at your own risk
 
 ## About
 
-`polyred` is a 3D graphics facility written in pure Go. It implements
-the rasterization as well as ray tracing pipelines for hybrid
-rendering. Although it is a software implementation, it remains fast as it
-is optimized to utilize the full power of CPUs. The project aims to
-provide a software fallback for real-time and offline geometry processing, rendering, and
-etc in graphics research. See a full [features list](./docs/features.md).
+`polyred` is a 3D graphics facility written in pure Go that aims to
+implement graphics research algorithms in real-time and offline geometry processing, rendering, animation, and etc.
+
+The geometry related facilities offer different types of geometry
+representations, and relevant I/O processors.
+
+The rendering related facility offers two levels of API set where the
+low-level API set contains abstract rendering passes for better customization, whereas high-level API set contains pre-defined rendering effects for better usability and performance.
+
+Although `polyred` is a software-only implementation currently, it
+remains fast as it is optimized for concurrent execution scheduling
+and utilize the full power of CPUs. The project aims to The current
+supported key features:
+
+- Cross platform
+- No dependency
+- Cache-aware concurrency optimization
+- Mesh I/O
+- Built-in geometries
+- Scene graph
+- Forward rendering
+- Mipmapping
+- Sutherland Hodgman Clipping
+- Back-face culling
+- View frustum culling
+- Perspective correct interpolation
+- Depth testing
+- Deferred shading
+- Blinn-Phong reflectance model
+- Shadow mapping
+- Screen-space ambient occlusion
+- Supersampling anti-aliasing
+
+See a full features list [here](./docs/features.md).
 
 ## Getting started
 
@@ -25,20 +53,20 @@ etc in graphics research. See a full [features list](./docs/features.md).
 // Create a scene graph
 s := scene.NewScene()
 s.SetCamera(camera.NewPerspective(
-    math.NewVector(0, 0.6, 0.9, 1),         // position
-    math.NewVector(0, 0, 0, 1),             // lookAt
-    math.NewVector(0, 1, 0, 0),             // up
-    45,                                     // fov
-    float64(opt.width)/float64(opt.height), // aspect
-    0.1,                                    // near
-    2,                                      // far
+    math.NewVec4(0, 0.6, 0.9, 1), // position
+    math.NewVec4(0, 0, 0, 1),     // lookAt
+    math.NewVec4(0, 1, 0, 0),     // up
+    45,                           // fov
+    float64(1920)/float64(1080),  // aspect
+    0.1,                          // near
+    2,                            // far
 ))
 
 // Add lights
 s.Add(light.NewPoint(
     light.WithPointLightIntensity(7),
     light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-    light.WithPointLightPosition(math.NewVector(4, 4, 2, 1)),
+    light.WithPointLightPosition(math.NewVec4(4, 4, 2, 1)),
     light.WithPointLightShadowMap(true)),
     light.NewAmbient(light.WithAmbientIntensity(0.5)))
 

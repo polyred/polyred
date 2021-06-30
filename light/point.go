@@ -20,7 +20,7 @@ var (
 type Point struct {
 	math.TransformContext
 
-	pos          math.Vector
+	pos          math.Vec4
 	intensity    float64
 	color        color.RGBA
 	useShadowMap bool
@@ -40,7 +40,7 @@ func WithPointLightColor(c color.RGBA) PointOption {
 	}
 }
 
-func WithPointLightPosition(pos math.Vector) PointOption {
+func WithPointLightPosition(pos math.Vec4) PointOption {
 	return func(l *Point) {
 		l.pos = pos
 	}
@@ -57,7 +57,7 @@ func NewPoint(opts ...PointOption) Source {
 	l := &Point{
 		intensity:    1,
 		color:        color.RGBA{255, 255, 255, 255},
-		pos:          math.Vector{},
+		pos:          math.Vec4{},
 		useShadowMap: false,
 	}
 
@@ -77,7 +77,7 @@ func (l *Point) Intensity() float64 {
 	return l.intensity
 }
 
-func (l *Point) Position() math.Vector {
+func (l *Point) Position() math.Vec4 {
 	return l.pos
 }
 

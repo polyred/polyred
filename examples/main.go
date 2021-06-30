@@ -13,8 +13,12 @@ import (
 	"runtime/trace"
 	"time"
 
+	"changkun.de/x/polyred/examples/bunny"
+	"changkun.de/x/polyred/examples/dragon"
 	"changkun.de/x/polyred/examples/gopher"
 	"changkun.de/x/polyred/examples/mcguire"
+	"changkun.de/x/polyred/examples/persp"
+	"changkun.de/x/polyred/examples/shadow"
 	"changkun.de/x/polyred/render"
 	"changkun.de/x/polyred/scene"
 	"changkun.de/x/polyred/utils"
@@ -34,10 +38,11 @@ type sceneExample struct {
 
 func main() {
 	examples := []sceneExample{
-		// {"bunny", bunny.NewBunnyScene, 960, 540, 2, false, true, true, true, true},
-		// {"dragon", dragon.NewDragonScene, 500, 500, 2, false, true, false, false, false},
-		// {"shadow", shadow.NewShadowScene, 960, 540, 2, true, false, true, false, false},
+		{"bunny", bunny.NewBunnyScene, 960, 540, 2, false, true, true, true, true},
+		{"dragon", dragon.NewDragonScene, 500, 500, 2, false, true, false, false, false},
+		{"shadow", shadow.NewShadowScene, 960, 540, 2, true, false, true, false, false},
 		{"gopher", gopher.NewGopherScene, 500, 500, 1, true, false, false, false, false},
+		{"persp", persp.NewCorrectScene, 500, 500, 2, false, false, false, false, false},
 		// {"mcguire", mcguire.NewMcGuireScene, 540, 540, 2, false, true, false, false, false},
 	}
 

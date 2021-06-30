@@ -17,7 +17,7 @@ type Halfedge struct {
 	onBoundary bool
 }
 
-func (he *Halfedge) Vec() math.Vector {
+func (he *Halfedge) Vec() math.Vec4 {
 	return he.next.v.Pos.Sub(he.v.Pos)
 }
 

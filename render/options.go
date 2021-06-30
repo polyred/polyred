@@ -90,7 +90,7 @@ func (r *Renderer) UpdateOptions(opts ...Option) {
 	r.lightSources = []light.Source{}
 	r.lightEnv = []light.Environment{}
 	if r.scene != nil {
-		r.scene.IterObjects(func(o object.Object, modelMatrix math.Matrix) bool {
+		r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 			if o.Type() != object.TypeLight {
 				return true
 			}

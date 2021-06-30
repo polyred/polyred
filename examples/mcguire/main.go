@@ -186,15 +186,15 @@ func NewMcGuireScene(w, h int) interface{} {
 			Name:  model,
 		}
 		s.Scene.SetCamera(camera.NewPerspective(
-			math.NewVector(1, 1, 2, 1),
-			math.NewVector(0, 0, 0, 1),
-			math.NewVector(0, 1, 0, 0),
+			math.NewVec4(1, 1, 2, 1),
+			math.NewVec4(0, 0, 0, 1),
+			math.NewVec4(0, 1, 0, 0),
 			50, float64(w)/float64(h), 0.1, 100,
 		))
 		s.Scene.Add(light.NewPoint(
 			light.WithPointLightIntensity(5),
 			light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-			light.WithPointLightPosition(math.NewVector(2, 2, 2, 1)),
+			light.WithPointLightPosition(math.NewVec4(2, 2, 2, 1)),
 		), light.NewAmbient(
 			light.WithAmbientIntensity(0.5),
 		))

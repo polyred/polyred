@@ -14,7 +14,7 @@ var _ Face = &Triangle{}
 type Triangle struct {
 	V1, V2, V3 Vertex
 
-	faceNormal math.Vector
+	faceNormal math.Vec4
 	aabb       *AABB
 }
 
@@ -29,8 +29,8 @@ func NewTriangle(v1, v2, v3 *Vertex) *Triangle {
 	ymin := math.Min(v1.Pos.Y, v2.Pos.Y, v3.Pos.Y)
 	zmax := math.Max(v1.Pos.Z, v2.Pos.Z, v3.Pos.Z)
 	zmin := math.Min(v1.Pos.Z, v2.Pos.Z, v3.Pos.Z)
-	min := math.NewVector(xmin, ymin, zmin, 1)
-	max := math.NewVector(xmax, ymax, zmax, 1)
+	min := math.NewVec4(xmin, ymin, zmin, 1)
+	max := math.NewVec4(xmax, ymax, zmax, 1)
 	v2v1 := v1.Pos.Sub(v2.Pos)
 	v2v3 := v3.Pos.Sub(v2.Pos)
 
@@ -59,8 +59,8 @@ func (t *Triangle) IsValid() bool {
 	}
 
 	d := p1p2.Dot(p1p3) / (p1p2.Len() * p1p3.Len())
-	if math.ApproxEq(d, 1, math.DefaultEpsilon) ||
-		math.ApproxEq(d, -1, math.DefaultEpsilon) {
+	if math.ApproxEq(d, 1, math.Epsilon) ||
+		math.ApproxEq(d, -1, math.Epsilon) {
 		return false
 	}
 	return true
@@ -94,8 +94,8 @@ func (t *Triangle) AABB() AABB {
 		ymin := math.Min(t.V1.Pos.Y, t.V2.Pos.Y, t.V3.Pos.Y)
 		zmax := math.Max(t.V1.Pos.Z, t.V2.Pos.Z, t.V3.Pos.Z)
 		zmin := math.Min(t.V1.Pos.Z, t.V2.Pos.Z, t.V3.Pos.Z)
-		min := math.NewVector(xmin, ymin, zmin, 1)
-		max := math.NewVector(xmax, ymax, zmax, 1)
+		min := math.NewVec4(xmin, ymin, zmin, 1)
+		max := math.NewVec4(xmax, ymax, zmax, 1)
 		t.aabb = &AABB{min, max}
 	}
 
@@ -115,7 +115,7 @@ func (t *Triangle) Triangles(f func(*Triangle) bool) {
 }
 
 // Normal returns the face normal of the given triangle.
-func (t *Triangle) Normal() math.Vector {
+func (t *Triangle) Normal() math.Vec4 {
 	if t.faceNormal.IsZero() {
 		v2v1 := t.V1.Pos.Sub(t.V2.Pos)
 		v2v3 := t.V3.Pos.Sub(t.V2.Pos)

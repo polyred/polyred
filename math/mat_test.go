@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewMatrix(t *testing.T) {
-	m := math.MatI
+	m := math.Mat4I
 
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 4; j++ {
@@ -26,8 +26,8 @@ func TestNewMatrix(t *testing.T) {
 	}
 }
 
-func TestSetMatrix(t *testing.T) {
-	m := math.Matrix{
+func TestMat4_Get(t *testing.T) {
+	m := math.Mat4{
 		1, 1, 1, 1,
 		1, 1, 1, 1,
 		1, 1, 1, 1,
@@ -44,14 +44,14 @@ func TestSetMatrix(t *testing.T) {
 	}
 }
 
-func TestMultiplyMatrices(t *testing.T) {
-	m1 := math.Matrix{
+func TestMat4_MulM(t *testing.T) {
+	m1 := math.Mat4{
 		1, 2, 3, 4,
 		5, 6, 7, 8,
 		9, 10, 11, 12,
 		13, 14, 15, 16,
 	}
-	m2 := math.Matrix{
+	m2 := math.Mat4{
 		16, 15, 14, 13,
 		12, 11, 10, 9,
 		8, 7, 6, 5,
@@ -60,7 +60,7 @@ func TestMultiplyMatrices(t *testing.T) {
 
 	got := m1.MulM(m2)
 
-	want := math.Matrix{
+	want := math.Mat4{
 		80, 70, 60, 50,
 		240, 214, 188, 162,
 		400, 358, 316, 274,
@@ -77,8 +77,8 @@ func TestMultiplyMatrices(t *testing.T) {
 	}
 }
 
-func TestInverseMatrix(t *testing.T) {
-	m1 := math.Matrix{
+func TestMat4_Inv(t *testing.T) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
@@ -86,7 +86,7 @@ func TestInverseMatrix(t *testing.T) {
 	}
 	m1 = m1.Inv()
 
-	want := math.Matrix{
+	want := math.Mat4{
 		1003995.0 / 4463716, -10967.0 / 4463716, -5949.0 / 4463716, -219389.0 / 4463716,
 		-62879.0 / 4463716, 65251.0 / 4463716, 1613.0 / 4463716, -107839.0 / 4463716,
 		-3999.0 / 2231858, -3.0 / 2231858, 3865.0 / 2231858, 347.0 / 2231858,
@@ -100,8 +100,8 @@ func TestInverseMatrix(t *testing.T) {
 	t.Fatalf("inverse matrices does not working properly, got %+v, want %+v", m1, want)
 }
 
-func TestTransposeMatrix(t *testing.T) {
-	m1 := math.Matrix{
+func TestMat4_T(t *testing.T) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
@@ -109,7 +109,7 @@ func TestTransposeMatrix(t *testing.T) {
 	}
 	m1 = m1.T()
 
-	want := math.Matrix{
+	want := math.Mat4{
 		5, 8, 5, 2,
 		1, 71, 1, 1,
 		5, 2, 582, 7,
@@ -121,14 +121,14 @@ func TestTransposeMatrix(t *testing.T) {
 	t.Fatalf("transpose matrices does not working properly, got %+v, want %+v", m1, want)
 }
 
-func BenchmarkMatrix_Eq(b *testing.B) {
-	m1 := math.Matrix{
+func BenchmarkMat4_Eq(b *testing.B) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
-	m2 := math.Matrix{
+	m2 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
@@ -142,104 +142,104 @@ func BenchmarkMatrix_Eq(b *testing.B) {
 	_ = m
 }
 
-func BenchmarkMatrix_Add(b *testing.B) {
-	m1 := math.Matrix{
+func BenchmarkMat4_Add(b *testing.B) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
-	m2 := math.Matrix{
+	m2 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
 
-	var m math.Matrix
+	var m math.Mat4
 	for i := 0; i < b.N; i++ {
 		m = m1.Add(m2)
 	}
 	_ = m
 }
 
-func BenchmarkMatrix_Sub(b *testing.B) {
-	m1 := math.Matrix{
+func BenchmarkMat4_Sub(b *testing.B) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
-	m2 := math.Matrix{
+	m2 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
 
-	var m math.Matrix
+	var m math.Mat4
 	for i := 0; i < b.N; i++ {
 		m = m1.Sub(m2)
 	}
 	_ = m
 }
 
-func BenchmarkMatrix_MulM(b *testing.B) {
-	m1 := math.Matrix{
+func BenchmarkMat4_MulM(b *testing.B) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
-	m2 := math.Matrix{
+	m2 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
 
-	var m math.Matrix
+	var m math.Mat4
 	for i := 0; i < b.N; i++ {
 		m = m1.MulM(m2)
 	}
 	_ = m
 }
 
-func BenchmarkMatrix_MulV(b *testing.B) {
-	m1 := math.Matrix{
+func BenchmarkMat4_MulV(b *testing.B) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
-	m2 := math.Vector{
+	m2 := math.Vec4{
 		5, 1, 5, 6,
 	}
 
-	var m math.Vector
+	var m math.Vec4
 	for i := 0; i < b.N; i++ {
 		m = m1.MulV(m2)
 	}
 	_ = m
 }
 
-func BenchmarkMatrix_Inv(b *testing.B) {
-	m1 := math.Matrix{
+func BenchmarkMat4_Inv(b *testing.B) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
 
-	var m math.Matrix
+	var m math.Mat4
 	for i := 0; i < b.N; i++ {
 		m = m1.Inv()
 	}
 	_ = m
 }
 
-func BenchmarkMatrix_Det(b *testing.B) {
-	m1 := math.Matrix{
+func BenchmarkMat4_Det(b *testing.B) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
@@ -253,15 +253,15 @@ func BenchmarkMatrix_Det(b *testing.B) {
 	_ = m
 }
 
-func BenchmarkMatrix_T(b *testing.B) {
-	m1 := math.Matrix{
+func BenchmarkMat4_T(b *testing.B) {
+	m1 := math.Mat4{
 		5, 1, 5, 6,
 		8, 71, 2, 47,
 		5, 1, 582, 4,
 		2, 1, 7, 25,
 	}
 
-	var m math.Matrix
+	var m math.Mat4
 	for i := 0; i < b.N; i++ {
 		m = m1.T()
 	}

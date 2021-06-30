@@ -19,9 +19,9 @@ import (
 // LoadOBJ loads a .obj file to a TriangleMesh object
 func LoadOBJ(data io.Reader) (geometry.Mesh, error) {
 
-	vs := make([]math.Vector, 1)
-	vts := make([]math.Vector, 1, 1024)
-	vns := make([]math.Vector, 1, 1024)
+	vs := make([]math.Vec4, 1)
+	vts := make([]math.Vec4, 1, 1024)
+	vns := make([]math.Vec4, 1, 1024)
 
 	var tris []*primitive.Triangle
 
@@ -37,13 +37,13 @@ func LoadOBJ(data io.Reader) (geometry.Mesh, error) {
 		switch k {
 		case "v":
 			coord := parseFloats(args)
-			vs = append(vs, math.NewVector(coord[0], coord[1], coord[2], 1))
+			vs = append(vs, math.NewVec4(coord[0], coord[1], coord[2], 1))
 		case "vt":
 			coord := parseFloats(args)
-			vts = append(vts, math.NewVector(coord[0], coord[1], 0, 1))
+			vts = append(vts, math.NewVec4(coord[0], coord[1], 0, 1))
 		case "vn":
 			coord := parseFloats(args)
-			vns = append(vns, math.NewVector(coord[0], coord[1], coord[2], 0))
+			vns = append(vns, math.NewVec4(coord[0], coord[1], coord[2], 0))
 		case "f":
 			fvs := make([]int, len(args))
 			fvts := make([]int, len(args))

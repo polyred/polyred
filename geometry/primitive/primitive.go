@@ -11,20 +11,32 @@ import (
 	"changkun.de/x/polyred/math"
 )
 
-// Vertex is a vertex that contains the necessary information for
-// describing a mesh.
+// Vertex represents a vertex that conveys attributes.
 type Vertex struct {
-	Pos math.Vector
-	UV  math.Vector
-	Nor math.Vector
-	Col color.RGBA
+	Pos        math.Vec4
+	UV         math.Vec4
+	Nor        math.Vec4
+	Col        color.RGBA
+	AttrSmooth map[string]interface{}
+	AttrFlat   map[string]interface{}
+}
+
+// Fragment represents a pixel that conveys varied attributes.
+type Fragment struct {
+	X, Y       int
+	Depth      float64
+	UV         math.Vec4
+	Nor        math.Vec4
+	Col        color.RGBA
+	AttrSmooth map[string]interface{}
+	AttrFlat   map[string]interface{}
 }
 
 func NewRandomVertex() *Vertex {
 	return &Vertex{
-		Pos: math.NewVector(rand.Float64(), rand.Float64(), rand.Float64(), 1),
-		UV:  math.NewVector(rand.Float64(), rand.Float64(), 0, 1),
-		Nor: math.NewVector(rand.Float64(), rand.Float64(), rand.Float64(), 1).Unit(),
+		Pos: math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), 1),
+		UV:  math.NewVec4(rand.Float64(), rand.Float64(), 0, 1),
+		Nor: math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), 1).Unit(),
 		Col: color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int())},
 	}
 }

@@ -17,10 +17,10 @@ import (
 
 func BenchmarkBlinnPhongShader(b *testing.B) {
 	col := color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int())}
-	x := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 1}
-	n := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 0}.Unit()
-	fn := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 0}.Unit()
-	c := math.Vector{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 1}
+	x := math.Vec4{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 1}
+	n := math.Vec4{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 0}.Unit()
+	fn := math.Vec4{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 0}.Unit()
+	c := math.Vec4{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 1}
 	l := []light.Source{
 		light.NewPoint(
 			light.WithPointLightIntensity(20),
@@ -33,7 +33,7 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 				},
 			),
 			light.WithPointLightPosition(
-				math.NewVector(rand.Float64(), rand.Float64(), rand.Float64(), 1),
+				math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), 1),
 			),
 		),
 	}

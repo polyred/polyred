@@ -8,13 +8,13 @@ import "changkun.de/x/polyred/math"
 
 // AABB an axis aligned bounding box
 type AABB struct {
-	Min, Max math.Vector
+	Min, Max math.Vec4
 }
 
 // NewAABB computes a new axis aligned bounding box of given vertices
-func NewAABB(vs ...math.Vector) AABB {
-	min := math.NewVector(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
-	max := math.NewVector(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
+func NewAABB(vs ...math.Vec4) AABB {
+	min := math.NewVec4(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
+	max := math.NewVec4(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
 	for i := range vs {
 		min.X = math.Min(min.X, vs[i].X)
 		min.Y = math.Min(min.Y, vs[i].Y)
@@ -30,13 +30,13 @@ func NewAABB(vs ...math.Vector) AABB {
 // If the two AABBs only share a single vertex or a 2D plane, then
 // it is also considered as an intersection and returns true.
 func (aabb *AABB) Intersect(aabb2 AABB) bool {
-	min := math.NewVector(
+	min := math.NewVec4(
 		math.Max(aabb.Min.X, aabb2.Min.X),
 		math.Max(aabb.Min.Y, aabb2.Min.Y),
 		math.Max(aabb.Min.Z, aabb2.Min.Z),
 		1,
 	)
-	max := math.NewVector(
+	max := math.NewVec4(
 		math.Min(aabb.Max.X, aabb2.Max.X),
 		math.Min(aabb.Max.Y, aabb2.Max.Y),
 		math.Min(aabb.Max.Y, aabb2.Max.Z),
