@@ -44,6 +44,7 @@ supported key features:
 - Shadow mapping
 - Screen-space ambient occlusion
 - Supersampling anti-aliasing
+- Shader programming
 
 See a full features list [here](./docs/features.md).
 

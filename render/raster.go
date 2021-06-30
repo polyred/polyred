@@ -259,9 +259,9 @@ func (r *Renderer) passDeferred() {
 		gbuffer: r.gBuf,
 	}
 
-	r.ScreenPass(r.frameBuf, func(x, y int, col color.RGBA) color.RGBA {
-		col = r.shade(x, h-y-1, uniforms)
-		return ao.Shade(x, h-y-1, col)
+	r.ScreenPass(r.frameBuf, func(frag primitive.Fragment) color.RGBA {
+		frag.Col = r.shade(frag.X, h-frag.Y-1, uniforms)
+		return ao.Shade(frag.X, h-frag.Y-1, frag.Col)
 	})
 }
 
@@ -503,11 +503,11 @@ func (r *Renderer) passGammaCorrect() {
 		return
 	}
 
-	r.ScreenPass(r.frameBuf, func(x, y int, col color.RGBA) color.RGBA {
-		r := uint8(color.FromLinear2sRGB(float64(col.R)/0xff)*0xff + 0.5)
-		g := uint8(color.FromLinear2sRGB(float64(col.G)/0xff)*0xff + 0.5)
-		b := uint8(color.FromLinear2sRGB(float64(col.B)/0xff)*0xff + 0.5)
-		return color.RGBA{r, g, b, col.A}
+	r.ScreenPass(r.frameBuf, func(frag primitive.Fragment) color.RGBA {
+		r := uint8(color.FromLinear2sRGB(float64(frag.Col.R)/0xff)*0xff + 0.5)
+		g := uint8(color.FromLinear2sRGB(float64(frag.Col.G)/0xff)*0xff + 0.5)
+		b := uint8(color.FromLinear2sRGB(float64(frag.Col.B)/0xff)*0xff + 0.5)
+		return color.RGBA{r, g, b, frag.Col.A}
 	})
 }
 

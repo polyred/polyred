@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"changkun.de/x/polyred/color"
+	"changkun.de/x/polyred/geometry/primitive"
 	"changkun.de/x/polyred/render"
 	"changkun.de/x/polyred/utils"
 )
@@ -39,7 +40,7 @@ func TestScreenPass(t *testing.T) {
 		img := image.NewRGBA(image.Rect(0, 0, tt.w, tt.h))
 
 		counter := uint32(0)
-		r.ScreenPass(img, func(x, y int, col color.RGBA) color.RGBA {
+		r.ScreenPass(img, func(frag primitive.Fragment) color.RGBA {
 			atomic.AddUint32(&counter, 1)
 			r := uint8(rand.Int())
 			g := uint8(rand.Int())
@@ -68,8 +69,8 @@ func BenchmarkScreenPass_Size(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.ScreenPass(img, func(x, y int, col color.RGBA) color.RGBA {
-					return color.RGBA{uint8(x), uint8(y), uint8(x), uint8(y)}
+				r.ScreenPass(img, func(frag primitive.Fragment) color.RGBA {
+					return color.RGBA{uint8(frag.X), uint8(frag.X), uint8(frag.Y), uint8(frag.Y)}
 				})
 			}
 		})
@@ -94,7 +95,7 @@ func BenchmarkScreenPass_Block(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.ScreenPass(img, func(x, y int, col color.RGBA) color.RGBA {
+				r.ScreenPass(img, func(frag primitive.Fragment) color.RGBA {
 					return color.RGBA{255, 255, 255, 255}
 				})
 			}
