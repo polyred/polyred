@@ -47,7 +47,7 @@ func (r *Renderer) PrimitivePass(
 
 // Draw implements a triangle draw call of the rasteriation graphics pipeline.
 func (r *Renderer) Draw(buf *Buffer, prog shader.Program,
-	tri *primitive.Triangle) {
+	tri *primitive.Triangle) bool {
 	v1 := prog.VertexShader(tri.V1)
 	v2 := prog.VertexShader(tri.V2)
 	v3 := prog.VertexShader(tri.V3)
@@ -71,22 +71,24 @@ func (r *Renderer) Draw(buf *Buffer, prog shader.Program,
 
 	// Back-face culling
 	if v2.Pos.Sub(v1.Pos).Cross(v3.Pos.Sub(v1.Pos)).Z < 0 {
-		return
+		return false
 	}
 
 	// View frustum culling
-	if !r.inViewFrustum(v1.Pos, v2.Pos, v3.Pos) {
-		return
-	}
+	// TODO: deal with window resizing
+	// if !r.inViewFrustum(v1.Pos, v2.Pos, v3.Pos) {
+	// 	return false
+	// }
 
 	// All vertices are inside the viewport, let's rasterize directly
 	if r.inViewport2(v1.Pos) && r.inViewport2(v2.Pos) && r.inViewport2(v3.Pos) {
 		r.rasterize(buf, prog, &v1, &v2, &v3, recipw)
-		return
+		return true
 	}
 
 	// Clipping into smaller triangles
 	r.drawClip(buf, prog, &v1, &v2, &v3, recipw)
+	return true
 }
 
 func (r *Renderer) inViewFrustum(v1, v2, v3 math.Vec4) bool {

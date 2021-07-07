@@ -5,8 +5,7 @@
 package shader
 
 import (
-	"image/color"
-
+	"changkun.de/x/polyred/color"
 	"changkun.de/x/polyred/geometry/primitive"
 	"changkun.de/x/polyred/math"
 )

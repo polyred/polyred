@@ -11,9 +11,11 @@ var (
 	Sin        = math.Sin
 	Tan        = math.Tan
 	Abs        = math.Abs
+	Acos       = math.Acos
 	Atan       = math.Atan
 	Atan2      = math.Atan2
 	Pi         = math.Pi
+	Inf        = math.Inf
 	MaxInt64   = math.MaxInt64
 	MaxFloat64 = math.MaxFloat64
 	Round      = math.Round

@@ -10,9 +10,11 @@ import (
 	"image/color"
 	"log"
 	"runtime"
+	"sync"
 	"time"
 	"unsafe"
 
+	"changkun.de/x/polyred/render"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"golang.design/x/mainthread"
@@ -34,8 +36,8 @@ func WithTitle(title string) Option {
 // WithSize option sets the width and height of the window.
 func WithSize(width, height int) Option {
 	return func(o *win) {
-		o.width = width
-		o.height = height
+		o.width = uint32(width)
+		o.height = uint32(height)
 	}
 }
 
@@ -49,20 +51,47 @@ func WithFPS() Option {
 type win struct {
 	win           *glfw.Window
 	title         string
-	width, height int
-	ratio         int // for retina display
-	showFPS       bool
-	drawer        *font.Drawer
-	last          time.Time
+	width, height uint32
+	scaleX        float64
+	scaleY        float64
+	buf           *render.Buffer
+
+	// Settings
+	showFPS bool
+	drawer  *font.Drawer
+	last    time.Time
+
+	// Events
+	dispatcher *dispatcher
+	evSize     SizeEvent
+	evMouse    MouseEvent
+	evCursor   CursorEvent
+	evScroll   ScrollEvent
+	evKey      KeyEvent
+	mods       ModifierKey
 }
 
-// NewWindow constructs a new graphical window.
-func NewWindow(opts ...Option) *win {
+var (
+	once   sync.Once
+	window *win
+)
+
+// Window returns the window instance
+func Window() *win {
+	if window != nil {
+		return window
+	}
+	panic("must call gui.InitWindow() first")
+}
+
+// InitWindow constructs a new graphical window.
+func InitWindow(opts ...Option) {
 	w := &win{
-		title:   "",
-		width:   500,
-		height:  500,
-		showFPS: false,
+		title:      "",
+		width:      500,
+		height:     500,
+		showFPS:    false,
+		dispatcher: newDispatcher(),
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -80,67 +109,135 @@ func NewWindow(opts ...Option) *win {
 		if err != nil {
 			// This function must be called from the mainthread.
 			mainthread.Call(w.win.Destroy)
-			log.Fatalf("failed to create a window: %v", err)
+			log.Fatalf("window: %v", err)
 		}
 	}()
 
 	mainthread.Call(func() {
 		err = glfw.Init()
 		if err != nil {
-			log.Fatalf("failed to initialize glfw context: %v", err)
+			err = fmt.Errorf("failed to initialize glfw context: %w", err)
+			return
 		}
 		glfw.WindowHint(glfw.ContextVersionMajor, 2)
 		glfw.WindowHint(glfw.ContextVersionMinor, 1)
 		glfw.WindowHint(glfw.DoubleBuffer, glfw.False)
-		glfw.WindowHint(glfw.Resizable, glfw.False)
+		glfw.WindowHint(glfw.Resizable, glfw.True)
 
-		w.win, err = glfw.CreateWindow(w.width, w.height, w.title, nil, nil)
+		w.win, err = glfw.CreateWindow(int(w.width), int(w.height), w.title, nil, nil)
 		if err != nil {
+			err = fmt.Errorf("failed to create glfw window: %w", err)
 			return
 		}
+		w.win.MakeContextCurrent()
 
 		// Ratio test. for high DPI, e.g. macOS Retina
-		width, _ := w.win.GetFramebufferSize()
-		w.ratio = width / w.width
-		if w.ratio < 1 {
-			w.ratio = 1
-		}
-		w.win.Destroy()
-
-		w.win, err = glfw.CreateWindow(w.width/w.ratio, w.height/w.ratio, w.title, nil, nil)
+		fbw, fbh := w.win.GetFramebufferSize()
+		w.scaleX = float64(fbw) / float64(w.width)
+		w.scaleY = float64(fbh) / float64(w.height)
+		w.buf = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
 	})
 	if err != nil {
-		return nil
+		return
 	}
 	err = gl.Init()
 	if err != nil {
-		return nil
+		err = fmt.Errorf("failed to initialize gl: %w", err)
+		return
 	}
 
-	return w
+	once.Do(func() { window = w })
 }
 
-func (w *win) MainLoop(f func() *image.RGBA) {
+func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
+	w.dispatcher.eventMap[eventName] = append(w.dispatcher.eventMap[eventName], subscription{
+		id: nil,
+		cb: cb,
+	})
+}
+
+func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
+	w := window
+
 	defer func() {
 		// This function must be called from the mainthread.
 		mainthread.Call(w.win.Destroy)
 	}()
 
+	// Setup event callbacks
+	w.win.SetSizeCallback(func(x *glfw.Window, width int, height int) {
+		fbw, fbh := x.GetFramebufferSize()
+		w.evSize.Width = width
+		w.evSize.Height = height
+		w.scaleX = float64(fbw) / float64(width)
+		w.scaleY = float64(fbh) / float64(height)
+		w.dispatcher.Dispatch(OnResize, &w.evSize)
+
+		// FIXME: figure out why resizing can cause window crash?
+		// guess: maybe because the resizing cause the race of drawing
+		// pixels and the old pixels?
+		w.refreshBuf(image.Rect(0, 0, fbw, fbh))
+	})
+	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
+		w.evCursor.Xpos = xpos
+		w.evCursor.Ypos = ypos
+		w.evCursor.Mods = w.mods
+		w.dispatcher.Dispatch(OnCursor, &w.evCursor)
+	})
+	w.win.SetMouseButtonCallback(func(x *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
+		xpos, ypos := x.GetCursorPos()
+		w.evMouse.Button = MouseButton(button)
+		w.evMouse.Mods = ModifierKey(mods)
+		w.evMouse.Xpos = xpos
+		w.evMouse.Ypos = ypos
+
+		switch action {
+		case glfw.Press:
+			w.dispatcher.Dispatch(OnMouseDown, &w.evMouse)
+		case glfw.Release:
+			w.dispatcher.Dispatch(OnMouseUp, &w.evMouse)
+		}
+	})
+	w.win.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
+		w.evScroll.Xoffset = xoff
+		w.evScroll.Yoffset = yoff
+		w.evScroll.Mods = w.mods
+		w.dispatcher.Dispatch(OnScroll, &w.evScroll)
+	})
+	w.win.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
+		w.evKey.Key = Key(key)
+		w.evKey.Mods = ModifierKey(mods)
+		w.mods = w.evKey.Mods
+		switch action {
+		case glfw.Press:
+			w.dispatcher.Dispatch(OnKeyDown, &w.evKey)
+		case glfw.Release:
+			w.dispatcher.Dispatch(OnKeyUp, &w.evKey)
+		case glfw.Repeat:
+			w.dispatcher.Dispatch(OnKeyRepeat, &w.evKey)
+		}
+	})
+
+	// Event Thread
 	go func() {
-		runtime.LockOSThread()
-		w.win.MakeContextCurrent()
+		timeout := 1.0 / 30
 		for !w.win.ShouldClose() {
-			w.flush(f())
+			// glfw.WaitEvents()
+			mainthread.Call(func() { glfw.WaitEventsTimeout(timeout) })
 		}
 	}()
 
+	// Rendering Thread
+	runtime.LockOSThread()
+	w.win.MakeContextCurrent()
+
 	for !w.win.ShouldClose() {
-		mainthread.Call(func() {
-			glfw.WaitEvents()
-			// or:
-			// glfw.WaitEventsTimeout(1.0 / 30)
-		})
+		w.flush(f(w.buf))
 	}
+}
+
+func (w *win) refreshBuf(r image.Rectangle) {
+	w.buf = render.NewBuffer(r)
 }
 
 func (w *win) flush(img *image.RGBA) {

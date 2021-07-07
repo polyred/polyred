@@ -19,7 +19,7 @@ type FragmentInfo struct {
 }
 
 // Buffer is a rendering buffer that supports concurrent-safe
-// depth testing and pixel wi
+// depth testing and pixel operation.
 type Buffer struct {
 	lock      []sync.Mutex
 	fragments []FragmentInfo
@@ -109,9 +109,9 @@ func (b *Buffer) Set(x, y int, info FragmentInfo) {
 	// we also write color and depth information to the two
 	// dedicated color and depth buffers.
 	b.depth.Set(x, y, color.RGBA{
-		uint8(info.Depth),
-		uint8(info.Depth),
-		uint8(info.Depth), 0xff,
+		uint8(info.Depth * 0xff),
+		uint8(info.Depth * 0xff),
+		uint8(info.Depth * 0xff), 0xff,
 	})
 	b.color.Set(x, y, info.Col)
 

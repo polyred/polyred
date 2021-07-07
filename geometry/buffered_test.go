@@ -15,18 +15,16 @@ import (
 func TestBufferedMesh(t *testing.T) {
 
 	bm := geometry.NewBufferedMesh()
-	pos := []float64{
-		-0.363322, -0.387725, 0.85933, // 0
-		-0.55029, -0.387725, -0.682297, // 1
-		-0.038214, 0.990508, -0.126177, // 2
-		0.951827, -0.215059, -0.050857, // 3
-	}
-	ba := &geometry.BufferAttribute{
+	bm.SetAttribute(geometry.AttributePos, &geometry.BufferAttribute{
 		Stride: 3,
-		Values: pos,
-	}
-	bm.SetAttribute(geometry.AttributePos, ba)
-	bm.SetVertexBuffer([]int64{
+		Values: []float64{
+			-0.363322, -0.387725, 0.85933, // 0
+			-0.55029, -0.387725, -0.682297, // 1
+			-0.038214, 0.990508, -0.126177, // 2
+			0.951827, -0.215059, -0.050857, // 3
+		},
+	})
+	bm.SetVertexIndex([]uint64{
 		2, 3, 1,
 		2, 0, 3,
 		3, 0, 1,

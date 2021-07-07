@@ -44,6 +44,10 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 			for x := 0; x < w; x++ {
 				for y := 0; y < h; y++ {
 					old := buf.RGBAAt(x, y)
+					if shade == nil {
+						buf.Set(x, y, old)
+						continue
+					}
 					col := shade(primitive.Fragment{
 						X: x, Y: y, Col: old,
 					})
@@ -67,6 +71,10 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 						x := ii + k
 						y := jj + l
 						old := buf.RGBAAt(x, y)
+						if shade == nil {
+							buf.Set(x, y, old)
+							continue
+						}
 						col := shade(primitive.Fragment{
 							X: x, Y: y, Col: old,
 						})
@@ -83,6 +91,10 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := 0; y < hsteps*blockSize; y++ {
 				old := buf.RGBAAt(x, y)
+				if shade == nil {
+					buf.Set(x, y, old)
+					continue
+				}
 				col := shade(primitive.Fragment{
 					X: x, Y: y, Col: old,
 				})
@@ -95,6 +107,10 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 		for x := 0; x < wsteps*blockSize; x++ {
 			for y := hsteps * blockSize; y < h; y++ {
 				old := buf.RGBAAt(x, y)
+				if shade == nil {
+					buf.Set(x, y, old)
+					continue
+				}
 				col := shade(primitive.Fragment{
 					X: x, Y: y, Col: old,
 				})
@@ -106,6 +122,10 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := hsteps * blockSize; y < h; y++ {
 				old := buf.RGBAAt(x, y)
+				if shade == nil {
+					buf.Set(x, y, old)
+					continue
+				}
 				col := shade(primitive.Fragment{
 					X: x, Y: y, Col: old,
 				})

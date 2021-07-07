@@ -22,6 +22,7 @@
     * [ ] uv parameterization
 - rendering facilities:
   + [x] scene graph
+  + [ ] BVH acceleration, morton coding, cache coherence optimization
   + [ ] primitive pass
   + [ ] shader programming
   + [x] deferred shading pass

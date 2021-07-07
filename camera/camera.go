@@ -23,6 +23,7 @@ var (
 type Interface interface {
 	object.Object
 
+	SetAspect(aspect float64)
 	Position() math.Vec4
 	ViewMatrix() math.Mat4
 	ProjMatrix() math.Mat4
@@ -85,9 +86,24 @@ func (c *Perspective) Type() object.Type {
 	return object.TypeCamera
 }
 
+// SetPosition sets the position of the given camera.
+func (c *Perspective) LookAt(target, up math.Vec4) {
+	c.lookAt = target
+	c.up = up
+}
+
+// SetPosition sets the position of the given camera.
+func (c *Perspective) SetPosition(pos math.Vec4) {
+	c.position = pos
+}
+
+func (c *Perspective) SetAspect(aspect float64) {
+	c.aspect = aspect
+}
+
 // Position returns the position of the given perspective camera.
 func (c *Perspective) Position() math.Vec4 {
-	return c.position.Apply(c.ModelMatrix())
+	return c.position
 }
 
 // ViewMatrix returns the view matrix of the given camera. The view
@@ -171,9 +187,18 @@ func (c *Orthographic) Type() object.Type {
 	return object.TypeCamera
 }
 
+// SetPosition sets the position of the given camera.
+// func (c *Orthographic) SetPosition(pos math.Vec4) {
+// 	c.position = pos
+// }
+
 // Position returns the position of the given orthographic camera.
 func (c *Orthographic) Position() math.Vec4 {
-	return c.position.Apply(c.ModelMatrix())
+	return c.position
+}
+
+func (c *Orthographic) SetAspect(aspect float64) {
+	// TODO: rethinking orthographic camera settings
 }
 
 // ViewMatrix returns the view matrix of the given camera. The view
