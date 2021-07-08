@@ -43,17 +43,14 @@ func fn() {
 		ViewMatrix:       cam.ViewMatrix(),
 		ProjectionMatrix: cam.ProjMatrix(),
 	}
-	m := geometry.NewRandomTriangleSoup(100).(*geometry.BufferedMesh)
+	m := geometry.NewRandomTriangleSoup(1000).(*geometry.BufferedMesh)
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
-
 	gui.Window().Subscribe(gui.OnResize, func(e gui.Event) {
 		ev := e.(*gui.SizeEvent)
 		cam.SetAspect(float64(ev.Width) / float64(ev.Height))
 		prog.ProjectionMatrix = cam.ProjMatrix()
 	})
 	gui.MainLoop(func(buf *render.Buffer) *image.RGBA {
-		buf.Clear()
-
 		cam.RotateX(math.Pi / 100)
 		cam.RotateY(math.Pi / 100)
 		prog.ModelMatrix = cam.ModelMatrix()
@@ -62,7 +59,7 @@ func fn() {
 		r.PrimitivePass(buf, prog, vi, vb)
 
 		// 2. Render Screen-space Effects
-		r.ScreenPass(buf.Image(), nil)
+		r.ScreenPass(buf.Image(), prog.FragmentShader)
 		return buf.Image()
 	})
 }

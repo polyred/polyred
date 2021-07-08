@@ -12,8 +12,6 @@ import (
 	"changkun.de/x/polyred/shader"
 )
 
-// FIXME: use shader.Program
-
 // ScreenPass is a concurrent executor of the given shader that travel
 // through all pixels. Each pixel executes the given shader exactly once.
 // One should not manipulate the given image buffer in the shader.

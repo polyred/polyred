@@ -9,7 +9,6 @@ import (
 	"image"
 	"image/color"
 	"log"
-	"runtime"
 	"sync"
 	"time"
 	"unsafe"
@@ -54,7 +53,10 @@ type win struct {
 	width, height uint32
 	scaleX        float64
 	scaleY        float64
-	buf           *render.Buffer
+
+	buf1 *render.Buffer
+	buf2 *render.Buffer
+	draw chan *image.RGBA
 
 	// Settings
 	showFPS bool
@@ -129,20 +131,25 @@ func InitWindow(opts ...Option) {
 			err = fmt.Errorf("failed to create glfw window: %w", err)
 			return
 		}
-		w.win.MakeContextCurrent()
 
 		// Ratio test. for high DPI, e.g. macOS Retina
 		fbw, fbh := w.win.GetFramebufferSize()
 		w.scaleX = float64(fbw) / float64(w.width)
 		w.scaleY = float64(fbh) / float64(w.height)
-		w.buf = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
+		w.buf1 = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
+		w.buf2 = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
+		w.draw = make(chan *image.RGBA)
+
+		// Make sure this happens on main thread. Otherwise, Windows
+		// cannot render anything from it.
+		w.win.MakeContextCurrent()
+		err = gl.Init()
+		if err != nil {
+			err = fmt.Errorf("failed to initialize gl: %w", err)
+			return
+		}
 	})
 	if err != nil {
-		return
-	}
-	err = gl.Init()
-	if err != nil {
-		err = fmt.Errorf("failed to initialize gl: %w", err)
 		return
 	}
 
@@ -172,10 +179,6 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 		w.scaleX = float64(fbw) / float64(width)
 		w.scaleY = float64(fbh) / float64(height)
 		w.dispatcher.Dispatch(OnResize, &w.evSize)
-
-		// FIXME: figure out why resizing can cause window crash?
-		// guess: maybe because the resizing cause the race of drawing
-		// pixels and the old pixels?
 		w.refreshBuf(image.Rect(0, 0, fbw, fbh))
 	})
 	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
@@ -218,26 +221,75 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 		}
 	})
 
-	// Event Thread
+	// Rendering Thread
 	go func() {
-		timeout := 1.0 / 30
+		// We use two switching buffers for the draw calls. Otherwise,
+		// The gl.DrawPixels will race with pixel memories.
+		//
+		// Consider the following diagram:
+		//
+		//                +------ buf.Clear()
+		//                v
+		// |f(w.buf)| |f(w.buf)|
+		// +--------+-+-------------------------------------------> Render
+		//           \ w.draw <- buf
+		//            v
+		// -----------+--+----------------------------------------> Event
+		//                \ gl.DrawPixels + gl.Flush
+		//                 v
+		// -------------------+-----------------------------------> GPU
+		//                     \
+		//                      v
+		// ---------------+------+--------------------------------> Monitor
+		//          |<-- ~5ms -->|
+		//
+		// According to a rough measurement, when f finishes the rendering,
+		// the time to be able to flush the entire pixel buffer to the
+		// monitor requires 5ms on a MacBook Air (M1, 2020) laptop.
+		// This means, if the next f(w.buf) is called before flushing
+		// the pixels onto monitor, the buf.Clear inside the f happens
+		// concurrently with the flushing, aka data race.
+		//
+		// Although the race is not serious enough since it is just pixels,
+		// but it still can cause multiple known issues:
+		//
+		// 1. Crash on specific platform when resizing the window, such as macOS
+		// 2. Black flicking on the rendering even without window resizing
+		//
+		// To prevent that happen, we use two buffers that call on different
+		// draw calls. The benefits, of course, resolve the above issues,
+		// and be able to compute motion vectors between frames.
 		for !w.win.ShouldClose() {
-			// glfw.WaitEvents()
-			mainthread.Call(func() { glfw.WaitEventsTimeout(timeout) })
+			w.buf1.Clear()
+			w.draw <- f(w.buf1)
+			w.buf2.Clear()
+			w.draw <- f(w.buf2)
 		}
 	}()
 
-	// Rendering Thread
-	runtime.LockOSThread()
-	w.win.MakeContextCurrent()
-
+	// Event Thread
+	timeout := 1.0 / 120 // maximum 120 fps
+	th := time.NewTicker(time.Second / 120)
 	for !w.win.ShouldClose() {
-		w.flush(f(w.buf))
+		mainthread.Call(func() {
+			var buf *image.RGBA
+		wait:
+			for {
+				select {
+				case buf = <-w.draw:
+				case <-th.C:
+					w.flush(buf)
+					break wait
+				}
+			}
+			glfw.WaitEventsTimeout(timeout)
+		})
 	}
 }
 
 func (w *win) refreshBuf(r image.Rectangle) {
-	w.buf = render.NewBuffer(r)
+	w.buf1 = render.NewBuffer(r)
+	w.buf2 = render.NewBuffer(r)
 }
 
 func (w *win) flush(img *image.RGBA) {
@@ -256,7 +308,7 @@ func (w *win) flush(img *image.RGBA) {
 	gl.Viewport(0, 0, int32(dx), int32(dy))
 	gl.RasterPos2d(-1, 1)
 	gl.PixelZoom(1, -1)
-	gl.DrawPixels(int32(dx), int32(dy), gl.RGBA, gl.UNSIGNED_BYTE,
-		unsafe.Pointer(&img.Pix[0]))
+	gl.DrawPixels(int32(dx), int32(dy), gl.RGBA,
+		gl.UNSIGNED_BYTE, unsafe.Pointer(&img.Pix[0]))
 	gl.Flush()
 }
