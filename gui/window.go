@@ -269,19 +269,13 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 
 	// Event Thread
 	timeout := 1.0 / 120 // maximum 120 fps
-	th := time.NewTicker(time.Second / 120)
+	mainthread.Call(func() {
+		gl.DrawBuffer(gl.FRONT)
+		gl.PixelZoom(1, -1)
+	})
 	for !w.win.ShouldClose() {
 		mainthread.Call(func() {
-			var buf *image.RGBA
-		wait:
-			for {
-				select {
-				case buf = <-w.draw:
-				case <-th.C:
-					w.flush(buf)
-					break wait
-				}
-			}
+			w.flush(<-w.draw)
 			glfw.WaitEventsTimeout(timeout)
 		})
 	}
@@ -303,11 +297,9 @@ func (w *win) flush(img *image.RGBA) {
 		w.last = time.Now()
 	}
 
-	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
-	gl.DrawBuffer(gl.FRONT)
-	gl.Viewport(0, 0, int32(dx), int32(dy))
 	gl.RasterPos2d(-1, 1)
-	gl.PixelZoom(1, -1)
+	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
+	gl.Viewport(0, 0, int32(dx), int32(dy))
 	gl.DrawPixels(int32(dx), int32(dy), gl.RGBA,
 		gl.UNSIGNED_BYTE, unsafe.Pointer(&img.Pix[0]))
 	gl.Flush()

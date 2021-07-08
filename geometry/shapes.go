@@ -7,10 +7,15 @@ package geometry
 import (
 	"image/color"
 	"math/rand"
+	"time"
 
 	"changkun.de/x/polyred/geometry/primitive"
 	"changkun.de/x/polyred/math"
 )
+
+func init() {
+	rand.Seed(time.Now().Unix())
+}
 
 // NewPlane returns a triangle soup that represents a plane with the
 // given width and height.

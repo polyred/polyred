@@ -17,6 +17,16 @@ import (
 	"changkun.de/x/polyred/utils"
 )
 
+func BenchmarkAlphaBlend(b *testing.B) {
+	c1 := color.RGBA{128, 128, 128, 128}
+	c2 := color.RGBA{128, 128, 128, 128}
+	var c color.RGBA
+	for i := 0; i < b.N; i++ {
+		c = render.AlphaBlend(c1, c2)
+	}
+	_ = c
+}
+
 func TestScreenPass(t *testing.T) {
 	tests := []struct {
 		w int

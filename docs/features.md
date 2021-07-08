@@ -2,6 +2,7 @@
 
 - IO
   + [x] OBJ file loader
+  + [ ] MTL file loader
   + [ ] OBJ file exporter
   + [x] Gamma correction
 - geometry
@@ -23,18 +24,18 @@
 - rendering facilities:
   + [x] scene graph
   + [ ] BVH acceleration, morton coding, cache coherence optimization
-  + [ ] primitive pass
-  + [ ] shader programming
+  + [x] primitive pass
+  + [x] shader programming
   + [x] deferred shading pass
   + [x] abstract concurrent screen pass
   + [x] depth test and z-buffer pass
+  + [ ] wireframe drawing
   + [x] rasterization pass
     * [x] clipping
     * [x] backface culling
     * [x] viewfrustum culling
     * [x] occlusion culling
     * [x] perspective correct interpolation
-  + [ ] alpha test
   + [ ] ray tracing
   + anti-aliasing pass
     * [x] MSAA
@@ -42,7 +43,7 @@
   + [ ] Tangent space normal mapping
   + [ ] Physically-based rendering (PBR)
   + [ ] Alpha testing
-  + [ ] Alpha blending
+  + [x] Alpha blending
   + [ ] Skeletal animation
   + [ ] Rendering statistics (TODO: what should we do about this?)
   + [x] GUI window

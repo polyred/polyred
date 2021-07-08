@@ -36,6 +36,7 @@ func fn() {
 	r := render.NewRenderer(
 		render.WithSize(width, height),
 		render.WithCamera(cam),
+		render.WithBlendFunc(render.AlphaBlend),
 		render.WithThreadLimit(runtime.GOMAXPROCS(0)),
 	)
 	prog := &shader.BasicShader{
@@ -43,16 +44,17 @@ func fn() {
 		ViewMatrix:       cam.ViewMatrix(),
 		ProjectionMatrix: cam.ProjMatrix(),
 	}
-	m := geometry.NewRandomTriangleSoup(1000).(*geometry.BufferedMesh)
+	m := geometry.NewRandomTriangleSoup(100).(*geometry.BufferedMesh)
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
+
 	gui.Window().Subscribe(gui.OnResize, func(e gui.Event) {
 		ev := e.(*gui.SizeEvent)
 		cam.SetAspect(float64(ev.Width) / float64(ev.Height))
 		prog.ProjectionMatrix = cam.ProjMatrix()
 	})
 	gui.MainLoop(func(buf *render.Buffer) *image.RGBA {
-		cam.RotateX(math.Pi / 100)
-		cam.RotateY(math.Pi / 100)
+		cam.RotateX(math.Pi / 1000)
+		cam.RotateY(math.Pi / 1000)
 		prog.ModelMatrix = cam.ModelMatrix()
 
 		// 1. Render Primitives

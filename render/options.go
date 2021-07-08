@@ -64,6 +64,12 @@ func WithGammaCorrection(enable bool) Option {
 	}
 }
 
+func WithBlendFunc(f BlendFunc) Option {
+	return func(r *Renderer) {
+		r.blendFunc = f
+	}
+}
+
 func WithDebug(enable bool) Option {
 	return func(r *Renderer) {
 		r.debug = enable

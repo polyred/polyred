@@ -37,6 +37,7 @@ type Renderer struct {
 	debug        bool
 	scene        *scene.Scene
 	background   color.RGBA
+	blendFunc    BlendFunc
 
 	// scheduling, use for hard interruption.
 	running uint32 // atomic
