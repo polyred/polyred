@@ -113,7 +113,7 @@ func (b *Buffer) Set(x, y int, info FragmentInfo) {
 		uint8(info.Depth * 0xff),
 		uint8(info.Depth * 0xff), 0xff,
 	})
-	b.color.Set(x, y, info.Col)
+	b.color.Set(x, b.rect.Max.Y-y, info.Col)
 
 	b.fragments[i] = info
 }

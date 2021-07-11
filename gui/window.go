@@ -228,8 +228,8 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 		//
 		// Consider the following diagram:
 		//
-		//                +------ buf.Clear()
-		//                v
+		//           +------ buf.Clear()
+		//           v
 		// |f(w.buf)| |f(w.buf)|
 		// +--------+-+-------------------------------------------> Render
 		//           \ w.draw <- buf
@@ -237,10 +237,10 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 		// -----------+--+----------------------------------------> Event
 		//                \ gl.DrawPixels + gl.Flush
 		//                 v
-		// -------------------+-----------------------------------> GPU
-		//                     \
-		//                      v
-		// ---------------+------+--------------------------------> Monitor
+		// ----------------+---+----------------------------------> GPU
+		//                      \
+		//                       v
+		// ----------------------+--------------------------------> Monitor
 		//          |<-- ~5ms -->|
 		//
 		// According to a rough measurement, when f finishes the rendering,

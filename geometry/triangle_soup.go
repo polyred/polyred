@@ -114,3 +114,26 @@ func (m *TriangleSoup) Normalize() {
 	m.aabb = &primitive.AABB{Min: min, Max: max}
 	m.ResetContext()
 }
+
+func (m *TriangleSoup) GetVertexIndex() []uint64 {
+	index := make([]uint64, len(m.faces)*3)
+
+	for i := range index {
+		index[i] = uint64(i)
+	}
+	return index
+}
+
+func (m *TriangleSoup) GetVertexBuffer() []*primitive.Vertex {
+	vs := make([]*primitive.Vertex, len(m.faces)*3)
+	i := 0
+	m.Faces(func(f primitive.Face, m material.Material) bool {
+		f.Vertices(func(v *primitive.Vertex) bool {
+			vs[i] = v
+			i++
+			return true
+		})
+		return true
+	})
+	return vs
+}
