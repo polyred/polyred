@@ -34,9 +34,16 @@ jobs:
         Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
         export DISPLAY=:99.0
         sleep 5s
-        go test -v -covermode=atomic ./...
+        go test -v -timeout 60m -coverprofile=coverage.txt -covermode=atomic ./...
       if: ${{ runner.os == 'Linux' }}
 
     - name: TestOthers
       run: |
         go test -v -covermode=atomic ./...
+
+    - name: Upload coverage profile
+      uses: codecov/codecov-action@v1
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        file: coverage.txt
+      if: ${{ runner.os == 'Linux' }}
