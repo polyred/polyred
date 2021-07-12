@@ -9,7 +9,92 @@ import (
 
 	"changkun.de/x/polyred/camera"
 	"changkun.de/x/polyred/math"
+	"changkun.de/x/polyred/object"
 )
+
+func TestCameraProperties(t *testing.T) {
+	pos := math.NewVec3(-550, 194, 734)
+	lookAt := math.NewVec3(-1000, 0, 0)
+	up := math.NewVec3(0, 1, 1)
+	fov := 45.0
+	aspect := 1.6
+	near := -100.0
+	far := -600.0
+
+	oc := camera.NewOrthographic(pos, lookAt, up, -1, 1, -1, 1, 1, -1)
+	if oc.Type() != object.TypeCamera {
+		t.Fatalf("camera type does not return a type of camera, got %v", oc.Type())
+	}
+
+	if oc.Fov() != 1.5707963267948966 {
+		t.Fatalf("unexpected camera fov, got %v, want %v", oc.Fov(), 1.5707963267948966)
+	}
+
+	if oc.Aspect() != 1 {
+		t.Fatalf("unexpected camera aspect, got %v, want %v", oc.Aspect(), 1)
+	}
+
+	oc.SetAspect(1, 2)
+	if oc.Aspect() != 0.5 {
+		t.Fatalf("unexpected camera apsect, got %v, want %v", oc.Aspect(), 0.5)
+	}
+
+	if !oc.Position().Eq(pos) {
+		t.Fatalf("unexpected camera position, got %v, want %v", oc.Position(), pos)
+	}
+
+	oc.SetPosition(math.NewVec3(0, 0, 0))
+	if !oc.Position().Eq(math.NewVec3(0, 0, 0)) {
+		t.Fatalf("unexpected camera position, got %v, want %v", oc.Position(), math.NewVec3(0, 0, 0))
+	}
+
+	target, gotup := oc.LookAt()
+	if !target.Eq(lookAt) || !gotup.Eq(up) {
+		t.Fatalf("unexpected target or up, want %v, %v, got %v, %v", lookAt, up, target, gotup)
+	}
+	oc.SetLookAt(math.NewVec3(0, 0, 0), math.NewVec3(0, 1, 0))
+	target, gotup = oc.LookAt()
+	if !target.Eq(math.NewVec3(0, 0, 0)) || !gotup.Eq(math.NewVec3(0, 1, 0)) {
+		t.Fatalf("unexpected target or up, want %v, %v, got %v, %v", math.NewVec3(0, 0, 0), math.NewVec3(0, 1, 0), target, gotup)
+	}
+
+	oc = camera.NewPerspective(pos, lookAt, up, fov, aspect, near, far)
+	if oc.Type() != object.TypeCamera {
+		t.Fatalf("camera type does not return a type of camera, got %v", oc.Type())
+	}
+
+	if oc.Fov() != 45 {
+		t.Fatalf("unexpected camera fov, got %v, want %v", oc.Fov(), 45)
+	}
+
+	if oc.Aspect() != 1.6 {
+		t.Fatalf("unexpected camera aspect, got %v, want %v", oc.Aspect(), 1.6)
+	}
+
+	oc.SetAspect(1, 2)
+	if oc.Aspect() != 0.5 {
+		t.Fatalf("unexpected camera apsect, got %v, want %v", oc.Aspect(), 0.5)
+	}
+
+	if !oc.Position().Eq(pos) {
+		t.Fatalf("unexpected camera position, got %v, want %v", oc.Position(), pos)
+	}
+
+	oc.SetPosition(math.NewVec3(0, 0, 0))
+	if !oc.Position().Eq(math.NewVec3(0, 0, 0)) {
+		t.Fatalf("unexpected camera position, got %v, want %v", oc.Position(), math.NewVec3(0, 0, 0))
+	}
+
+	target, gotup = oc.LookAt()
+	if !target.Eq(lookAt) || !gotup.Eq(up) {
+		t.Fatalf("unexpected target or up, want %v, %v, got %v, %v", lookAt, up, target, gotup)
+	}
+	oc.SetLookAt(math.NewVec3(0, 0, 0), math.NewVec3(0, 1, 0))
+	target, gotup = oc.LookAt()
+	if !target.Eq(math.NewVec3(0, 0, 0)) || !gotup.Eq(math.NewVec3(0, 1, 0)) {
+		t.Fatalf("unexpected target or up, want %v, %v, got %v, %v", math.NewVec3(0, 0, 0), math.NewVec3(0, 1, 0), target, gotup)
+	}
+}
 
 func TestViewMatrix(t *testing.T) {
 	pos := math.NewVec3(-550, 194, 734)
