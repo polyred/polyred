@@ -12,7 +12,7 @@ func TestDispatcher(t *testing.T) {
 	d := newDispatcher()
 
 	counter := 0
-	d.Subscribe(OnResize, func(e Event) {
+	d.Subscribe(OnResize, func(na EventName, e Event) {
 		counter++
 	})
 

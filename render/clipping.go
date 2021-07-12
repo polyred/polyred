@@ -71,6 +71,7 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float64, reci
 	clips := sutherlandHodgman([]math.Vec4{p1, p2, p3}, w, h)
 	var result []*primitive.Triangle
 	for i := 2; i < len(clips); i++ {
+		// FIXME: clipping should be perspective correct
 		b1bc := math.Barycoord(clips[0].X, clips[0].Y, p1, p2, p3)
 		b2bc := math.Barycoord(clips[i-1].X, clips[i-1].Y, p1, p2, p3)
 		b3bc := math.Barycoord(clips[i].X, clips[i].Y, p1, p2, p3)

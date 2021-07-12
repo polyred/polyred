@@ -14,7 +14,7 @@ func newDispatcher() *dispatcher {
 	}
 }
 
-type EventCallBack func(Event)
+type EventCallBack func(EventName, Event)
 
 type subscription struct {
 	id interface{}
@@ -29,7 +29,7 @@ func (d *dispatcher) Dispatch(eventName EventName, ev Event) int {
 	}
 
 	for _, s := range subs {
-		s.cb(ev)
+		s.cb(eventName, ev)
 	}
 	return nsubs
 }

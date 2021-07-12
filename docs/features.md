@@ -22,6 +22,8 @@
     * [ ] melax simplification
     * [ ] uv parameterization
 - rendering facilities:
+  + [x] perspective and orthographic camera
+  + [x] orbit control 
   + [x] scene graph
   + [ ] BVH acceleration, morton coding, cache coherence optimization
   + [x] primitive pass
@@ -29,7 +31,7 @@
   + [x] deferred shading pass
   + [x] abstract concurrent screen pass
   + [x] depth test and z-buffer pass
-  + [ ] wireframe drawing
+  + [x] wireframe drawing (Bresenham algorithm)
   + [x] rasterization pass
     * [x] clipping
     * [x] backface culling
