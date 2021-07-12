@@ -20,14 +20,14 @@ import (
 )
 
 type TextureShader struct {
-	ModelMatrix      math.Mat4
-	ViewMatrix       math.Mat4
-	ProjectionMatrix math.Mat4
-	Texture          *image.Texture
+	ModelMatrix math.Mat4
+	ViewMatrix  math.Mat4
+	ProjMatrix  math.Mat4
+	Texture     *image.Texture
 }
 
 func (s *TextureShader) VertexShader(v primitive.Vertex) primitive.Vertex {
-	v.Pos = s.ProjectionMatrix.MulM(s.ViewMatrix).MulM(s.ModelMatrix).MulV(v.Pos)
+	v.Pos = s.ProjMatrix.MulM(s.ViewMatrix).MulM(s.ModelMatrix).MulV(v.Pos)
 	return v
 }
 
@@ -53,6 +53,18 @@ func fn() {
 		float64(width)/float64(height),
 		0.1, 10,
 	)
+
+	// FIXME: orthographic camera does not with model matrix??
+	// cam := camera.NewOrthographic(
+	// 	math.NewVec3(0, 3, 3),
+	// 	math.NewVec3(0, 0, 0),
+	// 	math.NewVec3(0, 1, 0),
+	// 	-float64(width)/2,
+	// 	float64(width)/2,
+	// 	-float64(height)/2,
+	// 	float64(height)/2, 0, -10,
+	// )
+
 	r := render.NewRenderer(
 		render.WithSize(width, height),
 		render.WithCamera(cam),
@@ -63,6 +75,7 @@ func fn() {
 	// Use a different model
 	m := io.MustLoadMesh("../../testdata/bunny.obj").(*geometry.TriangleSoup)
 	m.Normalize()
+	m.Scale(100, 100, 100)
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 
 	tex := image.NewTexture(
@@ -72,16 +85,18 @@ func fn() {
 
 	// Shader
 	prog := &TextureShader{
-		ModelMatrix:      math.Mat4I,
-		ViewMatrix:       cam.ViewMatrix(),
-		ProjectionMatrix: cam.ProjMatrix(),
-		Texture:          tex,
+		ModelMatrix: m.ModelMatrix(),
+		ViewMatrix:  cam.ViewMatrix(),
+		ProjMatrix:  cam.ProjMatrix(),
+		Texture:     tex,
 	}
 	// Handling window resizing
 	gui.Window().Subscribe(gui.OnResize, func(name gui.EventName, e gui.Event) {
 		ev := e.(*gui.SizeEvent)
 		cam.SetAspect(float64(ev.Width), float64(ev.Height))
-		prog.ProjectionMatrix = cam.ProjMatrix()
+		prog.ModelMatrix = m.ModelMatrix()
+		prog.ViewMatrix = cam.ViewMatrix()
+		prog.ModelMatrix = cam.ModelMatrix()
 	})
 
 	// Orbit controls
@@ -93,10 +108,13 @@ func fn() {
 
 	// Starts the main rendering loop
 	gui.MainLoop(func(buf *render.Buffer) *image.RGBA {
+		prog.ModelMatrix = m.ModelMatrix()
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ModelMatrix = cam.ModelMatrix()
+
 		r.PrimitivePass(buf, prog, vi, vb)
 		r.ScreenPass(buf.Image(), prog.FragmentShader)
+
 		return buf.Image()
 	})
 }

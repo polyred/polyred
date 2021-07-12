@@ -4,6 +4,8 @@
 
 package gui
 
+import "github.com/go-gl/glfw/v3.3/glfw"
+
 type Event interface{}
 
 type EventName int
@@ -52,14 +54,9 @@ type KeyEvent struct {
 	Mods ModifierKey
 }
 
+// Mouse buttons
 const (
-	MouseButtonLeft MouseButton = iota
-	MouseButtonMiddle
-	MouseButtonRight
+	MouseButtonLeft   = MouseButton(glfw.MouseButtonLeft)
+	MouseButtonRight  = MouseButton(glfw.MouseButtonRight)
+	MouseButtonMiddle = MouseButton(glfw.MouseButtonMiddle)
 )
-
-// var buttons = map[glfw.MouseButton]MouseButton{
-// 	glfw.MouseButtonLeft:   MouseButtonLeft,
-// 	glfw.MouseButtonRight:  MouseButtonRight,
-// 	glfw.MouseButtonMiddle: MouseButtonMiddle,
-// }

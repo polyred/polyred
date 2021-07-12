@@ -9,6 +9,8 @@ import (
 	"changkun.de/x/polyred/math"
 )
 
+// FIXME: work with orthographic camera
+
 // OrbitEnabled specifies which control types are enabled.
 type OrbitEnabled int
 
@@ -107,9 +109,6 @@ func (oc *OrbitControl) SetEnabled(bitmask OrbitEnabled) {
 
 // Rotate rotates the camera around the target by the specified angles.
 func (oc *OrbitControl) Rotate(thetaDelta, phiDelta float64) {
-
-	const EPS = 0.0001
-
 	// Compute direction vector from target to camera
 	tcam := oc.cam.Position()
 	tcam = tcam.Sub(oc.target)
@@ -121,7 +120,7 @@ func (oc *OrbitControl) Rotate(thetaDelta, phiDelta float64) {
 
 	// Restrict phi and theta to be between desired limits
 	phi = math.Clamp(phi, oc.MinPolarAngle, oc.MaxPolarAngle)
-	phi = math.Clamp(phi, EPS, math.Pi-EPS)
+	phi = math.Clamp(phi, math.Epsilon, math.Pi-math.Epsilon)
 	theta = math.Clamp(theta, oc.MinAzimuthAngle, oc.MaxAzimuthAngle)
 
 	// Calculate new cartesian coordinates
@@ -132,7 +131,6 @@ func (oc *OrbitControl) Rotate(thetaDelta, phiDelta float64) {
 	// Update camera position and orientation
 	oc.cam.SetPosition(oc.target.Add(tcam))
 	oc.cam.SetLookAt(oc.target, oc.up)
-
 }
 
 // Zoom moves the camera closer or farther from the target the specified
@@ -157,12 +155,13 @@ func (oc *OrbitControl) Zoom(delta float64) {
 // perpendicular to the viewing direction.
 func (oc *OrbitControl) Pan(deltaX, deltaY float64) {
 	// Compute direction vector from camera to target
-	position := oc.cam.Position()
-	vdir := oc.target.Sub(position)
+	pos := oc.cam.Position()
+	target, up := oc.cam.LookAt()
+	vdir := oc.target.Sub(pos)
 
 	// Conversion constant between an on-screen cursor delta and its
 	// projection on the target plane
-	c := 2 * vdir.Len() * math.Tan((oc.cam.Fov()/2.0)*math.Pi/180.0) /
+	c := 2 * vdir.Len() * math.Tan(math.DegToRad(oc.cam.Fov()/2.0)) /
 		math.Max(float64(window.width), float64(window.height))
 
 	// Calculate pan components, scale by the converted offsets and
@@ -170,12 +169,13 @@ func (oc *OrbitControl) Pan(deltaX, deltaY float64) {
 	var pan, panX, panY math.Vec3
 	panX = oc.up.Cross(vdir).Unit()
 	panY = vdir.Cross(panX).Unit()
-	panY = panY.Scale(c*deltaY, c*deltaY, c*deltaY)
 	panX = panX.Scale(c*deltaX, c*deltaX, c*deltaX)
+	panY = panY.Scale(c*deltaY, c*deltaY, c*deltaY)
 	pan = panX.Add(panY)
 
 	// Add pan offset to camera and target
-	oc.cam.SetPosition(position.Add(pan))
+	oc.cam.SetPosition(pos.Add(pan))
+	oc.cam.SetLookAt(target.Add(pan), up)
 	oc.target = oc.target.Add(pan)
 }
 
@@ -206,7 +206,6 @@ func (oc *OrbitControl) OnMouse(name EventName, ev Event) {
 				oc.state = statePan
 				oc.panStart.X = mev.Xpos
 				oc.panStart.Y = mev.Ypos
-
 			}
 		}
 	case OnMouseUp:
@@ -225,18 +224,16 @@ func (oc *OrbitControl) OnCursor(evname EventName, ev Event) {
 	switch oc.state {
 	case stateRotate:
 		c := -2 * math.Pi * oc.RotSpeed / math.Max(float64(window.width), float64(window.height))
-		oc.Rotate(c*(mev.Xpos-oc.rotStart.X),
-			c*(mev.Ypos-oc.rotStart.Y))
+		oc.Rotate(c*(mev.Xpos-oc.rotStart.X), c*(mev.Ypos-oc.rotStart.Y))
 		oc.rotStart.X = mev.Xpos
 		oc.rotStart.Y = mev.Ypos
 	case stateZoom:
 		oc.Zoom(oc.ZoomSpeed * (mev.Ypos - oc.zoomStart))
 		oc.zoomStart = mev.Ypos
 	case statePan:
-		oc.Pan(mev.Xpos-oc.panStart.X,
-			mev.Ypos-oc.panStart.Y)
+		oc.Pan(mev.Xpos-oc.panStart.X, mev.Ypos-oc.panStart.Y)
 		oc.panStart.X = mev.Xpos
-		oc.panStart.X = mev.Ypos
+		oc.panStart.Y = mev.Ypos
 	}
 }
 
