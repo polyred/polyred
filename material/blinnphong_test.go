@@ -33,7 +33,7 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 				},
 			),
 			light.WithPointLightPosition(
-				math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), 1),
+				math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64()),
 			),
 		),
 	}

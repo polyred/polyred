@@ -12,7 +12,7 @@ import (
 
 func TestVertex_AABB(t *testing.T) {
 	v := primitive.NewRandomVertex()
-	pos := v.Pos
+	pos := v.Pos.ToVec3()
 	aabb := v.AABB()
 
 	if !aabb.Min.Eq(pos) {

@@ -19,16 +19,16 @@ import (
 func NewDragonScene(w, h int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVec4(-3, 1.25, -2, 1),
-		math.NewVec4(0, -0.1, -0.1, 1),
-		math.NewVec4(0, 1, 0, 0),
+		math.NewVec3(-3, 1.25, -2),
+		math.NewVec3(0, -0.1, -0.1),
+		math.NewVec3(0, 1, 0),
 		30, float64(w)/float64(h), 0.01, 1000,
 	))
 
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(2),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-		light.WithPointLightPosition(math.NewVec4(-1.5, -1, 1, 1)),
+		light.WithPointLightPosition(math.NewVec3(-1.5, -1, 1)),
 	), light.NewAmbient(
 		light.WithAmbientIntensity(0.5),
 	))

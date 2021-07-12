@@ -25,9 +25,9 @@ func init() {
 
 func prepare(num int) (*render.Renderer, *render.Buffer, shader.Program, []uint64, []*primitive.Vertex) {
 	cam := camera.NewPerspective(
-		math.NewVec4(0, 3, 3, 1),
-		math.NewVec4(0, 0, 0, 1),
-		math.NewVec4(0, 1, 0, 0),
+		math.NewVec3(0, 3, 3),
+		math.NewVec3(0, 0, 0),
+		math.NewVec3(0, 1, 0),
 		45,
 		1,
 		0.1, 10,

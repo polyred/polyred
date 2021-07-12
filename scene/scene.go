@@ -53,10 +53,10 @@ func (s *Scene) IterObjects(iter func(o object.Object, modelMatrix math.Mat4) bo
 	}
 }
 
-func (s *Scene) Center() math.Vec4 {
+func (s *Scene) Center() math.Vec3 {
 	aabb := &primitive.AABB{
-		Min: math.NewVec4(0, 0, 0, 1),
-		Max: math.NewVec4(0, 0, 0, 1),
+		Min: math.NewVec3(0, 0, 0),
+		Max: math.NewVec3(0, 0, 0),
 	}
 	s.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
@@ -66,7 +66,7 @@ func (s *Scene) Center() math.Vec4 {
 		aabb.Add(mesh.AABB())
 		return true
 	})
-	return aabb.Min.Add(aabb.Max).Pos()
+	return aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2)
 }
 
 var _ object.Object = &Group{}

@@ -8,13 +8,13 @@ import "changkun.de/x/polyred/math"
 
 // AABB an axis aligned bounding box
 type AABB struct {
-	Min, Max math.Vec4
+	Min, Max math.Vec3
 }
 
 // NewAABB computes a new axis aligned bounding box of given vertices
-func NewAABB(vs ...math.Vec4) AABB {
-	min := math.NewVec4(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
-	max := math.NewVec4(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
+func NewAABB(vs ...math.Vec3) AABB {
+	min := math.NewVec3(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64)
+	max := math.NewVec3(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64)
 	for i := range vs {
 		min.X = math.Min(min.X, vs[i].X)
 		min.Y = math.Min(min.Y, vs[i].Y)

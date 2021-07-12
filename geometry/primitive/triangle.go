@@ -29,8 +29,8 @@ func NewTriangle(v1, v2, v3 *Vertex) *Triangle {
 	ymin := math.Min(v1.Pos.Y, v2.Pos.Y, v3.Pos.Y)
 	zmax := math.Max(v1.Pos.Z, v2.Pos.Z, v3.Pos.Z)
 	zmin := math.Min(v1.Pos.Z, v2.Pos.Z, v3.Pos.Z)
-	min := math.NewVec4(xmin, ymin, zmin, 1)
-	max := math.NewVec4(xmax, ymax, zmax, 1)
+	min := math.NewVec3(xmin, ymin, zmin)
+	max := math.NewVec3(xmax, ymax, zmax)
 	v2v1 := v1.Pos.Sub(v2.Pos)
 	v2v3 := v3.Pos.Sub(v2.Pos)
 
@@ -94,8 +94,8 @@ func (t *Triangle) AABB() AABB {
 		ymin := math.Min(t.V1.Pos.Y, t.V2.Pos.Y, t.V3.Pos.Y)
 		zmax := math.Max(t.V1.Pos.Z, t.V2.Pos.Z, t.V3.Pos.Z)
 		zmin := math.Min(t.V1.Pos.Z, t.V2.Pos.Z, t.V3.Pos.Z)
-		min := math.NewVec4(xmin, ymin, zmin, 1)
-		max := math.NewVec4(xmax, ymax, zmax, 1)
+		min := math.NewVec3(xmin, ymin, zmin)
+		max := math.NewVec3(xmax, ymax, zmax)
 		t.aabb = &AABB{min, max}
 	}
 

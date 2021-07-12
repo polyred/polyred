@@ -19,9 +19,9 @@ import (
 func NewGopherScene(width, height int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVec4(1, 1, 2, 1),
-		math.NewVec4(0, 0, 0, 1),
-		math.NewVec4(0, 1, 0, 0),
+		math.NewVec3(1, 1, 2),
+		math.NewVec3(0, 0, 0),
+		math.NewVec3(0, 1, 0),
 		45,
 		float64(width)/float64(height),
 		0.01, 600,
@@ -29,7 +29,7 @@ func NewGopherScene(width, height int) interface{} {
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(5),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-		light.WithPointLightPosition(math.NewVec4(0, 0, 5, 1)),
+		light.WithPointLightPosition(math.NewVec3(0, 0, 5)),
 	), light.NewAmbient(
 		light.WithAmbientIntensity(0.7),
 	))

@@ -77,8 +77,8 @@ func (bm *BufferedMesh) Type() object.Type {
 
 func (bm *BufferedMesh) AABB() primitive.AABB {
 	if bm.aabb == nil {
-		min := math.NewVec4(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
-		max := math.NewVec4(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
+		min := math.NewVec3(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64)
+		max := math.NewVec3(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64)
 		attr := bm.GetAttribute(AttributePos)
 		for _, vIndex := range bm.vertIdx {
 			x := attr.Values[attr.Stride*int(vIndex)+0]
@@ -93,14 +93,14 @@ func (bm *BufferedMesh) AABB() primitive.AABB {
 		}
 		bm.aabb = &primitive.AABB{Min: min, Max: max}
 	}
-	min := bm.aabb.Min.Apply(bm.ModelMatrix())
-	max := bm.aabb.Max.Apply(bm.ModelMatrix())
+	min := bm.aabb.Min.ToVec4(1).Apply(bm.ModelMatrix()).ToVec3()
+	max := bm.aabb.Max.ToVec4(1).Apply(bm.ModelMatrix()).ToVec3()
 	return primitive.AABB{Min: min, Max: max}
 }
 
 func (bm *BufferedMesh) Normalize() {
 	aabb := bm.AABB()
-	center := aabb.Min.Add(aabb.Max).Pos()
+	center := aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2)
 	radius := aabb.Max.Sub(aabb.Min).Len() / 2
 	fac := 1 / radius
 
@@ -117,8 +117,8 @@ func (bm *BufferedMesh) Normalize() {
 	}
 
 	// update AABB after scaling
-	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
+	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
 	bm.aabb = &primitive.AABB{Min: min, Max: max}
 	bm.ResetContext()
 }

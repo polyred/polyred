@@ -48,16 +48,16 @@ func NewPolygon(vs ...*Vertex) (*Polygon, error) {
 		zmin = math.Min(zmin, vs[i].Pos.Z)
 		p.vs[i] = *vs[i]
 	}
-	min := math.NewVec4(xmin, ymin, zmin, 1)
-	max := math.NewVec4(xmax, ymax, zmax, 1)
+	min := math.NewVec3(xmin, ymin, zmin)
+	max := math.NewVec3(xmax, ymax, zmax)
 	p.aabb = &AABB{min, max}
 	return p, nil
 }
 
 func (p *Polygon) AABB() AABB {
 	if p.aabb == nil {
-		min := math.NewVec4(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64, 1)
-		max := math.NewVec4(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64, 1)
+		min := math.NewVec3(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64)
+		max := math.NewVec3(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64)
 
 		for i := 0; i < len(p.vs); i++ {
 			min.X = math.Min(min.X, p.vs[i].Pos.X)

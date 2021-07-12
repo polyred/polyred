@@ -78,14 +78,14 @@ func (m *TriangleSoup) AABB() primitive.AABB {
 		m.aabb = &aabb
 	}
 
-	min := m.aabb.Min.Apply(m.ModelMatrix())
-	max := m.aabb.Max.Apply(m.ModelMatrix())
+	min := m.aabb.Min.ToVec4(1).Apply(m.ModelMatrix()).ToVec3()
+	max := m.aabb.Max.ToVec4(1).Apply(m.ModelMatrix()).ToVec3()
 	return primitive.AABB{Min: min, Max: max}
 }
 
-func (m *TriangleSoup) Center() math.Vec4 {
+func (m *TriangleSoup) Center() math.Vec3 {
 	aabb := m.AABB()
-	return aabb.Min.Add(aabb.Max).Pos()
+	return aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2)
 }
 
 func (m *TriangleSoup) Radius() float64 {
@@ -96,7 +96,7 @@ func (m *TriangleSoup) Radius() float64 {
 // Normalize rescales the mesh to the unit sphere centered at the origin.
 func (m *TriangleSoup) Normalize() {
 	aabb := m.AABB()
-	center := aabb.Min.Add(aabb.Max).Pos()
+	center := aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2)
 	radius := aabb.Max.Sub(aabb.Min).Len() / 2
 	fac := 1 / radius
 
@@ -109,8 +109,8 @@ func (m *TriangleSoup) Normalize() {
 	}
 
 	// update AABB after scaling
-	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
+	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
 	m.aabb = &primitive.AABB{Min: min, Max: max}
 	m.ResetContext()
 }

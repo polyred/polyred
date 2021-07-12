@@ -30,6 +30,11 @@ func (v Vec4) Eq(u Vec4) bool {
 	return false
 }
 
+// ToVec3 drops the w component of the given vec4.
+func (v Vec4) ToVec3() Vec3 {
+	return Vec3{v.X, v.Y, v.Z}
+}
+
 // Add adds the given two vectors, or point and vector, or two points
 func (v Vec4) Add(u Vec4) Vec4 {
 	return Vec4{v.X + u.X, v.Y + u.Y, v.Z + u.Z, v.W + u.W}

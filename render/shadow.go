@@ -96,18 +96,18 @@ func (r *Renderer) initShadowMaps() {
 		tm := camera.ViewMatrix(
 			r.lightSources[i].Position(),
 			r.scene.Center(),
-			math.NewVec4(0, 1, 0, 0),
+			math.NewVec3(0, 1, 0),
 		).
 			MulM(r.scene.GetCamera().ViewMatrix().Inv()).
 			MulM(r.scene.GetCamera().ProjMatrix().Inv())
-		v1 := math.NewVec4(1, 1, 1, 1).Apply(tm).Pos()
-		v2 := math.NewVec4(1, 1, -1, 1).Apply(tm).Pos()
-		v3 := math.NewVec4(1, -1, 1, 1).Apply(tm).Pos()
-		v4 := math.NewVec4(-1, 1, 1, 1).Apply(tm).Pos()
-		v5 := math.NewVec4(-1, -1, 1, 1).Apply(tm).Pos()
-		v6 := math.NewVec4(1, -1, -1, 1).Apply(tm).Pos()
-		v7 := math.NewVec4(-1, 1, -1, 1).Apply(tm).Pos()
-		v8 := math.NewVec4(-1, -1, -1, 1).Apply(tm).Pos()
+		v1 := math.NewVec4(1, 1, 1, 1).Apply(tm).Pos().ToVec3()
+		v2 := math.NewVec4(1, 1, -1, 1).Apply(tm).Pos().ToVec3()
+		v3 := math.NewVec4(1, -1, 1, 1).Apply(tm).Pos().ToVec3()
+		v4 := math.NewVec4(-1, 1, 1, 1).Apply(tm).Pos().ToVec3()
+		v5 := math.NewVec4(-1, -1, 1, 1).Apply(tm).Pos().ToVec3()
+		v6 := math.NewVec4(1, -1, -1, 1).Apply(tm).Pos().ToVec3()
+		v7 := math.NewVec4(-1, 1, -1, 1).Apply(tm).Pos().ToVec3()
+		v8 := math.NewVec4(-1, -1, -1, 1).Apply(tm).Pos().ToVec3()
 		aabb := primitive.NewAABB(v1, v2, v3, v4, v5, v6, v7, v8)
 		le := aabb.Min.X
 		ri := aabb.Max.X
@@ -133,7 +133,7 @@ func (r *Renderer) initShadowMaps() {
 			c = camera.NewOrthographic(
 				l.Position(),
 				r.scene.Center(),
-				math.NewVec4(0, 1, 0, 0),
+				math.NewVec3(0, 1, 0),
 				le, ri, bo, to, ne, fa,
 			)
 		default:
@@ -256,7 +256,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 
 	// Compute AABB make the AABB a little bigger that align with pixels
 	// to contain the entire triangle
-	aabb := primitive.NewAABB(t1.Pos, t2.Pos, t3.Pos)
+	aabb := primitive.NewAABB(t1.Pos.ToVec3(), t2.Pos.ToVec3(), t3.Pos.ToVec3())
 	xmin := int(math.Round(aabb.Min.X) - 1)
 	xmax := int(math.Round(aabb.Max.X) + 1)
 	ymin := int(math.Round(aabb.Min.Y) - 1)

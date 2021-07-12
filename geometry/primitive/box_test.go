@@ -12,16 +12,16 @@ import (
 )
 
 func TestNewAABB(t *testing.T) {
-	v1 := math.NewVec4(1, 0, 0, 1)
-	v2 := math.NewVec4(0, 1, 0, 1)
-	v3 := math.NewVec4(0, 0, 1, 1)
+	v1 := math.NewVec3(1, 0, 0)
+	v2 := math.NewVec3(0, 1, 0)
+	v3 := math.NewVec3(0, 0, 1)
 
 	aabb := primitive.NewAABB(v1, v2, v3)
 
-	if !aabb.Min.Eq(math.NewVec4(0, 0, 0, 1)) {
+	if !aabb.Min.Eq(math.NewVec3(0, 0, 0)) {
 		t.Fatal("not equal")
 	}
-	if !aabb.Max.Eq(math.NewVec4(1, 1, 1, 1)) {
+	if !aabb.Max.Eq(math.NewVec3(1, 1, 1)) {
 		t.Fatal("not equal")
 	}
 
@@ -29,24 +29,24 @@ func TestNewAABB(t *testing.T) {
 
 func TestAABB_Intersect(t *testing.T) {
 
-	v1 := math.NewVec4(1, 0, 0, 1)
-	v2 := math.NewVec4(0, 1, 0, 1)
-	v3 := math.NewVec4(0, 0, 1, 1)
+	v1 := math.NewVec3(1, 0, 0)
+	v2 := math.NewVec3(0, 1, 0)
+	v3 := math.NewVec3(0, 0, 1)
 
 	aabb1 := primitive.NewAABB(v1, v2, v3)
 
-	v4 := math.NewVec4(-1, -0.5, -0.5, 1)
-	v5 := math.NewVec4(-0.5, -1, -0.5, 1)
-	v6 := math.NewVec4(-0.5, -0.5, -1, 1)
+	v4 := math.NewVec3(-1, -0.5, -0.5)
+	v5 := math.NewVec3(-0.5, -1, -0.5)
+	v6 := math.NewVec3(-0.5, -0.5, -1)
 
 	aabb2 := primitive.NewAABB(v4, v5, v6)
 
 	if aabb1.Intersect(aabb2) {
 		t.Fatalf("intersect")
 	}
-	v7 := math.NewVec4(0.5, 0, 0, 1)
-	v8 := math.NewVec4(0, 0.5, 0, 1)
-	v9 := math.NewVec4(0, 0, 0.5, 1)
+	v7 := math.NewVec3(0.5, 0, 0)
+	v8 := math.NewVec3(0, 0.5, 0)
+	v9 := math.NewVec3(0, 0, 0.5)
 
 	aabb3 := primitive.NewAABB(v7, v8, v9)
 
@@ -54,9 +54,9 @@ func TestAABB_Intersect(t *testing.T) {
 		t.Fatalf("not intersect")
 	}
 
-	v10 := math.NewVec4(-1, 0, 0, 1)
-	v11 := math.NewVec4(0, -1, 0, 1)
-	v12 := math.NewVec4(0, 0, -1, 1)
+	v10 := math.NewVec3(-1, 0, 0)
+	v11 := math.NewVec3(0, -1, 0)
+	v12 := math.NewVec3(0, 0, -1)
 
 	aabb4 := primitive.NewAABB(v10, v11, v12)
 
@@ -67,15 +67,15 @@ func TestAABB_Intersect(t *testing.T) {
 
 func TestAABB_Add(t *testing.T) {
 
-	v1 := math.NewVec4(1, 0, 0, 1)
-	v2 := math.NewVec4(0, 1, 0, 1)
-	v3 := math.NewVec4(0, 0, 1, 1)
+	v1 := math.NewVec3(1, 0, 0)
+	v2 := math.NewVec3(0, 1, 0)
+	v3 := math.NewVec3(0, 0, 1)
 
 	aabb := primitive.NewAABB(v1, v2, v3)
 
-	v4 := math.NewVec4(-1, -0.5, -0.5, 1)
-	v5 := math.NewVec4(-0.5, -1, -0.5, 1)
-	v6 := math.NewVec4(-0.5, -0.5, -1, 1)
+	v4 := math.NewVec3(-1, -0.5, -0.5)
+	v5 := math.NewVec3(-0.5, -1, -0.5)
+	v6 := math.NewVec3(-0.5, -0.5, -1)
 
 	aabb.Add(primitive.NewAABB(v4, v5, v6))
 	want := primitive.NewAABB(v1, v2, v3, v4, v5, v6)

@@ -26,6 +26,6 @@ type Source interface {
 
 	Color() color.RGBA
 	Intensity() float64
-	Position() math.Vec4
+	Position() math.Vec3
 	CastShadow() bool
 }

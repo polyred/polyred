@@ -127,11 +127,11 @@ func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec
 		)
 		switch ll := l.(type) {
 		case *light.Point:
-			Ldir := ll.Position().Sub(x)
+			Ldir := ll.Position().ToVec4(1).Sub(x)
 			L = Ldir.Unit()
 			I = ll.Intensity() / Ldir.Len()
 		case *light.Directional:
-			L = ll.Dir().Scale(-1, -1, -1, 1)
+			L = ll.Dir().ToVec4(0).Scale(-1, -1, -1, 1)
 			I = ll.Intensity()
 		}
 

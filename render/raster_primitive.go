@@ -94,11 +94,11 @@ func (r *Renderer) Draw(buf *Buffer, prog shader.Program,
 func (r *Renderer) inViewFrustum(v1, v2, v3 math.Vec4) bool {
 	// TODO: can be optimize?
 	viewportAABB := primitive.NewAABB(
-		math.NewVec4(float64(r.width*r.msaa), float64(r.height*r.msaa), 1, 1),
-		math.NewVec4(0, 0, 0, 1),
-		math.NewVec4(0, 0, -1, 1),
+		math.NewVec3(float64(r.width*r.msaa), float64(r.height*r.msaa), 1),
+		math.NewVec3(0, 0, 0),
+		math.NewVec3(0, 0, -1),
 	)
-	triangleAABB := primitive.NewAABB(v1, v2, v3)
+	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
 	return viewportAABB.Intersect(triangleAABB)
 }
 
@@ -247,7 +247,7 @@ func (r *Renderer) rasterize(buf *Buffer, prog shader.Program,
 	v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
 	// Compute AABB make the AABB a little bigger that align with
 	// pixels to contain the entire triangle
-	aabb := primitive.NewAABB(v1.Pos, v2.Pos, v3.Pos)
+	aabb := primitive.NewAABB(v1.Pos.ToVec3(), v2.Pos.ToVec3(), v3.Pos.ToVec3())
 	xmin := int(math.Round(aabb.Min.X) - 1)
 	xmax := int(math.Round(aabb.Max.X) + 1)
 	ymin := int(math.Round(aabb.Min.Y) - 1)

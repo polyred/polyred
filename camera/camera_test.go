@@ -12,9 +12,9 @@ import (
 )
 
 func TestViewMatrix(t *testing.T) {
-	pos := math.NewVec4(-550, 194, 734, 1)
-	lookAt := math.NewVec4(-1000, 0, 0, 1)
-	up := math.NewVec4(0, 1, 1, 0)
+	pos := math.NewVec3(-550, 194, 734)
+	lookAt := math.NewVec3(-1000, 0, 0)
+	up := math.NewVec3(0, 1, 1)
 	fov := 45.0
 	aspect := 1.6
 	near := -100.0
@@ -47,9 +47,9 @@ func TestViewMatrix(t *testing.T) {
 }
 
 func TestProjMatrix(t *testing.T) {
-	pos := math.NewVec4(-550, 194, 734, 1)
-	lookAt := math.NewVec4(-1000, 0, 0, 1)
-	up := math.NewVec4(0, 1, 1, 0)
+	pos := math.NewVec3(-550, 194, 734)
+	lookAt := math.NewVec3(-1000, 0, 0)
+	up := math.NewVec3(0, 1, 1)
 	fov := 45.0
 	aspect := 1.6
 	near := -100.0
@@ -90,9 +90,9 @@ func TestProjMatrix(t *testing.T) {
 func BenchmarkCamera(b *testing.B) {
 	w, h := 1920, 1080
 	c1 := camera.NewPerspective(
-		math.NewVec4(-0.5, 0.5, 0.5, 1),
-		math.NewVec4(0, 0, -0.5, 1),
-		math.NewVec4(0, 1, 0, 0),
+		math.NewVec3(-0.5, 0.5, 0.5),
+		math.NewVec3(0, 0, -0.5),
+		math.NewVec3(0, 1, 0),
 		45,
 		float64(w)/float64(h),
 		-0.1,
@@ -117,9 +117,9 @@ func BenchmarkCamera(b *testing.B) {
 	})
 
 	c2 := camera.NewOrthographic(
-		math.NewVec4(-0.5, 0.5, 0.5, 1),
-		math.NewVec4(0, 0, -0.5, 1),
-		math.NewVec4(0, 1, 0, 0),
+		math.NewVec3(-0.5, 0.5, 0.5),
+		math.NewVec3(0, 0, -0.5),
+		math.NewVec3(0, 1, 0),
 		-10, 10, -10, 10, 10, -10,
 	)
 

@@ -289,7 +289,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) color.RGBA {
 		col = info.mat.Texture().Query(lod, info.u, 1-info.v)
 		col = info.mat.FragmentShader(
 			col, info.pos, info.n, info.fN,
-			r.renderCamera.Position(), r.lightSources, r.lightEnv)
+			r.renderCamera.Position().ToVec4(1), r.lightSources, r.lightEnv)
 	}
 
 	if r.useShadowMap && info.mat != nil && info.mat.ReceiveShadow() {
@@ -397,7 +397,7 @@ func (r *Renderer) drawClipped(
 
 	// Compute AABB make the AABB a little bigger that align with
 	// pixels to contain the entire triangle
-	aabb := primitive.NewAABB(t1.Pos, t2.Pos, t3.Pos)
+	aabb := primitive.NewAABB(t1.Pos.ToVec3(), t2.Pos.ToVec3(), t3.Pos.ToVec3())
 	xmin := int(math.Round(aabb.Min.X) - 1)
 	xmax := int(math.Round(aabb.Max.X) + 1)
 	ymin := int(math.Round(aabb.Min.Y) - 1)
@@ -524,10 +524,10 @@ func (r *Renderer) depthTest(x, y int, z float64) bool {
 
 func (r *Renderer) inViewport(v1, v2, v3 math.Vec4) bool {
 	viewportAABB := primitive.NewAABB(
-		math.NewVec4(float64(r.width*r.msaa), float64(r.height*r.msaa), 1, 1),
-		math.NewVec4(0, 0, 0, 1),
-		math.NewVec4(0, 0, -1, 1),
+		math.NewVec3(float64(r.width*r.msaa), float64(r.height*r.msaa), 1),
+		math.NewVec3(0, 0, 0),
+		math.NewVec3(0, 0, -1),
 	)
-	triangleAABB := primitive.NewAABB(v1, v2, v3)
+	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
 	return viewportAABB.Intersect(triangleAABB)
 }

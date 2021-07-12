@@ -45,7 +45,7 @@ func NewRandomVertex() *Vertex {
 
 func (v *Vertex) AABB() AABB {
 	return AABB{
-		Min: v.Pos,
-		Max: v.Pos,
+		Min: v.Pos.ToVec3(),
+		Max: v.Pos.ToVec3(),
 	}
 }

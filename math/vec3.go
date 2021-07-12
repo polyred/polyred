@@ -16,6 +16,11 @@ func NewVec3(x, y, z float64) Vec3 {
 	return Vec3{x, y, z}
 }
 
+// ToPos converts to a Vec4 representation using the given w component.
+func (v Vec3) ToVec4(w float64) Vec4 {
+	return Vec4{v.X, v.Y, v.Z, w}
+}
+
 func (v Vec3) Eq(u Vec3) bool {
 	if ApproxEq(v.X, v.X, Epsilon) &&
 		ApproxEq(v.Y, v.Y, Epsilon) &&
