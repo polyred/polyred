@@ -72,9 +72,12 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float64, reci
 	var result []*primitive.Triangle
 	for i := 2; i < len(clips); i++ {
 		// FIXME: clipping should be perspective correct
-		b1bc := math.Barycoord(clips[0].X, clips[0].Y, p1, p2, p3)
-		b2bc := math.Barycoord(clips[i-1].X, clips[i-1].Y, p1, p2, p3)
-		b3bc := math.Barycoord(clips[i].X, clips[i].Y, p1, p2, p3)
+		b1bc := math.Barycoord(math.NewVec2(clips[0].X, clips[0].Y),
+			p1.ToVec2(), p2.ToVec2(), p3.ToVec2())
+		b2bc := math.Barycoord(math.NewVec2(clips[i-1].X, clips[i-1].Y),
+			p1.ToVec2(), p2.ToVec2(), p3.ToVec2())
+		b3bc := math.Barycoord(math.NewVec2(clips[i].X, clips[i].Y),
+			p1.ToVec2(), p2.ToVec2(), p3.ToVec2())
 
 		t1 := primitive.Vertex{
 			Pos: math.Vec4{

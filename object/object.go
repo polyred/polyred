@@ -17,7 +17,7 @@ const (
 
 type Object interface {
 	Type() Type
-	Rotate(dir math.Vec4, angle float64)
+	Rotate(dir math.Vec3, angle float64)
 	RotateX(a float64)
 	RotateY(a float64)
 	RotateZ(a float64)

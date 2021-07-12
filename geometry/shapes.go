@@ -51,7 +51,7 @@ func NewPlane(width, height float64) Mesh {
 }
 
 // NewRandomTriangleSoup returns a mesh with given number of
-// random traingles.
+// random triangles.
 func NewRandomTriangleSoup(numTri int) Mesh {
 	idx := make([]uint64, numTri*3)
 	pos := make([]float64, numTri*3)

@@ -85,7 +85,7 @@ func (m *TriangleSoup) AABB() primitive.AABB {
 
 func (m *TriangleSoup) Center() math.Vec3 {
 	aabb := m.AABB()
-	return aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2)
+	return aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 }
 
 func (m *TriangleSoup) Radius() float64 {
@@ -96,7 +96,7 @@ func (m *TriangleSoup) Radius() float64 {
 // Normalize rescales the mesh to the unit sphere centered at the origin.
 func (m *TriangleSoup) Normalize() {
 	aabb := m.AABB()
-	center := aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2)
+	center := aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 	radius := aabb.Max.Sub(aabb.Min).Len() / 2
 	fac := 1 / radius
 

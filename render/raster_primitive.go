@@ -155,9 +155,12 @@ func (r *Renderer) drawClip(buf *Buffer, prog shader.Program,
 
 	total := len(clips)
 	for i := 2; i < total; i++ {
-		b1bc := math.Barycoord(clips[0].X, clips[0].Y, v1.Pos, v2.Pos, v3.Pos)
-		b2bc := math.Barycoord(clips[i-1].X, clips[i-1].Y, v1.Pos, v2.Pos, v3.Pos)
-		b3bc := math.Barycoord(clips[i].X, clips[i].Y, v1.Pos, v2.Pos, v3.Pos)
+		b1bc := math.Barycoord(math.NewVec2(clips[0].X, clips[0].Y),
+			v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
+		b2bc := math.Barycoord(math.NewVec2(clips[i-1].X, clips[i-1].Y),
+			v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
+		b3bc := math.Barycoord(math.NewVec2(clips[i].X, clips[i].Y),
+			v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 
 		t1 := primitive.Vertex{
 			Pos: math.Vec4{
@@ -261,12 +264,11 @@ func (r *Renderer) rasterize(buf *Buffer, prog shader.Program,
 				continue
 			}
 
-			x0 := float64(x) + 0.5
-			y0 := float64(y) + 0.5
+			p := math.NewVec2(float64(x)+0.5, float64(y)+0.5)
 
 			// Compute barycentric coordinates of a triangle in screen
 			// space and check if the fragment is inside triangle.
-			bc := math.Barycoord(x0, y0, v1.Pos, v2.Pos, v3.Pos)
+			bc := math.Barycoord(p, v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 			if bc[0] < -math.Epsilon ||
 				bc[1] < -math.Epsilon ||
 				bc[2] < -math.Epsilon {
@@ -290,8 +292,10 @@ func (r *Renderer) rasterize(buf *Buffer, prog shader.Program,
 			uvY := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bc)
 			frag.UV = math.NewVec2(uvX, uvY)
 
-			bcx := math.Barycoord(x0+1, y0, v1.Pos, v2.Pos, v3.Pos)
-			bcy := math.Barycoord(x0, y0+1, v1.Pos, v2.Pos, v3.Pos)
+			p1 := math.NewVec2(p.X+1, p.Y)
+			p2 := math.NewVec2(p.X, p.Y+1)
+			bcx := math.Barycoord(p1, v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
+			bcy := math.Barycoord(p2, v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 
 			uvdU := r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bcx)
 			uvdX := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcx)

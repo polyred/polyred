@@ -34,7 +34,7 @@ func (bc *BezierCurve) At(t float64) math.Vec4 {
 	// The de Casteljau algorithm.
 	for j := 0; j < n; j++ {
 		for i := 0; i < n-j-1; i++ {
-			b01 := math.LerpV(tc[i], tc[i+1], t)
+			b01 := math.LerpVec4(tc[i], tc[i+1], t)
 			tc[i].X = b01.X
 			tc[i].Y = b01.Y
 		}

@@ -74,7 +74,7 @@ func newscene(w, h int) *scene.Scene {
 		material.WithBlinnPhongShininess(100),
 	)
 	m.SetMaterial(mat)
-	m.Rotate(math.NewVec4(0, 1, 0, 0), -math.Pi/6)
+	m.Rotate(math.NewVec3(0, 1, 0), -math.Pi/6)
 	m.Scale(4, 4, 4)
 	m.Translate(0.1, 0, -0.2)
 	s.Add(m)

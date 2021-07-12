@@ -411,10 +411,8 @@ func (r *Renderer) drawClipped(
 				continue
 			}
 
-			x0 := float64(x) + 0.5
-			y0 := float64(y) + 0.5
-
-			bc := math.Barycoord(x0, y0, t1.Pos, t2.Pos, t3.Pos)
+			p := math.NewVec2(float64(x)+0.5, float64(y)+0.5)
+			bc := math.Barycoord(p, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
 
 			// Is inside triangle?
 			if bc[0] < -math.Epsilon || bc[1] < -math.Epsilon || bc[2] < -math.Epsilon {
@@ -443,11 +441,13 @@ func (r *Renderer) drawClipped(
 			// Compute du dv
 			var du, dv float64
 			if mat != nil && mat.Texture().UseMipmap() {
-				bcx := math.Barycoord(x0+1, y0, t1.Pos, t2.Pos, t3.Pos)
+				p1 := math.NewVec2(p.X+1, p.Y)
+				p2 := math.NewVec2(p.X, p.Y+1)
+				bcx := math.Barycoord(p1, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
 				wc1x, wc2x, wc3x := recipw.X*bcx[0], recipw.Y*bcx[1], recipw.Z*bcx[2]
 				normx := 1 / (wc1x + wc2x + wc3x)
 
-				bcy := math.Barycoord(x0, y0+1, t1.Pos, t2.Pos, t3.Pos)
+				bcy := math.Barycoord(p2, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
 				wc1y, wc2y, wc3y := recipw.X*bcy[0], recipw.Y*bcy[1], recipw.Z*bcy[2]
 				normy := 1 / (wc1y + wc2y + wc3y)
 

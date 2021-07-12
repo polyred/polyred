@@ -66,7 +66,7 @@ func (s *Scene) Center() math.Vec3 {
 		aabb.Add(mesh.AABB())
 		return true
 	})
-	return aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2)
+	return aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 }
 
 var _ object.Object = &Group{}

@@ -17,7 +17,7 @@ type ambientOcclusionPass struct {
 
 func (ao *ambientOcclusionPass) Shade(x, y int, col color.RGBA) color.RGBA {
 	// FIXME: naive and super slow SSAO implementation. Optimize
-	// when denoiser is avaliable.
+	// when denoiser is available.
 	w := ao.w
 	idx := x + w*y
 	info := &ao.gbuffer[idx]

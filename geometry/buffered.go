@@ -100,7 +100,7 @@ func (bm *BufferedMesh) AABB() primitive.AABB {
 
 func (bm *BufferedMesh) Normalize() {
 	aabb := bm.AABB()
-	center := aabb.Min.Add(aabb.Max).Scale(1/2, 1/2, 1/2)
+	center := aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 	radius := aabb.Max.Sub(aabb.Min).Len() / 2
 	fac := 1 / radius
 
