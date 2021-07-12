@@ -9,7 +9,63 @@ import (
 	"testing"
 
 	"changkun.de/x/polyred/color"
+	"changkun.de/x/polyred/math"
 )
+
+func TestColor(t *testing.T) {
+	tests := []struct {
+		col string
+	}{
+		{col: "#ffffffff"},
+		{col: "#ffffff"},
+		{col: "#ffff"},
+		{col: "#fff"},
+	}
+
+	for _, tt := range tests {
+		col := color.FromHex(tt.col)
+		if !color.Equal(col, color.White) {
+			t.Fatalf("unexpected color from hex, got %v, want %v", col, color.White)
+		}
+
+		if color.Equal(col, color.Black) {
+			t.Fatalf("unexpected color from hex, got %v, want %v", col, color.White)
+		}
+	}
+}
+
+func TestCoverConversion(t *testing.T) {
+
+	orig := 0.5
+	v := color.FromLinear2sRGB(orig)
+	if !math.ApproxEq(color.FromsRGB2Linear(v), orig, math.Epsilon) {
+		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), orig)
+	}
+
+	if color.FromLinear2sRGB(0) != 0 {
+		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromLinear2sRGB(v), 0)
+	}
+
+	if color.FromLinear2sRGB(1) != 1 {
+		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromLinear2sRGB(v), 1)
+	}
+
+	if color.FromsRGB2Linear(0) != 0 {
+		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), 0)
+	}
+
+	if color.FromsRGB2Linear(1) != 1 {
+		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), 1)
+	}
+
+	color.DisableLut()
+
+	orig = 0.5
+	v = color.FromLinear2sRGB(orig)
+	if !math.ApproxEq(color.FromsRGB2Linear(v), orig, math.Epsilon) {
+		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), orig)
+	}
+}
 
 func BenchmarkFromHex(b *testing.B) {
 	x := "#ffffff"

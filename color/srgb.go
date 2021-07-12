@@ -1,3 +1,7 @@
+// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
+
 package color
 
 import (
@@ -50,11 +54,11 @@ func FromsRGB2Linear(v float64) float64 {
 var once sync.Once
 
 const (
-	useLut  = false
 	lutSize = 1024 // keep a power of 2
 )
 
 var (
+	useLut      = true
 	lin2sRGBLUT [lutSize + 1]float64
 	sRGB2linLUT [lutSize + 1]float64
 )
