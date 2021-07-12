@@ -20,6 +20,10 @@ var (
 )
 
 // Mat3 represents a 3x3 Mat3
+//
+// / X00, X01, X02 \
+// | X10, X11, X12 |
+// \ X20, X21, X22 /
 type Mat3 struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 3x4 Mat3.
@@ -29,7 +33,10 @@ type Mat3 struct {
 	X20, X21, X22 float64
 }
 
-func NewMat3(X00, X01, X02, X10, X11, X12, X20, X21, X22 float64) Mat3 {
+func NewMat3(
+	X00, X01, X02,
+	X10, X11, X12,
+	X20, X21, X22 float64) Mat3 {
 	return Mat3{
 		X00, X01, X02,
 		X10, X11, X12,
@@ -39,11 +46,11 @@ func NewMat3(X00, X01, X02, X10, X11, X12, X20, X21, X22 float64) Mat3 {
 
 // Get gets the Mat3 elements
 func (m Mat3) Get(i, j int) float64 {
-	if i < 0 || i > 3 || j < 0 || j > 3 {
+	if i < 0 || i > 2 || j < 0 || j > 2 {
 		panic("invalid index")
 	}
 
-	switch i*4 + j {
+	switch i*3 + j {
 	case 0:
 		return m.X00
 	case 1:
@@ -60,18 +67,20 @@ func (m Mat3) Get(i, j int) float64 {
 		return m.X20
 	case 7:
 		return m.X21
+	case 8:
+		fallthrough
 	default:
 		return m.X22
 	}
 }
 
 // Set set the Mat3 elements at row i and column j
-func (m Mat3) Set(i, j int, v float64) {
-	if i < 0 || i > 3 || j < 0 || j > 3 {
+func (m *Mat3) Set(i, j int, v float64) {
+	if i < 0 || i > 2 || j < 0 || j > 2 {
 		panic("invalid index")
 	}
 
-	switch i*4 + j {
+	switch i*3 + j {
 	case 0:
 		m.X00 = v
 	case 1:
@@ -88,6 +97,8 @@ func (m Mat3) Set(i, j int, v float64) {
 		m.X20 = v
 	case 7:
 		m.X21 = v
+	case 8:
+		fallthrough
 	default:
 		m.X22 = v
 	}
@@ -154,6 +165,13 @@ func (m Mat3) MulV(v Vec3) Vec3 {
 	y := m.X10*v.X + m.X11*v.Y + m.X12*v.Z
 	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z
 	return Vec3{x, y, z}
+}
+
+// Det computes the determinant of the given matrix.
+func (m Mat3) Det() float64 {
+	return (m.X00*m.X11*m.X22 - m.X21*m.X12) -
+		m.X10*(m.X01*m.X22-m.X21*m.X02) +
+		m.X20*(m.X01*m.X12-m.X11*m.X02)
 }
 
 // T computes the transpose Mat3 of a given Mat3

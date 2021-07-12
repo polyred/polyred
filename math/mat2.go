@@ -17,7 +17,10 @@ var (
 	}
 )
 
-// Mat2 represents a 3x3 Mat2
+// Mat2 represents a 2x2 Mat2:
+//
+// / X00, X01 \
+// \ X10, X11 /
 type Mat2 struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 3x4 Mat2.
@@ -26,7 +29,10 @@ type Mat2 struct {
 	X10, X11 float64
 }
 
-func NewMat2(X00, X01, X10, X11 float64) Mat2 {
+// NewMat2 returns a new Mat2.
+func NewMat2(
+	X00, X01,
+	X10, X11 float64) Mat2 {
 	return Mat2{
 		X00, X01,
 		X10, X11,
@@ -39,31 +45,35 @@ func (m Mat2) Get(i, j int) float64 {
 		panic("invalid index")
 	}
 
-	switch i*4 + j {
+	switch i*2 + j {
 	case 0:
 		return m.X00
 	case 1:
 		return m.X01
 	case 2:
 		return m.X10
+	case 3:
+		fallthrough
 	default:
 		return m.X11
 	}
 }
 
 // Set set the Mat2 elements at row i and column j
-func (m Mat2) Set(i, j int, v float64) {
+func (m *Mat2) Set(i, j int, v float64) {
 	if i < 0 || i > 1 || j < 0 || j > 1 {
 		panic("invalid index")
 	}
 
-	switch i*4 + j {
+	switch i*2 + j {
 	case 0:
 		m.X00 = v
 	case 1:
 		m.X01 = v
-	case 3:
+	case 2:
 		m.X10 = v
+	case 3:
+		fallthrough
 	default:
 		m.X11 = v
 	}

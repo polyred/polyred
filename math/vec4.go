@@ -6,6 +6,7 @@ package math
 
 import (
 	"math"
+	"math/rand"
 )
 
 // Vec4 uses homogeneous coordinates (x, y, z, w) that represents
@@ -19,24 +20,29 @@ func NewVec4(x, y, z, w float64) Vec4 {
 	return Vec4{x, y, z, w}
 }
 
+// NewRandVec4
+func NewRandVec4() Vec4 {
+	return Vec4{
+		rand.Float64(),
+		rand.Float64(),
+		rand.Float64(),
+		rand.Float64(),
+	}
+}
+
 // Eq checks whether two vectors are equal.
 func (v Vec4) Eq(u Vec4) bool {
-	if ApproxEq(v.X, v.X, Epsilon) &&
-		ApproxEq(v.Y, v.Y, Epsilon) &&
-		ApproxEq(v.Z, v.Z, Epsilon) &&
-		ApproxEq(v.W, v.W, Epsilon) {
+	if ApproxEq(v.X, u.X, Epsilon) &&
+		ApproxEq(v.Y, u.Y, Epsilon) &&
+		ApproxEq(v.Z, u.Z, Epsilon) &&
+		ApproxEq(v.W, u.W, Epsilon) {
 		return true
 	}
 	return false
 }
 
-// ToVec3 drops the w component of the given vec4.
-func (v Vec4) ToVec3() Vec3 {
-	return Vec3{v.X, v.Y, v.Z}
-}
-
 // Add adds the given two vectors, or point and vector, or two points
-func (v Vec4) Add(u Vec4) Vec4 {
+func (v *Vec4) Add(u Vec4) Vec4 {
 	return Vec4{v.X + u.X, v.Y + u.Y, v.Z + u.Z, v.W + u.W}
 }
 
@@ -74,18 +80,6 @@ func (v Vec4) Dot(u Vec4) float64 {
 	return v.X*u.X + v.Y*u.Y + v.Z*u.Z + v.W*u.W
 }
 
-// Cross implements cross product for two given vectors
-// and assign the result to this.
-func (v Vec4) Cross(u Vec4) Vec4 {
-	// if !ApproxEq(v.W, 0, DefaultEpsilon) || !ApproxEq(u.W, 0, DefaultEpsilon) {
-	// 	panic("v or u is not a vector")
-	// }
-	x := v.Y*u.Z - v.Z*u.Y
-	y := v.Z*u.X - v.X*u.Z
-	z := v.X*u.Y - v.Y*u.X
-	return Vec4{x, y, z, 0}
-}
-
 // Len computes the length of the given Vector
 func (v Vec4) Len() float64 {
 	return math.Sqrt(v.Dot(v))
@@ -105,6 +99,25 @@ func (v Vec4) Apply(m Mat4) Vec4 {
 	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z + m.X23*v.W
 	w := m.X30*v.X + m.X31*v.Y + m.X32*v.Z + m.X33*v.W
 	return Vec4{x, y, z, w}
+}
+
+// ToVec2 drops the z and w components of the given vec4.
+func (v Vec4) ToVec2() Vec2 {
+	return Vec2{v.X, v.Y}
+}
+
+// ToVec3 drops the w component of the given vec4.
+func (v Vec4) ToVec3() Vec3 {
+	return Vec3{v.X, v.Y, v.Z}
+}
+
+// Cross applies cross product of two given vectors
+// and returns the resulting vector.
+func (v Vec4) Cross(u Vec4) Vec4 {
+	x := v.Y*u.Z - v.Z*u.Y
+	y := v.Z*u.X - v.X*u.Z
+	z := v.X*u.Y - v.Y*u.X
+	return Vec4{x, y, z, 0}
 }
 
 // Pos converts a homogeneous represented vector to a point

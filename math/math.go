@@ -2,10 +2,15 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
+// Package math implements basic math functions which operate
+// directly on float64 numbers without casting and contains
+// types of common entities used in 3D Graphics such as vectors,
+// matrices, quaternions and others.
 package math
 
 import "math"
 
+// Equivalents to the standard math package.
 var (
 	Cos        = math.Cos
 	Sin        = math.Sin
@@ -27,27 +32,26 @@ var (
 	Modf       = math.Modf
 )
 
-// Epsilon is a default epsilon value for computation.
-const Epsilon = 1e-7
+const (
+	// Epsilon is a default epsilon value for computation.
+	Epsilon     = 1e-7
+	degToRadFac = math.Pi / 180
+	radToDegFac = 180.0 / math.Pi
+)
 
 // ApproxEq approximately compares v1 and v2.
 func ApproxEq(v1, v2, epsilon float64) bool {
 	return math.Abs(v1-v2) <= epsilon
 }
 
-// Clamp clamps a given value in [min, max].
-func Clamp(n, min, max float64) float64 {
-	return math.Min(math.Max(n, min), max)
+// DegToRad converts a number from degrees to radians
+func DegToRad(deg float64) float64 {
+	return deg * degToRadFac
 }
 
-// ClampV clamps a vector in [min, max].
-func ClampV(v Vec4, min, max float64) Vec4 {
-	return Vec4{
-		Clamp(v.X, min, max),
-		Clamp(v.Y, min, max),
-		Clamp(v.Z, min, max),
-		Clamp(v.W, min, max),
-	}
+// RadToDeg converts a number from radians to degrees
+func RadToDeg(rad float64) float64 {
+	return rad * radToDegFac
 }
 
 // Min compares n values and returns the minimum

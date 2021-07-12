@@ -10,260 +10,678 @@ import (
 	"changkun.de/x/polyred/math"
 )
 
-func TestNewMatrix(t *testing.T) {
-	m := math.Mat4I
+func TestMat_Eq(t *testing.T) {
+	t.Run("Mat2", func(t *testing.T) {
+		m1 := math.Mat2I
+		m2 := math.Mat2I
 
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
-			if i == j && m.Get(i, j) == 1 {
-				continue
-			}
-			if i != j && m.Get(i, j) == 0 {
-				continue
-			}
-			t.Fatalf("new matrix is not an intentity matrix")
+		if !m1.Eq(m2) {
+			t.Fatalf("unexpected Eq, want true, got false")
 		}
-	}
-}
 
-func TestMat4_Get(t *testing.T) {
-	m := math.Mat4{
-		1, 1, 1, 1,
-		1, 1, 1, 1,
-		1, 1, 1, 1,
-		1, 1, 1, 1,
-	}
-
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
-			if m.Get(i, j) == 1 {
-				continue
-			}
-			t.Fatalf("set matrix does not working properly, want 1, got %v", m.Get(i, j))
+		m3 := math.Mat2Zero
+		if m1.Eq(m3) {
+			t.Fatalf("unexpected Eq, want false, got true")
 		}
-	}
-}
+	})
 
-func TestMat4_MulM(t *testing.T) {
-	m1 := math.Mat4{
-		1, 2, 3, 4,
-		5, 6, 7, 8,
-		9, 10, 11, 12,
-		13, 14, 15, 16,
-	}
-	m2 := math.Mat4{
-		16, 15, 14, 13,
-		12, 11, 10, 9,
-		8, 7, 6, 5,
-		4, 3, 2, 1,
-	}
+	t.Run("Mat3", func(t *testing.T) {
+		m1 := math.Mat3I
+		m2 := math.Mat3I
 
-	got := m1.MulM(m2)
-
-	want := math.Mat4{
-		80, 70, 60, 50,
-		240, 214, 188, 162,
-		400, 358, 316, 274,
-		560, 502, 444, 386,
-	}
-
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 4; j++ {
-			if got.Get(i, j) == want.Get(i, j) {
-				continue
-			}
-			t.Fatalf("multiply matrices does not working properly, want %v, got %v", want.Get(i, j), got.Get(i, j))
+		if !m1.Eq(m2) {
+			t.Fatalf("unexpected Eq, want true, got false")
 		}
-	}
+
+		m3 := math.Mat3Zero
+		if m1.Eq(m3) {
+			t.Fatalf("unexpected Eq, want false, got true")
+		}
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		m1 := math.Mat4I
+		m2 := math.Mat4I
+
+		if !m1.Eq(m2) {
+			t.Fatalf("unexpected Eq, want true, got false")
+		}
+
+		m3 := math.Mat4Zero
+		if m1.Eq(m3) {
+			t.Fatalf("unexpected Eq, want false, got true")
+		}
+	})
 }
 
-func TestMat4_Inv(t *testing.T) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
-	m1 = m1.Inv()
+func TestMat_Get(t *testing.T) {
+	t.Run("Mat2", func(t *testing.T) {
+		m := math.NewMat2(
+			1, 2,
+			3, 4,
+		)
 
-	want := math.Mat4{
-		1003995.0 / 4463716, -10967.0 / 4463716, -5949.0 / 4463716, -219389.0 / 4463716,
-		-62879.0 / 4463716, 65251.0 / 4463716, 1613.0 / 4463716, -107839.0 / 4463716,
-		-3999.0 / 2231858, -3.0 / 2231858, 3865.0 / 2231858, 347.0 / 2231858,
-		-75565.0 / 4463716, -1731.0 / 4463716, -1753.0 / 4463716, 200219.0 / 4463716,
-	}
+		counter := 1
+		for i := 0; i < 2; i++ {
+			for j := 0; j < 2; j++ {
+				if m.Get(i, j) == float64(counter) {
+					counter++
+					continue
+				}
+				t.Fatalf("unexpected element (%d, %d), got %v, want %v", i, j, m.Get(i, j), counter)
+			}
+		}
+	})
 
-	if m1.Eq(want) {
-		return
-	}
+	t.Run("Mat3", func(t *testing.T) {
+		m := math.NewMat3(
+			1, 2, 3,
+			4, 5, 6,
+			7, 8, 9,
+		)
 
-	t.Fatalf("inverse matrices does not working properly, got %+v, want %+v", m1, want)
+		counter := 1
+		for i := 0; i < 3; i++ {
+			for j := 0; j < 3; j++ {
+				if m.Get(i, j) == float64(counter) {
+					counter++
+					continue
+				}
+				t.Fatalf("unexpected element (%d, %d), got %v, want %v", i, j, m.Get(i, j), counter)
+			}
+		}
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		m := math.NewMat4(
+			1, 2, 3, 4,
+			5, 6, 7, 8,
+			9, 10, 11, 12,
+			13, 14, 15, 16,
+		)
+
+		counter := 1
+		for i := 0; i < 4; i++ {
+			for j := 0; j < 4; j++ {
+				if m.Get(i, j) == float64(counter) {
+					counter++
+					continue
+				}
+				t.Fatalf("unexpected element (%d, %d), got %v, want %v", i, j, m.Get(i, j), counter)
+			}
+		}
+	})
+
+	t.Run("Mat2_Invalid1", func(t *testing.T) {
+		m := math.Mat2I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Get(-1, -1)
+	})
+	t.Run("Mat2_Invalid2", func(t *testing.T) {
+		m := math.Mat2I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Get(2, 2)
+	})
+
+	t.Run("Mat3_Invalid1", func(t *testing.T) {
+		m := math.Mat3I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Get(-1, -1)
+	})
+	t.Run("Mat3_Invalid2", func(t *testing.T) {
+		m := math.Mat3I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Get(3, 3)
+	})
+
+	t.Run("Mat4_Invalid1", func(t *testing.T) {
+		m := math.Mat4I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Get(-1, -1)
+	})
+	t.Run("Mat4_Invalid2", func(t *testing.T) {
+		m := math.Mat4I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Get(4, 4)
+	})
 }
 
-func TestMat4_T(t *testing.T) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
-	m1 = m1.T()
+func TestMat_Set(t *testing.T) {
+	t.Run("Mat2", func(t *testing.T) {
+		want := math.NewMat2(
+			1, 2,
+			3, 4,
+		)
+		got := math.Mat2Zero
 
-	want := math.Mat4{
-		5, 8, 5, 2,
-		1, 71, 1, 1,
-		5, 2, 582, 7,
-		6, 47, 4, 25,
-	}
-	if m1.Eq(want) {
-		return
-	}
-	t.Fatalf("transpose matrices does not working properly, got %+v, want %+v", m1, want)
+		counter := 1
+		for i := 0; i < 2; i++ {
+			for j := 0; j < 2; j++ {
+				got.Set(i, j, float64(counter))
+				counter++
+			}
+		}
+
+		if !want.Eq(got) {
+			t.Fatalf("unexpected Set, got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("Mat3", func(t *testing.T) {
+		want := math.NewMat3(
+			1, 2, 3,
+			4, 5, 6,
+			7, 8, 9,
+		)
+		got := math.Mat3Zero
+
+		counter := 1
+		for i := 0; i < 3; i++ {
+			for j := 0; j < 3; j++ {
+				got.Set(i, j, float64(counter))
+				counter++
+			}
+		}
+
+		if !want.Eq(got) {
+			t.Fatalf("unexpected Set, got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		want := math.NewMat4(
+			1, 2, 3, 4,
+			5, 6, 7, 8,
+			9, 10, 11, 12,
+			13, 14, 15, 16,
+		)
+		got := math.Mat4Zero
+
+		counter := 1
+		for i := 0; i < 4; i++ {
+			for j := 0; j < 4; j++ {
+				got.Set(i, j, float64(counter))
+				counter++
+			}
+		}
+
+		if !want.Eq(got) {
+			t.Fatalf("unexpected Set, got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("Mat2_Invalid1", func(t *testing.T) {
+		m := math.Mat2I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Set(-1, -1, 1)
+	})
+	t.Run("Mat2_Invalid2", func(t *testing.T) {
+		m := math.Mat2I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Set(2, 2, 1)
+	})
+
+	t.Run("Mat3_Invalid1", func(t *testing.T) {
+		m := math.Mat3I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Set(-1, -1, 1)
+	})
+	t.Run("Mat3_Invalid2", func(t *testing.T) {
+		m := math.Mat3I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Set(3, 3, 1)
+	})
+
+	t.Run("Mat4_Invalid1", func(t *testing.T) {
+		m := math.Mat4I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Set(-1, -1, 1)
+	})
+	t.Run("Mat4_Invalid2", func(t *testing.T) {
+		m := math.Mat4I
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("invalid Get does not panic")
+			}
+		}()
+		m.Set(4, 4, 1)
+	})
 }
 
-func BenchmarkMat4_Eq(b *testing.B) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
-	m2 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
+func TestMat_Add(t *testing.T) {
+	t.Run("Mat2", func(t *testing.T) {
+		m1 := math.NewMat2(
+			1, 2, 3, 4,
+		)
+		m2 := math.NewMat2(
+			5, 6, 7, 8,
+		)
+		want := math.NewMat2(
+			6, 8, 10, 12,
+		)
+		if !m1.Add(m2).Eq(want) {
+			t.Fatalf("unexpected Mat Add, got %v, want %v", m1.Add(m2), want)
+		}
+	})
 
-	var m bool
-	for i := 0; i < b.N; i++ {
-		m = m1.Eq(m2)
-	}
-	_ = m
+	t.Run("Mat3", func(t *testing.T) {
+		m1 := math.NewMat3(
+			1, 2, 3,
+			4, 1, 2,
+			3, 4, 1,
+		)
+		m2 := math.NewMat3(
+			5, 6, 7,
+			8, 5, 6,
+			7, 8, 5,
+		)
+		want := math.NewMat3(
+			6, 8, 10,
+			12, 6, 8,
+			10, 12, 6,
+		)
+		if !m1.Add(m2).Eq(want) {
+			t.Fatalf("unexpected Mat Add, got %v, want %v", m1.Add(m2), want)
+		}
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		m1 := math.NewMat4(
+			1, 2, 3, 4,
+			1, 2, 3, 4,
+			1, 2, 3, 4,
+			1, 2, 3, 4,
+		)
+		m2 := math.NewMat4(
+			5, 6, 7, 8,
+			5, 6, 7, 8,
+			5, 6, 7, 8,
+			5, 6, 7, 8,
+		)
+		want := math.NewMat4(
+			6, 8, 10, 12,
+			6, 8, 10, 12,
+			6, 8, 10, 12,
+			6, 8, 10, 12,
+		)
+		if !m1.Add(m2).Eq(want) {
+			t.Fatalf("unexpected Mat Add, got %v, want %v", m1.Add(m2), want)
+		}
+	})
 }
 
-func BenchmarkMat4_Add(b *testing.B) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
-	m2 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
+func TestMat_Sub(t *testing.T) {
+	t.Run("Mat2", func(t *testing.T) {
+		m1 := math.NewMat2(
+			1, 2, 3, 4,
+		)
+		m2 := math.NewMat2(
+			5, 6, 7, 8,
+		)
+		want := math.NewMat2(
+			-4, -4, -4, -4,
+		)
+		if !m1.Sub(m2).Eq(want) {
+			t.Fatalf("unexpected Mat Sub, got %v, want %v", m1.Sub(m2), want)
+		}
+	})
 
-	var m math.Mat4
-	for i := 0; i < b.N; i++ {
-		m = m1.Add(m2)
-	}
-	_ = m
+	t.Run("Mat3", func(t *testing.T) {
+		m1 := math.NewMat3(
+			1, 2, 3,
+			4, 1, 2,
+			3, 4, 1,
+		)
+		m2 := math.NewMat3(
+			5, 6, 7,
+			8, 5, 6,
+			7, 8, 5,
+		)
+		want := math.NewMat3(
+			-4, -4, -4,
+			-4, -4, -4,
+			-4, -4, -4,
+		)
+		if !m1.Sub(m2).Eq(want) {
+			t.Fatalf("unexpected Mat Sub, got %v, want %v", m1.Sub(m2), want)
+		}
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		m1 := math.NewMat4(
+			1, 2, 3, 4,
+			1, 2, 3, 4,
+			1, 2, 3, 4,
+			1, 2, 3, 4,
+		)
+		m2 := math.NewMat4(
+			5, 6, 7, 8,
+			5, 6, 7, 8,
+			5, 6, 7, 8,
+			5, 6, 7, 8,
+		)
+		want := math.NewMat4(
+			-4, -4, -4, -4,
+			-4, -4, -4, -4,
+			-4, -4, -4, -4,
+			-4, -4, -4, -4,
+		)
+		if !m1.Sub(m2).Eq(want) {
+			t.Fatalf("unexpected Mat Sub, got %v, want %v", m1.Sub(m2), want)
+		}
+	})
 }
 
-func BenchmarkMat4_Sub(b *testing.B) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
-	m2 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
+func TestMat_MulM(t *testing.T) {
+	t.Run("Mat2", func(t *testing.T) {
+		m1 := math.Mat2{
+			1, 2, 3, 4,
+		}
+		m2 := math.Mat2{
+			16, 15, 14, 13,
+		}
 
-	var m math.Mat4
-	for i := 0; i < b.N; i++ {
-		m = m1.Sub(m2)
-	}
-	_ = m
+		got := m1.MulM(m2)
+
+		want := math.Mat2{
+			44, 41, 104, 97,
+		}
+
+		for i := 0; i < 2; i++ {
+			for j := 0; j < 2; j++ {
+				if got.Get(i, j) == want.Get(i, j) {
+					continue
+				}
+				t.Fatalf("multiply matrices does not working properly, want %v, got %v", want.Get(i, j), got.Get(i, j))
+			}
+		}
+	})
+
+	t.Run("Mat3", func(t *testing.T) {
+		m1 := math.NewMat3(
+			1, 2, 3,
+			4, 1, 2,
+			3, 4, 1,
+		)
+		m2 := math.NewMat3(
+			16, 15, 14,
+			13, 12, 14,
+			12, 43, 23,
+		)
+
+		got := m1.MulM(m2)
+
+		want := math.Mat3{
+			78, 168, 111, 101, 158, 116, 112, 136, 121,
+		}
+
+		for i := 0; i < 3; i++ {
+			for j := 0; j < 3; j++ {
+				if got.Get(i, j) == want.Get(i, j) {
+					continue
+				}
+				t.Fatalf("multiply matrices does not working properly, want %v, got %v", want.Get(i, j), got.Get(i, j))
+			}
+		}
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		m1 := math.Mat4{
+			1, 2, 3, 4,
+			5, 6, 7, 8,
+			9, 10, 11, 12,
+			13, 14, 15, 16,
+		}
+		m2 := math.Mat4{
+			16, 15, 14, 13,
+			12, 11, 10, 9,
+			8, 7, 6, 5,
+			4, 3, 2, 1,
+		}
+
+		got := m1.MulM(m2)
+
+		want := math.Mat4{
+			80, 70, 60, 50,
+			240, 214, 188, 162,
+			400, 358, 316, 274,
+			560, 502, 444, 386,
+		}
+
+		for i := 0; i < 4; i++ {
+			for j := 0; j < 4; j++ {
+				if got.Get(i, j) == want.Get(i, j) {
+					continue
+				}
+				t.Fatalf("multiply matrices does not working properly, want %v, got %v", want.Get(i, j), got.Get(i, j))
+			}
+		}
+	})
 }
 
-func BenchmarkMat4_MulM(b *testing.B) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
-	m2 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
+func TestMat_MulV(t *testing.T) {
+	t.Run("Mat2", func(t *testing.T) {
+		v1 := math.NewVec2(1, 1)
+		mat := math.NewMat2(
+			1, 2,
+			3, 4,
+		)
+		got := mat.MulV(v1)
+		want := math.NewVec2(3, 7)
+		if !got.Eq(want) {
+			t.Fatalf("unexpected Apply, want %v, got %v", want, got)
+		}
+	})
 
-	var m math.Mat4
-	for i := 0; i < b.N; i++ {
-		m = m1.MulM(m2)
-	}
-	_ = m
+	t.Run("Mat3", func(t *testing.T) {
+		v1 := math.NewVec3(1, 1, 1)
+		mat := math.NewMat3(
+			1, 2, 3,
+			4, 5, 6,
+			7, 8, 9,
+		)
+		got := mat.MulV(v1)
+		want := math.NewVec3(6, 15, 24)
+		if !got.Eq(want) {
+			t.Fatalf("unexpected Apply, want %v, got %v", want, got)
+		}
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		v1 := math.NewVec4(1, 1, 1, 1)
+		mat := math.NewMat4(
+			1, 2, 3, 4,
+			5, 6, 7, 8,
+			9, 10, 11, 12,
+			13, 14, 15, 16,
+		)
+		got := mat.MulV(v1)
+		want := math.NewVec4(10, 26, 42, 58)
+		if !got.Eq(want) {
+			t.Fatalf("unexpected Apply, want %v, got %v", want, got)
+		}
+	})
 }
 
-func BenchmarkMat4_MulV(b *testing.B) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
-	m2 := math.Vec4{
-		5, 1, 5, 6,
-	}
+func TestMat_Det(t *testing.T) {
 
-	var m math.Vec4
-	for i := 0; i < b.N; i++ {
-		m = m1.MulV(m2)
-	}
-	_ = m
+	t.Run("Mat2", func(t *testing.T) {
+		m := math.NewMat2(
+			1, 2,
+			3, 4,
+		)
+
+		want := -2.0
+
+		if m.Det() != want {
+			t.Fatalf("unexpected Det, got %v, want %v", m.Det(), want)
+		}
+
+	})
+
+	t.Run("Mat3", func(t *testing.T) {
+		m := math.NewMat3(
+			1, 2, 3,
+			4, 3, 4,
+			3, 4, 4,
+		)
+
+		want := 9.0
+
+		if m.Det() != want {
+			t.Fatalf("unexpected Det, got %v, want %v", m.Det(), want)
+		}
+
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		m := math.Mat4{
+			5, 1, 5, 6,
+			8, 2, 2, 3,
+			5, 1, 1, 4,
+			2, 1, 7, 5,
+		}
+		want := -44.0
+
+		if m.Det() != want {
+			t.Fatalf("unexpected Det, got %v, want %v", m.Det(), want)
+		}
+	})
 }
 
-func BenchmarkMat4_Inv(b *testing.B) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
+func TestMat_T(t *testing.T) {
 
-	var m math.Mat4
-	for i := 0; i < b.N; i++ {
-		m = m1.Inv()
-	}
-	_ = m
+	t.Run("Mat2", func(t *testing.T) {
+		m := math.NewMat2(
+			1, 2,
+			3, 4,
+		)
+
+		want := math.NewMat2(
+			1, 3,
+			2, 4,
+		)
+
+		if !m.T().Eq(want) {
+			t.Fatalf("unexpected T, got %v, want %v", m.T(), want)
+		}
+
+	})
+
+	t.Run("Mat3", func(t *testing.T) {
+		m := math.NewMat3(
+			1, 2, 3,
+			4, 3, 4,
+			3, 4, 4,
+		)
+
+		want := math.NewMat3(
+			1, 4, 3,
+			2, 3, 4,
+			3, 4, 4,
+		)
+
+		if !m.T().Eq(want) {
+			t.Fatalf("unexpected T, got %v, want %v", m.T(), want)
+		}
+
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		m := math.Mat4{
+			5, 1, 5, 6,
+			8, 2, 2, 3,
+			5, 1, 1, 4,
+			2, 1, 7, 5,
+		}
+		want := math.Mat4{
+			5, 8, 5, 2,
+			1, 2, 1, 1,
+			5, 2, 1, 7,
+			6, 3, 4, 5,
+		}
+
+		if !m.T().Eq(want) {
+			t.Fatalf("unexpected T, got %v, want %v", m.T(), want)
+		}
+	})
 }
 
-func BenchmarkMat4_Det(b *testing.B) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
+func TestMat_Inv(t *testing.T) {
+	t.Run("Mat4", func(t *testing.T) {
+		m := math.Mat4{
+			5, 1, 5, 6,
+			8, 71, 2, 47,
+			5, 1, 582, 4,
+			2, 1, 7, 25,
+		}
+		m = m.Inv()
 
-	var m float64
-	for i := 0; i < b.N; i++ {
-		m = m1.Det()
-	}
-	_ = m
-}
+		want := math.Mat4{
+			1003995.0 / 4463716, -10967.0 / 4463716, -5949.0 / 4463716, -219389.0 / 4463716,
+			-62879.0 / 4463716, 65251.0 / 4463716, 1613.0 / 4463716, -107839.0 / 4463716,
+			-3999.0 / 2231858, -3.0 / 2231858, 3865.0 / 2231858, 347.0 / 2231858,
+			-75565.0 / 4463716, -1731.0 / 4463716, -1753.0 / 4463716, 200219.0 / 4463716,
+		}
 
-func BenchmarkMat4_T(b *testing.B) {
-	m1 := math.Mat4{
-		5, 1, 5, 6,
-		8, 71, 2, 47,
-		5, 1, 582, 4,
-		2, 1, 7, 25,
-	}
+		if m.Eq(want) {
+			return
+		}
 
-	var m math.Mat4
-	for i := 0; i < b.N; i++ {
-		m = m1.T()
-	}
-	_ = m
+		t.Fatalf("unexpected Inv, got %+v, want %+v", m, want)
+	})
+
+	t.Run("Mat4_Invalid", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("zero matrix inverse should panic")
+			}
+		}()
+		m := math.Mat4Zero
+		m = m.Inv()
+	})
 }

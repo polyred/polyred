@@ -14,13 +14,34 @@ func Lerp(from, to, t float64) float64 {
 	return from + t*(to-from)
 }
 
+// Lerp computes a linear interpolation between two given integers
+// regarding the given t parameter.
 func LerpInt(from, to int, t float64) int {
 	return int(float64(from) + t*float64(to-from))
 }
 
 // LerpV computes a linear interpolation between two given vectors
 // regarding the given t parameter.
-func LerpV(from Vec4, to Vec4, t float64) Vec4 {
+func LerpVec2(from, to Vec2, t float64) Vec2 {
+	return Vec2{
+		Lerp(from.X, to.X, t),
+		Lerp(from.Y, to.Y, t),
+	}
+}
+
+// LerpV computes a linear interpolation between two given vectors
+// regarding the given t parameter.
+func LerpVec3(from, to Vec3, t float64) Vec3 {
+	return Vec3{
+		Lerp(from.X, to.X, t),
+		Lerp(from.Y, to.Y, t),
+		Lerp(from.Z, to.Z, t),
+	}
+}
+
+// LerpV computes a linear interpolation between two given vectors
+// regarding the given t parameter.
+func LerpVec4(from, to Vec4, t float64) Vec4 {
 	return Vec4{
 		Lerp(from.X, to.X, t),
 		Lerp(from.Y, to.Y, t),
@@ -42,12 +63,12 @@ func LerpC(from color.RGBA, to color.RGBA, t float64) color.RGBA {
 
 // Barycoord computes the barycentric coordinates of a given position
 // regards to the given three positions.
-func Barycoord(x, y float64, t1, t2, t3 Vec4) [3]float64 {
-	ap := NewVec4(x-t1.X, y-t1.Y, 0, 0)
-	ab := NewVec4(t2.X-t1.X, t2.Y-t1.Y, 0, 0)
-	ac := NewVec4(t3.X-t1.X, t3.Y-t1.Y, 0, 0)
-	bc := NewVec4(t3.X-t2.X, t3.Y-t2.Y, 0, 0)
-	bp := NewVec4(x-t2.X, y-t2.Y, 0, 0)
+func Barycoord(p, t1, t2, t3 Vec2) [3]float64 {
+	ap := NewVec3(p.X-t1.X, p.Y-t1.Y, 0)
+	ab := NewVec3(t2.X-t1.X, t2.Y-t1.Y, 0)
+	ac := NewVec3(t3.X-t1.X, t3.Y-t1.Y, 0)
+	bc := NewVec3(t3.X-t2.X, t3.Y-t2.Y, 0)
+	bp := NewVec3(p.X-t2.X, p.Y-t2.Y, 0)
 	Sabc := ab.Cross(ac).Z
 	Sabp := ab.Cross(ap).Z
 	Sapc := ap.Cross(ac).Z
@@ -58,18 +79,18 @@ func Barycoord(x, y float64, t1, t2, t3 Vec4) [3]float64 {
 
 // IsInsideTriangle tests three given vertices and a position p, returns
 // true if p is inside the three vertices, or false otherwise.
-func IsInsideTriangle(v1, v2, v3, p Vec4) bool {
-	AB := NewVec4(v2.X, v2.Y, 0, 1).Sub(NewVec4(v1.X, v1.Y, 0, 1))
-	AP := p.Sub(NewVec4(v1.X, v1.Y, 0, 1))
+func IsInsideTriangle(p, v1, v2, v3 Vec2) bool {
+	AB := NewVec3(v2.X-v1.X, v2.Y-v1.Y, 0)
+	AP := NewVec3(p.X-v1.X, p.Y-v1.Y, 0)
 	if AB.Cross(AP).Z < 0 {
 		return false
 	}
-	BC := NewVec4(v3.X, v3.Y, 0, 1).Sub(NewVec4(v2.X, v2.Y, 0, 1))
-	BP := p.Sub(NewVec4(v2.X, v2.Y, 0, 1))
+	BC := NewVec3(v3.X-v2.X, v3.Y-v2.Y, 0)
+	BP := NewVec3(p.X-v2.X, p.Y-v2.Y, 0)
 	if BC.Cross(BP).Z < 0 {
 		return false
 	}
-	CA := NewVec4(v1.X, v1.Y, 0, 1).Sub(NewVec4(v3.X, v3.Y, 0, 1))
-	CP := p.Sub(NewVec4(v3.X, v3.Y, 0, 1))
-	return CA.Cross(CP).Dot(NewVec4(0, 0, 1, 0)) >= 0
+	CA := NewVec3(v1.X-v3.X, v1.Y-v3.Y, 0)
+	CP := NewVec3(p.X-v3.X, p.Y-v3.Y, 0)
+	return CA.Cross(CP).Z >= 0
 }

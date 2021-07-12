@@ -12,6 +12,44 @@ import (
 	"changkun.de/x/polyred/math"
 )
 
+func TestMinMax(t *testing.T) {
+	a, b, c := 1.0, 2.0, 3.0
+
+	got := math.Min(a, b, c)
+	want := 1.0
+	if got != want {
+		t.Fatalf("unexpected Min, got %v, want %v", got, want)
+	}
+
+	got = math.Max(a, b, c)
+	want = 3.0
+	if got != want {
+		t.Fatalf("unexpected Max, got %v, want %v", got, want)
+	}
+}
+
+func TestRadDeg(t *testing.T) {
+	if math.RadToDeg(math.Pi) != 180 {
+		t.Fatalf("unexpected RadToDeg, got %v, want 180.0", math.RadToDeg(math.Pi))
+	}
+	if math.DegToRad(180) != math.Pi {
+		t.Fatalf("unexpected DegToRad, got %v, want Pi", math.RadToDeg(math.Pi))
+	}
+}
+
+func TestViewportMatrix(t *testing.T) {
+	vpMat := math.ViewportMatrix(800, 400)
+	want := math.NewMat4(
+		400, 0, 0, 400,
+		0, 200, 0, 200,
+		0, 0, 1, 0,
+		0, 0, 0, 1,
+	)
+	if !vpMat.Eq(want) {
+		t.Fatalf("unexpected viewportMatrix, got %v want %v", vpMat, want)
+	}
+}
+
 func BenchmarkApproxEq(b *testing.B) {
 	v1 := 0.000000002
 	v2 := 0.000000001
@@ -19,26 +57,6 @@ func BenchmarkApproxEq(b *testing.B) {
 	var bb bool
 	for i := 0; i < b.N; i++ {
 		bb = math.ApproxEq(v1, v2, math.Epsilon)
-	}
-	_ = bb
-}
-
-func BenchmarkClamp(b *testing.B) {
-	v := 128.0
-
-	var bb float64
-	for i := 0; i < b.N; i++ {
-		bb = math.Clamp(v, 0, 255)
-	}
-	_ = bb
-}
-
-func BenchmarkClampV(b *testing.B) {
-	v := math.Vec4{128, 128, 128, 255}
-
-	var bb math.Vec4
-	for i := 0; i < b.N; i++ {
-		bb = math.ClampV(v, 0, 255)
 	}
 	_ = bb
 }

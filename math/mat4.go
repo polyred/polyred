@@ -22,6 +22,11 @@ var (
 )
 
 // Mat4 represents a 4x4 Mat4
+//
+// / X00, X01, X02, X03 \
+// | X10, X11, X12, X13 |
+// | X20, X21, X22, X23 |
+// \ X30, X31, X32, X33 /
 type Mat4 struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 4x4 Mat4.
@@ -32,7 +37,11 @@ type Mat4 struct {
 	X30, X31, X32, X33 float64
 }
 
-func NewMat4(X00, X01, X02, X03, X10, X11, X12, X13, X20, X21, X22, X23, X30, X31, X32, X33 float64) Mat4 {
+func NewMat4(
+	X00, X01, X02, X03,
+	X10, X11, X12, X13,
+	X20, X21, X22, X23,
+	X30, X31, X32, X33 float64) Mat4 {
 	return Mat4{
 		X00, X01, X02, X03,
 		X10, X11, X12, X13,
@@ -78,13 +87,15 @@ func (m Mat4) Get(i, j int) float64 {
 		return m.X31
 	case 14:
 		return m.X32
+	case 15:
+		fallthrough
 	default:
 		return m.X33
 	}
 }
 
 // Set set the Mat4 elements at row i and column j
-func (m Mat4) Set(i, j int, v float64) {
+func (m *Mat4) Set(i, j int, v float64) {
 	if i < 0 || i > 3 || j < 0 || j > 3 {
 		panic("invalid index")
 	}
@@ -120,6 +131,8 @@ func (m Mat4) Set(i, j int, v float64) {
 		m.X31 = v
 	case 14:
 		m.X32 = v
+	case 15:
+		fallthrough
 	default:
 		m.X33 = v
 	}
@@ -199,6 +212,32 @@ func (m Mat4) MulV(v Vec4) Vec4 {
 	return Vec4{x, y, z, w}
 }
 
+// Det computes the determinant of the Mat4
+func (m Mat4) Det() float64 {
+	return m.X00*m.X11*m.X22*m.X33 - m.X00*m.X11*m.X23*m.X32 +
+		m.X00*m.X12*m.X23*m.X31 - m.X00*m.X12*m.X21*m.X33 +
+		m.X00*m.X13*m.X21*m.X32 - m.X00*m.X13*m.X22*m.X31 -
+		m.X01*m.X12*m.X23*m.X30 + m.X01*m.X12*m.X20*m.X33 -
+		m.X01*m.X13*m.X20*m.X32 + m.X01*m.X13*m.X22*m.X30 -
+		m.X01*m.X10*m.X22*m.X33 + m.X01*m.X10*m.X23*m.X32 +
+		m.X02*m.X13*m.X20*m.X31 - m.X02*m.X13*m.X21*m.X30 +
+		m.X02*m.X10*m.X21*m.X33 - m.X02*m.X10*m.X23*m.X31 +
+		m.X02*m.X11*m.X23*m.X30 - m.X02*m.X11*m.X20*m.X33 -
+		m.X03*m.X10*m.X21*m.X32 + m.X03*m.X10*m.X22*m.X31 -
+		m.X03*m.X11*m.X22*m.X30 + m.X03*m.X11*m.X20*m.X32 -
+		m.X03*m.X12*m.X20*m.X31 + m.X03*m.X12*m.X21*m.X30
+}
+
+// T computes the transpose Mat4 of a given Mat4
+func (m Mat4) T() Mat4 {
+	return Mat4{
+		m.X00, m.X10, m.X20, m.X30,
+		m.X01, m.X11, m.X21, m.X31,
+		m.X02, m.X12, m.X22, m.X32,
+		m.X03, m.X13, m.X23, m.X33,
+	}
+}
+
 // Inv computes the inverse Mat4 of a given Mat4
 func (m Mat4) Inv() Mat4 {
 	d := m.Det()
@@ -224,30 +263,4 @@ func (m Mat4) Inv() Mat4 {
 	n.X32 = dinv * (m.X02*m.X11*m.X30 - m.X01*m.X12*m.X30 - m.X02*m.X10*m.X31 + m.X00*m.X12*m.X31 + m.X01*m.X10*m.X32 - m.X00*m.X11*m.X32)
 	n.X33 = dinv * (m.X01*m.X12*m.X20 - m.X02*m.X11*m.X20 + m.X02*m.X10*m.X21 - m.X00*m.X12*m.X21 - m.X01*m.X10*m.X22 + m.X00*m.X11*m.X22)
 	return n
-}
-
-// Det computes the determinant of the Mat4
-func (m Mat4) Det() float64 {
-	return m.X00*m.X11*m.X22*m.X33 - m.X00*m.X11*m.X23*m.X32 +
-		m.X00*m.X12*m.X23*m.X31 - m.X00*m.X12*m.X21*m.X33 +
-		m.X00*m.X13*m.X21*m.X32 - m.X00*m.X13*m.X22*m.X31 -
-		m.X01*m.X12*m.X23*m.X30 + m.X01*m.X12*m.X20*m.X33 -
-		m.X01*m.X13*m.X20*m.X32 + m.X01*m.X13*m.X22*m.X30 -
-		m.X01*m.X10*m.X22*m.X33 + m.X01*m.X10*m.X23*m.X32 +
-		m.X02*m.X13*m.X20*m.X31 - m.X02*m.X13*m.X21*m.X30 +
-		m.X02*m.X10*m.X21*m.X33 - m.X02*m.X10*m.X23*m.X31 +
-		m.X02*m.X11*m.X23*m.X30 - m.X02*m.X11*m.X20*m.X33 -
-		m.X03*m.X10*m.X21*m.X32 + m.X03*m.X10*m.X22*m.X31 -
-		m.X03*m.X11*m.X22*m.X30 + m.X03*m.X11*m.X20*m.X32 -
-		m.X03*m.X12*m.X20*m.X31 + m.X03*m.X12*m.X21*m.X30
-}
-
-// T computes the transpose Mat4 of a given Mat4
-func (m Mat4) T() Mat4 {
-	return Mat4{
-		m.X00, m.X10, m.X20, m.X30,
-		m.X01, m.X11, m.X21, m.X31,
-		m.X02, m.X12, m.X22, m.X32,
-		m.X03, m.X13, m.X23, m.X33,
-	}
 }

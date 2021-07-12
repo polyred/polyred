@@ -6,23 +6,23 @@ package math
 
 type Quaternion struct {
 	A float64
-	V Vec4
+	V Vec3
 }
 
 func NewQuaternion(a, b, c, d float64) Quaternion {
 	return Quaternion{
 		A: a,
-		V: Vec4{b, c, d, 0},
+		V: Vec3{b, c, d},
 	}
 }
 
-func (q Quaternion) Mul(p Quaternion) Quaternion {
+func (q *Quaternion) Mul(p Quaternion) Quaternion {
 	aa := q.A*p.A - q.V.Dot(p.V)
-	vv := p.V.Scale(q.A, q.A, q.A, q.A).Add(q.V.Scale(p.A, p.A, p.A, p.A)).Add(q.V.Cross(p.V))
+	vv := p.V.Scale(q.A, q.A, q.A).Add(q.V.Scale(p.A, p.A, p.A)).Add(q.V.Cross(p.V))
 	return Quaternion{aa, vv}
 }
 
-func (q Quaternion) ToRoMat() Mat4 {
+func (q *Quaternion) ToRoMat() Mat4 {
 	w := q.A
 	x := q.V.X
 	y := q.V.Y

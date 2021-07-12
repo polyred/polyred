@@ -34,7 +34,7 @@ func TestQuaternionToRotationMatrix(t *testing.T) {
 	u = dirY.Unit()
 	cosa = math.Cos(angle / 2)
 	sina = math.Sin(angle / 2)
-	q = math.Quaternion{cosa, math.Vec4{sina * u.X, sina * u.Y, sina * u.Z, 0}}
+	q = math.Quaternion{cosa, math.Vec3{sina * u.X, sina * u.Y, sina * u.Z}}
 	want = math.Mat4{
 		0.5, 0, 0.8660254, 0,
 		0, 1, 0, 0,
@@ -50,7 +50,7 @@ func TestQuaternionToRotationMatrix(t *testing.T) {
 	u = dirZ.Unit()
 	cosa = math.Cos(angle / 2)
 	sina = math.Sin(angle / 2)
-	q = math.Quaternion{cosa, math.Vec4{sina * u.X, sina * u.Y, sina * u.Z, 0}}
+	q = math.Quaternion{cosa, math.Vec3{sina * u.X, sina * u.Y, sina * u.Z}}
 	want = math.Mat4{
 		0.5, -0.8660254, 0, 0,
 		0.8660254, 0.5, 0, 0,
