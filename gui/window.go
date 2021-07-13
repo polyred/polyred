@@ -224,41 +224,55 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 	// Rendering Thread
 	go func() {
 		// We use two switching buffers for the draw calls. Otherwise,
-		// The gl.DrawPixels will race with pixel memories.
+		// there is a data race regards the pixel buffer between buf.Clear
+		// and gl.DrawPixels.
 		//
 		// Consider the following diagram:
 		//
-		//           +------ buf.Clear()
-		//           v
-		// |f(w.buf)| |f(w.buf)|
-		// +--------+-+-------------------------------------------> Render
-		//           \ w.draw <- buf
+		//            +------ buf1.Clear()
 		//            v
-		// -----------+--+----------------------------------------> Event
-		//                \ gl.DrawPixels + gl.Flush
-		//                 v
-		// ----------------+---+----------------------------------> GPU
-		//                      \
-		//                       v
-		// ----------------------+--------------------------------> Monitor
-		//          |<-- ~5ms -->|
+		//  |f(w.buf)| |f(w.buf)|
+		// -+--------+-+-------------------------------------------> Render
+		//            \ w.draw <- buf
+		//             v
+		// ------------+--+----------------------------------------> Event
+		//                 \ gl.DrawPixels + gl.Flush for buf
+		//                  v
+		// -----------------+-+----------------------------------> GPU
+		//                     \
+		//                      v
+		// ---------------------+--------------------------------> Monitor
+		//           |<- ~5ms ->| <- the monitor shows w.buf
 		//
 		// According to a rough measurement, when f finishes the rendering,
-		// the time to be able to flush the entire pixel buffer to the
+		// the time period of flushing the entire pixel buffer to the
 		// monitor requires 5ms on a MacBook Air (M1, 2020) laptop.
-		// This means, if the next f(w.buf) is called before flushing
-		// the pixels onto monitor, the buf.Clear inside the f happens
-		// concurrently with the flushing, aka data race.
 		//
-		// Although the race is not serious enough since it is just pixels,
-		// but it still can cause multiple known issues:
+		// This means, if the next frame of f(w.buf) is called before
+		// flushing the pixels onto monitor (i.e. pixel buffer read
+		// behavior), the buf.Clear (i.e. pixel buffer write behavior)
+		// between two f calls happens concurrently with the flushing,
+		// thus causing data race on a chunk of memory.
 		//
-		// 1. Crash on specific platform when resizing the window, such as macOS
-		// 2. Black flicking on the rendering even without window resizing
+		// The data race leads to the following two know issues:
 		//
-		// To prevent that happen, we use two buffers that call on different
+		// 1. Crash on specific platform while resizing, such as macOS;
+		// 2. Black flicking while rendering even without resizing
+		//
+		// To prevent that happen, we use a two-buffer approach (similar
+		// to hardware double-buffering technique) that call on different
 		// draw calls. The benefits, of course, resolve the above issues,
 		// and be able to compute motion vectors between frames.
+		//
+		// TODO: while executing the rendering on buf2, the buf1 is not
+		// cleared yet. It should be safe for accessing as previous frame,
+		// in order to compute motion vectors. Figuring out what is a
+		// proper API design here. A possible design:
+		//
+		// func MainLoop(f func(buf, prevBuf *render.Buffer) *image.RGBA)
+		//
+		// Yet there are no enough practice regards the drawbacks of the API,
+		// implement a motion vector related algorithm might worthy. e.g. TAA??
 		for !w.win.ShouldClose() {
 			w.buf1.Clear()
 			w.draw <- f(w.buf1)
@@ -268,16 +282,36 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 	}()
 
 	// Event Thread
-	timeout := 1.0 / 120 // maximum 120 fps
+	//
+	// The event thread terminates when the window instance is closed.
+	// All events are handled in the ticked loop.
+	//
+	// Every draw call is (sent from the rendering thread, and) received
+	// from the w.draw channel, then being flushed in the mainthread
+	// using w.flush. Since the mainthread serialized every call, it
+	// is also not interesting to the event loop regarding the rendering
+	// whether finished or not, thus the mainthread.Go is used for async
+	// call scheduling.
+	//
+	// The ticker ticks every ~1ms which permits a maximum of 960 fps
+	// (should large enough) for rendering and input events handling.
+	// Since we manage time event timeout ourselves using the ticker,
+	// the glfw.WaitEventsTImeout is only used for event processing
+	// hence with the argument of value 0. As the key to making sure the
+	// window being responsive, a blocking mainthread.Call is used here.
 	mainthread.Call(func() {
 		gl.DrawBuffer(gl.FRONT)
 		gl.PixelZoom(1, -1)
 	})
+	var buf *image.RGBA
+	th := time.NewTicker(time.Second / 960)
 	for !w.win.ShouldClose() {
-		mainthread.Call(func() {
-			w.flush(<-w.draw)
-			glfw.WaitEventsTimeout(timeout)
-		})
+		select {
+		case buf = <-w.draw:
+			mainthread.Go(func() { w.flush(buf) })
+		case <-th.C:
+			mainthread.Call(func() { glfw.WaitEventsTimeout(0) })
+		}
 	}
 }
 
