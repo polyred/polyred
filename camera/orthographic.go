@@ -63,7 +63,9 @@ func (c *Orthographic) Aspect() float64 {
 // SetAspect sets the aspect of the given camera
 func (c *Orthographic) SetAspect(width, height float64) {
 	c.top = height / 2
+	c.bottom = -height / 2
 	c.right = width / 2
+	c.left = -width / 2
 }
 
 // Position returns the position of the given camera.

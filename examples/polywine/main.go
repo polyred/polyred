@@ -54,17 +54,6 @@ func fn() {
 		0.1, 10,
 	)
 
-	// FIXME: orthographic camera does not with model matrix??
-	// cam := camera.NewOrthographic(
-	// 	math.NewVec3(0, 3, 3),
-	// 	math.NewVec3(0, 0, 0),
-	// 	math.NewVec3(0, 1, 0),
-	// 	-float64(width)/2,
-	// 	float64(width)/2,
-	// 	-float64(height)/2,
-	// 	float64(height)/2, 0, -10,
-	// )
-
 	r := render.NewRenderer(
 		render.WithSize(width, height),
 		render.WithCamera(cam),
@@ -75,7 +64,6 @@ func fn() {
 	// Use a different model
 	m := io.MustLoadMesh("../../testdata/bunny.obj").(*geometry.TriangleSoup)
 	m.Normalize()
-	m.Scale(100, 100, 100)
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 
 	tex := image.NewTexture(
@@ -94,7 +82,6 @@ func fn() {
 	gui.Window().Subscribe(gui.OnResize, func(name gui.EventName, e gui.Event) {
 		ev := e.(*gui.SizeEvent)
 		cam.SetAspect(float64(ev.Width), float64(ev.Height))
-		prog.ModelMatrix = m.ModelMatrix()
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ModelMatrix = cam.ModelMatrix()
 	})
@@ -110,7 +97,7 @@ func fn() {
 	gui.MainLoop(func(buf *render.Buffer) *image.RGBA {
 		prog.ModelMatrix = m.ModelMatrix()
 		prog.ViewMatrix = cam.ViewMatrix()
-		prog.ModelMatrix = cam.ModelMatrix()
+		prog.ProjMatrix = cam.ProjMatrix()
 
 		r.PrimitivePass(buf, prog, vi, vb)
 		r.ScreenPass(buf.Image(), prog.FragmentShader)
