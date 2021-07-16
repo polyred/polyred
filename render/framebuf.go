@@ -26,8 +26,8 @@ type Buffer struct {
 	stride    int
 	rect      image.Rectangle
 
-	depth *image.RGBA // read only
-	color *image.RGBA // read only
+	depth *image.RGBA
+	color *image.RGBA
 }
 
 func NewBuffer(r image.Rectangle) *Buffer {
@@ -43,14 +43,18 @@ func NewBuffer(r image.Rectangle) *Buffer {
 }
 
 func (b *Buffer) Clear() {
+	// Clear using zero values.
+	// This loop involves compiler optimization, see:
+	// https://golang.org/issue/5373
+
+	for i := range b.fragments {
+		b.fragments[i] = FragmentInfo{}
+	}
 	for i := range b.depth.Pix {
 		b.depth.Pix[i] = 0
 	}
 	for i := range b.color.Pix {
 		b.color.Pix[i] = 0
-	}
-	for i := range b.fragments {
-		b.fragments[i] = FragmentInfo{}
 	}
 }
 
@@ -106,9 +110,9 @@ func (b *Buffer) Set(x, y int, info FragmentInfo) {
 		return
 	}
 
-	// we also write color and depth information to the two
-	// dedicated color and depth buffers.
-	b.depth.Set(x, y, color.RGBA{
+	// Write color and depth information to the two dedicated color and
+	// depth buffers.
+	b.depth.Set(x, b.rect.Max.Y-y, color.RGBA{
 		uint8(info.Depth * 0xff),
 		uint8(info.Depth * 0xff),
 		uint8(info.Depth * 0xff), 0xff,

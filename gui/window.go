@@ -2,6 +2,27 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
+// Package gui implements a minimum windowing utility that collaborate
+// with render.Buffer.
+//
+// A basic window program is as follows:
+//
+// 	package main
+//
+// 	import (
+// 		"image"
+//
+// 		"changkun.de/x/polyred/gui"
+// 		"changkun.de/x/polyred/render"
+// 	)
+//
+// 	func main() {
+// 		gui.InitWindow()
+// 		gui.MainLoop(func(buf *render.Buffer) *image.RGBA {
+// 			return nil
+// 		})
+// 	}
+//
 package gui
 
 import (
@@ -9,7 +30,6 @@ import (
 	"image"
 	"image/color"
 	"runtime"
-	"sync"
 	"time"
 	"unsafe"
 
@@ -43,6 +63,14 @@ func WithSize(width, height int) Option {
 	}
 }
 
+// WithNumBufs option sets the number of switching buffers are used
+// internally for the rendering.
+func WithNumBufs(num int) Option {
+	return func(w *win) {
+		w.buflen = num
+	}
+}
+
 // WithFPS sets the window to show FPS.
 func WithFPS() Option {
 	return func(o *win) {
@@ -57,9 +85,11 @@ type win struct {
 	scaleX        float64
 	scaleY        float64
 
-	bufs  []*render.Buffer
-	draw  chan *image.RGBA
-	drawQ chan *image.RGBA
+	// buffers and draw queue
+	buflen int
+	bufs   []*render.Buffer
+	draw   chan *image.RGBA
+	drawQ  chan *image.RGBA
 
 	// Settings
 	showFPS bool
@@ -75,10 +105,7 @@ type win struct {
 	mods       ModifierKey
 }
 
-var (
-	once   sync.Once
-	window *win
-)
+var window *win
 
 // Window returns the window instance
 func Window() *win {
@@ -96,6 +123,7 @@ func InitWindow(opts ...Option) {
 		height:     500,
 		showFPS:    false,
 		dispatcher: newDispatcher(),
+		buflen:     2, // use two buffers by default.
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -127,16 +155,13 @@ func InitWindow(opts ...Option) {
 	fbw, fbh := w.win.GetFramebufferSize()
 	w.scaleX = float64(fbw) / float64(w.width)
 	w.scaleY = float64(fbh) / float64(w.height)
+
 	w.draw = make(chan *image.RGBA)
 	w.drawQ = make(chan *image.RGBA)
-	w.bufs = make([]*render.Buffer, 2)
-	for i := range w.bufs {
+
+	w.bufs = make([]*render.Buffer, w.buflen)
+	for i := 0; i < w.buflen; i++ {
 		w.bufs[i] = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
-	}
-	w.win.MakeContextCurrent()
-	err = gl.Init()
-	if err != nil {
-		panic(fmt.Errorf("failed to initialize gl: %w", err))
 	}
 
 	// Setup event callbacks
@@ -198,7 +223,11 @@ func InitWindow(opts ...Option) {
 		}
 	})
 
-	once.Do(func() { window = w })
+	if window != nil {
+		panic("gui: double window initialization")
+	}
+
+	window = w
 }
 
 func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
@@ -209,7 +238,7 @@ func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
 }
 
 // MainLoop executes the given f on a loop, then schedules the returned
-// image and renders it to the created window. f
+// image and renders it to the created window.
 func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
 	w := window
 
@@ -236,7 +265,7 @@ func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
 			//
 			// Maybe we can make framebuf abstraction to be a linked list,
 			// in this way, the API remains one buffer parameter, but
-			// be able to access previous frames using frame.Prev()
+			// be able to access previous frames using frame.Prev()?
 			for i := range w.bufs {
 				w.bufs[i].Clear()
 				w.drawQ <- f(w.bufs[i])
@@ -251,8 +280,8 @@ func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
 		last := time.Now()
 		tPerFrame := time.Second / 240 // permit maximum 120 fps
 		for buf := range w.drawQ {
-			current := time.Now()
-			t := current.Sub(last)
+			c := time.Now()
+			t := c.Sub(last)
 			if t < tPerFrame || buf == nil {
 				continue
 			}
@@ -261,7 +290,7 @@ func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
 				w.drawer.Dst = buf
 				w.drawer.DrawString(fmt.Sprintf("%d", time.Second/t))
 			}
-			last = current
+			last = c
 			w.draw <- buf
 		}
 	}()
@@ -295,6 +324,7 @@ func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
 	}
 
 	w.win.Destroy()
+	glfw.Terminate()
 }
 
 // flush flushes the containing pixel buffer of the given image to the

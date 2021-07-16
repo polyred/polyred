@@ -275,8 +275,10 @@ func (r *Renderer) rasterize(buf *Buffer, prog shader.Program,
 				continue
 			}
 
-			// Z-test
-			z := bc[0]*v1.Pos.Z + bc[1]*v2.Pos.Z + bc[2]*v3.Pos.Z
+			// Early Z-test. We normalize depth values to [0, 1], such that
+			// the smallest depth value is 0. This collaborate with the buffer
+			// clearing.
+			z := ((bc[0]*v1.Pos.Z + bc[1]*v2.Pos.Z + bc[2]*v3.Pos.Z) + 1) / 2
 			if !buf.DepthTest(x, y, z) {
 				continue
 			}

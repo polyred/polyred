@@ -99,7 +99,6 @@ func main() {
 
 		r.PrimitivePass(buf, prog, vi, vb)
 		r.ScreenPass(buf.Image(), prog.FragmentShader)
-
 		return buf.Image()
 	})
 }
