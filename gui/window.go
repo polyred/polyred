@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"log"
 	"runtime"
 	"sync"
 	"time"
@@ -17,11 +16,14 @@ import (
 	"changkun.de/x/polyred/render"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"golang.design/x/mainthread"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
 )
+
+func init() {
+	runtime.LockOSThread()
+}
 
 // Option is a functional option to the window constructor New.
 type Option func(*win)
@@ -55,10 +57,10 @@ type win struct {
 	scaleX        float64
 	scaleY        float64
 
-	resize chan image.Rectangle
-	buf1   *render.Buffer
-	buf2   *render.Buffer
-	draw   chan *image.RGBA
+	buf1  *render.Buffer
+	buf2  *render.Buffer
+	draw  chan *image.RGBA
+	drawQ chan *image.RGBA
 
 	// Settings
 	showFPS bool
@@ -107,70 +109,34 @@ func InitWindow(opts ...Option) {
 		Dot:  fixed.P(0*64, 13*64),
 	}
 
-	var err error
-	defer func() {
-		if err != nil {
-			// This function must be called from the mainthread.
-			mainthread.Call(w.win.Destroy)
-			log.Fatalf("window: %v", err)
-		}
-	}()
-
-	mainthread.Call(func() {
-		err = glfw.Init()
-		if err != nil {
-			err = fmt.Errorf("failed to initialize glfw context: %w", err)
-			return
-		}
-		glfw.WindowHint(glfw.ContextVersionMajor, 2)
-		glfw.WindowHint(glfw.ContextVersionMinor, 1)
-		glfw.WindowHint(glfw.DoubleBuffer, glfw.False)
-		glfw.WindowHint(glfw.Resizable, glfw.True)
-
-		w.win, err = glfw.CreateWindow(int(w.width), int(w.height), w.title, nil, nil)
-		if err != nil {
-			err = fmt.Errorf("failed to create glfw window: %w", err)
-			return
-		}
-
-		// Ratio test. for high DPI, e.g. macOS Retina
-		fbw, fbh := w.win.GetFramebufferSize()
-		w.scaleX = float64(fbw) / float64(w.width)
-		w.scaleY = float64(fbh) / float64(w.height)
-		w.resize = make(chan image.Rectangle)
-		w.buf1 = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
-		w.buf2 = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
-
-		// Make sure this happens on main thread. Otherwise, Windows
-		// cannot render anything from it.
-		w.win.MakeContextCurrent()
-		err = gl.Init()
-		if err != nil {
-			err = fmt.Errorf("failed to initialize gl: %w", err)
-			return
-		}
-	})
+	err := glfw.Init()
 	if err != nil {
-		return
+		panic(fmt.Errorf("failed to initialize glfw context: %w", err))
 	}
 
-	once.Do(func() { window = w })
-}
+	glfw.WindowHint(glfw.ContextVersionMajor, 2)
+	glfw.WindowHint(glfw.ContextVersionMinor, 1)
+	glfw.WindowHint(glfw.DoubleBuffer, glfw.False)
+	glfw.WindowHint(glfw.Resizable, glfw.True)
 
-func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
-	w.dispatcher.eventMap[eventName] = append(w.dispatcher.eventMap[eventName], subscription{
-		id: nil,
-		cb: cb,
-	})
-}
+	w.win, err = glfw.CreateWindow(int(w.width), int(w.height), w.title, nil, nil)
+	if err != nil {
+		panic(fmt.Errorf("failed to create glfw window: %w", err))
+	}
 
-func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
-	w := window
-
-	defer func() {
-		// This function must be called from the mainthread.
-		mainthread.Call(w.win.Destroy)
-	}()
+	// Ratio test. for high DPI, e.g. macOS Retina
+	fbw, fbh := w.win.GetFramebufferSize()
+	w.scaleX = float64(fbw) / float64(w.width)
+	w.scaleY = float64(fbh) / float64(w.height)
+	w.draw = make(chan *image.RGBA)
+	w.drawQ = make(chan *image.RGBA)
+	w.buf1 = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
+	w.buf2 = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
+	w.win.MakeContextCurrent()
+	err = gl.Init()
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize gl: %w", err))
+	}
 
 	// Setup event callbacks
 	w.win.SetSizeCallback(func(x *glfw.Window, width int, height int) {
@@ -180,7 +146,14 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 		w.scaleX = float64(fbw) / float64(width)
 		w.scaleY = float64(fbh) / float64(height)
 		w.dispatcher.Dispatch(OnResize, &w.evSize)
-		w.resize <- image.Rect(0, 0, fbw, fbh)
+
+		// The following replaces the w.buf1 and w.buf2 on the main thread.
+		// It does not involve with data race. Because the draw call is
+		// also handled on the mainthread, which is currently not possible
+		// to execute.
+		r := image.Rect(0, 0, fbw, fbh)
+		w.buf1 = render.NewBuffer(r)
+		w.buf2 = render.NewBuffer(r)
 	})
 	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
 		w.evCursor.Xpos = xpos
@@ -222,142 +195,136 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 		}
 	})
 
+	once.Do(func() { window = w })
+}
+
+func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
+	w.dispatcher.eventMap[eventName] = append(w.dispatcher.eventMap[eventName], subscription{
+		id: nil,
+		cb: cb,
+	})
+}
+
+// MainLoop executes the given f on a loop, then schedules the returned
+// image and renders it to the created window. f
+func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
+	w := window
+
 	// Rendering Thread
 	go func() {
-		runtime.LockOSThread()
-		w.win.MakeContextCurrent()
-		gl.DrawBuffer(gl.FRONT)
-		gl.PixelZoom(1, -1)
-		last := time.Now()
-		tPerFrame := time.Second / 120 // permit maximum 120 fps
 		for !w.win.ShouldClose() {
-			select {
-			case r := <-w.resize:
-				w.buf1 = render.NewBuffer(r)
-				w.buf2 = render.NewBuffer(r)
-			default:
-				// We use two switching buffers for the draw calls.
-				// Otherwise, there is a data race regards the pixel
-				// buffer between buf.Clear and gl.DrawPixels.
-				//
-				// Consider the following diagram:
-				//
-				//  | f(w.buf) | buf.Clear() | f(w.buf) |
-				// -+----------+-------------+----------+------> Render Thread
-				//              \ gl.DrawPixels
-				//               \__
-				//                  \ gl.Flush
-				//                   v
-				// ------------------+---+---------------------> GPU Processing
-				//                        \
-				//                         v
-				// ------------------------+-------------------> Monitor
-				//              |<- <5ms ->|
-				//                         ^
-				//                         monitor shows w.buf
-				//
-				// According to a rough measurement, when f finishes
-				// the rendering, the flushing the entire pixel buffer
-				// to the monitor requires <~5ms on a MacBook Air (M1).
-				//
-				// This means, if the next frame of f(w.buf) is called
-				// before flushing the pixels onto monitor (i.e. pixel
-				// buffer read behavior), the buf.Clear (i.e. pixel
-				// buffer write behavior) between two f calls happens
-				// concurrently with the flushing, thus causing data
-				// race on a chunk of memory.
-				//
-				// The data race leads to the following two know issues:
-				//
-				// 1. Crash on specific platform while resizing, e.g. macOS;
-				// 2. Black flicking while rendering even without resizing
-				//
-				// To prevent that happen, we use a two-buffer approach
-				// (similar to hardware double-buffering technique) that
-				// call on different draw calls. The benefits, of course,
-				// resolve the above issues, and enables motion vectors
-				// computation between frames.
-				//
-				// TODO: while executing the rendering on buf2, the buf1
-				// is not cleared yet. It should be safe for accessing
-				// as previous frame, in order to compute motion vectors.
-				// Figuring out what is a proper API design here.
-				//
-				// A possible design:
-				//
-				// func MainLoop(f func(buf, prevBuf *render.Buffer) *image.RGBA)
-				//
-				// Yet there are no enough practice regards the drawbacks
-				// of the API, implement a motion vector related algorithm
-				// might worthy. e.g. TAA??
-
-				// It seems we are not able to send the buffer to
-				// the main thread. When we want to handle the resizing
-				// of buf1 and buf2 in the same goroutine (to prevent
-				// data race), sending a draw call to the main thread
-				// will block until the main thread is able to handle
-				// the draw message. However, if the resize channel is
-				// a unbuffered channel, then it blocks until the above
-				// resize being handled. Hance a dead lock happens.
-				// Nevertheless, we handle the flushing here.
-				//
-				// FIXME:
-				// This really can hurts the performance. E.g. drawing
-				// Measuring the FPS and drawing can happen on a different
-				// thread and should not block the next frame. But here it does.
-				//
-				// Another ideal: make sure select channel has a certain
-				// weight to select a branch? It seems impossible...
-				w.buf1.Clear()
-				buf1 := f(w.buf1)
-
-				// If draw too fast, drop it.
-				current := time.Now()
-				t := current.Sub(last)
-				if t >= tPerFrame && buf1 != nil {
-					if w.showFPS {
-						w.drawer.Dot = fixed.P(5, 15)
-						w.drawer.Dst = buf1
-						w.drawer.DrawString(fmt.Sprintf("%d", time.Second/t))
-					}
-					last = current
-					w.flush(buf1)
-				}
-
-				w.buf2.Clear()
-				buf2 := f(w.buf2)
-
-				// If draw too fast, drop it.
-				current = time.Now()
-				t = current.Sub(last)
-				if t >= tPerFrame || buf2 != nil {
-					if w.showFPS {
-						w.drawer.Dot = fixed.P(5, 15)
-						w.drawer.Dst = buf2
-						w.drawer.DrawString(fmt.Sprintf("%d", time.Second/t))
-					}
-					last = current
-					w.flush(buf2)
-				}
-			}
+			// We use two switching buffers for the draw calls.
+			// Otherwise, there is a data race regards the pixel
+			// buffer between buf.Clear and gl.DrawPixels.
+			//
+			// Consider the following diagram:
+			//
+			//  | f(w.buf) | buf.Clear() | f(w.buf) |
+			// -+----------+-------------+----------+------> Render Thread
+			//              \ gl.DrawPixels
+			//               \__
+			//                  \ gl.Flush
+			//                   v
+			// ------------------+---+---------------------> GPU Processing
+			//                        \
+			//                         v
+			// ------------------------+-------------------> Monitor
+			//              |<- <5ms ->|
+			//                         ^
+			//                         monitor shows w.buf
+			//
+			// According to a rough measurement, when f finishes
+			// the rendering, the flushing the entire pixel buffer
+			// to the monitor requires <~5ms on a MacBook Air (M1).
+			//
+			// This means, if the next frame of f(w.buf) is called
+			// before flushing the pixels onto monitor (i.e. pixel
+			// buffer read behavior), the buf.Clear (i.e. pixel
+			// buffer write behavior) between two f calls happens
+			// concurrently with the flushing, thus causing data
+			// race on a chunk of memory.
+			//
+			// The data race leads to the following two know issues:
+			//
+			// 1. Crash on specific platform while resizing, e.g. macOS;
+			// 2. Black flicking while rendering even without resizing
+			//
+			// To prevent that happen, we use a two-buffer approach
+			// (similar to hardware double-buffering technique) that
+			// call on different draw calls. The benefits, of course,
+			// resolve the above issues, and enables motion vectors
+			// computation between frames.
+			//
+			// TODO: while executing the rendering on buf2, the buf1
+			// is not cleared yet. It should be safe for accessing
+			// as previous frame, in order to compute motion vectors.
+			// Figuring out what is a proper API design here.
+			//
+			// A possible design:
+			//
+			// func MainLoop(f func(buf, prevBuf *render.Buffer) *image.RGBA)
+			//
+			// Yet there are no enough practice regards the drawbacks
+			// of the API, implement a motion vector related algorithm
+			// might worthy. e.g. TAA??
+			w.buf1.Clear()
+			w.drawQ <- f(w.buf1)
+			w.buf2.Clear()
+			w.drawQ <- f(w.buf2)
 		}
 	}()
 
-	// Event Thread
+	// Auxiliary Rendering Thread
 	//
-	// The event thread terminates when the window instance is closed.
-	// All events are handled in the ticked loop.
+	// This thread processes the auxiliary informations, such as fps, etc.
+	go func() {
+		last := time.Now()
+		tPerFrame := time.Second / 240 // permit maximum 120 fps
+		for buf := range w.drawQ {
+			current := time.Now()
+			t := current.Sub(last)
+			if t < tPerFrame || buf == nil {
+				continue
+			}
+			if w.showFPS {
+				w.drawer.Dot = fixed.P(5, 15)
+				w.drawer.Dst = buf
+				w.drawer.DrawString(fmt.Sprintf("%d", time.Second/t))
+			}
+			last = current
+			w.draw <- buf
+		}
+	}()
+
+	// The Main Thread
+	//
+	// The main (event) thread terminates when the window instance is
+	// closed. All events are handled in the ticked loop.
 	//
 	// The ticker ticks every ~1ms which permits a maximum of 960 fps
 	// (should large enough) for input events handling as the key to
 	// making sure the window being responsive (especially on macOS).
 	// Since we manage time event timeout ourselves using the ticker,
 	// the glfw.PollEvents is used.
+	w.win.MakeContextCurrent()
+	err := gl.Init()
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize gl: %w", err))
+	}
+	gl.DrawBuffer(gl.FRONT)
+	gl.PixelZoom(1, -1)
+
 	ti := time.NewTicker(time.Second / 960)
 	for !w.win.ShouldClose() {
-		<-ti.C
-		mainthread.Call(func() { glfw.PollEvents() })
+		select {
+		case buf := <-w.draw:
+			w.flush(buf)
+		case <-ti.C:
+			glfw.PollEvents()
+		}
 	}
+
+	w.win.Destroy()
 }
 
 // flush flushes the containing pixel buffer of the given image to the

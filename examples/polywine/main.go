@@ -16,7 +16,6 @@ import (
 	"changkun.de/x/polyred/io"
 	"changkun.de/x/polyred/math"
 	"changkun.de/x/polyred/render"
-	"golang.design/x/mainthread"
 )
 
 type TextureShader struct {
@@ -35,8 +34,7 @@ func (s *TextureShader) FragmentShader(frag primitive.Fragment) color.RGBA {
 	return s.Texture.Query(0, frag.UV.X, 1-frag.UV.Y)
 }
 
-func main() { mainthread.Init(fn) }
-func fn() {
+func main() {
 	width, height := 400, 400
 	gui.InitWindow(
 		gui.WithTitle("polyred"),
