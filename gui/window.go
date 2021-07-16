@@ -57,8 +57,7 @@ type win struct {
 	scaleX        float64
 	scaleY        float64
 
-	buf1  *render.Buffer
-	buf2  *render.Buffer
+	bufs  []*render.Buffer
 	draw  chan *image.RGBA
 	drawQ chan *image.RGBA
 
@@ -130,8 +129,10 @@ func InitWindow(opts ...Option) {
 	w.scaleY = float64(fbh) / float64(w.height)
 	w.draw = make(chan *image.RGBA)
 	w.drawQ = make(chan *image.RGBA)
-	w.buf1 = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
-	w.buf2 = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
+	w.bufs = make([]*render.Buffer, 2)
+	for i := range w.bufs {
+		w.bufs[i] = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
+	}
 	w.win.MakeContextCurrent()
 	err = gl.Init()
 	if err != nil {
@@ -147,13 +148,15 @@ func InitWindow(opts ...Option) {
 		w.scaleY = float64(fbh) / float64(height)
 		w.dispatcher.Dispatch(OnResize, &w.evSize)
 
-		// The following replaces the w.buf1 and w.buf2 on the main thread.
+		// The following replaces the w.bufs on the main thread.
+		//
 		// It does not involve with data race. Because the draw call is
-		// also handled on the mainthread, which is currently not possible
+		// also handled on the main thread, which is currently not possible
 		// to execute.
 		r := image.Rect(0, 0, fbw, fbh)
-		w.buf1 = render.NewBuffer(r)
-		w.buf2 = render.NewBuffer(r)
+		for i := range w.bufs {
+			w.bufs[i] = render.NewBuffer(r)
+		}
 	})
 	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
 		w.evCursor.Xpos = xpos
@@ -207,53 +210,16 @@ func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
 
 // MainLoop executes the given f on a loop, then schedules the returned
 // image and renders it to the created window. f
-func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
+func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
 	w := window
 
 	// Rendering Thread
 	go func() {
 		for !w.win.ShouldClose() {
-			// We use two switching buffers for the draw calls.
-			// Otherwise, there is a data race regards the pixel
-			// buffer between buf.Clear and gl.DrawPixels.
-			//
-			// Consider the following diagram:
-			//
-			//  | f(w.buf) | buf.Clear() | f(w.buf) |
-			// -+----------+-------------+----------+------> Render Thread
-			//              \ gl.DrawPixels
-			//               \__
-			//                  \ gl.Flush
-			//                   v
-			// ------------------+---+---------------------> GPU Processing
-			//                        \
-			//                         v
-			// ------------------------+-------------------> Monitor
-			//              |<- <5ms ->|
-			//                         ^
-			//                         monitor shows w.buf
-			//
-			// According to a rough measurement, when f finishes
-			// the rendering, the flushing the entire pixel buffer
-			// to the monitor requires <~5ms on a MacBook Air (M1).
-			//
-			// This means, if the next frame of f(w.buf) is called
-			// before flushing the pixels onto monitor (i.e. pixel
-			// buffer read behavior), the buf.Clear (i.e. pixel
-			// buffer write behavior) between two f calls happens
-			// concurrently with the flushing, thus causing data
-			// race on a chunk of memory.
-			//
-			// The data race leads to the following two know issues:
-			//
-			// 1. Crash on specific platform while resizing, e.g. macOS;
-			// 2. Black flicking while rendering even without resizing
-			//
-			// To prevent that happen, we use a two-buffer approach
-			// (similar to hardware double-buffering technique) that
-			// call on different draw calls. The benefits, of course,
-			// resolve the above issues, and enables motion vectors
-			// computation between frames.
+			// We use multiple switching buffers for the drawing, which
+			// similar to the double- tripple-buffering techniques.
+			// The benefit is that this enables motion vectors between
+			// frames.
 			//
 			// TODO: while executing the rendering on buf2, the buf1
 			// is not cleared yet. It should be safe for accessing
@@ -267,10 +233,14 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 			// Yet there are no enough practice regards the drawbacks
 			// of the API, implement a motion vector related algorithm
 			// might worthy. e.g. TAA??
-			w.buf1.Clear()
-			w.drawQ <- f(w.buf1)
-			w.buf2.Clear()
-			w.drawQ <- f(w.buf2)
+			//
+			// Maybe we can make framebuf abstraction to be a linked list,
+			// in this way, the API remains one buffer parameter, but
+			// be able to access previous frames using frame.Prev()
+			for i := range w.bufs {
+				w.bufs[i].Clear()
+				w.drawQ <- f(w.bufs[i])
+			}
 		}
 	}()
 
