@@ -3,4 +3,4 @@
 // can be found in the LICENSE file.
 
 // Package polyred is a software renderer.
-package polyred // import "changkun.de/x/polyred"
+package polyred // import "poly.red"
