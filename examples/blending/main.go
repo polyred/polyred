@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"image/color"
 
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/image"
-	"changkun.de/x/polyred/io"
-	"changkun.de/x/polyred/render"
-	"changkun.de/x/polyred/utils"
+	"poly.red/geometry/primitive"
+	"poly.red/image"
+	"poly.red/io"
+	"poly.red/render"
+	"poly.red/utils"
 )
 
 func main() {

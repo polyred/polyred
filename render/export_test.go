@@ -5,9 +5,9 @@
 package render
 
 import (
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/material"
-	"changkun.de/x/polyred/math"
+	"poly.red/geometry/primitive"
+	"poly.red/material"
+	"poly.red/math"
 )
 
 var (

@@ -8,14 +8,14 @@ import (
 	"image/color"
 	"runtime"
 
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/geometry"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/gui"
-	"changkun.de/x/polyred/image"
-	"changkun.de/x/polyred/io"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/render"
+	"poly.red/camera"
+	"poly.red/geometry"
+	"poly.red/geometry/primitive"
+	"poly.red/gui"
+	"poly.red/image"
+	"poly.red/io"
+	"poly.red/math"
+	"poly.red/render"
 )
 
 type TextureShader struct {

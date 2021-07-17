@@ -7,9 +7,9 @@ package geometry_test
 import (
 	"testing"
 
-	"changkun.de/x/polyred/geometry"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/material"
+	"poly.red/geometry"
+	"poly.red/geometry/primitive"
+	"poly.red/material"
 )
 
 func TestBufferedMesh(t *testing.T) {

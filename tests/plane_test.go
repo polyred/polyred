@@ -7,14 +7,14 @@ package tests
 import (
 	"testing"
 
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/geometry"
-	"changkun.de/x/polyred/light"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/render"
-	"changkun.de/x/polyred/scene"
-	"changkun.de/x/polyred/utils"
+	"poly.red/camera"
+	"poly.red/color"
+	"poly.red/geometry"
+	"poly.red/light"
+	"poly.red/math"
+	"poly.red/render"
+	"poly.red/scene"
+	"poly.red/utils"
 )
 
 func TestPlane(t *testing.T) {

@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"testing"
 
-	"changkun.de/x/polyred/geometry"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/object"
-	"changkun.de/x/polyred/scene"
+	"poly.red/geometry"
+	"poly.red/math"
+	"poly.red/object"
+	"poly.red/scene"
 )
 
 func TestScene(t *testing.T) {

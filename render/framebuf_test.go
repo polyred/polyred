@@ -8,7 +8,7 @@ import (
 	"image"
 	"testing"
 
-	"changkun.de/x/polyred/render"
+	"poly.red/render"
 )
 
 func BenchmarkBuffer_Clear(b *testing.B) {

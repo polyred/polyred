@@ -10,13 +10,13 @@ import (
 	"log"
 	"os"
 
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/image"
-	"changkun.de/x/polyred/io"
-	"changkun.de/x/polyred/light"
-	"changkun.de/x/polyred/material"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/scene"
+	"poly.red/camera"
+	"poly.red/image"
+	"poly.red/io"
+	"poly.red/light"
+	"poly.red/material"
+	"poly.red/math"
+	"poly.red/scene"
 )
 
 type Scene struct {

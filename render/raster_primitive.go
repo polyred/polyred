@@ -5,11 +5,11 @@
 package render
 
 import (
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/shader"
+	"poly.red/camera"
+	"poly.red/color"
+	"poly.red/geometry/primitive"
+	"poly.red/math"
+	"poly.red/shader"
 )
 
 // PrimitivePass is a pass that executes Draw call concurrently on all

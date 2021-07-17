@@ -11,10 +11,10 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/render"
-	"changkun.de/x/polyred/utils"
+	"poly.red/color"
+	"poly.red/geometry/primitive"
+	"poly.red/render"
+	"poly.red/utils"
 )
 
 func BenchmarkAlphaBlend(b *testing.B) {

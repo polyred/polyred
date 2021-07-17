@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/geometry"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/math"
+	"poly.red/color"
+	"poly.red/geometry"
+	"poly.red/geometry/primitive"
+	"poly.red/math"
 )
 
 // LoadOBJ loads a .obj file to a TriangleMesh object

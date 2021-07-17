@@ -9,7 +9,7 @@ import (
 	"image/color"
 	"sync"
 
-	"changkun.de/x/polyred/geometry/primitive"
+	"poly.red/geometry/primitive"
 )
 
 // FragmentInfo is a collection regarding the relevant geometry information of a fragment.

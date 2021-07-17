@@ -7,9 +7,9 @@ package camera_test
 import (
 	"testing"
 
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/object"
+	"poly.red/camera"
+	"poly.red/math"
+	"poly.red/object"
 )
 
 func TestCameraProperties(t *testing.T) {

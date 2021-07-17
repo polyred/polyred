@@ -8,8 +8,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/math"
+	"poly.red/color"
+	"poly.red/math"
 )
 
 func TestColor(t *testing.T) {

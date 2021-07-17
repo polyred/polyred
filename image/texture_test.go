@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"testing"
 
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/image"
-	"changkun.de/x/polyred/io"
+	"poly.red/color"
+	"poly.red/image"
+	"poly.red/io"
 )
 
 func mustLoadTexture(path string) *image.Texture {

@@ -7,7 +7,7 @@ package math_test
 import (
 	"testing"
 
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 func TestTransformationContext(t *testing.T) {

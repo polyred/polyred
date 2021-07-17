@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"changkun.de/x/polyred/io"
+	"poly.red/io"
 )
 
 func TestLoadImage(t *testing.T) {

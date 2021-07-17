@@ -5,8 +5,8 @@
 package gui
 
 import (
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/math"
+	"poly.red/camera"
+	"poly.red/math"
 )
 
 // FIXME: work with orthographic camera

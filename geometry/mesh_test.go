@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"changkun.de/x/polyred/geometry/primitive"
+	"poly.red/geometry/primitive"
 )
 
 func BenchmarkNewTriangleMesh(b *testing.B) {

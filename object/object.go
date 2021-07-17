@@ -4,7 +4,7 @@
 
 package object
 
-import "changkun.de/x/polyred/math"
+import "poly.red/math"
 
 type Type int
 

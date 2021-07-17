@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 var (

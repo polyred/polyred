@@ -7,7 +7,7 @@ package primitive
 import (
 	"errors"
 
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 var _ Face = &Polygon{}

@@ -5,10 +5,10 @@
 package geometry
 
 import (
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/material"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/object"
+	"poly.red/geometry/primitive"
+	"poly.red/material"
+	"poly.red/math"
+	"poly.red/object"
 )
 
 var (

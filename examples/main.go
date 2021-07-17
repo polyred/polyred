@@ -13,15 +13,15 @@ import (
 	"runtime/trace"
 	"time"
 
-	"changkun.de/x/polyred/examples/bunny"
-	"changkun.de/x/polyred/examples/dragon"
-	"changkun.de/x/polyred/examples/gopher"
-	"changkun.de/x/polyred/examples/mcguire"
-	"changkun.de/x/polyred/examples/persp"
-	"changkun.de/x/polyred/examples/shadow"
-	"changkun.de/x/polyred/render"
-	"changkun.de/x/polyred/scene"
-	"changkun.de/x/polyred/utils"
+	"poly.red/examples/bunny"
+	"poly.red/examples/dragon"
+	"poly.red/examples/gopher"
+	"poly.red/examples/mcguire"
+	"poly.red/examples/persp"
+	"poly.red/examples/shadow"
+	"poly.red/render"
+	"poly.red/scene"
+	"poly.red/utils"
 )
 
 type sceneExample struct {

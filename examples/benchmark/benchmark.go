@@ -10,15 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/image"
-	"changkun.de/x/polyred/io"
-	"changkun.de/x/polyred/light"
-	"changkun.de/x/polyred/material"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/render"
-	"changkun.de/x/polyred/scene"
-	"changkun.de/x/polyred/utils"
+	"poly.red/camera"
+	"poly.red/image"
+	"poly.red/io"
+	"poly.red/light"
+	"poly.red/material"
+	"poly.red/math"
+	"poly.red/render"
+	"poly.red/scene"
+	"poly.red/utils"
 )
 
 type benchOpts struct {

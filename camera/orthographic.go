@@ -5,8 +5,8 @@
 package camera
 
 import (
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/object"
+	"poly.red/math"
+	"poly.red/object"
 )
 
 // Orthographic represents an orthographic camera.

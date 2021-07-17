@@ -7,7 +7,7 @@ package math_test
 import (
 	"testing"
 
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 func BenchmarkMat4_Eq(b *testing.B) {

@@ -9,10 +9,10 @@ import (
 	"math/rand"
 	"testing"
 
-	"changkun.de/x/polyred/image"
-	"changkun.de/x/polyred/light"
-	"changkun.de/x/polyred/material"
-	"changkun.de/x/polyred/math"
+	"poly.red/image"
+	"poly.red/light"
+	"poly.red/material"
+	"poly.red/math"
 )
 
 func BenchmarkBlinnPhongShader(b *testing.B) {

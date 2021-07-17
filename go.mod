@@ -1,4 +1,4 @@
-module changkun.de/x/polyred
+module poly.red
 
 go 1.17
 

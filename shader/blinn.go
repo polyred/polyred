@@ -7,10 +7,10 @@ package shader
 import (
 	"image/color"
 
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/image"
-	"changkun.de/x/polyred/light"
-	"changkun.de/x/polyred/math"
+	"poly.red/geometry/primitive"
+	"poly.red/image"
+	"poly.red/light"
+	"poly.red/math"
 )
 
 var _ Program = &BlinnShader{}

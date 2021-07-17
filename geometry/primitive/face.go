@@ -4,7 +4,7 @@
 
 package primitive
 
-import "changkun.de/x/polyred/math"
+import "poly.red/math"
 
 type Face interface {
 	Normal() math.Vec4

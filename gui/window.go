@@ -12,8 +12,8 @@
 // 	import (
 // 		"image"
 //
-// 		"changkun.de/x/polyred/gui"
-// 		"changkun.de/x/polyred/render"
+// 		"poly.red/gui"
+// 		"poly.red/render"
 // 	)
 //
 // 	func main() {
@@ -33,12 +33,12 @@ import (
 	"time"
 	"unsafe"
 
-	"changkun.de/x/polyred/render"
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
+	"poly.red/render"
 )
 
 func init() {

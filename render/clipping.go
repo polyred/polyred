@@ -7,8 +7,8 @@ package render
 import (
 	"image/color"
 
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/math"
+	"poly.red/geometry/primitive"
+	"poly.red/math"
 )
 
 type plane struct {

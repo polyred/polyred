@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"changkun.de/x/polyred/utils"
+	"poly.red/utils"
 )
 
 func TestLimiterV2(t *testing.T) {

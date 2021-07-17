@@ -3,7 +3,7 @@ package render
 import (
 	"image/color"
 
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 // drawLine implements the Bresenham algorithm that draws a line

@@ -8,7 +8,7 @@ import (
 	"image/color"
 	"testing"
 
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 var (

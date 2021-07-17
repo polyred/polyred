@@ -8,7 +8,7 @@ import (
 	"image/color"
 	"math/rand"
 
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 // Vertex represents a vertex that conveys attributes.

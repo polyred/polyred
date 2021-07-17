@@ -5,7 +5,7 @@
 package primitive
 
 import (
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 var _ Face = &Triangle{}

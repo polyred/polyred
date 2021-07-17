@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/render"
-	"changkun.de/x/polyred/shader"
-	"changkun.de/x/polyred/utils"
+	"poly.red/camera"
+	"poly.red/color"
+	"poly.red/geometry/primitive"
+	"poly.red/math"
+	"poly.red/render"
+	"poly.red/shader"
+	"poly.red/utils"
 )
 
 func init() {

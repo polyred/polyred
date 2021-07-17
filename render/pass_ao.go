@@ -7,7 +7,7 @@ package render
 import (
 	"image/color"
 
-	"changkun.de/x/polyred/math"
+	"poly.red/math"
 )
 
 type ambientOcclusionPass struct {

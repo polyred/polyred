@@ -4,7 +4,7 @@
 
 package geometry
 
-import "changkun.de/x/polyred/math"
+import "poly.red/math"
 
 type Ray struct {
 	Ori, Dir math.Vec4

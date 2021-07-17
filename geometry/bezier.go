@@ -5,8 +5,8 @@
 package geometry
 
 import (
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/math"
+	"poly.red/geometry/primitive"
+	"poly.red/math"
 )
 
 type BezierCurve struct {

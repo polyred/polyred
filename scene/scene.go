@@ -5,11 +5,11 @@
 package scene
 
 import (
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/geometry"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/object"
+	"poly.red/camera"
+	"poly.red/geometry"
+	"poly.red/geometry/primitive"
+	"poly.red/math"
+	"poly.red/object"
 )
 
 // Scene is a scene graph

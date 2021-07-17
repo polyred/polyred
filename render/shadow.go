@@ -10,14 +10,14 @@ import (
 	"image/color"
 	"sync"
 
-	"changkun.de/x/polyred/camera"
-	"changkun.de/x/polyred/geometry"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/light"
-	"changkun.de/x/polyred/material"
-	"changkun.de/x/polyred/math"
-	"changkun.de/x/polyred/object"
-	"changkun.de/x/polyred/utils"
+	"poly.red/camera"
+	"poly.red/geometry"
+	"poly.red/geometry/primitive"
+	"poly.red/light"
+	"poly.red/material"
+	"poly.red/math"
+	"poly.red/object"
+	"poly.red/utils"
 )
 
 type ShadowType int

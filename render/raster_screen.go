@@ -7,9 +7,9 @@ package render
 import (
 	"image"
 
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/geometry/primitive"
-	"changkun.de/x/polyred/shader"
+	"poly.red/color"
+	"poly.red/geometry/primitive"
+	"poly.red/shader"
 )
 
 // BlendFunc is a blending function for two given colors and returns

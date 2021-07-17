@@ -14,8 +14,8 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 
-	"changkun.de/x/polyred/color"
-	"changkun.de/x/polyred/utils"
+	"poly.red/color"
+	"poly.red/utils"
 )
 
 // ImageOption offers several basic custom conversions of the image.
