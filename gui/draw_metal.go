@@ -121,13 +121,24 @@ func (w *win) flush(img *image.RGBA) error {
 		return fmt.Errorf("gui: couldn't get the next drawable: %w", err)
 	}
 
+	// We need present the image in BGRA order
+	// FIXME: can we find a better way to use BGRA order by default in
+	// the frame buffer so that we can avoid converting loop here?
+	for i := 0; i < dx; i++ {
+		for j := 0; j < dy; j++ {
+			col := img.RGBAAt(i, j)
+			col.R, col.B = col.B, col.R
+			img.SetRGBA(i, j, col)
+		}
+	}
+
 	// We create a new texture for every draw call. A temporary texture
 	// is needed since ReplaceRegion tries to sync the pixel data between
 	// CPU and GPU, and doing it on the existing texture is inefficient.
 	// The texture cannot be reused until sending the pixels finishes,
 	// then create new ones for each call.
 	tex := w.device.MakeTexture(mtl.TextureDescriptor{
-		PixelFormat: mtl.PixelFormatRGBA8UNorm,
+		PixelFormat: mtl.PixelFormatBGRA8UNorm,
 		Width:       dx,
 		Height:      dy,
 		StorageMode: mtl.StorageModeManaged,

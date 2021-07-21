@@ -94,15 +94,6 @@ func (b *Buffer) Set(x, y int, info FragmentInfo) {
 	}
 	i := b.FragmentOffset(x, y)
 
-	// fast path. depth test fail
-	b.lock[i].Lock()
-	if b.fragments[i].Ok && info.Depth <= b.fragments[i].Depth {
-		b.lock[i].Unlock()
-		return
-	}
-	b.lock[i].Unlock()
-
-	// slow path
 	b.lock[i].Lock()
 	defer b.lock[i].Unlock()
 
