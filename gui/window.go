@@ -31,9 +31,7 @@ import (
 	"image/color"
 	"runtime"
 	"time"
-	"unsafe"
 
-	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
@@ -43,39 +41,6 @@ import (
 
 func init() {
 	runtime.LockOSThread()
-}
-
-// Option is a functional option to the window constructor New.
-type Option func(*win)
-
-// WithTitle option sets the title (caption) of the window.
-func WithTitle(title string) Option {
-	return func(o *win) {
-		o.title = title
-	}
-}
-
-// WithSize option sets the width and height of the window.
-func WithSize(width, height int) Option {
-	return func(o *win) {
-		o.width = uint32(width)
-		o.height = uint32(height)
-	}
-}
-
-// WithNumBufs option sets the number of switching buffers are used
-// internally for the rendering.
-func WithNumBufs(num int) Option {
-	return func(w *win) {
-		w.buflen = num
-	}
-}
-
-// WithFPS sets the window to show FPS.
-func WithFPS() Option {
-	return func(o *win) {
-		o.showFPS = true
-	}
 }
 
 type win struct {
@@ -103,6 +68,8 @@ type win struct {
 	evScroll   ScrollEvent
 	evKey      KeyEvent
 	mods       ModifierKey
+
+	driverInfo
 }
 
 var window *win
@@ -116,9 +83,9 @@ func Window() *win {
 }
 
 // InitWindow constructs a new graphical window.
-func InitWindow(opts ...Option) {
+func InitWindow(opts ...Option) error {
 	w := &win{
-		title:      "",
+		title:      "polyred-gui",
 		width:      500,
 		height:     500,
 		showFPS:    false,
@@ -138,13 +105,9 @@ func InitWindow(opts ...Option) {
 
 	err := glfw.Init()
 	if err != nil {
-		panic(fmt.Errorf("failed to initialize glfw context: %w", err))
+		return fmt.Errorf("failed to initialize glfw context: %w", err)
 	}
-
-	glfw.WindowHint(glfw.ContextVersionMajor, 2)
-	glfw.WindowHint(glfw.ContextVersionMinor, 1)
-	glfw.WindowHint(glfw.DoubleBuffer, glfw.False)
-	glfw.WindowHint(glfw.Resizable, glfw.True)
+	w.initWinHints()
 
 	w.win, err = glfw.CreateWindow(int(w.width), int(w.height), w.title, nil, nil)
 	if err != nil {
@@ -158,78 +121,20 @@ func InitWindow(opts ...Option) {
 
 	w.draw = make(chan *image.RGBA)
 	w.drawQ = make(chan *image.RGBA)
-
 	w.bufs = make([]*render.Buffer, w.buflen)
 	for i := 0; i < w.buflen; i++ {
 		w.bufs[i] = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
 	}
-
-	// Setup event callbacks
-	w.win.SetSizeCallback(func(x *glfw.Window, width int, height int) {
-		fbw, fbh := x.GetFramebufferSize()
-		w.evSize.Width = width
-		w.evSize.Height = height
-		w.scaleX = float64(fbw) / float64(width)
-		w.scaleY = float64(fbh) / float64(height)
-		w.dispatcher.Dispatch(OnResize, &w.evSize)
-
-		// The following replaces the w.bufs on the main thread.
-		//
-		// It does not involve with data race. Because the draw call is
-		// also handled on the main thread, which is currently not possible
-		// to execute.
-		r := image.Rect(0, 0, fbw, fbh)
-		for i := range w.bufs {
-			w.bufs[i] = render.NewBuffer(r)
-		}
-	})
-	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
-		w.evCursor.Xpos = xpos
-		w.evCursor.Ypos = ypos
-		w.evCursor.Mods = w.mods
-		w.dispatcher.Dispatch(OnCursor, &w.evCursor)
-	})
-	w.win.SetMouseButtonCallback(func(x *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
-		xpos, ypos := x.GetCursorPos()
-		w.evMouse.Button = MouseButton(button)
-		w.evMouse.Mods = ModifierKey(mods)
-		w.evMouse.Xpos = xpos
-		w.evMouse.Ypos = ypos
-
-		switch action {
-		case glfw.Press:
-			w.dispatcher.Dispatch(OnMouseDown, &w.evMouse)
-		case glfw.Release:
-			w.dispatcher.Dispatch(OnMouseUp, &w.evMouse)
-		}
-	})
-	w.win.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
-		w.evScroll.Xoffset = xoff
-		w.evScroll.Yoffset = yoff
-		w.evScroll.Mods = w.mods
-		w.dispatcher.Dispatch(OnScroll, &w.evScroll)
-	})
-	w.win.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
-		w.evKey.Key = Key(key)
-		w.evKey.Mods = ModifierKey(mods)
-		w.mods = w.evKey.Mods
-		switch action {
-		case glfw.Press:
-			w.dispatcher.Dispatch(OnKeyDown, &w.evKey)
-		case glfw.Release:
-			w.dispatcher.Dispatch(OnKeyUp, &w.evKey)
-		case glfw.Repeat:
-			w.dispatcher.Dispatch(OnKeyRepeat, &w.evKey)
-		}
-	})
 
 	if window != nil {
 		panic("gui: double window initialization")
 	}
 
 	window = w
+	return nil
 }
 
+// Subscribe subscribes the given event and registers the given callback.
 func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
 	w.dispatcher.eventMap[eventName] = append(w.dispatcher.eventMap[eventName], subscription{
 		id: nil,
@@ -239,7 +144,7 @@ func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
 
 // MainLoop executes the given f on a loop, then schedules the returned
 // image and renders it to the created window.
-func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
+func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 	w := window
 
 	// Rendering Thread
@@ -305,18 +210,16 @@ func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
 	// making sure the window being responsive (especially on macOS).
 	// Since we manage time event timeout ourselves using the ticker,
 	// the glfw.PollEvents is used.
-	w.win.MakeContextCurrent()
-	err := gl.Init()
-	if err != nil {
-		panic(fmt.Errorf("failed to initialize gl: %w", err))
-	}
-	gl.DrawBuffer(gl.FRONT)
-	gl.PixelZoom(1, -1)
+	w.initDriver()
+	w.initCallbacks()
 
 	ti := time.NewTicker(time.Second / 960)
 	for !w.win.ShouldClose() {
 		select {
 		case buf := <-w.draw:
+			// flush is a platform dependent function which uses
+			// different drivers. For instance, it use Metal on darwin,
+			// OpenGL for Linux and Windows (for now).
 			w.flush(buf)
 		case <-ti.C:
 			glfw.PollEvents()
@@ -325,15 +228,4 @@ func MainLoop(f func(frame *render.Buffer) *image.RGBA) {
 
 	w.win.Destroy()
 	glfw.Terminate()
-}
-
-// flush flushes the containing pixel buffer of the given image to the
-// hardware frame buffer for display prupose. The given image is assumed
-// to be non-nil pointer.
-func (w *win) flush(img *image.RGBA) {
-	dx, dy := int32(img.Bounds().Dx()), int32(img.Bounds().Dy())
-	gl.RasterPos2d(-1, 1)
-	gl.Viewport(0, 0, dx, dy)
-	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, unsafe.Pointer(&img.Pix[0]))
-	gl.Flush()
 }
