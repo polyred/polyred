@@ -26,21 +26,22 @@ type Orthographic struct {
 
 // NewOrthographic creates an orthographic camera with the provided
 // camera parameters.
-func NewOrthographic(
-	pos, target, up math.Vec3,
-	left, right, bottom, top, near, far float64,
-) Interface {
+func NewOrthographic(opts ...Option) Interface {
 	c := &Orthographic{
-		position: pos,
-		target:   target,
-		up:       up,
-		left:     left,
-		right:    right,
-		bottom:   bottom,
-		top:      top,
-		near:     near,
-		far:      far,
+		position: math.NewVec3(0, 0, 1),
+		target:   math.NewVec3(0, 0, 0),
+		up:       math.NewVec3(0, 1, 0),
+		left:     -1,
+		right:    1,
+		bottom:   -1,
+		top:      1,
+		near:     1,
+		far:      -1,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+
 	c.ResetContext()
 	return c
 }

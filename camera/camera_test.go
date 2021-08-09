@@ -21,7 +21,10 @@ func TestCameraProperties(t *testing.T) {
 	near := -100.0
 	far := -600.0
 
-	oc := camera.NewOrthographic(pos, lookAt, up, -1, 1, -1, 1, 1, -1)
+	oc := camera.NewOrthographic(
+		camera.WithPosition(pos),
+		camera.WithLookAt(lookAt, up),
+	)
 	if oc.Type() != object.TypeCamera {
 		t.Fatalf("camera type does not return a type of camera, got %v", oc.Type())
 	}
@@ -58,7 +61,11 @@ func TestCameraProperties(t *testing.T) {
 		t.Fatalf("unexpected target or up, want %v, %v, got %v, %v", math.NewVec3(0, 0, 0), math.NewVec3(0, 1, 0), target, gotup)
 	}
 
-	oc = camera.NewPerspective(pos, lookAt, up, fov, aspect, near, far)
+	oc = camera.NewPerspective(
+		camera.WithPosition(pos),
+		camera.WithLookAt(lookAt, up),
+		camera.WithPerspFrustum(fov, aspect, near, far),
+	)
 	if oc.Type() != object.TypeCamera {
 		t.Fatalf("camera type does not return a type of camera, got %v", oc.Type())
 	}
@@ -118,13 +125,20 @@ func TestViewMatrix(t *testing.T) {
 		t.Errorf("view matrix is wrong, want %v got %v", want, vm)
 	}
 
-	cp := camera.NewPerspective(pos, lookAt, up, fov, aspect, near, far)
+	cp := camera.NewPerspective(
+		camera.WithPosition(pos),
+		camera.WithLookAt(lookAt, up),
+		camera.WithPerspFrustum(fov, aspect, near, far),
+	)
 	vm = cp.ViewMatrix()
 	if !vm.Eq(want) {
 		t.Errorf("view matrix is wrong, want %v got %v", want, vm)
 	}
 
-	op := camera.NewOrthographic(pos, lookAt, up, -1, 1, -1, 1, 1, -1)
+	op := camera.NewOrthographic(
+		camera.WithPosition(pos),
+		camera.WithLookAt(lookAt, up),
+	)
 	vm = op.ViewMatrix()
 	if !vm.Eq(want) {
 		t.Errorf("view matrix is wrong, want %v got %v", want, vm)
@@ -147,7 +161,11 @@ func TestProjMatrix(t *testing.T) {
 		0, 0, 1, 0,
 	)
 
-	cp := camera.NewPerspective(pos, lookAt, up, fov, aspect, near, far)
+	cp := camera.NewPerspective(
+		camera.WithPosition(pos),
+		camera.WithLookAt(lookAt, up),
+		camera.WithPerspFrustum(fov, aspect, near, far),
+	)
 	vm := cp.ProjMatrix()
 	if !vm.Eq(want) {
 		t.Errorf("perspective projection matrix is wrong, want %v got %v", want, vm)
@@ -165,7 +183,11 @@ func TestProjMatrix(t *testing.T) {
 		0, 0, 0.6666666, 1,
 		0, 0, 0, 1,
 	)
-	op := camera.NewOrthographic(pos, lookAt, up, left, right, bottom, top, near, far)
+	op := camera.NewOrthographic(
+		camera.WithPosition(pos),
+		camera.WithLookAt(lookAt, up),
+		camera.WithOrthoFrustum(left, right, bottom, top, near, far),
+	)
 	vm = op.ProjMatrix()
 	if !vm.Eq(want) {
 		t.Errorf("view matrix is wrong, want %v got %v", want, vm)
@@ -175,13 +197,17 @@ func TestProjMatrix(t *testing.T) {
 func BenchmarkCamera(b *testing.B) {
 	w, h := 1920, 1080
 	c1 := camera.NewPerspective(
-		math.NewVec3(-0.5, 0.5, 0.5),
-		math.NewVec3(0, 0, -0.5),
-		math.NewVec3(0, 1, 0),
-		45,
-		float64(w)/float64(h),
-		-0.1,
-		-3,
+		camera.WithPosition(math.NewVec3(-0.5, 0.5, 0.5)),
+		camera.WithLookAt(
+			math.NewVec3(0, 0, -0.5),
+			math.NewVec3(0, 1, 0),
+		),
+		camera.WithPerspFrustum(
+			45,
+			float64(w)/float64(h),
+			-0.1,
+			-3,
+		),
 	)
 
 	b.Run("Perspective_ViewMatrix", func(b *testing.B) {
@@ -202,10 +228,16 @@ func BenchmarkCamera(b *testing.B) {
 	})
 
 	c2 := camera.NewOrthographic(
-		math.NewVec3(-0.5, 0.5, 0.5),
-		math.NewVec3(0, 0, -0.5),
-		math.NewVec3(0, 1, 0),
-		-10, 10, -10, 10, 10, -10,
+		camera.WithPosition(
+			math.NewVec3(-0.5, 0.5, 0.5),
+		),
+		camera.WithLookAt(
+			math.NewVec3(0, 0, -0.5),
+			math.NewVec3(0, 1, 0),
+		),
+		camera.WithOrthoFrustum(
+			-10, 10, -10, 10, 10, -10,
+		),
 	)
 
 	b.Run("Orthographic_ViewMatrix", func(b *testing.B) {
@@ -223,5 +255,32 @@ func BenchmarkCamera(b *testing.B) {
 			m = c2.ProjMatrix()
 		}
 		_ = m
+	})
+}
+
+func TestCmaeraMisuse(t *testing.T) {
+
+	t.Run("persp", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("camera misuse did not panic")
+			}
+		}()
+
+		camera.NewPerspective(
+			camera.WithOrthoFrustum(1, 1, 1, 1, 1, 1),
+		)
+	})
+
+	t.Run("ortho", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatalf("camera misuse did not panic")
+			}
+		}()
+
+		camera.NewOrthographic(
+			camera.WithPerspFrustum(1, 1, 1, 1),
+		)
 	})
 }
