@@ -16,19 +16,27 @@ type Perspective struct {
 	position math.Vec3
 	target   math.Vec3
 	up       math.Vec3
-	fov      float64
 	aspect   float64
+	fov      float64
 	near     float64 // 0 < near < far
 	far      float64
 }
 
 // NewPerspective creates a new perspective camera with the provided
 // camera parameters.
-func NewPerspective(pos, target, up math.Vec3, fov, aspect, near, far float64) Interface {
+func NewPerspective(opts ...Option) Interface {
 	c := &Perspective{
-		position: pos, target: target, up: up,
-		fov: fov, aspect: aspect, near: near, far: far,
+		position: math.NewVec3(0, 0, 1),
+		target:   math.NewVec3(0, 0, 0),
+		up:       math.NewVec3(0, 1, 0),
+		aspect:   16.0 / 9,
+		fov:      60,
+		near:     0.01, far: 1000,
 	}
+	for _, opt := range opts {
+		opt(c)
+	}
+
 	c.ResetContext()
 	return c
 }
