@@ -62,7 +62,11 @@ func newscene(w, h int) *scene.Scene {
 		light.WithAmbientIntensity(0.5),
 	))
 
-	m := io.MustLoadMesh("../testdata/bunny.obj")
+	m, err := mesh.Load("../testdata/bunny.obj")
+	if err != nil {
+		panic(err)
+	}
+
 	data := io.MustLoadImage("../testdata/bunny.png")
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(image.NewTexture(

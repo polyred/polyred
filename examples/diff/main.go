@@ -10,6 +10,7 @@ import (
 	"math/rand"
 
 	"poly.red/camera"
+	"poly.red/geometry/mesh"
 	"poly.red/image"
 	"poly.red/io"
 	"poly.red/light"
@@ -39,7 +40,10 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 		light.WithPointLightShadowMap(true)),
 		light.NewAmbient(light.WithAmbientIntensity(0.5)))
 
-	m := io.MustLoadMesh("../../testdata/bunny.obj")
+	m, err := mesh.Load("../../testdata/bunny.obj")
+	if err != nil {
+		panic(err)
+	}
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(
 			image.NewTexture(
@@ -58,7 +62,10 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m = io.MustLoadMesh("../../testdata/ground.obj")
+	m, err = mesh.Load("../../testdata/ground.obj")
+	if err != nil {
+		panic(err)
+	}
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(image.NewTexture(
 			image.WithSource(

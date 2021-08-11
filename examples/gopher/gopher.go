@@ -8,8 +8,8 @@ import (
 	"image/color"
 
 	"poly.red/camera"
+	"poly.red/geometry/mesh"
 	"poly.red/image"
-	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -34,7 +34,10 @@ func NewGopherScene(width, height int) interface{} {
 		light.WithAmbientIntensity(0.7),
 	))
 
-	m := io.MustLoadMesh("../testdata/gopher.obj")
+	m, err := mesh.Load("../testdata/gopher.obj")
+	if err != nil {
+		panic(err)
+	}
 	m.RotateY(-math.Pi / 2)
 
 	mat := material.NewBlinnPhong(

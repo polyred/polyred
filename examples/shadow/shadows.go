@@ -6,6 +6,7 @@ package shadow
 
 import (
 	"poly.red/camera"
+	"poly.red/geometry/mesh"
 	"poly.red/image"
 	"poly.red/io"
 	"poly.red/light"
@@ -37,7 +38,11 @@ func NewShadowScene(w, h int) interface{} {
 		),
 	)
 
-	m := io.MustLoadMesh("../testdata/bunny.obj")
+	m, err := mesh.Load("../testdata/bunny.obj")
+	if err != nil {
+		panic(err)
+	}
+
 	data := io.MustLoadImage("../testdata/bunny.png")
 	tex := image.NewTexture(
 		image.WithSource(data),
@@ -52,7 +57,10 @@ func NewShadowScene(w, h int) interface{} {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m = io.MustLoadMesh("../testdata/ground.obj")
+	m, err = mesh.Load("../testdata/ground.obj")
+	if err != nil {
+		panic(err)
+	}
 	data = io.MustLoadImage("../testdata/ground.png")
 	tex = image.NewTexture(
 		image.WithSource(data),

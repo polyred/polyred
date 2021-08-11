@@ -2,22 +2,27 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package io
+package mesh
 
 import (
 	"bufio"
-	"io"
+	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
 	"poly.red/color"
-	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 )
 
 // LoadOBJ loads a .obj file to a TriangleMesh object
-func LoadOBJ(data io.Reader) (mesh.Mesh, error) {
+func LoadOBJ(path string) (Mesh, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("mesh: failed to open file %s: %w", path, err)
+	}
+	defer f.Close()
 
 	vs := make([]math.Vec4, 1)
 	vts := make([]math.Vec4, 1, 1024)
@@ -25,7 +30,7 @@ func LoadOBJ(data io.Reader) (mesh.Mesh, error) {
 
 	var tris []*primitive.Triangle
 
-	s := bufio.NewScanner(data)
+	s := bufio.NewScanner(f)
 	for s.Scan() {
 		l := s.Text()
 		fields := strings.Fields(l)
@@ -82,7 +87,7 @@ func LoadOBJ(data io.Reader) (mesh.Mesh, error) {
 			}
 		}
 	}
-	return mesh.NewTriangleSoup(tris), s.Err()
+	return NewTriangleSoup(tris), s.Err()
 }
 
 func parseFloats(items []string) []float64 {

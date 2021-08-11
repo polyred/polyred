@@ -8,8 +8,8 @@ import (
 	"image/color"
 
 	"poly.red/camera"
+	"poly.red/geometry/mesh"
 	"poly.red/image"
-	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -37,7 +37,11 @@ func NewDragonScene(w, h int) interface{} {
 		light.WithAmbientIntensity(0.5),
 	))
 
-	m := io.MustLoadMesh("../testdata/dragon.obj")
+	m, err := mesh.Load("../testdata/dragon.obj")
+	if err != nil {
+		panic(err)
+	}
+
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(
 			image.NewColorTexture(color.RGBA{0, 128, 255, 255}),

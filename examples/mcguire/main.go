@@ -11,8 +11,8 @@ import (
 	"os"
 
 	"poly.red/camera"
+	"poly.red/geometry/mesh"
 	"poly.red/image"
-	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -197,7 +197,11 @@ func NewMcGuireScene(w, h int) interface{} {
 			light.WithAmbientIntensity(0.5),
 		))
 
-		m := io.MustLoadMesh(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
+		m, err := mesh.Load(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
+		if err != nil {
+			panic(err)
+		}
+
 		m.Normalize()
 		m.SetMaterial(material.NewBlinnPhong(
 			material.WithBlinnPhongTexture(image.NewColorTexture(color.RGBA{0, 128, 255, 255})),

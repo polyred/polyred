@@ -8,6 +8,7 @@ import (
 	"image/color"
 
 	"poly.red/camera"
+	"poly.red/geometry/mesh"
 	"poly.red/image"
 	"poly.red/io"
 	"poly.red/light"
@@ -43,7 +44,10 @@ func NewBunnyScene(width, height int) interface{} {
 
 	// load a mesh
 	done = utils.Timed("loading mesh")
-	m := io.MustLoadMesh("../testdata/bunny-smooth.obj")
+	m, err := mesh.Load("../testdata/bunny-smooth.obj")
+	if err != nil {
+		panic(err)
+	}
 	done()
 
 	done = utils.Timed("loading texture")

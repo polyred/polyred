@@ -54,7 +54,15 @@ func main() {
 	)
 
 	// Use a different model
-	m := io.MustLoadMesh("../../testdata/bunny.obj").(*mesh.TriangleSoup)
+	mod, err := mesh.Load("../../testdata/bunny.obj")
+	if err != nil {
+		panic(err)
+	}
+	m, ok := mod.(*mesh.TriangleSoup)
+	if !ok {
+		panic("expect load as an triangle soup")
+	}
+
 	m.Normalize()
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 
