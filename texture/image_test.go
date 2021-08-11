@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package io_test
+package texture_test
 
 import (
 	"image/color"
@@ -10,11 +10,11 @@ import (
 	"os"
 	"testing"
 
-	"poly.red/io"
+	"poly.red/texture"
 )
 
 func TestLoadImage(t *testing.T) {
-	img := io.MustLoadImage("./testdata/ground.png", io.WithGammaCorrection(true))
+	img := texture.MustLoadImage("./testdata/ground.png", texture.WithGammaCorrection(true))
 
 	f, err := os.Open("./testdata/golden.png")
 	if err != nil {
@@ -43,12 +43,12 @@ func TestLoadImage(t *testing.T) {
 func BenchmarkLoadImage(b *testing.B) {
 	b.Run("without-correction", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			io.MustLoadImage("../testdata/ground.png", io.WithGammaCorrection(false))
+			texture.MustLoadImage("../testdata/ground.png", texture.WithGammaCorrection(false))
 		}
 	})
 	b.Run("with-correction", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			io.MustLoadImage("../testdata/ground.png", io.WithGammaCorrection(true))
+			texture.MustLoadImage("../testdata/ground.png", texture.WithGammaCorrection(true))
 		}
 	})
 }

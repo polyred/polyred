@@ -7,12 +7,11 @@ package shadow
 import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/image"
-	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
+	"poly.red/texture"
 )
 
 func NewShadowScene(w, h int) interface{} {
@@ -43,10 +42,10 @@ func NewShadowScene(w, h int) interface{} {
 		panic(err)
 	}
 
-	data := io.MustLoadImage("../testdata/bunny.png")
-	tex := image.NewTexture(
-		image.WithSource(data),
-		image.WithIsotropicMipMap(true),
+	data := texture.MustLoadImage("../testdata/bunny.png")
+	tex := texture.NewTexture(
+		texture.WithSource(data),
+		texture.WithIsotropicMipMap(true),
 	)
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),
@@ -61,10 +60,10 @@ func NewShadowScene(w, h int) interface{} {
 	if err != nil {
 		panic(err)
 	}
-	data = io.MustLoadImage("../testdata/ground.png")
-	tex = image.NewTexture(
-		image.WithSource(data),
-		image.WithIsotropicMipMap(true),
+	data = texture.MustLoadImage("../testdata/ground.png")
+	tex = texture.NewTexture(
+		texture.WithSource(data),
+		texture.WithIsotropicMipMap(true),
 	)
 	mat = material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(tex),

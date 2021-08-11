@@ -9,12 +9,11 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/image"
-	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
+	"poly.red/texture"
 	"poly.red/utils"
 )
 
@@ -51,10 +50,10 @@ func NewBunnyScene(width, height int) interface{} {
 	done()
 
 	done = utils.Timed("loading texture")
-	data := io.MustLoadImage("../testdata/bunny.png")
-	tex := image.NewTexture(
-		image.WithSource(data),
-		image.WithIsotropicMipMap(true),
+	data := texture.MustLoadImage("../testdata/bunny.png")
+	tex := texture.NewTexture(
+		texture.WithSource(data),
+		texture.WithIsotropicMipMap(true),
 	)
 	done()
 

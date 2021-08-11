@@ -8,16 +8,16 @@ import (
 	"image/color"
 
 	"poly.red/geometry/primitive"
-	"poly.red/image"
 	"poly.red/light"
 	"poly.red/math"
+	"poly.red/texture"
 )
 
 // Material is an interface that represents a mesh material
 type Material interface {
 	ReceiveShadow() bool
 	AmbientOcclusion() bool
-	Texture() *image.Texture
+	Texture() *texture.Texture
 	VertexShader(
 		v primitive.Vertex,
 		uniforms map[string]interface{},

@@ -11,13 +11,12 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/image"
-	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
+	"poly.red/texture"
 	"poly.red/utils"
 )
 
@@ -46,12 +45,12 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 	}
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(
-			image.NewTexture(
-				image.WithSource(
-					io.MustLoadImage("../../testdata/bunny.png",
-						io.WithGammaCorrection(true)),
+			texture.NewTexture(
+				texture.WithSource(
+					texture.MustLoadImage("../../testdata/bunny.png",
+						texture.WithGammaCorrection(true)),
 				),
-				image.WithIsotropicMipMap(true),
+				texture.WithIsotropicMipMap(true),
 			),
 		),
 		material.WithBlinnPhongFactors(0.6, 1),
@@ -67,12 +66,12 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 		panic(err)
 	}
 	m.SetMaterial(material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(image.NewTexture(
-			image.WithSource(
-				io.MustLoadImage("../../testdata/ground.png",
-					io.WithGammaCorrection(true)),
+		material.WithBlinnPhongTexture(texture.NewTexture(
+			texture.WithSource(
+				texture.MustLoadImage("../../testdata/ground.png",
+					texture.WithGammaCorrection(true)),
 			),
-			image.WithIsotropicMipMap(true),
+			texture.WithIsotropicMipMap(true),
 		),
 		),
 		material.WithBlinnPhongFactors(0.6, 0.5),
@@ -116,7 +115,7 @@ func main() {
 		)
 		searchImg := searchR.Render()
 		utils.Save(searchImg, "search.png")
-		diffImg, diffScore := image.MseDiff(goalImg, searchImg)
+		diffImg, diffScore := texture.MseDiff(goalImg, searchImg)
 		utils.Save(diffImg, fmt.Sprintf("diff-%d-search-%f-score-%f.png", iter, Isearch, diffScore))
 		iter++
 		if diffScore < 1000 {

@@ -3,12 +3,11 @@ package persp
 import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/image"
-	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
+	"poly.red/texture"
 )
 
 func NewCorrectScene(w, h int) interface{} {
@@ -20,9 +19,9 @@ func NewCorrectScene(w, h int) interface{} {
 	s.Add(light.NewAmbient(light.WithAmbientIntensity(1)))
 	m := mesh.NewPlane(1, 1)
 	m.SetMaterial(material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(image.NewTexture(
-			image.WithSource(io.MustLoadImage("../testdata/uvgrid2.png")),
-			image.WithIsotropicMipMap(true),
+		material.WithBlinnPhongTexture(texture.NewTexture(
+			texture.WithSource(texture.MustLoadImage("../testdata/uvgrid2.png")),
+			texture.WithIsotropicMipMap(true),
 		)),
 		material.WithBlinnPhongFactors(0.6, 0.5),
 		material.WithBlinnPhongShininess(150),

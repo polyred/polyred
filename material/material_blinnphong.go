@@ -8,13 +8,13 @@ import (
 	"image/color"
 
 	"poly.red/geometry/primitive"
-	"poly.red/image"
 	"poly.red/light"
 	"poly.red/math"
+	"poly.red/texture"
 )
 
 type BlinnPhongMaterial struct {
-	tex              *image.Texture
+	tex              *texture.Texture
 	kDiff            float64
 	kSpec            float64
 	shininess        float64
@@ -23,13 +23,13 @@ type BlinnPhongMaterial struct {
 	ambientOcclusion bool
 }
 
-func (m *BlinnPhongMaterial) Texture() *image.Texture {
+func (m *BlinnPhongMaterial) Texture() *texture.Texture {
 	return m.tex
 }
 
 type BlinnPhongMaterialOption func(m *BlinnPhongMaterial)
 
-func WithBlinnPhongTexture(tex *image.Texture) BlinnPhongMaterialOption {
+func WithBlinnPhongTexture(tex *texture.Texture) BlinnPhongMaterialOption {
 	return func(m *BlinnPhongMaterial) {
 		m.tex = tex
 	}

@@ -5,6 +5,7 @@
 package main
 
 import (
+	"image"
 	"image/color"
 	"runtime"
 
@@ -12,17 +13,16 @@ import (
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/gui"
-	"poly.red/image"
-	"poly.red/io"
 	"poly.red/math"
 	"poly.red/render"
+	"poly.red/texture"
 )
 
 type TextureShader struct {
 	ModelMatrix math.Mat4
 	ViewMatrix  math.Mat4
 	ProjMatrix  math.Mat4
-	Texture     *image.Texture
+	Texture     *texture.Texture
 }
 
 func (s *TextureShader) VertexShader(v primitive.Vertex) primitive.Vertex {
@@ -66,9 +66,9 @@ func main() {
 	m.Normalize()
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 
-	tex := image.NewTexture(
-		image.WithSource(io.MustLoadImage("../../testdata/bunny.png")),
-		image.WithIsotropicMipMap(true),
+	tex := texture.NewTexture(
+		texture.WithSource(texture.MustLoadImage("../../testdata/bunny.png")),
+		texture.WithIsotropicMipMap(true),
 	)
 
 	// Shader

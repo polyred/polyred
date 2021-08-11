@@ -2,22 +2,22 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package image_test
+package texture_test
 
 import (
 	"fmt"
+	"image"
 	"testing"
 
 	"poly.red/color"
-	"poly.red/image"
-	"poly.red/io"
+	"poly.red/texture"
 )
 
-func mustLoadTexture(path string) *image.Texture {
-	data := io.MustLoadImage(path)
-	return image.NewTexture(
-		image.WithSource(data),
-		image.WithIsotropicMipMap(true),
+func mustLoadTexture(path string) *texture.Texture {
+	data := texture.MustLoadImage(path)
+	return texture.NewTexture(
+		texture.WithSource(data),
+		texture.WithIsotropicMipMap(true),
 	)
 }
 
@@ -32,61 +32,61 @@ var (
 	}
 	tests = []struct {
 		name string
-		tex  *image.Texture
+		tex  *texture.Texture
 		u    float64
 		v    float64
 		lod  float64
 		want color.RGBA
 	}{
-		{"1x1", image.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", image.NewTexture(), 1, 1, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", image.NewTexture(), 0.5, 0.5, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", image.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", texture.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", texture.NewTexture(), 1, 1, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", texture.NewTexture(), 0.5, 0.5, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", texture.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
 		{
 			"2x2",
-			image.NewTexture(
-				image.WithSource(data),
-				image.WithIsotropicMipMap(true),
+			texture.NewTexture(
+				texture.WithSource(data),
+				texture.WithIsotropicMipMap(true),
 			),
 			0, 0, 0, color.RGBA{255, 255, 255, 255},
 		},
 		{
 			"2x2",
-			image.NewTexture(
-				image.WithSource(data),
-				image.WithIsotropicMipMap(true),
+			texture.NewTexture(
+				texture.WithSource(data),
+				texture.WithIsotropicMipMap(true),
 			),
 			0, 1, 0, color.RGBA{0, 0, 0, 0},
 		},
 		{
 			"2x2",
-			image.NewTexture(
-				image.WithSource(data),
-				image.WithIsotropicMipMap(true),
+			texture.NewTexture(
+				texture.WithSource(data),
+				texture.WithIsotropicMipMap(true),
 			),
 			1, 0, 0, color.RGBA{0, 0, 0, 0},
 		},
 		{
 			"2x2",
-			image.NewTexture(
-				image.WithSource(data),
-				image.WithIsotropicMipMap(true),
+			texture.NewTexture(
+				texture.WithSource(data),
+				texture.WithIsotropicMipMap(true),
 			),
 			1, 1, 0, color.RGBA{255, 255, 255, 255},
 		},
 		{
 			"2x2",
-			image.NewTexture(
-				image.WithSource(data),
-				image.WithIsotropicMipMap(true),
+			texture.NewTexture(
+				texture.WithSource(data),
+				texture.WithIsotropicMipMap(true),
 			),
 			1, 1, 1.5, color.RGBA{191, 191, 191, 191},
 		},
 		{
 			"2x2",
-			image.NewTexture(
-				image.WithSource(data),
-				image.WithIsotropicMipMap(true),
+			texture.NewTexture(
+				texture.WithSource(data),
+				texture.WithIsotropicMipMap(true),
 			),
 			0.5, 0.5, 0, color.RGBA{127, 127, 127, 127},
 		},

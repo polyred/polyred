@@ -6,19 +6,19 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"testing"
 	"time"
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/image"
-	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
+	"poly.red/texture"
 	"poly.red/utils"
 )
 
@@ -91,14 +91,14 @@ func bench(opt *benchOpts) {
 		if err != nil {
 			panic(err)
 		}
-		data := io.MustLoadImage(
+		data := texture.MustLoadImage(
 			"../../testdata/bunny.png",
-			io.WithGammaCorrection(opt.gammaCorrection),
+			texture.WithGammaCorrection(opt.gammaCorrection),
 		)
 		m.SetMaterial(material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(image.NewTexture(
-				image.WithSource(data),
-				image.WithIsotropicMipMap(true),
+			material.WithBlinnPhongTexture(texture.NewTexture(
+				texture.WithSource(data),
+				texture.WithIsotropicMipMap(true),
 			)),
 			material.WithBlinnPhongFactors(0.6, 0.5),
 			material.WithBlinnPhongShininess(150),
@@ -113,12 +113,12 @@ func bench(opt *benchOpts) {
 			panic(err)
 		}
 
-		data = io.MustLoadImage("../../testdata/ground.png",
-			io.WithGammaCorrection(opt.gammaCorrection))
+		data = texture.MustLoadImage("../../testdata/ground.png",
+			texture.WithGammaCorrection(opt.gammaCorrection))
 		m.SetMaterial(material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(image.NewTexture(
-				image.WithSource(data),
-				image.WithIsotropicMipMap(true),
+			material.WithBlinnPhongTexture(texture.NewTexture(
+				texture.WithSource(data),
+				texture.WithIsotropicMipMap(true),
 			)),
 			material.WithBlinnPhongFactors(0.6, 0.5),
 			material.WithBlinnPhongShininess(150),

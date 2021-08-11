@@ -9,11 +9,11 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/image"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
+	"poly.red/texture"
 )
 
 func NewDragonScene(w, h int) interface{} {
@@ -44,7 +44,7 @@ func NewDragonScene(w, h int) interface{} {
 
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(
-			image.NewColorTexture(color.RGBA{0, 128, 255, 255}),
+			texture.NewColorTexture(color.RGBA{0, 128, 255, 255}),
 		),
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(100),

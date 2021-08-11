@@ -8,9 +8,9 @@ import (
 	"image/color"
 
 	"poly.red/geometry/primitive"
-	"poly.red/image"
 	"poly.red/light"
 	"poly.red/math"
+	"poly.red/texture"
 )
 
 var _ Program = &BlinnShader{}
@@ -26,7 +26,7 @@ type BlinnShader struct {
 	Kdiff            float64
 	Kspec            float64
 	Shininess        float64
-	Texture          *image.Texture
+	Texture          *texture.Texture
 }
 
 func (s *BlinnShader) VertexShader(v primitive.Vertex) primitive.Vertex {

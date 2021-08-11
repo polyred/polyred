@@ -9,11 +9,11 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/image"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
+	"poly.red/texture"
 )
 
 func NewGopherScene(width, height int) interface{} {
@@ -41,7 +41,7 @@ func NewGopherScene(width, height int) interface{} {
 	m.RotateY(-math.Pi / 2)
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(image.NewColorTexture(color.RGBA{0, 128, 255, 255})),
+		material.WithBlinnPhongTexture(texture.NewColorTexture(color.RGBA{0, 128, 255, 255})),
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 		material.WithBlinnPhongFlatShading(true),

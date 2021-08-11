@@ -5,16 +5,15 @@ import (
 	"image/color"
 
 	"poly.red/geometry/primitive"
-	"poly.red/image"
-	"poly.red/io"
 	"poly.red/render"
+	"poly.red/texture"
 	"poly.red/utils"
 )
 
 func main() {
-	img1 := io.MustLoadImage("../../testdata/src1.png")
-	img2 := io.MustLoadImage("../../testdata/src2.png")
-	want := io.MustLoadImage("./dst.png")
+	img1 := texture.MustLoadImage("../../testdata/src1.png")
+	img2 := texture.MustLoadImage("../../testdata/src2.png")
+	want := texture.MustLoadImage("./dst.png")
 	r := render.NewRenderer(
 		render.WithSize(img1.Bounds().Dx(), img1.Bounds().Dy()),
 		render.WithBlendFunc(render.AlphaBlend),
@@ -25,7 +24,7 @@ func main() {
 	})
 
 	utils.Save(dst, "dst.png")
-	diff, num := image.MseDiff(want, dst)
+	diff, num := texture.MseDiff(want, dst)
 	utils.Save(diff, "diff.png")
 	fmt.Println("total diff: ", num, img1.Bounds().Dx()*img1.Bounds().Dy())
 }
