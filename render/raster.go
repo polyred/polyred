@@ -19,7 +19,8 @@ import (
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 // 1 second / 60fps = 16.6666 ms/frame

@@ -15,7 +15,7 @@ import (
 	_ "image/png"
 
 	"poly.red/color"
-	"poly.red/utils"
+	"poly.red/internal/utils"
 )
 
 // ImageOption offers several basic custom conversions of the image.

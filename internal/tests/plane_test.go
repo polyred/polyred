@@ -14,7 +14,8 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 func TestPlane(t *testing.T) {

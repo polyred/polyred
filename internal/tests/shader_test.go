@@ -16,7 +16,8 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/shader"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 func init() {

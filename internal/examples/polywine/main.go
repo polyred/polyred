@@ -12,7 +12,7 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
-	"poly.red/gui"
+	"poly.red/internal/gui"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/texture"

@@ -13,15 +13,16 @@ import (
 	"runtime/trace"
 	"time"
 
-	"poly.red/examples/bunny"
-	"poly.red/examples/dragon"
-	"poly.red/examples/gopher"
-	"poly.red/examples/mcguire"
-	"poly.red/examples/persp"
-	"poly.red/examples/shadow"
+	"poly.red/internal/examples/bunny"
+	"poly.red/internal/examples/dragon"
+	"poly.red/internal/examples/gopher"
+	"poly.red/internal/examples/mcguire"
+	"poly.red/internal/examples/persp"
+	"poly.red/internal/examples/shadow"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 type sceneExample struct {

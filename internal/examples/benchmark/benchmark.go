@@ -19,7 +19,8 @@ import (
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 type benchOpts struct {

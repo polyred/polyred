@@ -7,7 +7,8 @@ import (
 	"poly.red/geometry/primitive"
 	"poly.red/render"
 	"poly.red/texture"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 func main() {

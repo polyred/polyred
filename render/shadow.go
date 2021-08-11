@@ -17,7 +17,8 @@ import (
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/object"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 type ShadowType int

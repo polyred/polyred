@@ -23,7 +23,8 @@ import (
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 var (
@@ -62,12 +63,12 @@ func newscene(w, h int) *scene.Scene {
 		light.WithAmbientIntensity(0.5),
 	))
 
-	m, err := mesh.Load("../testdata/bunny.obj")
+	m, err := mesh.Load("../internal/testdata/bunny.obj")
 	if err != nil {
 		panic(err)
 	}
 
-	data := texture.MustLoadImage("../testdata/bunny.png")
+	data := texture.MustLoadImage("../internal/testdata/bunny.png")
 	mat := material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(texture.NewTexture(
 			texture.WithSource(data),

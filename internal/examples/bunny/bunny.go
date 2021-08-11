@@ -9,12 +9,12 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
+	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
 	"poly.red/texture"
-	"poly.red/utils"
 )
 
 func NewBunnyScene(width, height int) interface{} {

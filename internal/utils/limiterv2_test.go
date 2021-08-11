@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"poly.red/utils"
+	"poly.red/internal/utils"
 )
 
 func TestLimiterV2(t *testing.T) {

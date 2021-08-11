@@ -9,8 +9,8 @@ import (
 	"image"
 	"image/color"
 
+	"poly.red/internal/utils"
 	"poly.red/math"
-	"poly.red/utils"
 )
 
 var defaultTexture = &image.RGBA{

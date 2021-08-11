@@ -14,7 +14,8 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/render"
-	"poly.red/utils"
+
+	"poly.red/internal/utils"
 )
 
 func BenchmarkAlphaBlend(b *testing.B) {
