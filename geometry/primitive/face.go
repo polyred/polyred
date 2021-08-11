@@ -6,8 +6,9 @@ package primitive
 
 import "poly.red/math"
 
+// Face represents a polygon face.
 type Face interface {
-	Normal() math.Vec4
+	Normal() math.Vec3
 	AABB() AABB
 	Vertices(func(v *Vertex) bool)
 	Triangles(func(t *Triangle) bool)

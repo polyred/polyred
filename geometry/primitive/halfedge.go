@@ -17,8 +17,8 @@ type Halfedge struct {
 	onBoundary bool
 }
 
-func (he *Halfedge) Vec() math.Vec4 {
-	return he.next.v.Pos.Sub(he.v.Pos)
+func (he *Halfedge) Vec() math.Vec3 {
+	return he.next.v.Pos.Sub(he.v.Pos).ToVec3()
 }
 
 func (he *Halfedge) DihedralAngle() float64 {
@@ -38,6 +38,6 @@ func (he *Halfedge) Cotan() float64 {
 	}
 
 	u := he.prev.Vec()
-	v := he.next.Vec().Scale(-1, -1, -1, 1)
+	v := he.next.Vec().Scale(-1, -1, -1)
 	return u.Dot(v) / u.Cross(v).Len()
 }

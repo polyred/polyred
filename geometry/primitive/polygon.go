@@ -15,7 +15,7 @@ var _ Face = &Polygon{}
 // Polygon is a polygon that contains multiple vertices.
 type Polygon struct {
 	vs     []Vertex
-	normal math.Vec4
+	normal math.Vec3
 	aabb   *AABB
 }
 
@@ -72,13 +72,13 @@ func (p *Polygon) AABB() AABB {
 	return *p.aabb
 }
 
-func (p *Polygon) Normal() math.Vec4 {
+func (p *Polygon) Normal() math.Vec3 {
 	return p.normal
 }
 
 func (p *Polygon) Triangles(iter func(t *Triangle) bool) {
 	for i := 0; i < len(p.vs); i += 3 {
-		tri := &Triangle{V1: p.vs[i], V2: p.vs[i+1], V3: p.vs[i+2]}
+		tri := &Triangle{V: [3]Vertex{p.vs[i], p.vs[i+1], p.vs[i+2]}}
 		if !iter(tri) {
 			return
 		}

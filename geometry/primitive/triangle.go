@@ -12,9 +12,9 @@ var _ Face = &Triangle{}
 
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
-	V1, V2, V3 Vertex
+	V [3]Vertex
 
-	faceNormal math.Vec4
+	faceNormal math.Vec3
 	aabb       *AABB
 }
 
@@ -35,19 +35,17 @@ func NewTriangle(v1, v2, v3 *Vertex) *Triangle {
 	v2v3 := v3.Pos.Sub(v2.Pos)
 
 	return &Triangle{
-		V1:         *v1,
-		V2:         *v2,
-		V3:         *v3,
-		faceNormal: v2v3.Cross(v2v1).Unit(),
+		V:          [3]Vertex{*v1, *v2, *v3},
+		faceNormal: v2v3.Cross(v2v1).Unit().ToVec3(),
 		aabb:       &AABB{min, max},
 	}
 }
 
 // IsValid is an assertion to check if the given triangle is valid or not.
 func (t *Triangle) IsValid() bool {
-	p1 := t.V1.Pos
-	p2 := t.V2.Pos
-	p3 := t.V3.Pos
+	p1 := t.V[0].Pos
+	p2 := t.V[1].Pos
+	p3 := t.V[2].Pos
 
 	p1p2 := p2.Sub(p1)
 	p1p3 := p3.Sub(p1)
@@ -68,9 +66,9 @@ func (t *Triangle) IsValid() bool {
 
 // Area returns the surface area of the given triangle.
 func (t *Triangle) Area() float64 {
-	p1 := t.V1.Pos
-	p2 := t.V2.Pos
-	p3 := t.V3.Pos
+	p1 := t.V[0].Pos
+	p2 := t.V[1].Pos
+	p3 := t.V[2].Pos
 
 	p1p2 := p2.Sub(p1)
 	p1p3 := p3.Sub(p1)
@@ -88,12 +86,12 @@ func (t *Triangle) Area() float64 {
 // AABB returns the AABB of the given triangle.
 func (t *Triangle) AABB() AABB {
 	if t.aabb == nil {
-		xmax := math.Max(t.V1.Pos.X, t.V2.Pos.X, t.V3.Pos.X)
-		xmin := math.Min(t.V1.Pos.X, t.V2.Pos.X, t.V3.Pos.X)
-		ymax := math.Max(t.V1.Pos.Y, t.V2.Pos.Y, t.V3.Pos.Y)
-		ymin := math.Min(t.V1.Pos.Y, t.V2.Pos.Y, t.V3.Pos.Y)
-		zmax := math.Max(t.V1.Pos.Z, t.V2.Pos.Z, t.V3.Pos.Z)
-		zmin := math.Min(t.V1.Pos.Z, t.V2.Pos.Z, t.V3.Pos.Z)
+		xmax := math.Max(t.V[0].Pos.X, t.V[1].Pos.X, t.V[2].Pos.X)
+		xmin := math.Min(t.V[0].Pos.X, t.V[1].Pos.X, t.V[2].Pos.X)
+		ymax := math.Max(t.V[0].Pos.Y, t.V[1].Pos.Y, t.V[2].Pos.Y)
+		ymin := math.Min(t.V[0].Pos.Y, t.V[1].Pos.Y, t.V[2].Pos.Y)
+		zmax := math.Max(t.V[0].Pos.Z, t.V[1].Pos.Z, t.V[2].Pos.Z)
+		zmin := math.Min(t.V[0].Pos.Z, t.V[1].Pos.Z, t.V[2].Pos.Z)
 		min := math.NewVec3(xmin, ymin, zmin)
 		max := math.NewVec3(xmax, ymax, zmax)
 		t.aabb = &AABB{min, max}
@@ -104,7 +102,7 @@ func (t *Triangle) AABB() AABB {
 
 // Vertices traserval all vertices of the given triangle.
 func (t *Triangle) Vertices(f func(v *Vertex) bool) {
-	if !f(&t.V1) || !f(&t.V2) || !f(&t.V3) {
+	if !f(&t.V[0]) || !f(&t.V[1]) || !f(&t.V[2]) {
 		return
 	}
 }
@@ -115,11 +113,11 @@ func (t *Triangle) Triangles(f func(*Triangle) bool) {
 }
 
 // Normal returns the face normal of the given triangle.
-func (t *Triangle) Normal() math.Vec4 {
+func (t *Triangle) Normal() math.Vec3 {
 	if t.faceNormal.IsZero() {
-		v2v1 := t.V1.Pos.Sub(t.V2.Pos)
-		v2v3 := t.V3.Pos.Sub(t.V2.Pos)
-		t.faceNormal = v2v3.Cross(v2v1).Unit()
+		v2v1 := t.V[0].Pos.Sub(t.V[1].Pos)
+		v2v3 := t.V[2].Pos.Sub(t.V[1].Pos)
+		t.faceNormal = v2v3.Cross(v2v1).Unit().ToVec3()
 	}
 
 	return t.faceNormal

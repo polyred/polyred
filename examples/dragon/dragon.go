@@ -8,21 +8,27 @@ import (
 	"image/color"
 
 	"poly.red/camera"
-	"poly.red/image"
 	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
+	"poly.red/texture"
 )
 
 func NewDragonScene(w, h int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVec3(-3, 1.25, -2),
-		math.NewVec3(0, -0.1, -0.1),
-		math.NewVec3(0, 1, 0),
-		30, float64(w)/float64(h), 0.01, 1000,
+		camera.WithPosition(
+			math.NewVec3(-3, 1.25, -2),
+		),
+		camera.WithLookAt(
+			math.NewVec3(0, -0.1, -0.1),
+			math.NewVec3(0, 1, 0),
+		),
+		camera.WithPerspFrustum(
+			30, float64(w)/float64(h), 0.01, 1000,
+		),
 	))
 
 	s.Add(light.NewPoint(
@@ -36,7 +42,9 @@ func NewDragonScene(w, h int) interface{} {
 	m := io.MustLoadMesh("../testdata/dragon.obj")
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(
-			image.NewColorTexture(color.RGBA{0, 128, 255, 255}),
+			texture.New(
+				texture.WithColor(color.RGBA{0, 128, 255, 255}),
+			),
 		),
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(100),

@@ -14,8 +14,8 @@ import (
 // Vertex represents a vertex that conveys attributes.
 type Vertex struct {
 	Pos        math.Vec4
-	UV         math.Vec4
-	Nor        math.Vec4
+	UV         math.Vec2
+	Nor        math.Vec3
 	Col        color.RGBA
 	AttrSmooth map[string]interface{}
 	AttrFlat   map[string]interface{}
@@ -37,8 +37,8 @@ type Fragment struct {
 func NewRandomVertex() *Vertex {
 	return &Vertex{
 		Pos: math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), 1),
-		UV:  math.NewVec4(rand.Float64(), rand.Float64(), 0, 1),
-		Nor: math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), 1).Unit(),
+		UV:  math.NewVec2(rand.Float64(), rand.Float64()),
+		Nor: math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64()).Unit(),
 		Col: color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int())},
 	}
 }

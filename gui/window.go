@@ -82,6 +82,16 @@ func Window() *win {
 	panic("must call gui.InitWindow() first")
 }
 
+func Show(img *image.RGBA) {
+	if err := InitWindow(); err != nil {
+		panic(err)
+	}
+
+	MainLoop(func(buf *render.Buffer) *image.RGBA {
+		return img
+	})
+}
+
 // InitWindow constructs a new graphical window.
 func InitWindow(opts ...Option) error {
 	w := &win{

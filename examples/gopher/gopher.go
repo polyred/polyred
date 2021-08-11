@@ -8,23 +8,25 @@ import (
 	"image/color"
 
 	"poly.red/camera"
-	"poly.red/image"
-	"poly.red/io"
+	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
+	"poly.red/texture"
 )
 
 func NewGopherScene(width, height int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVec3(1, 1, 2),
-		math.NewVec3(0, 0, 0),
-		math.NewVec3(0, 1, 0),
-		45,
-		float64(width)/float64(height),
-		0.01, 600,
+		camera.WithPosition(
+			math.NewVec3(1, 1, 2),
+		),
+		camera.WithPerspFrustum(
+			45,
+			float64(width)/float64(height),
+			0.01, 600,
+		),
 	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(5),
@@ -34,11 +36,13 @@ func NewGopherScene(width, height int) interface{} {
 		light.WithAmbientIntensity(0.7),
 	))
 
-	m := io.MustLoadMesh("../testdata/gopher.obj")
+	m := mesh.MustLoad("../testdata/gopher.obj")
 	m.RotateY(-math.Pi / 2)
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(image.NewColorTexture(color.RGBA{0, 128, 255, 255})),
+		material.WithBlinnPhongTexture(texture.New(
+			texture.WithColor(color.RGBA{0, 128, 255, 255}),
+		)),
 		material.WithBlinnPhongFactors(0.6, 1),
 		material.WithBlinnPhongShininess(150),
 		material.WithBlinnPhongFlatShading(true),

@@ -21,6 +21,8 @@
     * [ ] quadric error simplification
     * [ ] melax simplification
     * [ ] uv parameterization
+  * [ ] LOD
+  * [ ] Tesselation
 - rendering facilities:
   + [x] perspective and orthographic camera
   + [x] orbit control 
@@ -39,8 +41,16 @@
     * [x] occlusion culling
     * [x] perspective correct interpolation
   + [ ] ray tracing
+  + [ ] tiled rendering
+  + [ ] hybrid rendering
+  + [ ] tiled and clustered forward rendering
+  + [ ] visibility buffer
+  + [ ] command buffer?
+  + [ ] transparency
+  + [ ] raster order group
   + anti-aliasing pass
     * [x] MSAA
+    * [ ] TAA?
   + [ ] denoising
   + [ ] Tangent space normal mapping
   + [ ] Physically-based rendering (PBR)
@@ -60,6 +70,7 @@
   + [x] isotropic mipmap
   + [ ] anisotropic mipmap
   + [x] arbitrary texture size
+  + [ ] texture formats (RGBA, BGRA, ...)
 + material
   + [x] basic material
   + [x] Blinn-Phong material
@@ -67,6 +78,7 @@
   + [ ] Lambertian material
   + [ ] Glossy material
   + [ ] Micofacet material
+  + [ ] Physically-based materials
 - lighting
   + [x] point light
   + [x] directional light

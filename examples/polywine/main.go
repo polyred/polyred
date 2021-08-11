@@ -6,7 +6,6 @@ package main
 
 import (
 	"image/color"
-	"runtime"
 
 	"poly.red/camera"
 	"poly.red/geometry"
@@ -44,19 +43,21 @@ func main() {
 
 	// camera and renderer
 	cam := camera.NewPerspective(
-		math.NewVec3(0, 3, 3),
-		math.NewVec3(0, 0, 0),
-		math.NewVec3(0, 1, 0),
-		45,
-		float64(width)/float64(height),
-		0.1, 10,
+		camera.WithPosition(
+			math.NewVec3(0, 3, 3),
+		),
+		camera.WithPerspFrustum(
+			45,
+			float64(width)/float64(height),
+			0.1, 10,
+		),
 	)
 
 	r := render.NewRenderer(
 		render.WithSize(width, height),
 		render.WithCamera(cam),
 		render.WithBlendFunc(render.AlphaBlend),
-		render.WithThreadLimit(runtime.GOMAXPROCS(0)),
+		render.WithThreadLimit(1),
 	)
 
 	// Use a different model

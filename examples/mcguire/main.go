@@ -11,12 +11,12 @@ import (
 	"os"
 
 	"poly.red/camera"
-	"poly.red/image"
 	"poly.red/io"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
+	"poly.red/texture"
 )
 
 type Scene struct {
@@ -186,10 +186,12 @@ func NewMcGuireScene(w, h int) interface{} {
 			Name:  model,
 		}
 		s.Scene.SetCamera(camera.NewPerspective(
-			math.NewVec3(1, 1, 2),
-			math.NewVec3(0, 0, 0),
-			math.NewVec3(0, 1, 0),
-			50, float64(w)/float64(h), 0.1, 100,
+			camera.WithPosition(
+				math.NewVec3(1, 1, 2),
+			),
+			camera.WithPerspFrustum(
+				50, float64(w)/float64(h), 0.1, 100,
+			),
 		))
 		s.Scene.Add(light.NewPoint(
 			light.WithPointLightIntensity(5),
@@ -202,7 +204,9 @@ func NewMcGuireScene(w, h int) interface{} {
 		m := io.MustLoadMesh(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
 		m.Normalize()
 		m.SetMaterial(material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(image.NewColorTexture(color.RGBA{0, 128, 255, 255})),
+			material.WithBlinnPhongTexture(texture.New(
+				texture.WithColor(color.RGBA{0, 128, 255, 255}),
+			)),
 			material.WithBlinnPhongFactors(0.6, 1),
 			material.WithBlinnPhongShininess(100),
 			material.WithBlinnPhongFlatShading(false),

@@ -11,8 +11,8 @@ import (
 	"os"
 )
 
-// Save stores the current frame buffer to a newly created file.
-func Save(buf *image.RGBA, dst string) error {
+// SaveImage writes an image to a destination file.
+func SaveImage(buf *image.RGBA, dst string) error {
 	err := flushBuf(buf, dst)
 	if err != nil {
 		return fmt.Errorf("cannot save the given buffer to a file, err: %w", err)
