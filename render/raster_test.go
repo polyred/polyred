@@ -45,13 +45,12 @@ func init() {
 func newscene(w, h int) *scene.Scene {
 	s := scene.NewScene()
 	c := camera.NewPerspective(
-		math.NewVec3(0, 1.5, 1),
-		math.NewVec3(0, 0, -0.5),
-		math.NewVec3(0, 1, 0),
-		45,
-		float64(w)/float64(h),
-		0.1,
-		3,
+		camera.WithPosition(math.NewVec3(0, 1.5, 1)),
+		camera.WithLookAt(
+			math.NewVec3(0, 0, -0.5),
+			math.NewVec3(0, 1, 0),
+		),
+		camera.WithPerspFrustum(45, float64(w)/float64(h), 0.1, 3),
 	)
 	s.SetCamera(c)
 

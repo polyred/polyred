@@ -14,12 +14,8 @@ import (
 func NewCorrectScene(w, h int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVec3(0, 3, 3),
-		math.NewVec3(0, 0, 0),
-		math.NewVec3(0, 1, 0),
-		45,
-		1,
-		0.1, 10,
+		camera.WithPosition(math.NewVec3(0, 3, 3)),
+		camera.WithPerspFrustum(45, 1, 0.1, 10),
 	))
 	s.Add(light.NewAmbient(light.WithAmbientIntensity(1)))
 	m := geometry.NewPlane(1, 1)

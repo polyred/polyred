@@ -43,14 +43,8 @@ func main() {
 	)
 
 	// camera and renderer
-	cam := camera.NewPerspective(
-		math.NewVec3(0, 3, 3),
-		math.NewVec3(0, 0, 0),
-		math.NewVec3(0, 1, 0),
-		45,
-		float64(width)/float64(height),
-		0.1, 10,
-	)
+	cam := camera.NewPerspective(camera.WithPosition(math.NewVec3(0, 3, 3)),
+		camera.WithPerspFrustum(45, float64(width)/float64(height), 0.1, 10))
 
 	r := render.NewRenderer(
 		render.WithSize(width, height),

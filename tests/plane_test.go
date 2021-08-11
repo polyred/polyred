@@ -20,12 +20,8 @@ import (
 func TestPlane(t *testing.T) {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		math.NewVec3(2, 2, 2),
-		math.NewVec3(0, 0, 0),
-		math.NewVec3(0, 1, 0),
-		45,
-		1,
-		0.1, 10,
+		camera.WithPosition(math.NewVec3(2, 2, 2)),
+		camera.WithPerspFrustum(45, 1, 0.1, 10),
 	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(1),
