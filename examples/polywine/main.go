@@ -9,7 +9,7 @@ import (
 	"runtime"
 
 	"poly.red/camera"
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/gui"
 	"poly.red/image"
@@ -54,7 +54,7 @@ func main() {
 	)
 
 	// Use a different model
-	m := io.MustLoadMesh("../../testdata/bunny.obj").(*geometry.TriangleSoup)
+	m := io.MustLoadMesh("../../testdata/bunny.obj").(*mesh.TriangleSoup)
 	m.Normalize()
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 

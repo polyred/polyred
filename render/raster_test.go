@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"poly.red/camera"
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/image"
 	"poly.red/io"
@@ -196,12 +196,12 @@ func BenchmarkDraw(b *testing.B) {
 		matVP := math.ViewportMatrix(1920, 1080)
 
 		var (
-			mesh     geometry.Mesh
+			m        mesh.Mesh
 			modelMat math.Mat4
 		)
 		s.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 			if o.Type() == object.TypeMesh {
-				mesh = o.(geometry.Mesh)
+				m = o.(mesh.Mesh)
 				modelMat = modelMatrix
 				return false
 			}
@@ -220,10 +220,10 @@ func BenchmarkDraw(b *testing.B) {
 			var (
 				ts  = []*primitive.Triangle{}
 				mat material.Material
-				nt  = mesh.NumTriangles()
+				nt  = m.NumTriangles()
 			)
 
-			mesh.Faces(func(f primitive.Face, m material.Material) bool {
+			m.Faces(func(f primitive.Face, m material.Material) bool {
 				mat = m
 				f.Triangles(func(t *primitive.Triangle) bool {
 					ts = append(ts, t)

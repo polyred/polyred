@@ -11,13 +11,13 @@ import (
 	"strings"
 
 	"poly.red/color"
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 )
 
 // LoadOBJ loads a .obj file to a TriangleMesh object
-func LoadOBJ(data io.Reader) (geometry.Mesh, error) {
+func LoadOBJ(data io.Reader) (mesh.Mesh, error) {
 
 	vs := make([]math.Vec4, 1)
 	vts := make([]math.Vec4, 1, 1024)
@@ -82,7 +82,7 @@ func LoadOBJ(data io.Reader) (geometry.Mesh, error) {
 			}
 		}
 	}
-	return geometry.NewTriangleSoup(tris), s.Err()
+	return mesh.NewTriangleSoup(tris), s.Err()
 }
 
 func parseFloats(items []string) []float64 {

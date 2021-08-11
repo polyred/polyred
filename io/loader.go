@@ -10,11 +10,11 @@ import (
 	_ "image/png"
 	"os"
 
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 )
 
 // MustLoadMesh loads a given file to a triangle mesh.
-func MustLoadMesh(path string) geometry.Mesh {
+func MustLoadMesh(path string) mesh.Mesh {
 	f, err := os.Open(path)
 	if err != nil {
 		panic(fmt.Errorf("loader: cannot open file %s, err: %v", path, err))

@@ -2,20 +2,20 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package geometry_test
+package mesh_test
 
 import (
 	"testing"
 
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/material"
 )
 
 func TestBufferedMesh(t *testing.T) {
 
-	bm := geometry.NewBufferedMesh()
-	bm.SetAttribute(geometry.AttributePos, &geometry.BufferAttribute{
+	bm := mesh.NewBufferedMesh()
+	bm.SetAttribute(mesh.AttributePos, &mesh.BufferAttribute{
 		Stride: 3,
 		Values: []float64{
 			-0.363322, -0.387725, 0.85933, // 0

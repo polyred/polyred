@@ -6,7 +6,7 @@ package scene
 
 import (
 	"poly.red/camera"
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/object"
@@ -62,7 +62,7 @@ func (s *Scene) Center() math.Vec3 {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
-		mesh := o.(geometry.Mesh)
+		mesh := o.(mesh.Mesh)
 		aabb.Add(mesh.AABB())
 		return true
 	})

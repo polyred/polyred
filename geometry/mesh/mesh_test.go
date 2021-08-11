@@ -2,12 +2,13 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package geometry
+package mesh_test
 
 import (
 	"fmt"
 	"testing"
 
+	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 )
 
@@ -28,7 +29,7 @@ func BenchmarkNewTriangleMesh(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				NewTriangleSoup(ts)
+				mesh.NewTriangleSoup(ts)
 			}
 		})
 	}

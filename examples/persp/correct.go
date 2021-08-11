@@ -2,7 +2,7 @@ package persp
 
 import (
 	"poly.red/camera"
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 	"poly.red/image"
 	"poly.red/io"
 	"poly.red/light"
@@ -18,7 +18,7 @@ func NewCorrectScene(w, h int) interface{} {
 		camera.WithPerspFrustum(45, 1, 0.1, 10),
 	))
 	s.Add(light.NewAmbient(light.WithAmbientIntensity(1)))
-	m := geometry.NewPlane(1, 1)
+	m := mesh.NewPlane(1, 1)
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(image.NewTexture(
 			image.WithSource(io.MustLoadImage("../testdata/uvgrid2.png")),

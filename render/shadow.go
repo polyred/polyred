@@ -11,7 +11,7 @@ import (
 	"sync"
 
 	"poly.red/camera"
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/material"
@@ -185,7 +185,7 @@ func (r *Renderer) passShadows(index int) {
 			return true
 		}
 
-		mesh := o.(geometry.Mesh)
+		mesh := o.(mesh.Mesh)
 		r.sched.Add(mesh.NumTriangles())
 		return true
 	})
@@ -195,7 +195,7 @@ func (r *Renderer) passShadows(index int) {
 			return true
 		}
 
-		mesh := o.(geometry.Mesh)
+		mesh := o.(mesh.Mesh)
 		uniforms := map[string]interface{}{
 			"matModel": mesh.ModelMatrix(),
 			"matView":  matView,

@@ -9,7 +9,7 @@ import (
 
 	"poly.red/camera"
 	"poly.red/color"
-	"poly.red/geometry"
+	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/render"
@@ -29,7 +29,7 @@ func TestPlane(t *testing.T) {
 		light.WithPointLightPosition(math.NewVec3(2, 2, 2)),
 	))
 
-	m := geometry.NewPlane(1, 1)
+	m := mesh.NewPlane(1, 1)
 	s.Add(m)
 
 	r := render.NewRenderer(
