@@ -2,49 +2,21 @@
 
 # polyred [![Go Reference](https://pkg.go.dev/badge/github.com/changkun/polyred.svg)](https://pkg.go.dev/poly.red) [![Latest relsease](https://img.shields.io/github/v/tag/changkun/polyred?label=polyred)](https://github.com/changkun/polyred/releases) ![polyred](https://github.com/changkun/polyred/workflows/polyred/badge.svg?branch=master) ![](https://changkun.de/urlstat?mode=github&repo=changkun/polyred) [![codecov](https://codecov.io/gh/changkun/polyred/branch/master/graph/badge.svg?token=PSCJA90S57)](https://codecov.io/gh/changkun/polyred) [![Go Report Card](https://goreportcard.com/badge/github.com/changkun/polyred)](https://goreportcard.com/report/github.com/changkun/polyred)
 
-3D graphics facilities in pure Go.
+3D graphics facilities in Go.
 
 ```go
 import "poly.red"
 ```
 
-_Caution: experimenting, expect it to break at any time. Use it at your own risk._
+_Caution: still under experiment, expect it to break at any time. Use it at your own risk._
 
 ## About
 
-`polyred` is a 3D graphics facility written in pure Go that aims to
-implement graphics research algorithms in real-time and offline geometry processing, rendering, animation, and etc.
+`polyred` is a 3D graphics facility written in Go that aims to offer state-of-the-art graphics research algorithms, especially geometry processing, rendering, animation, and etc.
 
-The geometry related facilities offer different types of geometry
-representations, and relevant I/O processors.
+The geometry facility offers different types of geometry representations (mostly for meshes), iterators, solvers, and relevant I/O processors.
 
-The rendering related facility offers two levels of API set where the
-low-level API set contains abstract rendering passes for better customization, whereas high-level API set contains pre-defined rendering effects for better usability and performance.
-
-Although `polyred` is a software-only implementation currently, it
-remains fast as it is optimized for concurrent execution scheduling
-and utilize the full power of CPUs. The project aims to The current
-supported key features:
-
-- Cross platform
-- No dependency
-- Cache-aware concurrency optimization
-- Mesh I/O
-- Built-in geometries
-- Scene graph
-- Forward rendering
-- Mipmapping
-- Sutherland Hodgman Clipping
-- Back-face culling
-- View frustum culling
-- Perspective correct interpolation
-- Depth testing
-- Deferred shading
-- Blinn-Phong reflectance model
-- Shadow mapping
-- Screen-space ambient occlusion
-- Supersampling anti-aliasing
-- Shader programming
+The rendering facility offers two levels of API set where the low-level API set contains abstract rendering passes for flexible customization, whereas the high-level API set contains pre-defined rendering effects for better usability and performance.
 
 See a full features list [here](./docs/features.md).
 
@@ -117,17 +89,20 @@ r := render.NewRenderer(
 utils.Save(r.Render(), "./render.png")
 ```
 
-The rendered results:
+The above example results:
 
 ![](./examples/teaser.png)
 
-See more full examples in the [`examples` folder](./examples), and a 
-connecting project [polywine](https://changkun.de/s/polywine) to put
-polyred results on a window.
+See more full examples in the [`examples` folder](./examples), especially
+[polywine](https://changkun.de/s/polywine) runs a window that shows
+results produced by polyred.
 
 ## Contributes
 
-Easiest way to contribute is to provide feedback! I would love to hear what you like and what you think is missing. [Issue](https://github.com/changkun/polyred/issues/new) and [PRs](https://github.com/changkun/polyred/pulls) are also welcome.
+Easiest way to contribute is to provide feedback! I would love to hear
+what you like and what you think is missing.
+[Issue](https://github.com/changkun/polyred/issues/new) and
+[PRs](https://github.com/changkun/polyred/pulls) are also welcome.
 
 ## License
 
