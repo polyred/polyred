@@ -26,8 +26,8 @@ func init() {
 
 func prepare(num int) (*render.Renderer, *render.Buffer, shader.Program, []uint64, []*primitive.Vertex) {
 	cam := camera.NewPerspective(
-		camera.WithPosition(math.NewVec3(0, 3, 3)),
-		camera.WithPerspFrustum(45, 1, 0.1, 10),
+		camera.Position(math.NewVec3(0, 3, 3)),
+		camera.PerspFrustum(45, 1, 0.1, 10),
 	)
 	r := render.NewRenderer(
 		render.WithSize(500, 500),

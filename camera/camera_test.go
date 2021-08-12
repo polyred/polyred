@@ -22,8 +22,8 @@ func TestCameraProperties(t *testing.T) {
 	far := -600.0
 
 	oc := camera.NewOrthographic(
-		camera.WithPosition(pos),
-		camera.WithLookAt(lookAt, up),
+		camera.Position(pos),
+		camera.LookAt(lookAt, up),
 	)
 	if oc.Type() != object.TypeCamera {
 		t.Fatalf("camera type does not return a type of camera, got %v", oc.Type())
@@ -62,9 +62,9 @@ func TestCameraProperties(t *testing.T) {
 	}
 
 	oc = camera.NewPerspective(
-		camera.WithPosition(pos),
-		camera.WithLookAt(lookAt, up),
-		camera.WithPerspFrustum(fov, aspect, near, far),
+		camera.Position(pos),
+		camera.LookAt(lookAt, up),
+		camera.PerspFrustum(fov, aspect, near, far),
 	)
 	if oc.Type() != object.TypeCamera {
 		t.Fatalf("camera type does not return a type of camera, got %v", oc.Type())
@@ -126,9 +126,9 @@ func TestViewMatrix(t *testing.T) {
 	}
 
 	cp := camera.NewPerspective(
-		camera.WithPosition(pos),
-		camera.WithLookAt(lookAt, up),
-		camera.WithPerspFrustum(fov, aspect, near, far),
+		camera.Position(pos),
+		camera.LookAt(lookAt, up),
+		camera.PerspFrustum(fov, aspect, near, far),
 	)
 	vm = cp.ViewMatrix()
 	if !vm.Eq(want) {
@@ -136,8 +136,8 @@ func TestViewMatrix(t *testing.T) {
 	}
 
 	op := camera.NewOrthographic(
-		camera.WithPosition(pos),
-		camera.WithLookAt(lookAt, up),
+		camera.Position(pos),
+		camera.LookAt(lookAt, up),
 	)
 	vm = op.ViewMatrix()
 	if !vm.Eq(want) {
@@ -162,9 +162,9 @@ func TestProjMatrix(t *testing.T) {
 	)
 
 	cp := camera.NewPerspective(
-		camera.WithPosition(pos),
-		camera.WithLookAt(lookAt, up),
-		camera.WithPerspFrustum(fov, aspect, near, far),
+		camera.Position(pos),
+		camera.LookAt(lookAt, up),
+		camera.PerspFrustum(fov, aspect, near, far),
 	)
 	vm := cp.ProjMatrix()
 	if !vm.Eq(want) {
@@ -184,9 +184,9 @@ func TestProjMatrix(t *testing.T) {
 		0, 0, 0, 1,
 	)
 	op := camera.NewOrthographic(
-		camera.WithPosition(pos),
-		camera.WithLookAt(lookAt, up),
-		camera.WithOrthoFrustum(left, right, bottom, top, near, far),
+		camera.Position(pos),
+		camera.LookAt(lookAt, up),
+		camera.OrthoFrustum(left, right, bottom, top, near, far),
 	)
 	vm = op.ProjMatrix()
 	if !vm.Eq(want) {
@@ -197,12 +197,12 @@ func TestProjMatrix(t *testing.T) {
 func BenchmarkCamera(b *testing.B) {
 	w, h := 1920, 1080
 	c1 := camera.NewPerspective(
-		camera.WithPosition(math.NewVec3(-0.5, 0.5, 0.5)),
-		camera.WithLookAt(
+		camera.Position(math.NewVec3(-0.5, 0.5, 0.5)),
+		camera.LookAt(
 			math.NewVec3(0, 0, -0.5),
 			math.NewVec3(0, 1, 0),
 		),
-		camera.WithPerspFrustum(
+		camera.PerspFrustum(
 			45,
 			float64(w)/float64(h),
 			-0.1,
@@ -228,14 +228,12 @@ func BenchmarkCamera(b *testing.B) {
 	})
 
 	c2 := camera.NewOrthographic(
-		camera.WithPosition(
-			math.NewVec3(-0.5, 0.5, 0.5),
-		),
-		camera.WithLookAt(
+		camera.Position(math.NewVec3(-0.5, 0.5, 0.5)),
+		camera.LookAt(
 			math.NewVec3(0, 0, -0.5),
 			math.NewVec3(0, 1, 0),
 		),
-		camera.WithOrthoFrustum(
+		camera.OrthoFrustum(
 			-10, 10, -10, 10, 10, -10,
 		),
 	)
@@ -268,7 +266,7 @@ func TestCmaeraMisuse(t *testing.T) {
 		}()
 
 		camera.NewPerspective(
-			camera.WithOrthoFrustum(1, 1, 1, 1, 1, 1),
+			camera.OrthoFrustum(1, 1, 1, 1, 1, 1),
 		)
 	})
 
@@ -280,7 +278,7 @@ func TestCmaeraMisuse(t *testing.T) {
 		}()
 
 		camera.NewOrthographic(
-			camera.WithPerspFrustum(1, 1, 1, 1),
+			camera.PerspFrustum(1, 1, 1, 1),
 		)
 	})
 }

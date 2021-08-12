@@ -73,8 +73,8 @@ func bench(opt *benchOpts) {
 	result := testing.Benchmark(func(b *testing.B) {
 		s := scene.NewScene()
 		s.SetCamera(camera.NewPerspective(
-			camera.WithPosition(math.NewVec3(0, 0.6, 0.9)),
-			camera.WithPerspFrustum(
+			camera.Position(math.NewVec3(0, 0.6, 0.9)),
+			camera.PerspFrustum(
 				45, float64(opt.width)/float64(opt.height), 0.1, 2),
 		))
 

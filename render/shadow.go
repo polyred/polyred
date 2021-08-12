@@ -132,10 +132,10 @@ func (r *Renderer) initShadowMaps() {
 			// )
 			// TODO: use cube shadow map for point light
 			c = camera.NewOrthographic(
-				camera.WithPosition(l.Position()),
-				camera.WithLookAt(r.scene.Center(),
+				camera.Position(l.Position()),
+				camera.LookAt(r.scene.Center(),
 					math.NewVec3(0, 1, 0)),
-				camera.WithOrthoFrustum(le, ri, bo, to, ne, fa),
+				camera.OrthoFrustum(le, ri, bo, to, ne, fa),
 			)
 		default:
 		}

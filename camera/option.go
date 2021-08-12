@@ -1,26 +1,30 @@
+// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
+
 package camera
 
 import "poly.red/math"
 
-// Option represents camera options.
-type Option func(Interface)
+// Opt represents camera options.
+type Opt func(Interface)
 
-// WithPosition sets the camera position.
-func WithPosition(pos math.Vec3) Option {
+// Position sets the camera position.
+func Position(pos math.Vec3) Opt {
 	return func(i Interface) {
 		i.SetPosition(pos)
 	}
 }
 
-// WithLookAt sets the camera look at target and up direction.
-func WithLookAt(target, up math.Vec3) Option {
+// LookAt sets the camera look at target and up direction.
+func LookAt(target, up math.Vec3) Opt {
 	return func(i Interface) {
 		i.SetLookAt(target, up)
 	}
 }
 
-// WithPerspFrustum sets the perspective related camera parameters.
-func WithPerspFrustum(fov, aspect, near, far float64) Option {
+// PerspFrustum sets the perspective related camera parameters.
+func PerspFrustum(fov, aspect, near, far float64) Opt {
 	return func(i Interface) {
 		switch ii := i.(type) {
 		case *Perspective:
@@ -34,8 +38,8 @@ func WithPerspFrustum(fov, aspect, near, far float64) Option {
 	}
 }
 
-// WithOrthoFrustum sets the perspective related camera parameters.
-func WithOrthoFrustum(left, right, bottom, top, near, far float64) Option {
+// OrthoFrustum sets the perspective related camera parameters.
+func OrthoFrustum(left, right, bottom, top, near, far float64) Opt {
 	return func(i Interface) {
 		switch ii := i.(type) {
 		case *Orthographic:

@@ -25,13 +25,8 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 	// Create a scene graph
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		camera.WithPosition(math.NewVec3(0, 0.6, 0.9)),
-		camera.WithPerspFrustum(
-			45,                             // fov
-			float64(width)/float64(height), // aspect
-			0.1,                            // near
-			2,                              // far
-		),
+		camera.Position(math.NewVec3(0, 0.6, 0.9)),
+		camera.PerspFrustum(45, float64(width)/float64(height), 0.1, 2),
 	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(lightI),

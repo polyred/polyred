@@ -43,14 +43,16 @@ func main() {
 	)
 
 	// camera and renderer
-	cam := camera.NewPerspective(camera.WithPosition(math.NewVec3(0, 3, 3)),
-		camera.WithPerspFrustum(45, float64(width)/float64(height), 0.1, 10))
+	cam := camera.NewPerspective(
+		camera.Position(math.NewVec3(0, 3, 3)),
+		camera.PerspFrustum(45, float64(width)/float64(height), 0.1, 10),
+	)
 
 	r := render.NewRenderer(
 		render.WithSize(width, height),
 		render.WithCamera(cam),
 		render.WithBlendFunc(render.AlphaBlend),
-		render.WithThreadLimit(runtime.GOMAXPROCS(0)),
+		render.WithThreadLimit(runtime.GOMAXPROCS(1)),
 	)
 
 	// Use a different model

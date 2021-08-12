@@ -24,7 +24,7 @@ type Perspective struct {
 
 // NewPerspective creates a new perspective camera with the provided
 // camera parameters.
-func NewPerspective(opts ...Option) Interface {
+func NewPerspective(opts ...Opt) Interface {
 	c := &Perspective{
 		position: math.NewVec3(0, 0, 1),
 		target:   math.NewVec3(0, 0, 0),

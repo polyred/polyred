@@ -20,16 +20,9 @@ import (
 func NewBunnyScene(width, height int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
-		camera.WithPosition(math.NewVec3(-550, 194, 734)),
-		camera.WithLookAt(
-			math.NewVec3(-1000, 0, 0),
-			math.NewVec3(0, 1, 1),
-		),
-		camera.WithPerspFrustum(
-			45,
-			float64(width)/float64(height),
-			100, 600,
-		),
+		camera.Position(math.NewVec3(-550, 194, 734)),
+		camera.LookAt(math.NewVec3(-1000, 0, 0), math.NewVec3(0, 1, 1)),
+		camera.PerspFrustum(45, float64(width)/float64(height), 100, 600),
 	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(200),
