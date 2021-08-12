@@ -74,6 +74,24 @@ type win struct {
 
 var window *win
 
+// Show shows the given image on a window.
+func Show(img *image.RGBA) {
+	// TODO: fix on darwin about scaling issue.
+	err := InitWindow(
+		WithSize(img.Bounds().Dx()/2, img.Bounds().Dy()/2),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: rethink about the main loop and speedup. if
+	// the callback is returning the same image, why not caching
+	// the result?
+	//
+	// Possible issues: double buffering.
+	MainLoop(func(buf *render.Buffer) *image.RGBA { return img })
+}
+
 // Window returns the window instance
 func Window() *win {
 	if window != nil {
@@ -86,7 +104,7 @@ func Window() *win {
 func InitWindow(opts ...Option) error {
 	w := &win{
 		title:      "polyred-gui",
-		width:      500,
+		width:      800,
 		height:     500,
 		showFPS:    false,
 		dispatcher: newDispatcher(),
@@ -220,6 +238,11 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 			// flush is a platform dependent function which uses
 			// different drivers. For instance, it use Metal on darwin,
 			// OpenGL for Linux and Windows (for now).
+			//
+			// FIXME: if the flush takes too long, it may block the
+			// PollEvents and therefore block the window. We should be
+			// able to turn it into a non-mainthread call. See:
+			// https://golang.design/research/ultimate-channel/
 			w.flush(buf)
 		case <-ti.C:
 			glfw.PollEvents()

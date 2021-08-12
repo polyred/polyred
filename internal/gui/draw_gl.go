@@ -117,6 +117,9 @@ func (w *win) flush(img *image.RGBA) error {
 	// The difference of gl.Finish and gl.Flush can be found here:
 	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFlush.xml
 	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFinish.xml
+	//
+	// TODO: we may not need such an wait, if we are doing perfect timing.
+	// See: https://golang.design/research/ultimate-channel/
 	gl.Finish()
 	return nil
 }

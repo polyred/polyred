@@ -4,7 +4,18 @@
 
 package mesh
 
-import "path/filepath"
+import (
+	"fmt"
+	"path/filepath"
+)
+
+func MustLoad(path string) Mesh {
+	m, err := Load(path)
+	if err != nil {
+		panic(fmt.Errorf("mesh: cannot load a given mesh: %w", err))
+	}
+	return m
+}
 
 func Load(path string) (Mesh, error) {
 	switch filepath.Ext(path) {

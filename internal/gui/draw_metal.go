@@ -160,6 +160,9 @@ func (w *win) flush(img *image.RGBA) error {
 	//
 	// Working with Metal: Fundamentals, 21:28
 	// https://developer.apple.com/videos/play/wwdc2014/604/
+	//
+	// TODO: we may not need such an wait, if we are doing perfect timing.
+	// See: https://golang.design/research/ultimate-channel/
 	cb.WaitUntilCompleted()
 	return nil
 }

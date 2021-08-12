@@ -20,27 +20,42 @@ See a full features list [here](https://github.com/changkun/polyred/wiki/feature
 
 ## Getting started
 
+The following code snippet shows a minimum example:
+
 ```go
 package main
 
 import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/gui"
 	"poly.red/light"
 	"poly.red/render"
 	"poly.red/scene"
+
+	"poly.red/internal/gui" // TODO: make this public
 )
 
 func main() {
+	// Create a scene graph
 	s := scene.NewScene()
-	s.Add(mesh.Load("path/to/the/model.obj"))
+
+	// Load and add the mesh to the scene graph
+	s.Add(mesh.MustLoad("bunny.obj"))
+
+	// Create and add a point light to the scene graph
 	s.Add(light.NewPoint())
 
-	r := render.NewRenderer()
-	img := r.Render(camera.NewPerspective())
+	// Create a camera for the rendering
+	c := camera.NewPerspective()
 
-	gui.Show(img)
+	// Create a renderer and specify scene and camera
+	r := render.NewRenderer(
+		render.Scene(s),
+		render.Camera(c),
+	)
+
+	// Render and show the result in a window
+	gui.Show(r.Render())
 }
 ```
 
