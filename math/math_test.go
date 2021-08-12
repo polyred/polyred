@@ -62,7 +62,7 @@ func BenchmarkApproxEq(b *testing.B) {
 }
 
 func BenchmarkMin(b *testing.B) {
-	for j := 1; j < 100000; j *= 2 {
+	for j := 1; j < 10000; j *= 2 {
 		n := j
 		vs := make([]float64, n)
 		for i := 0; i < n; i++ {
@@ -80,7 +80,7 @@ func BenchmarkMin(b *testing.B) {
 }
 
 func BenchmarkMax(b *testing.B) {
-	for j := 1; j < 100000; j *= 2 {
+	for j := 1; j < 10000; j *= 2 {
 		n := j
 		vs := make([]float64, n)
 		for i := 0; i < n; i++ {

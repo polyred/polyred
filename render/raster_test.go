@@ -214,11 +214,14 @@ func BenchmarkDraw(b *testing.B) {
 		})
 
 		uniforms := map[string]interface{}{
-			"matModel":  modelMat,
-			"matView":   matView,
-			"matProj":   matProj,
-			"matVP":     matVP,
-			"matNormal": modelMat.Inv().T(),
+			"matModel":   modelMat,
+			"matView":    matView,
+			"matViewInv": matView.Inv(),
+			"matProj":    matProj,
+			"matProjInv": matProj.Inv(),
+			"matVP":      matVP,
+			"matVPInv":   matVP.Inv(),
+			"matNormal":  modelMat.Inv().T(),
 		}
 
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
