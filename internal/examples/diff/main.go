@@ -26,7 +26,7 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 0.6, 0.9)),
-		camera.PerspFrustum(45, float64(width)/float64(height), 0.1, 2),
+		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 2),
 	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(lightI),
@@ -85,20 +85,20 @@ func main() {
 	Igoal := 7
 	goal := loadScene(width, height, float64(Igoal))
 	goalR := render.NewRenderer(
-		render.WithSize(width, height),
-		render.WithMSAA(msaa),
-		render.WithScene(goal),
-		render.WithShadowMap(true),
-		render.WithGammaCorrection(true),
+		render.Size(width, height),
+		render.MSAA(msaa),
+		render.Scene(goal),
+		render.ShadowMap(true),
+		render.GammaCorrection(true),
 	)
 	goalImg := goalR.Render()
 	utils.Save(goalImg, "goal.png")
 
 	searchR := render.NewRenderer(
-		render.WithSize(width, height),
-		render.WithMSAA(msaa),
-		render.WithShadowMap(true),
-		render.WithGammaCorrection(true),
+		render.Size(width, height),
+		render.MSAA(msaa),
+		render.ShadowMap(true),
+		render.GammaCorrection(true),
 	)
 
 	// naive random search.
@@ -106,9 +106,7 @@ func main() {
 	for {
 		Isearch := rand.Float64() * 10
 		searchS := loadScene(width, height, Isearch)
-		searchR.UpdateOptions(
-			render.WithScene(searchS),
-		)
+		searchR.Options(render.Scene(searchS))
 		searchImg := searchR.Render()
 		utils.Save(searchImg, "search.png")
 		diffImg, diffScore := texture.MseDiff(goalImg, searchImg)

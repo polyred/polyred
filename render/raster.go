@@ -62,7 +62,7 @@ type Renderer struct {
 // NewRenderer creates a new renderer.
 //
 // The renderer implements a rasterization rendering pipeline.
-func NewRenderer(opts ...Option) *Renderer {
+func NewRenderer(opts ...Opt) *Renderer {
 	r := &Renderer{ // default settings
 		width:          800,
 		height:         500,

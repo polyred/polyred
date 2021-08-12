@@ -22,7 +22,7 @@ func TestPlane(t *testing.T) {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
 		camera.Position(math.NewVec3(2, 2, 2)),
-		camera.PerspFrustum(45, 1, 0.1, 10),
+		camera.ViewFrustum(45, 1, 0.1, 10),
 	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(1),
@@ -34,10 +34,10 @@ func TestPlane(t *testing.T) {
 	s.Add(m)
 
 	r := render.NewRenderer(
-		render.WithSize(500, 500),
-		render.WithMSAA(2),
-		render.WithScene(s),
-		render.WithBackground(color.FromHex("#181818")),
+		render.Size(500, 500),
+		render.MSAA(2),
+		render.Scene(s),
+		render.Background(color.FromHex("#181818")),
 	)
 	utils.Save(r.Render(), "plane.png")
 }

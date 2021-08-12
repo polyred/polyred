@@ -187,7 +187,7 @@ func NewMcGuireScene(w, h int) interface{} {
 		}
 		s.Scene.SetCamera(camera.NewPerspective(
 			camera.Position(math.NewVec3(1, 1, 2)),
-			camera.PerspFrustum(50, float64(w)/float64(h), 0.1, 100),
+			camera.ViewFrustum(50, float64(w)/float64(h), 0.1, 100),
 		))
 		s.Scene.Add(light.NewPoint(
 			light.WithPointLightIntensity(5),

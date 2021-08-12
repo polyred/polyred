@@ -45,8 +45,8 @@ func TestScreenPass(t *testing.T) {
 
 	for i, tt := range tests {
 		r := render.NewRenderer(
-			render.WithSize(tt.w, tt.h),
-			render.WithConcurrency(128),
+			render.Size(tt.w, tt.h),
+			render.Concurrency(128),
 		)
 		img := image.NewRGBA(image.Rect(0, 0, tt.w, tt.h))
 
@@ -71,8 +71,8 @@ func BenchmarkScreenPass_Size(b *testing.B) {
 	for i := 1; i < 128; i *= 2 {
 		ww, hh := w*i, h*i
 		r := render.NewRenderer(
-			render.WithSize(ww, hh),
-			render.WithConcurrency(128),
+			render.Size(ww, hh),
+			render.Concurrency(128),
 		)
 		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
 
@@ -99,8 +99,8 @@ func BenchmarkScreenPass_Block(b *testing.B) {
 	for i := 1; i <= 1024; i *= 2 {
 		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
 		r := render.NewRenderer(
-			render.WithSize(ww, hh),
-			render.WithConcurrency(int32(i)),
+			render.Size(ww, hh),
+			render.Concurrency(int32(i)),
 		)
 		b.Run(fmt.Sprintf("%d-%d-%d", ww, hh, i), func(b *testing.B) {
 			b.ReportAllocs()

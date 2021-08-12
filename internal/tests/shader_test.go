@@ -27,11 +27,11 @@ func init() {
 func prepare(num int) (*render.Renderer, *render.Buffer, shader.Program, []uint64, []*primitive.Vertex) {
 	cam := camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 3, 3)),
-		camera.PerspFrustum(45, 1, 0.1, 10),
+		camera.ViewFrustum(45, 1, 0.1, 10),
 	)
 	r := render.NewRenderer(
-		render.WithSize(500, 500),
-		render.WithCamera(cam),
+		render.Size(500, 500),
+		render.Camera(cam),
 	)
 	buf := render.NewBuffer(image.Rect(0, 0, 500, 500))
 	prog := &shader.BasicShader{

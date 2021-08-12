@@ -74,7 +74,7 @@ func bench(opt *benchOpts) {
 		s := scene.NewScene()
 		s.SetCamera(camera.NewPerspective(
 			camera.Position(math.NewVec3(0, 0.6, 0.9)),
-			camera.PerspFrustum(
+			camera.ViewFrustum(
 				45, float64(opt.width)/float64(opt.height), 0.1, 2),
 		))
 
@@ -129,12 +129,12 @@ func bench(opt *benchOpts) {
 		s.Add(m)
 
 		r := render.NewRenderer(
-			render.WithSize(opt.width, opt.height),
-			render.WithMSAA(opt.msaa),
-			render.WithScene(s),
-			render.WithShadowMap(opt.shadowmap),
-			render.WithDebug(true),
-			render.WithGammaCorrection(opt.gammaCorrection),
+			render.Size(opt.width, opt.height),
+			render.MSAA(opt.msaa),
+			render.Scene(s),
+			render.ShadowMap(opt.shadowmap),
+			render.Debug(true),
+			render.GammaCorrection(opt.gammaCorrection),
 		)
 
 		var buf *image.RGBA

@@ -36,10 +36,10 @@ func init() {
 	w, h, msaa := 1920, 1080, 2
 	s = newscene(w, h)
 	r = render.NewRenderer(
-		render.WithSize(w, h),
-		render.WithMSAA(msaa),
-		render.WithScene(s),
-		render.WithBackground(color.RGBA{0, 127, 255, 255}),
+		render.Size(w, h),
+		render.MSAA(msaa),
+		render.Scene(s),
+		render.Background(color.RGBA{0, 127, 255, 255}),
 	)
 }
 
@@ -51,7 +51,7 @@ func newscene(w, h int) *scene.Scene {
 			math.NewVec3(0, 0, -0.5),
 			math.NewVec3(0, 1, 0),
 		),
-		camera.PerspFrustum(45, float64(w)/float64(h), 0.1, 3),
+		camera.ViewFrustum(45, float64(w)/float64(h), 0.1, 3),
 	)
 	s.SetCamera(c)
 
@@ -89,10 +89,10 @@ func TestRasterizer(t *testing.T) {
 	w, h, msaa := 1920, 1080, 2
 	s := newscene(w, h)
 	r := render.NewRenderer(
-		render.WithSize(w, h),
-		render.WithMSAA(msaa),
-		render.WithScene(s),
-		render.WithBackground(color.RGBA{0, 127, 255, 255}),
+		render.Size(w, h),
+		render.MSAA(msaa),
+		render.Scene(s),
+		render.Background(color.RGBA{0, 127, 255, 255}),
 	)
 
 	f, err := os.Create("cpu.pprof")
@@ -122,9 +122,7 @@ func TestRasterizer(t *testing.T) {
 
 func BenchmarkRasterizer(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.UpdateOptions(
-			render.WithConcurrency(int32(block)),
-		)
+		r.Options(render.Concurrency(int32(block)))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -137,9 +135,7 @@ func BenchmarkRasterizer(b *testing.B) {
 
 func BenchmarkForwardPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.UpdateOptions(
-			render.WithConcurrency(int32(block)),
-		)
+		r.Options(render.Concurrency(int32(block)))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -152,9 +148,7 @@ func BenchmarkForwardPass(b *testing.B) {
 
 func BenchmarkDeferredPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.UpdateOptions(
-			render.WithConcurrency(int32(block)),
-		)
+		r.Options(render.Concurrency(int32(block)))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()

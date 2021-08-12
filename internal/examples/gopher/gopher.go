@@ -20,7 +20,7 @@ func NewGopherScene(width, height int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
 		camera.Position(math.NewVec3(1, 1, 2)),
-		camera.PerspFrustum(45, float64(width)/float64(height), 0.01, 600),
+		camera.ViewFrustum(45, float64(width)/float64(height), 0.01, 600),
 	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(5),

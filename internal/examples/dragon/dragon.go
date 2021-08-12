@@ -21,7 +21,7 @@ func NewDragonScene(w, h int) interface{} {
 	s.SetCamera(camera.NewPerspective(
 		camera.Position(math.NewVec3(-3, 1.25, -2)),
 		camera.LookAt(math.NewVec3(0, -0.1, -0.1), math.NewVec3(0, 1, 0)),
-		camera.PerspFrustum(30, float64(w)/float64(h), 0.01, 1000),
+		camera.ViewFrustum(30, float64(w)/float64(h), 0.01, 1000),
 	))
 
 	s.Add(light.NewPoint(

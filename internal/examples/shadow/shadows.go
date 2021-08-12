@@ -18,7 +18,7 @@ func NewShadowScene(w, h int) interface{} {
 	s := scene.NewScene()
 	s.SetCamera(camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 0.6, 0.9)),
-		camera.PerspFrustum(45, float64(w)/float64(h), 0.1, 2),
+		camera.ViewFrustum(45, float64(w)/float64(h), 0.1, 2),
 	))
 
 	s.Add(

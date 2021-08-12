@@ -87,22 +87,19 @@ func rend(settings *sceneExample) {
 
 	s := settings.Func(settings.Width, settings.Height)
 	r := render.NewRenderer(
-		render.WithSize(int(settings.Width), int(settings.Height)),
-		render.WithMSAA(settings.MSAA),
-		render.WithShadowMap(settings.ShadowMap),
-		render.WithDebug(settings.Debug),
+		render.Size(int(settings.Width), int(settings.Height)),
+		render.MSAA(settings.MSAA),
+		render.ShadowMap(settings.ShadowMap),
+		render.Debug(settings.Debug),
 	)
 	switch ss := s.(type) {
 	case *scene.Scene:
-		r.UpdateOptions(
-			render.WithScene(ss),
-		)
+		r.Options(render.Scene(ss))
 		utils.Save(r.Render(), fmt.Sprintf("./%s/%s.png", settings.Name, settings.Name))
 	case []*mcguire.Scene:
 		for _, sss := range ss {
-			r.UpdateOptions(
-				render.WithScene(sss.Scene),
-			)
+			r.Options(render.Scene(sss.Scene))
+
 			log.Printf("scene name: %s", sss.Name)
 			utils.Save(r.Render(), fmt.Sprintf("./%s/%s.png", settings.Name, sss.Name))
 		}

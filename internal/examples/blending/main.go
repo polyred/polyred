@@ -16,8 +16,8 @@ func main() {
 	img2 := texture.MustLoadImage("../../testdata/src2.png")
 	want := texture.MustLoadImage("./dst.png")
 	r := render.NewRenderer(
-		render.WithSize(img1.Bounds().Dx(), img1.Bounds().Dy()),
-		render.WithBlendFunc(render.AlphaBlend),
+		render.Size(img1.Bounds().Dx(), img1.Bounds().Dy()),
+		render.Blending(render.AlphaBlend),
 	)
 	dst := img1
 	r.ScreenPass(dst, func(f primitive.Fragment) color.RGBA {

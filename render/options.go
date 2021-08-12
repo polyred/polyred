@@ -16,16 +16,17 @@ import (
 	"poly.red/scene"
 )
 
-type Option func(r *Renderer)
+// Opt represents a rendering Opt
+type Opt func(r *Renderer)
 
-func WithSize(width, height int) Option {
+func Size(width, height int) Opt {
 	return func(r *Renderer) {
 		r.width = width
 		r.height = height
 	}
 }
 
-func WithCamera(cam camera.Interface) Option {
+func Camera(cam camera.Interface) Opt {
 	return func(r *Renderer) {
 		r.renderCamera = cam
 		if _, ok := cam.(*camera.Perspective); ok {
@@ -34,61 +35,61 @@ func WithCamera(cam camera.Interface) Option {
 	}
 }
 
-func WithScene(s *scene.Scene) Option {
+func Scene(s *scene.Scene) Opt {
 	return func(r *Renderer) {
 		r.scene = s
 	}
 }
 
-func WithBackground(c color.RGBA) Option {
+func Background(c color.RGBA) Opt {
 	return func(r *Renderer) {
 		r.background = c
 	}
 }
 
-func WithMSAA(n int) Option {
+func MSAA(n int) Opt {
 	return func(r *Renderer) {
 		r.msaa = n
 	}
 }
 
-func WithShadowMap(enable bool) Option {
+func ShadowMap(enable bool) Opt {
 	return func(r *Renderer) {
 		r.useShadowMap = enable
 	}
 }
 
-func WithGammaCorrection(enable bool) Option {
+func GammaCorrection(enable bool) Opt {
 	return func(r *Renderer) {
 		r.correctGamma = enable
 	}
 }
 
-func WithBlendFunc(f BlendFunc) Option {
+func Blending(f BlendFunc) Opt {
 	return func(r *Renderer) {
 		r.blendFunc = f
 	}
 }
 
-func WithDebug(enable bool) Option {
+func Debug(enable bool) Opt {
 	return func(r *Renderer) {
 		r.debug = enable
 	}
 }
 
-func WithConcurrency(n int32) Option {
+func Concurrency(n int32) Opt {
 	return func(r *Renderer) {
 		r.concurrentSize = n
 	}
 }
 
-func WithThreadLimit(n int) Option {
+func ThreadLimit(n int) Opt {
 	return func(r *Renderer) {
 		r.gomaxprocs = n
 	}
 }
 
-func (r *Renderer) UpdateOptions(opts ...Option) {
+func (r *Renderer) Options(opts ...Opt) {
 	r.wait() // wait last frame to finish
 
 	for _, opt := range opts {
