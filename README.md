@@ -12,13 +12,11 @@ _Caution: still under experiment, expect it to break at any time. Use it at your
 
 ## About
 
-`polyred` is a 3D graphics facility written in Go that aims to offer state-of-the-art graphics research algorithms, especially geometry processing, rendering, animation, and etc.
+`polyred` is a 3D graphics facility written in Go that aims to offer
+state-of-the-art graphics research algorithms, especially geometry processing,
+rendering, animation, and etc.
 
-The geometry facility offers different types of geometry representations (mostly for meshes), iterators, solvers, and relevant I/O processors.
-
-The rendering facility offers two levels of API set where the low-level API set contains abstract rendering passes for flexible customization, whereas the high-level API set contains pre-defined rendering effects for better usability and performance.
-
-See a full features list [here](https://github.com/changkun/polyred/wiki/Features).
+See a full features list [here](https://github.com/changkun/polyred/wiki/features).
 
 ## Getting started
 
