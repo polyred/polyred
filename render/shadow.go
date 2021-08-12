@@ -44,8 +44,8 @@ func (r *Renderer) initShadowMaps() {
 			r.scene.Center(),
 			math.NewVec3(0, 1, 0),
 		).
-			MulM(r.scene.GetCamera().ViewMatrix().Inv()).
-			MulM(r.scene.GetCamera().ProjMatrix().Inv())
+			MulM(r.renderCamera.ViewMatrix().Inv()).
+			MulM(r.renderCamera.ProjMatrix().Inv())
 		v1 := math.NewVec4(1, 1, 1, 1).Apply(tm).Pos().ToVec3()
 		v2 := math.NewVec4(1, 1, -1, 1).Apply(tm).Pos().ToVec3()
 		v3 := math.NewVec4(1, -1, 1, 1).Apply(tm).Pos().ToVec3()

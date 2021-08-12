@@ -5,7 +5,6 @@
 package scene
 
 import (
-	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
@@ -14,8 +13,7 @@ import (
 
 // Scene is a scene graph
 type Scene struct {
-	root   *Group
-	camera camera.Interface
+	root *Group
 }
 
 func NewScene() *Scene {
@@ -33,14 +31,6 @@ func NewScene() *Scene {
 func (s *Scene) Add(geo ...object.Object) *Group {
 	s.root.Add(geo...)
 	return s.root
-}
-
-func (s *Scene) SetCamera(c camera.Interface) {
-	s.camera = c
-}
-
-func (s *Scene) GetCamera() camera.Interface {
-	return s.camera
 }
 
 func (s *Scene) IterObjects(iter func(o object.Object, modelMatrix math.Mat4) bool) {

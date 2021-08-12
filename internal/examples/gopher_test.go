@@ -2,26 +2,24 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package gopher
+package example_test
 
 import (
 	"image/color"
+	"testing"
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
+	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
 )
 
-func NewGopherScene(width, height int) interface{} {
+func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene()
-	s.SetCamera(camera.NewPerspective(
-		camera.Position(math.NewVec3(1, 1, 2)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 0.01, 600),
-	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(5),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
@@ -47,5 +45,34 @@ func NewGopherScene(width, height int) interface{} {
 	m.Normalize()
 	s.Add(m)
 
-	return s
+	return s, camera.NewPerspective(
+		camera.Position(math.NewVec3(1, 1, 2)),
+		camera.ViewFrustum(45, float64(width)/float64(height), 0.01, 600),
+	)
+}
+
+func TestGopher(t *testing.T) {
+	tests := []*BasicOpt{
+		{
+			Name:       "gopher",
+			Width:      500,
+			Height:     500,
+			CPUProf:    false,
+			MemProf:    false,
+			ExecTracer: false,
+			RenderOpts: []render.Opt{
+				render.Debug(false),
+				render.MSAA(1),
+				render.ShadowMap(true),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Logf("%s under settings: %#v", test.Name, test)
+		s, cam := NewGopherScene(test.Width, test.Height)
+		rendopts := []render.Opt{render.Camera(cam)}
+		rendopts = append(rendopts, test.RenderOpts...)
+		Render(t, s, test, rendopts...)
+	}
 }

@@ -177,7 +177,6 @@ func (r *Renderer) passForward() {
 
 	w := r.width * r.msaa
 	h := r.height * r.msaa
-	r.renderCamera = r.scene.GetCamera()
 	matView := r.renderCamera.ViewMatrix()
 	matProj := r.renderCamera.ProjMatrix()
 	matVP := math.ViewportMatrix(float64(w), float64(h))
@@ -239,7 +238,6 @@ func (r *Renderer) passDeferred() {
 	}
 	w := r.width * r.msaa
 	h := r.height * r.msaa
-	r.renderCamera = r.scene.GetCamera()
 	matView := r.renderCamera.ViewMatrix()
 	matViewInv := matView.Inv()
 	matProj := r.renderCamera.ProjMatrix()

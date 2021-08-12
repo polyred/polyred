@@ -72,12 +72,6 @@ func main() {
 func bench(opt *benchOpts) {
 	result := testing.Benchmark(func(b *testing.B) {
 		s := scene.NewScene()
-		s.SetCamera(camera.NewPerspective(
-			camera.Position(math.NewVec3(0, 0.6, 0.9)),
-			camera.ViewFrustum(
-				45, float64(opt.width)/float64(opt.height), 0.1, 2),
-		))
-
 		s.Add(light.NewPoint(
 			light.WithPointLightIntensity(7),
 			light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
@@ -129,6 +123,10 @@ func bench(opt *benchOpts) {
 		s.Add(m)
 
 		r := render.NewRenderer(
+			render.Camera(camera.NewPerspective(
+				camera.Position(math.NewVec3(0, 0.6, 0.9)),
+				camera.ViewFrustum(45, float64(opt.width)/float64(opt.height), 0.1, 2),
+			)),
 			render.Size(opt.width, opt.height),
 			render.MSAA(opt.msaa),
 			render.Scene(s),

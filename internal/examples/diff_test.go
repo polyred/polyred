@@ -2,12 +2,13 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package main
+package example_test
 
 import (
 	"fmt"
 	"image/color"
 	"math/rand"
+	"testing"
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
@@ -21,13 +22,9 @@ import (
 	"poly.red/internal/utils"
 )
 
-func loadScene(width, height int, lightI float64) *scene.Scene {
+func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Interface) {
 	// Create a scene graph
 	s := scene.NewScene()
-	s.SetCamera(camera.NewPerspective(
-		camera.Position(math.NewVec3(0, 0.6, 0.9)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 2),
-	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(lightI),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
@@ -35,7 +32,7 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 		light.WithPointLightShadowMap(true)),
 		light.NewAmbient(light.WithAmbientIntensity(0.5)))
 
-	m, err := mesh.Load("../../testdata/bunny.obj")
+	m, err := mesh.Load("../testdata/bunny.obj")
 	if err != nil {
 		panic(err)
 	}
@@ -43,7 +40,7 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 		material.WithBlinnPhongTexture(
 			texture.NewTexture(
 				texture.WithSource(
-					texture.MustLoadImage("../../testdata/bunny.png",
+					texture.MustLoadImage("../testdata/bunny.png",
 						texture.WithGammaCorrection(true)),
 				),
 				texture.WithIsotropicMipMap(true),
@@ -57,14 +54,14 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m, err = mesh.Load("../../testdata/ground.obj")
+	m, err = mesh.Load("../testdata/ground.obj")
 	if err != nil {
 		panic(err)
 	}
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(texture.NewTexture(
 			texture.WithSource(
-				texture.MustLoadImage("../../testdata/ground.png",
+				texture.MustLoadImage("../testdata/ground.png",
 					texture.WithGammaCorrection(true)),
 			),
 			texture.WithIsotropicMipMap(true),
@@ -77,14 +74,21 @@ func loadScene(width, height int, lightI float64) *scene.Scene {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	return s
+	return s, camera.NewPerspective(
+		camera.Position(math.NewVec3(0, 0.6, 0.9)),
+		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 2),
+	)
 }
 
-func main() {
+func TestDiff(t *testing.T) {
+	// We don't run this test for now.
+	t.Skip()
+
 	width, height, msaa := 500, 500, 1
 	Igoal := 7
-	goal := loadScene(width, height, float64(Igoal))
+	goal, cam := NewDiffScene(width, height, float64(Igoal))
 	goalR := render.NewRenderer(
+		render.Camera(cam),
 		render.Size(width, height),
 		render.MSAA(msaa),
 		render.Scene(goal),
@@ -92,7 +96,7 @@ func main() {
 		render.GammaCorrection(true),
 	)
 	goalImg := goalR.Render()
-	utils.Save(goalImg, "goal.png")
+	utils.Save(goalImg, "./out/goal.png")
 
 	searchR := render.NewRenderer(
 		render.Size(width, height),
@@ -105,12 +109,12 @@ func main() {
 	iter := 0
 	for {
 		Isearch := rand.Float64() * 10
-		searchS := loadScene(width, height, Isearch)
-		searchR.Options(render.Scene(searchS))
+		searchS, cam := NewDiffScene(width, height, Isearch)
+		searchR.Options(render.Camera(cam), render.Scene(searchS))
 		searchImg := searchR.Render()
-		utils.Save(searchImg, "search.png")
+		utils.Save(searchImg, "./out/search.png")
 		diffImg, diffScore := texture.MseDiff(goalImg, searchImg)
-		utils.Save(diffImg, fmt.Sprintf("diff-%d-search-%f-score-%f.png", iter, Isearch, diffScore))
+		utils.Save(diffImg, fmt.Sprintf("./out/diff-%d-search-%f-score-%f.png", iter, Isearch, diffScore))
 		iter++
 		if diffScore < 1000 {
 			break

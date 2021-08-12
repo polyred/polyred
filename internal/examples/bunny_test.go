@@ -2,10 +2,11 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package bunny
+package example_test
 
 import (
 	"image/color"
+	"testing"
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
@@ -13,17 +14,13 @@ import (
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
+	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
 )
 
-func NewBunnyScene(width, height int) interface{} {
+func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene()
-	s.SetCamera(camera.NewPerspective(
-		camera.Position(math.NewVec3(-550, 194, 734)),
-		camera.LookAt(math.NewVec3(-1000, 0, 0), math.NewVec3(0, 1, 1)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 100, 600),
-	))
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(200),
 		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
@@ -61,5 +58,36 @@ func NewBunnyScene(width, height int) interface{} {
 	m.Translate(-700, -5, 350)
 	s.Add(m)
 
-	return s
+	cam := camera.NewPerspective(
+		camera.Position(math.NewVec3(-550, 194, 734)),
+		camera.LookAt(math.NewVec3(-1000, 0, 0), math.NewVec3(0, 1, 1)),
+		camera.ViewFrustum(45, float64(width)/float64(height), 100, 600),
+	)
+	return s, cam
+}
+
+func TestBunny(t *testing.T) {
+	tests := []*BasicOpt{
+		{
+			Name:       "bunny",
+			Width:      960,
+			Height:     540,
+			CPUProf:    false,
+			MemProf:    false,
+			ExecTracer: false,
+			RenderOpts: []render.Opt{
+				render.Debug(false),
+				render.MSAA(2),
+				render.ShadowMap(true),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Logf("%s under settings: %#v", test.Name, test)
+		s, cam := NewBunnyScene(test.Width, test.Height)
+		rendopts := []render.Opt{render.Camera(cam)}
+		rendopts = append(rendopts, test.RenderOpts...)
+		Render(t, s, test, rendopts...)
+	}
 }

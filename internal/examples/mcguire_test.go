@@ -2,19 +2,21 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package mcguire
+package example_test
 
 import (
 	"fmt"
 	"image/color"
 	"log"
 	"os"
+	"testing"
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
+	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
 )
@@ -24,7 +26,7 @@ type Scene struct {
 	Scene *scene.Scene
 }
 
-func NewMcGuireScene(w, h int) interface{} {
+func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 	models := []string{
 		// "AL05a",
 		// "AL05m",
@@ -185,10 +187,6 @@ func NewMcGuireScene(w, h int) interface{} {
 			Scene: scene.NewScene(),
 			Name:  model,
 		}
-		s.Scene.SetCamera(camera.NewPerspective(
-			camera.Position(math.NewVec3(1, 1, 2)),
-			camera.ViewFrustum(50, float64(w)/float64(h), 0.1, 100),
-		))
 		s.Scene.Add(light.NewPoint(
 			light.WithPointLightIntensity(5),
 			light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
@@ -214,5 +212,39 @@ func NewMcGuireScene(w, h int) interface{} {
 		scenes[i] = s
 	}
 
-	return scenes
+	return scenes, camera.NewPerspective(
+		camera.Position(math.NewVec3(1, 1, 2)),
+		camera.ViewFrustum(50, float64(w)/float64(h), 0.1, 100),
+	)
+}
+
+func TestMcguire(t *testing.T) {
+	tests := []*BasicOpt{
+		{
+			Name:       "mcguire",
+			Width:      540,
+			Height:     540,
+			CPUProf:    false,
+			MemProf:    false,
+			ExecTracer: false,
+			RenderOpts: []render.Opt{
+				render.Debug(true),
+				render.MSAA(2),
+				render.ShadowMap(false),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Logf("%s under settings: %#v", test.Name, test)
+		ss, cam := NewMcGuireScene(test.Width, test.Height)
+		rendopts := []render.Opt{render.Camera(cam)}
+		rendopts = append(rendopts, test.RenderOpts...)
+
+		rootName := test.Name
+		for _, s := range ss {
+			test.Name = rootName + "-" + s.Name
+			Render(t, s.Scene, test, rendopts...)
+		}
+	}
 }
