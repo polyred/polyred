@@ -227,9 +227,9 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 			// different drivers. For instance, it use Metal on darwin,
 			// OpenGL for Linux and Windows (for now).
 			//
-			// If the flush takes too long, it may block the
-			// PollEvents and therefore block the window. We should be
-			// able to turn it into a non-mainthread call. See:
+			// If the flush is executed on the mainthread, it takes too
+			// long to start execute event processing, which may laggy.
+			// Hence, we should run it into a non-mainthread call. See:
 			// https://golang.design/research/ultimate-channel/
 			w.flush(buf)
 		}

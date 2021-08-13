@@ -29,12 +29,13 @@ import (
 
 var (
 	s *scene.Scene
+	c camera.Interface
 	r *render.Renderer
 )
 
 func init() {
 	w, h, msaa := 1920, 1080, 2
-	s = newscene(w, h)
+	s, c = newscene(w, h)
 	r = render.NewRenderer(
 		render.Size(w, h),
 		render.MSAA(msaa),
@@ -43,17 +44,8 @@ func init() {
 	)
 }
 
-func newscene(w, h int) *scene.Scene {
+func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene()
-	c := camera.NewPerspective(
-		camera.Position(math.NewVec3(0, 1.5, 1)),
-		camera.LookAt(
-			math.NewVec3(0, 0, -0.5),
-			math.NewVec3(0, 1, 0),
-		),
-		camera.ViewFrustum(45, float64(w)/float64(h), 0.1, 3),
-	)
-	s.SetCamera(c)
 
 	s.Add(light.NewPoint(
 		light.WithPointLightIntensity(5),
@@ -82,13 +74,21 @@ func newscene(w, h int) *scene.Scene {
 	m.Scale(4, 4, 4)
 	m.Translate(0.1, 0, -0.2)
 	s.Add(m)
-	return s
+	return s, camera.NewPerspective(
+		camera.Position(math.NewVec3(0, 1.5, 1)),
+		camera.LookAt(
+			math.NewVec3(0, 0, -0.5),
+			math.NewVec3(0, 1, 0),
+		),
+		camera.ViewFrustum(45, float64(w)/float64(h), 0.1, 3),
+	)
 }
 
 func TestRasterizer(t *testing.T) {
 	w, h, msaa := 1920, 1080, 2
-	s := newscene(w, h)
+	s, c := newscene(w, h)
 	r := render.NewRenderer(
+		render.Camera(c),
 		render.Size(w, h),
 		render.MSAA(msaa),
 		render.Scene(s),
@@ -190,8 +190,8 @@ func BenchmarkResetBuf(b *testing.B) {
 
 func BenchmarkDraw(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		matView := s.GetCamera().ViewMatrix()
-		matProj := s.GetCamera().ProjMatrix()
+		matView := c.ViewMatrix()
+		matProj := c.ProjMatrix()
 		matVP := math.ViewportMatrix(1920, 1080)
 
 		var (
