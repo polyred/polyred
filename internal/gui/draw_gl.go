@@ -36,10 +36,7 @@ func (w *win) initCallbacks() {
 		// It does not involve with data race. Because the draw call is
 		// also handled on the main thread, which is currently not possible
 		// to execute.
-		r := image.Rect(0, 0, fbw, fbh)
-		for i := range w.bufs {
-			w.bufs[i] = render.NewBuffer(r)
-		}
+		w.resize <- image.Rect(0, 0, fbw, fbh)
 	})
 	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
 		w.evCursor.Xpos = xpos
@@ -118,8 +115,9 @@ func (w *win) flush(img *image.RGBA) error {
 	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFlush.xml
 	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFinish.xml
 	//
-	// TODO: we may not need such an wait, if we are doing perfect timing.
+	// We may not need such an wait, if we are doing perfect timing.
 	// See: https://golang.design/research/ultimate-channel/
-	gl.Finish()
+	// gl.Finish()
+	gl.Flush()
 	return nil
 }

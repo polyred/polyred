@@ -55,6 +55,7 @@ type win struct {
 	bufs   []*render.Buffer
 	draw   chan *image.RGBA
 	drawQ  chan *image.RGBA
+	resize chan image.Rectangle
 
 	// Settings
 	showFPS bool
@@ -139,6 +140,7 @@ func InitWindow(opts ...Option) error {
 
 	w.draw = make(chan *image.RGBA)
 	w.drawQ = make(chan *image.RGBA)
+	w.resize = make(chan image.Rectangle)
 	w.bufs = make([]*render.Buffer, w.buflen)
 	for i := 0; i < w.buflen; i++ {
 		w.bufs[i] = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
@@ -168,30 +170,37 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 	// Rendering Thread
 	go func() {
 		for !w.win.ShouldClose() {
-			// We use multiple switching buffers for the drawing, which
-			// similar to the double- tripple-buffering techniques.
-			// The benefit is that this enables motion vectors between
-			// frames.
-			//
-			// TODO: while executing the rendering on buf2, the buf1
-			// is not cleared yet. It should be safe for accessing
-			// as previous frame, in order to compute motion vectors.
-			// Figuring out what is a proper API design here.
-			//
-			// A possible design:
-			//
-			// func MainLoop(f func(buf, prevBuf *render.Buffer) *image.RGBA)
-			//
-			// Yet there are no enough practice regards the drawbacks
-			// of the API, implement a motion vector related algorithm
-			// might worthy. e.g. TAA??
-			//
-			// Maybe we can make framebuf abstraction to be a linked list,
-			// in this way, the API remains one buffer parameter, but
-			// be able to access previous frames using frame.Prev()?
-			for i := range w.bufs {
-				w.bufs[i].Clear()
-				w.drawQ <- f(w.bufs[i])
+			select {
+			case r := <-w.resize:
+				for i := range w.bufs {
+					w.bufs[i] = render.NewBuffer(r)
+				}
+			default:
+				// We use multiple switching buffers for the drawing, which
+				// similar to the double- tripple-buffering techniques.
+				// The benefit is that this enables motion vectors between
+				// frames.
+				//
+				// TODO: while executing the rendering on buf2, the buf1
+				// is not cleared yet. It should be safe for accessing
+				// as previous frame, in order to compute motion vectors.
+				// Figuring out what is a proper API design here.
+				//
+				// A possible design:
+				//
+				// func MainLoop(f func(buf, prevBuf *render.Buffer) *image.RGBA
+				//
+				// Yet there are no enough practice regards the drawbacks
+				// of the API, implement a motion vector related algorithm
+				// might worthy. e.g. TAA??
+				//
+				// Maybe we can make framebuf abstraction to be a linked list,
+				// in this way, the API remains one buffer parameter, but
+				// be able to access previous frames using frame.Prev()?
+				for i := range w.bufs {
+					w.bufs[i].Clear()
+					w.drawQ <- f(w.bufs[i])
+				}
 			}
 		}
 	}()
@@ -214,7 +223,15 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 				w.drawer.DrawString(fmt.Sprintf("%d", time.Second/t))
 			}
 			last = c
-			w.draw <- buf
+			// flush is a platform dependent function which uses
+			// different drivers. For instance, it use Metal on darwin,
+			// OpenGL for Linux and Windows (for now).
+			//
+			// If the flush takes too long, it may block the
+			// PollEvents and therefore block the window. We should be
+			// able to turn it into a non-mainthread call. See:
+			// https://golang.design/research/ultimate-channel/
+			w.flush(buf)
 		}
 	}()
 
@@ -233,20 +250,8 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 
 	ti := time.NewTicker(time.Second / 960)
 	for !w.win.ShouldClose() {
-		select {
-		case buf := <-w.draw:
-			// flush is a platform dependent function which uses
-			// different drivers. For instance, it use Metal on darwin,
-			// OpenGL for Linux and Windows (for now).
-			//
-			// FIXME: if the flush takes too long, it may block the
-			// PollEvents and therefore block the window. We should be
-			// able to turn it into a non-mainthread call. See:
-			// https://golang.design/research/ultimate-channel/
-			w.flush(buf)
-		case <-ti.C:
-			glfw.PollEvents()
-		}
+		<-ti.C
+		glfw.PollEvents()
 	}
 
 	w.win.Destroy()
