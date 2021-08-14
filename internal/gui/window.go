@@ -36,7 +36,7 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
-	"poly.red/render"
+	"poly.red/texture/buffer"
 )
 
 func init() {
@@ -52,7 +52,7 @@ type win struct {
 
 	// buffers and draw queue
 	buflen int
-	bufs   []*render.Buffer
+	bufs   []*buffer.Buffer
 	draw   chan *image.RGBA
 	drawQ  chan *image.RGBA
 	resize chan image.Rectangle
@@ -90,7 +90,7 @@ func Show(img *image.RGBA) {
 	// the result?
 	//
 	// Possible issues: double buffering.
-	MainLoop(func(buf *render.Buffer) *image.RGBA { return img })
+	MainLoop(func(buf *buffer.Buffer) *image.RGBA { return img })
 }
 
 // Window returns the window instance
@@ -141,10 +141,8 @@ func InitWindow(opts ...Option) error {
 	w.draw = make(chan *image.RGBA)
 	w.drawQ = make(chan *image.RGBA)
 	w.resize = make(chan image.Rectangle)
-	w.bufs = make([]*render.Buffer, w.buflen)
-	for i := 0; i < w.buflen; i++ {
-		w.bufs[i] = render.NewBuffer(image.Rect(0, 0, fbw, fbh))
-	}
+	w.bufs = make([]*buffer.Buffer, w.buflen)
+	w.resetBufs(image.Rect(0, 0, fbw, fbh))
 
 	if window != nil {
 		panic("gui: double window initialization")
@@ -164,7 +162,7 @@ func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
 
 // MainLoop executes the given f on a loop, then schedules the returned
 // image and renders it to the created window.
-func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
+func MainLoop(f func(buf *buffer.Buffer) *image.RGBA) {
 	w := window
 
 	// Rendering Thread
@@ -172,9 +170,7 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 		for !w.win.ShouldClose() {
 			select {
 			case r := <-w.resize:
-				for i := range w.bufs {
-					w.bufs[i] = render.NewBuffer(r)
-				}
+				w.resetBufs(r)
 			default:
 				// We use multiple switching buffers for the drawing, which
 				// similar to the double- tripple-buffering techniques.
@@ -218,6 +214,7 @@ func MainLoop(f func(buf *render.Buffer) *image.RGBA) {
 				continue
 			}
 			if w.showFPS {
+				// FIXME: should draw based on buffer.Buffer format.
 				w.drawer.Dot = fixed.P(5, 15)
 				w.drawer.Dst = buf
 				w.drawer.DrawString(fmt.Sprintf("%d", time.Second/t))

@@ -121,3 +121,11 @@ func (w *win) flush(img *image.RGBA) error {
 	gl.Flush()
 	return nil
 }
+
+// resetBuffers assign new buffers to the caches window buffers (w.bufs)
+// Note: with Metal, we always use RGBA pixel format.
+func (w *win) resetBufs(r image.Rectangle) {
+	for i := 0; i < w.buflen; i++ {
+		w.bufs[i] = buffer.NewBuffer(r, buffer.Format(buffer.PixelFormatRGBA))
+	}
+}

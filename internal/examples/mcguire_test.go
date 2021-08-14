@@ -219,6 +219,9 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 }
 
 func TestMcguire(t *testing.T) {
+	// FIXME: enable this test if we figured how to fetch data remotely.
+	t.Skip()
+
 	tests := []*BasicOpt{
 		{
 			Name:       "mcguire",

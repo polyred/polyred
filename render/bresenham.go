@@ -4,12 +4,13 @@ import (
 	"image/color"
 
 	"poly.red/math"
+	"poly.red/texture/buffer"
 )
 
 // drawLine implements the Bresenham algorithm that draws a line
 // segment starting from p1 and ends at p2. The drawn pixels are
 // stored in a given buffer.
-func DrawLine(buf *Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
+func DrawLine(buf *buffer.Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
 	// TODO: test it with a demo
 	if math.Abs(p2.Y-p1.Y) < math.Abs(p2.X-p1.X) {
 		if p1.X > p2.X {
@@ -24,7 +25,7 @@ func DrawLine(buf *Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
 	}
 }
 
-func drawLineLow(buf *Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
+func drawLineLow(buf *buffer.Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
 	x0 := math.Round(p1.X)
 	y0 := math.Round(p1.Y)
 	z0 := p1.Z
@@ -56,7 +57,7 @@ func drawLineLow(buf *Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
 		//     fragmentProcessing(frameBuf, depthBuf, x, y, z, color);
 		//   }
 		if buf.DepthTest(int(x), int(y), z) {
-			buf.Set(int(x), int(y), FragmentInfo{})
+			buf.Set(int(x), int(y), buffer.Fragment{})
 		}
 		if D > 0 {
 			y += yi
@@ -65,7 +66,7 @@ func drawLineLow(buf *Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
 		D += 2 * dy
 	}
 }
-func drawLineHigh(buf *Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
+func drawLineHigh(buf *buffer.Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
 	x0 := math.Round(p1.X)
 	y0 := math.Round(p1.Y)
 	z0 := p1.Z
@@ -97,7 +98,7 @@ func drawLineHigh(buf *Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
 		// 	this.fragmentProcessing(frameBuf, depthBuf, x, y, z, color)
 		// }
 		if buf.DepthTest(int(x), int(y), z) {
-			buf.Set(int(x), int(y), FragmentInfo{})
+			buf.Set(int(x), int(y), buffer.Fragment{})
 		}
 		if D > 0 {
 			x += xi

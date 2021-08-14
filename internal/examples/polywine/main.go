@@ -16,6 +16,7 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/texture"
+	"poly.red/texture/buffer"
 )
 
 type TextureShader struct {
@@ -52,7 +53,7 @@ func main() {
 		render.Size(width, height),
 		render.Camera(cam),
 		render.Blending(render.AlphaBlend),
-		render.ThreadLimit(runtime.GOMAXPROCS(1)),
+		render.ThreadLimit(runtime.GOMAXPROCS(2)),
 	)
 
 	// Use a different model
@@ -96,7 +97,7 @@ func main() {
 	gui.Window().Subscribe(gui.OnScroll, ctrl.OnScroll)
 
 	// Starts the main rendering loop
-	gui.MainLoop(func(buf *render.Buffer) *image.RGBA {
+	gui.MainLoop(func(buf *buffer.Buffer) *image.RGBA {
 		prog.ModelMatrix = m.ModelMatrix()
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ProjMatrix = cam.ProjMatrix()

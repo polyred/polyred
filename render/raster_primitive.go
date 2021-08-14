@@ -10,6 +10,7 @@ import (
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/shader"
+	"poly.red/texture/buffer"
 )
 
 // PrimitivePass is a pass that executes Draw call concurrently on all
@@ -19,7 +20,7 @@ import (
 //
 // See shader.Program for more information regarding shader programming.
 func (r *Renderer) PrimitivePass(
-	buf *Buffer,
+	buf *buffer.Buffer,
 	prog shader.Program,
 	indexBuf []uint64,
 	vertBuf []*primitive.Vertex,
@@ -46,7 +47,7 @@ func (r *Renderer) PrimitivePass(
 }
 
 // Draw implements a triangle draw call of the rasteriation graphics pipeline.
-func (r *Renderer) Draw(buf *Buffer, prog shader.Program,
+func (r *Renderer) Draw(buf *buffer.Buffer, prog shader.Program,
 	tri *primitive.Triangle) bool {
 	v1 := prog.VertexShader(tri.V1)
 	v2 := prog.VertexShader(tri.V2)
@@ -111,7 +112,7 @@ func (r *Renderer) inViewport2(v math.Vec4) bool {
 	return true
 }
 
-func (r *Renderer) drawClip(buf *Buffer, prog shader.Program,
+func (r *Renderer) drawClip(buf *buffer.Buffer, prog shader.Program,
 	v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
 	w := float64(buf.Bounds().Dx())
 	h := float64(buf.Bounds().Dy())
@@ -246,7 +247,7 @@ func (r *Renderer) drawClip(buf *Buffer, prog shader.Program,
 }
 
 // rasterize implements the rasterization process of a given primitive.
-func (r *Renderer) rasterize(buf *Buffer, prog shader.Program,
+func (r *Renderer) rasterize(buf *buffer.Buffer, prog shader.Program,
 	v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
 	// Compute AABB make the AABB a little bigger that align with
 	// pixels to contain the entire triangle
@@ -337,7 +338,7 @@ func (r *Renderer) rasterize(buf *Buffer, prog shader.Program,
 
 			// TODO: alpha test and blending?
 
-			buf.Set(x, y, FragmentInfo{
+			buf.Set(x, y, buffer.Fragment{
 				Ok:       true,
 				Fragment: frag,
 			})

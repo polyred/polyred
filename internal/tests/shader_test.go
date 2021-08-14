@@ -16,6 +16,7 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/shader"
+	"poly.red/texture/buffer"
 
 	"poly.red/internal/utils"
 )
@@ -24,7 +25,7 @@ func init() {
 	rand.Seed(time.Now().Unix())
 }
 
-func prepare(num int) (*render.Renderer, *render.Buffer, shader.Program, []uint64, []*primitive.Vertex) {
+func prepare(num int) (*render.Renderer, *buffer.Buffer, shader.Program, []uint64, []*primitive.Vertex) {
 	cam := camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 3, 3)),
 		camera.ViewFrustum(45, 1, 0.1, 10),
@@ -33,7 +34,7 @@ func prepare(num int) (*render.Renderer, *render.Buffer, shader.Program, []uint6
 		render.Size(500, 500),
 		render.Camera(cam),
 	)
-	buf := render.NewBuffer(image.Rect(0, 0, 500, 500))
+	buf := buffer.NewBuffer(image.Rect(0, 0, 500, 500))
 	prog := &shader.BasicShader{
 		ModelMatrix:      math.Mat4I,
 		ViewMatrix:       cam.ViewMatrix(),

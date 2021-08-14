@@ -14,8 +14,10 @@ import (
 
 	"github.com/go-gl/glfw/v3.3/glfw"
 	"poly.red/internal/driver/mtl"
+	"poly.red/texture/buffer"
 )
 
+// driverInfo contains graphics driver informations.
 type driverInfo struct {
 	device mtl.Device
 	ml     mtl.MetalLayer
@@ -117,17 +119,6 @@ func (w *win) flush(img *image.RGBA) error {
 		return fmt.Errorf("gui: couldn't get the next drawable: %w", err)
 	}
 
-	// We need present the image in BGRA order
-	// FIXME: can we find a better way to use BGRA order by default in
-	// the frame buffer so that we can avoid converting loop here?
-	for i := 0; i < dx; i++ {
-		for j := 0; j < dy; j++ {
-			col := img.RGBAAt(i, j)
-			col.R, col.B = col.B, col.R
-			img.SetRGBA(i, j, col)
-		}
-	}
-
 	// We create a new texture for every draw call. A temporary texture
 	// is needed since ReplaceRegion tries to sync the pixel data between
 	// CPU and GPU, and doing it on the existing texture is inefficient.
@@ -161,4 +152,12 @@ func (w *win) flush(img *image.RGBA) error {
 	// See: https://golang.design/research/ultimate-channel/
 	// cb.WaitUntilCompleted()
 	return nil
+}
+
+// resetBuffers assign new buffers to the caches window buffers (w.bufs)
+// Note: with Metal, we always use BGRA pixel format.
+func (w *win) resetBufs(r image.Rectangle) {
+	for i := 0; i < w.buflen; i++ {
+		w.bufs[i] = buffer.NewBuffer(r, buffer.Format(buffer.PixelFormatBGRA))
+	}
 }
