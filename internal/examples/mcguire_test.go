@@ -188,11 +188,11 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 			Name:  model,
 		}
 		s.Scene.Add(light.NewPoint(
-			light.WithPointLightIntensity(5),
-			light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-			light.WithPointLightPosition(math.NewVec3(2, 2, 2)),
+			light.Intensity(5),
+			light.Color(color.RGBA{255, 255, 255, 255}),
+			light.Position(math.NewVec3(2, 2, 2)),
 		), light.NewAmbient(
-			light.WithAmbientIntensity(0.5),
+			light.Intensity(0.5),
 		))
 
 		m, err := mesh.Load(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))

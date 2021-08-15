@@ -23,31 +23,18 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	c := math.Vec4{X: rand.Float64(), Y: rand.Float64(), Z: rand.Float64(), W: 1}
 	l := []light.Source{
 		light.NewPoint(
-			light.WithPointLightIntensity(20),
-			light.WithPointLightColor(
-				color.RGBA{
-					uint8(rand.Int()),
-					uint8(rand.Int()),
-					uint8(rand.Int()),
-					255,
-				},
-			),
-			light.WithPointLightPosition(
+			light.Intensity(20),
+			light.Color(color.RGBA{
+				uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), 255}),
+			light.Position(
 				math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64()),
 			),
 		),
 	}
 	a := []light.Environment{
 		light.NewAmbient(
-			light.WithAmbientIntensity(20),
-			light.WithAmbientColor(
-				color.RGBA{
-					uint8(rand.Int()),
-					uint8(rand.Int()),
-					uint8(rand.Int()),
-					255,
-				},
-			),
+			light.Intensity(20),
+			light.Color(color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), 255}),
 		),
 	}
 

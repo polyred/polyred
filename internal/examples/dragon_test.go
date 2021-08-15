@@ -21,11 +21,11 @@ import (
 func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene()
 	s.Add(light.NewPoint(
-		light.WithPointLightIntensity(2),
-		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-		light.WithPointLightPosition(math.NewVec3(-1.5, -1, 1)),
+		light.Intensity(2),
+		light.Color(color.RGBA{255, 255, 255, 255}),
+		light.Position(math.NewVec3(-1.5, -1, 1)),
 	), light.NewAmbient(
-		light.WithAmbientIntensity(0.5),
+		light.Intensity(0.5),
 	))
 
 	m, err := mesh.Load("../testdata/dragon.obj")

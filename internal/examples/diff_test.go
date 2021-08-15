@@ -26,11 +26,11 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 	// Create a scene graph
 	s := scene.NewScene()
 	s.Add(light.NewPoint(
-		light.WithPointLightIntensity(lightI),
-		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-		light.WithPointLightPosition(math.NewVec3(4, 4, 2)),
-		light.WithPointLightShadowMap(true)),
-		light.NewAmbient(light.WithAmbientIntensity(0.5)))
+		light.Intensity(lightI),
+		light.Color(color.RGBA{255, 255, 255, 255}),
+		light.Position(math.NewVec3(4, 4, 2)),
+		light.CastShadow(true)),
+		light.NewAmbient(light.Intensity(0.5)))
 
 	m, err := mesh.Load("../testdata/bunny.obj")
 	if err != nil {

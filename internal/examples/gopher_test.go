@@ -21,11 +21,11 @@ import (
 func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene()
 	s.Add(light.NewPoint(
-		light.WithPointLightIntensity(5),
-		light.WithPointLightColor(color.RGBA{255, 255, 255, 255}),
-		light.WithPointLightPosition(math.NewVec3(0, 0, 5)),
+		light.Intensity(5),
+		light.Color(color.RGBA{255, 255, 255, 255}),
+		light.Position(math.NewVec3(0, 0, 5)),
 	), light.NewAmbient(
-		light.WithAmbientIntensity(0.7),
+		light.Intensity(0.7),
 	))
 
 	m, err := mesh.Load("../testdata/gopher.obj")

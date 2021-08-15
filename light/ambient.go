@@ -23,21 +23,7 @@ type Ambient struct {
 	intensity float64
 }
 
-type AmbientOption func(a *Ambient)
-
-func WithAmbientIntensity(I float64) AmbientOption {
-	return func(a *Ambient) {
-		a.intensity = I
-	}
-}
-
-func WithAmbientColor(c color.RGBA) AmbientOption {
-	return func(a *Ambient) {
-		a.color = c
-	}
-}
-
-func NewAmbient(opts ...AmbientOption) *Ambient {
+func NewAmbient(opts ...Opt) *Ambient {
 	a := &Ambient{
 		intensity: 0.1,
 		color:     color.RGBA{0xff, 0xff, 0xff, 0xff},

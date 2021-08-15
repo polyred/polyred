@@ -28,40 +28,8 @@ type Directional struct {
 	useShadowMap bool
 }
 
-type DirectionalOption func(d *Directional)
-
-func WithDirectionalLightPosition(pos math.Vec3) DirectionalOption {
-	return func(d *Directional) {
-		d.pos = pos
-	}
-}
-
-func WithDirectionalLightDirection(dir math.Vec3) DirectionalOption {
-	return func(d *Directional) {
-		d.dir = dir
-	}
-}
-
-func WithDirectionalLightIntensity(I float64) DirectionalOption {
-	return func(d *Directional) {
-		d.intensity = I
-	}
-}
-
-func WithDirectionalLightColor(c color.RGBA) DirectionalOption {
-	return func(d *Directional) {
-		d.color = c
-	}
-}
-
-func WithDirectionalLightShadowMap(enable bool) DirectionalOption {
-	return func(d *Directional) {
-		d.useShadowMap = enable
-	}
-}
-
 // NewDirectional returns a new directional light
-func NewDirectional(opts ...DirectionalOption) Source {
+func NewDirectional(opts ...Opt) Source {
 	d := &Directional{
 		intensity:    1,
 		color:        color.RGBA{255, 255, 255, 255},

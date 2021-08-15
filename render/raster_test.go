@@ -48,11 +48,11 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene()
 
 	s.Add(light.NewPoint(
-		light.WithPointLightIntensity(5),
-		light.WithPointLightColor(color.RGBA{0, 0, 0, 255}),
-		light.WithPointLightPosition(math.NewVec3(-2, 2.5, 6)),
+		light.Intensity(5),
+		light.Color(color.RGBA{0, 0, 0, 255}),
+		light.Position(math.NewVec3(-2, 2.5, 6)),
 	), light.NewAmbient(
-		light.WithAmbientIntensity(0.5),
+		light.Intensity(0.5),
 	))
 
 	m, err := mesh.Load("../internal/testdata/bunny.obj")

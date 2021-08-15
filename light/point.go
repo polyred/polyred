@@ -26,34 +26,8 @@ type Point struct {
 	useShadowMap bool
 }
 
-type PointOption func(l *Point)
-
-func WithPointLightIntensity(I float64) PointOption {
-	return func(l *Point) {
-		l.intensity = I
-	}
-}
-
-func WithPointLightColor(c color.RGBA) PointOption {
-	return func(l *Point) {
-		l.color = c
-	}
-}
-
-func WithPointLightPosition(pos math.Vec3) PointOption {
-	return func(l *Point) {
-		l.pos = pos
-	}
-}
-
-func WithPointLightShadowMap(enable bool) PointOption {
-	return func(l *Point) {
-		l.useShadowMap = enable
-	}
-}
-
 // NewPoint returns a new point light
-func NewPoint(opts ...PointOption) Source {
+func NewPoint(opts ...Opt) Source {
 	l := &Point{
 		intensity:    1,
 		color:        color.RGBA{255, 255, 255, 255},

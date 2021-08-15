@@ -15,7 +15,7 @@ import (
 
 func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene()
-	s.Add(light.NewAmbient(light.WithAmbientIntensity(1)))
+	s.Add(light.NewAmbient(light.Intensity(1)))
 	m := mesh.NewPlane(1, 1)
 	m.SetMaterial(material.NewBlinnPhong(
 		material.WithBlinnPhongTexture(texture.NewTexture(

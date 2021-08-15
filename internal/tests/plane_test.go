@@ -21,9 +21,9 @@ import (
 func TestPlane(t *testing.T) {
 	s := scene.NewScene()
 	s.Add(light.NewPoint(
-		light.WithPointLightIntensity(1),
-		light.WithPointLightColor(color.RGBA{0, 128, 255, 255}),
-		light.WithPointLightPosition(math.NewVec3(2, 2, 2)),
+		light.Intensity(1),
+		light.Color(color.RGBA{0, 128, 255, 255}),
+		light.Position(math.NewVec3(2, 2, 2)),
 	))
 
 	m := mesh.NewPlane(1, 1)

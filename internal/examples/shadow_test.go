@@ -22,17 +22,17 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 
 	s.Add(
 		light.NewPoint(
-			light.WithPointLightIntensity(3),
-			light.WithPointLightPosition(math.NewVec3(4, 4, 2)),
-			light.WithPointLightShadowMap(true),
+			light.Intensity(3),
+			light.Position(math.NewVec3(4, 4, 2)),
+			light.CastShadow(true),
 		),
 		light.NewPoint(
-			light.WithPointLightIntensity(3),
-			light.WithPointLightPosition(math.NewVec3(-6, 4, 2)),
-			light.WithPointLightShadowMap(true),
+			light.Intensity(3),
+			light.Position(math.NewVec3(-6, 4, 2)),
+			light.CastShadow(true),
 		),
 		light.NewAmbient(
-			light.WithAmbientIntensity(0.7),
+			light.Intensity(0.7),
 		),
 	)
 
