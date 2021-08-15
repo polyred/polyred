@@ -92,8 +92,8 @@ func bench(opt *benchOpts) {
 		)
 		m.SetMaterial(material.NewBlinnPhong(
 			material.Texture(texture.NewTexture(
-				texture.WithSource(data),
-				texture.WithIsotropicMipMap(true),
+				texture.Image(data),
+				texture.IsoMipmap(true),
 			)),
 			material.Kdiff(0.6), material.Kspec(0.5),
 			material.Shininess(150),
@@ -112,8 +112,8 @@ func bench(opt *benchOpts) {
 			texture.WithGammaCorrection(opt.gammaCorrection))
 		m.SetMaterial(material.NewBlinnPhong(
 			material.Texture(texture.NewTexture(
-				texture.WithSource(data),
-				texture.WithIsotropicMipMap(true),
+				texture.Image(data),
+				texture.IsoMipmap(true),
 			)),
 			material.Kdiff(0.6), material.Kspec(0.5),
 			material.Shininess(150),

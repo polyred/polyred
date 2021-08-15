@@ -42,8 +42,8 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 	done = utils.Timed("loading texture")
 	data := texture.MustLoadImage("../testdata/bunny.png")
 	tex := texture.NewTexture(
-		texture.WithSource(data),
-		texture.WithIsotropicMipMap(true),
+		texture.Image(data),
+		texture.IsoMipmap(true),
 	)
 	done()
 

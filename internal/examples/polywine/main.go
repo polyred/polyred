@@ -70,8 +70,8 @@ func main() {
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 
 	tex := texture.NewTexture(
-		texture.WithSource(texture.MustLoadImage("../../testdata/bunny.png")),
-		texture.WithIsotropicMipMap(true),
+		texture.Image(texture.MustLoadImage("../../testdata/bunny.png")),
+		texture.IsoMipmap(true),
 	)
 
 	// Shader

@@ -16,8 +16,8 @@ import (
 func mustLoadTexture(path string) *texture.Texture {
 	data := texture.MustLoadImage(path)
 	return texture.NewTexture(
-		texture.WithSource(data),
-		texture.WithIsotropicMipMap(true),
+		texture.Image(data),
+		texture.IsoMipmap(true),
 	)
 }
 
@@ -45,48 +45,48 @@ var (
 		{
 			"2x2",
 			texture.NewTexture(
-				texture.WithSource(data),
-				texture.WithIsotropicMipMap(true),
+				texture.Image(data),
+				texture.IsoMipmap(true),
 			),
 			0, 0, 0, color.RGBA{255, 255, 255, 255},
 		},
 		{
 			"2x2",
 			texture.NewTexture(
-				texture.WithSource(data),
-				texture.WithIsotropicMipMap(true),
+				texture.Image(data),
+				texture.IsoMipmap(true),
 			),
 			0, 1, 0, color.RGBA{0, 0, 0, 0},
 		},
 		{
 			"2x2",
 			texture.NewTexture(
-				texture.WithSource(data),
-				texture.WithIsotropicMipMap(true),
+				texture.Image(data),
+				texture.IsoMipmap(true),
 			),
 			1, 0, 0, color.RGBA{0, 0, 0, 0},
 		},
 		{
 			"2x2",
 			texture.NewTexture(
-				texture.WithSource(data),
-				texture.WithIsotropicMipMap(true),
+				texture.Image(data),
+				texture.IsoMipmap(true),
 			),
 			1, 1, 0, color.RGBA{255, 255, 255, 255},
 		},
 		{
 			"2x2",
 			texture.NewTexture(
-				texture.WithSource(data),
-				texture.WithIsotropicMipMap(true),
+				texture.Image(data),
+				texture.IsoMipmap(true),
 			),
 			1, 1, 1.5, color.RGBA{191, 191, 191, 191},
 		},
 		{
 			"2x2",
 			texture.NewTexture(
-				texture.WithSource(data),
-				texture.WithIsotropicMipMap(true),
+				texture.Image(data),
+				texture.IsoMipmap(true),
 			),
 			0.5, 0.5, 0, color.RGBA{127, 127, 127, 127},
 		},

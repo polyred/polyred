@@ -19,8 +19,8 @@ func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	m := mesh.NewPlane(1, 1)
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(texture.NewTexture(
-			texture.WithSource(texture.MustLoadImage("../testdata/uvgrid2.png")),
-			texture.WithIsotropicMipMap(true),
+			texture.Image(texture.MustLoadImage("../testdata/uvgrid2.png")),
+			texture.IsoMipmap(true),
 		)),
 		material.Kdiff(0.6), material.Kspec(0.5),
 		material.Shininess(150),

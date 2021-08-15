@@ -43,8 +43,8 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 
 	data := texture.MustLoadImage("../testdata/bunny.png")
 	tex := texture.NewTexture(
-		texture.WithSource(data),
-		texture.WithIsotropicMipMap(true),
+		texture.Image(data),
+		texture.IsoMipmap(true),
 	)
 	mat := material.NewBlinnPhong(
 		material.Texture(tex),
@@ -61,8 +61,8 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	}
 	data = texture.MustLoadImage("../testdata/ground.png")
 	tex = texture.NewTexture(
-		texture.WithSource(data),
-		texture.WithIsotropicMipMap(true),
+		texture.Image(data),
+		texture.IsoMipmap(true),
 	)
 	mat = material.NewBlinnPhong(
 		material.Texture(tex),

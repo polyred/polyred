@@ -39,11 +39,11 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(
 			texture.NewTexture(
-				texture.WithSource(
+				texture.Image(
 					texture.MustLoadImage("../testdata/bunny.png",
 						texture.WithGammaCorrection(true)),
 				),
-				texture.WithIsotropicMipMap(true),
+				texture.IsoMipmap(true),
 			),
 		),
 		material.Kdiff(0.6), material.Kspec(1),
@@ -60,11 +60,11 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 	}
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(texture.NewTexture(
-			texture.WithSource(
+			texture.Image(
 				texture.MustLoadImage("../testdata/ground.png",
 					texture.WithGammaCorrection(true)),
 			),
-			texture.WithIsotropicMipMap(true),
+			texture.IsoMipmap(true),
 		),
 		),
 		material.Kdiff(0.6), material.Kspec(0.5),

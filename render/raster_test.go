@@ -63,8 +63,8 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	data := texture.MustLoadImage("../internal/testdata/bunny.png")
 	mat := material.NewBlinnPhong(
 		material.Texture(texture.NewTexture(
-			texture.WithSource(data),
-			texture.WithIsotropicMipMap(true),
+			texture.Image(data),
+			texture.IsoMipmap(true),
 		)),
 		material.Kdiff(0.8), material.Kspec(1),
 		material.Shininess(100),

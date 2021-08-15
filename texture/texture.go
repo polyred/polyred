@@ -25,7 +25,7 @@ func NewColorTexture(c color.RGBA) *Texture {
 		Stride: 4,
 		Rect:   image.Rect(0, 0, 1, 1),
 	}
-	return NewTexture(WithSource(data))
+	return NewTexture(Image(data))
 }
 
 // Texture represents a power-of-two 2D texture. The power-of-two means
@@ -37,30 +37,7 @@ type Texture struct {
 	debug     bool
 }
 
-type TextureOption func(t *Texture)
-
-func WithSource(data *image.RGBA) TextureOption {
-	return func(t *Texture) {
-		if data.Bounds().Dx() < 1 || data.Bounds().Dy() < 1 {
-			panic("image width or height is less than 1!")
-		}
-		t.image = data
-	}
-}
-
-func WithDebug(enable bool) TextureOption {
-	return func(t *Texture) {
-		t.debug = enable
-	}
-}
-
-func WithIsotropicMipMap(enable bool) TextureOption {
-	return func(t *Texture) {
-		t.useMipmap = enable
-	}
-}
-
-func NewTexture(opts ...TextureOption) *Texture {
+func NewTexture(opts ...Opt) *Texture {
 	t := &Texture{
 		useMipmap: true,
 		image:     defaultTexture,
