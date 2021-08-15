@@ -53,7 +53,6 @@ type win struct {
 	// buffers and draw queue
 	buflen int
 	bufs   []*buffer.Buffer
-	draw   chan *image.RGBA
 	drawQ  chan *image.RGBA
 	resize chan image.Rectangle
 
@@ -138,7 +137,6 @@ func InitWindow(opts ...Option) error {
 	w.scaleX = float64(fbw) / float64(w.width)
 	w.scaleY = float64(fbh) / float64(w.height)
 
-	w.draw = make(chan *image.RGBA)
 	w.drawQ = make(chan *image.RGBA)
 	w.resize = make(chan image.Rectangle)
 	w.bufs = make([]*buffer.Buffer, w.buflen)
@@ -205,6 +203,9 @@ func MainLoop(f func(buf *buffer.Buffer) *image.RGBA) {
 	//
 	// This thread processes the auxiliary informations, such as fps, etc.
 	go func() {
+		runtime.LockOSThread()
+		w.initDriver()
+
 		last := time.Now()
 		tPerFrame := time.Second / 240 // permit maximum 120 fps
 		for buf := range w.drawQ {
@@ -242,7 +243,6 @@ func MainLoop(f func(buf *buffer.Buffer) *image.RGBA) {
 	// making sure the window being responsive (especially on macOS).
 	// Since we manage time event timeout ourselves using the ticker,
 	// the glfw.PollEvents is used.
-	w.initDriver()
 	w.initCallbacks()
 
 	ti := time.NewTicker(time.Second / 960)
