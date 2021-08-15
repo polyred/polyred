@@ -62,12 +62,12 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 
 	data := texture.MustLoadImage("../internal/testdata/bunny.png")
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(texture.NewTexture(
+		material.Texture(texture.NewTexture(
 			texture.WithSource(data),
 			texture.WithIsotropicMipMap(true),
 		)),
-		material.WithBlinnPhongFactors(0.8, 1),
-		material.WithBlinnPhongShininess(100),
+		material.Kdiff(0.8), material.Kspec(1),
+		material.Shininess(100),
 	)
 	m.SetMaterial(mat)
 	m.Rotate(math.NewVec3(0, 1, 0), -math.Pi/6)

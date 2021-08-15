@@ -202,10 +202,10 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 
 		m.Normalize()
 		m.SetMaterial(material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(texture.NewColorTexture(color.RGBA{0, 128, 255, 255})),
-			material.WithBlinnPhongFactors(0.6, 1),
-			material.WithBlinnPhongShininess(100),
-			material.WithBlinnPhongFlatShading(false),
+			material.Texture(texture.NewColorTexture(color.RGBA{0, 128, 255, 255})),
+			material.Kdiff(0.6), material.Kspec(1),
+			material.Shininess(100),
+			material.FlatShading(false),
 		))
 		s.Scene.Add(m)
 

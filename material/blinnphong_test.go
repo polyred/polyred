@@ -39,9 +39,9 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	}
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(texture.NewTexture()),
-		material.WithBlinnPhongFactors(0.6, 200),
-		material.WithBlinnPhongShininess(25),
+		material.Texture(texture.NewTexture()),
+		material.Kdiff(0.6), material.Kspec(200),
+		material.Shininess(25),
 	)
 
 	b.ReportAllocs()

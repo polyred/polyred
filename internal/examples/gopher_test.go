@@ -35,11 +35,11 @@ func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 	m.RotateY(-math.Pi / 2)
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(texture.NewColorTexture(color.RGBA{0, 128, 255, 255})),
-		material.WithBlinnPhongFactors(0.6, 1),
-		material.WithBlinnPhongShininess(150),
-		material.WithBlinnPhongFlatShading(true),
-		material.WithBlinnPhongAmbientOcclusion(true),
+		material.Texture(texture.NewColorTexture(color.RGBA{0, 128, 255, 255})),
+		material.Kdiff(0.6), material.Kspec(1),
+		material.Shininess(150),
+		material.FlatShading(true),
+		material.AmbientOcclusion(true),
 	)
 	m.SetMaterial(mat)
 	m.Normalize()

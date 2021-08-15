@@ -91,14 +91,14 @@ func bench(opt *benchOpts) {
 			texture.WithGammaCorrection(opt.gammaCorrection),
 		)
 		m.SetMaterial(material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(texture.NewTexture(
+			material.Texture(texture.NewTexture(
 				texture.WithSource(data),
 				texture.WithIsotropicMipMap(true),
 			)),
-			material.WithBlinnPhongFactors(0.6, 0.5),
-			material.WithBlinnPhongShininess(150),
-			material.WithBlinnPhongShadow(opt.shadowmap),
-			material.WithBlinnPhongAmbientOcclusion(true),
+			material.Kdiff(0.6), material.Kspec(0.5),
+			material.Shininess(150),
+			material.ReceiveShadow(opt.shadowmap),
+			material.AmbientOcclusion(true),
 		))
 		m.Scale(2, 2, 2)
 		s.Add(m)
@@ -111,13 +111,13 @@ func bench(opt *benchOpts) {
 		data = texture.MustLoadImage("../../testdata/ground.png",
 			texture.WithGammaCorrection(opt.gammaCorrection))
 		m.SetMaterial(material.NewBlinnPhong(
-			material.WithBlinnPhongTexture(texture.NewTexture(
+			material.Texture(texture.NewTexture(
 				texture.WithSource(data),
 				texture.WithIsotropicMipMap(true),
 			)),
-			material.WithBlinnPhongFactors(0.6, 0.5),
-			material.WithBlinnPhongShininess(150),
-			material.WithBlinnPhongShadow(opt.shadowmap),
+			material.Kdiff(0.6), material.Kspec(0.5),
+			material.Shininess(150),
+			material.ReceiveShadow(opt.shadowmap),
 		))
 		m.Scale(2, 2, 2)
 		s.Add(m)

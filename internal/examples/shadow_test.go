@@ -47,9 +47,9 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 		texture.WithIsotropicMipMap(true),
 	)
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.6, 0.3),
-		material.WithBlinnPhongShininess(20),
+		material.Texture(tex),
+		material.Kdiff(0.6), material.Kspec(0.3),
+		material.Shininess(20),
 	)
 	m.SetMaterial(mat)
 	m.Scale(2, 2, 2)
@@ -65,10 +65,10 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 		texture.WithIsotropicMipMap(true),
 	)
 	mat = material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.6, 0.3),
-		material.WithBlinnPhongShininess(20),
-		material.WithBlinnPhongShadow(true),
+		material.Texture(tex),
+		material.Kdiff(0.6), material.Kspec(0.3),
+		material.Shininess(20),
+		material.ReceiveShadow(true),
 	)
 	m.SetMaterial(mat)
 	m.Scale(2, 2, 2)

@@ -37,7 +37,7 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 		panic(err)
 	}
 	m.SetMaterial(material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(
+		material.Texture(
 			texture.NewTexture(
 				texture.WithSource(
 					texture.MustLoadImage("../testdata/bunny.png",
@@ -46,10 +46,10 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 				texture.WithIsotropicMipMap(true),
 			),
 		),
-		material.WithBlinnPhongFactors(0.6, 1),
-		material.WithBlinnPhongShininess(150),
-		material.WithBlinnPhongShadow(true),
-		material.WithBlinnPhongAmbientOcclusion(true),
+		material.Kdiff(0.6), material.Kspec(1),
+		material.Shininess(150),
+		material.ReceiveShadow(true),
+		material.AmbientOcclusion(true),
 	))
 	m.Scale(2, 2, 2)
 	s.Add(m)
@@ -59,7 +59,7 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 		panic(err)
 	}
 	m.SetMaterial(material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(texture.NewTexture(
+		material.Texture(texture.NewTexture(
 			texture.WithSource(
 				texture.MustLoadImage("../testdata/ground.png",
 					texture.WithGammaCorrection(true)),
@@ -67,9 +67,9 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 			texture.WithIsotropicMipMap(true),
 		),
 		),
-		material.WithBlinnPhongFactors(0.6, 0.5),
-		material.WithBlinnPhongShininess(150),
-		material.WithBlinnPhongShadow(true),
+		material.Kdiff(0.6), material.Kspec(0.5),
+		material.Shininess(150),
+		material.ReceiveShadow(true),
 	))
 	m.Scale(2, 2, 2)
 	s.Add(m)

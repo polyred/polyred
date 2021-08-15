@@ -48,10 +48,10 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 	done()
 
 	mat := material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(tex),
-		material.WithBlinnPhongFactors(0.6, 1),
-		material.WithBlinnPhongShininess(150),
-		material.WithBlinnPhongFlatShading(true),
+		material.Texture(tex),
+		material.Kdiff(0.6), material.Kspec(1),
+		material.Shininess(150),
+		material.FlatShading(true),
 	)
 	m.SetMaterial(mat)
 	m.Scale(1500, 1500, 1500)

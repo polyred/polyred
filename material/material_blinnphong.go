@@ -27,46 +27,7 @@ func (m *BlinnPhongMaterial) Texture() *texture.Texture {
 	return m.tex
 }
 
-type BlinnPhongMaterialOption func(m *BlinnPhongMaterial)
-
-func WithBlinnPhongTexture(tex *texture.Texture) BlinnPhongMaterialOption {
-	return func(m *BlinnPhongMaterial) {
-		m.tex = tex
-	}
-}
-
-func WithBlinnPhongFactors(Kdiff, Kspec float64) BlinnPhongMaterialOption {
-	return func(m *BlinnPhongMaterial) {
-		m.kDiff = Kdiff
-		m.kSpec = Kspec
-	}
-}
-
-func WithBlinnPhongShininess(p float64) BlinnPhongMaterialOption {
-	return func(m *BlinnPhongMaterial) {
-		m.shininess = p
-	}
-}
-
-func WithBlinnPhongFlatShading(enable bool) BlinnPhongMaterialOption {
-	return func(m *BlinnPhongMaterial) {
-		m.flatShading = enable
-	}
-}
-
-func WithBlinnPhongAmbientOcclusion(enable bool) BlinnPhongMaterialOption {
-	return func(m *BlinnPhongMaterial) {
-		m.ambientOcclusion = enable
-	}
-}
-
-func WithBlinnPhongShadow(enable bool) BlinnPhongMaterialOption {
-	return func(m *BlinnPhongMaterial) {
-		m.receiveShadow = enable
-	}
-}
-
-func NewBlinnPhong(opts ...BlinnPhongMaterialOption) Material {
+func NewBlinnPhong(opts ...Opt) Material {
 	t := &BlinnPhongMaterial{
 		tex:              nil,
 		kDiff:            0.5,

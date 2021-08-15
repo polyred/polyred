@@ -34,12 +34,12 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 	}
 
 	m.SetMaterial(material.NewBlinnPhong(
-		material.WithBlinnPhongTexture(
+		material.Texture(
 			texture.NewColorTexture(color.RGBA{0, 128, 255, 255}),
 		),
-		material.WithBlinnPhongFactors(0.6, 1),
-		material.WithBlinnPhongShininess(100),
-		material.WithBlinnPhongAmbientOcclusion(true),
+		material.Kdiff(0.6), material.Kspec(1),
+		material.Shininess(100),
+		material.AmbientOcclusion(true),
 	))
 	m.Scale(1.5, 1.5, 1.5)
 	m.Translate(0, -0.1, -0.15)
