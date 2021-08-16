@@ -14,7 +14,7 @@ import (
 )
 
 func TestLoadImage(t *testing.T) {
-	img := texture.MustLoadImage("../internal/testdata/ground.png", texture.WithGammaCorrection(true))
+	img := texture.MustLoadImage("../internal/testdata/ground.png", texture.GammaCorrect(true))
 
 	f, err := os.Open("../internal/testdata/golden.png")
 	if err != nil {
@@ -43,12 +43,12 @@ func TestLoadImage(t *testing.T) {
 func BenchmarkLoadImage(b *testing.B) {
 	b.Run("without-correction", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			texture.MustLoadImage("../internal/testdata/ground.png", texture.WithGammaCorrection(false))
+			texture.MustLoadImage("../internal/testdata/ground.png", texture.GammaCorrect(false))
 		}
 	})
 	b.Run("with-correction", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			texture.MustLoadImage("../internal/testdata/ground.png", texture.WithGammaCorrection(true))
+			texture.MustLoadImage("../internal/testdata/ground.png", texture.GammaCorrect(true))
 		}
 	})
 }

@@ -41,7 +41,7 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 			texture.NewTexture(
 				texture.Image(
 					texture.MustLoadImage("../testdata/bunny.png",
-						texture.WithGammaCorrection(true)),
+						texture.GammaCorrect(true)),
 				),
 				texture.IsoMipmap(true),
 			),
@@ -62,7 +62,7 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 		material.Texture(texture.NewTexture(
 			texture.Image(
 				texture.MustLoadImage("../testdata/ground.png",
-					texture.WithGammaCorrection(true)),
+					texture.GammaCorrect(true)),
 			),
 			texture.IsoMipmap(true),
 		),

@@ -6,26 +6,53 @@ package texture
 
 import "image"
 
-type Opt func(t *Texture)
+type Opt func(t interface{})
 
 func Image(data *image.RGBA) Opt {
-	return func(t *Texture) {
-		if data.Bounds().Dx() < 1 || data.Bounds().Dy() < 1 {
-			panic("image width or height is less than 1!")
+	return func(t interface{}) {
+		switch o := t.(type) {
+		case *Texture:
+			if data.Bounds().Dx() < 1 || data.Bounds().Dy() < 1 {
+				panic("image width or height is less than 1!")
+			}
+			o.image = data
+		default:
+			panic("texture: misuse of Image option")
 		}
-		t.image = data
 	}
 }
 
 func Debug(enable bool) Opt {
-	return func(t *Texture) {
-		t.debug = enable
+	return func(t interface{}) {
+		switch o := t.(type) {
+		case *Texture:
+			o.debug = enable
+		default:
+			panic("texture: misuse of Debug option")
+		}
 	}
 }
 
 // IsoMipmap is a isotropic mipmap option
 func IsoMipmap(enable bool) Opt {
-	return func(t *Texture) {
-		t.useMipmap = enable
+	return func(t interface{}) {
+		switch o := t.(type) {
+		case *Texture:
+			o.useMipmap = enable
+		default:
+			panic("texture: misuse of IsoMipmap option")
+		}
+	}
+}
+
+// GammaCorrect is a gamma correction option
+func GammaCorrect(enable bool) Opt {
+	return func(t interface{}) {
+		switch o := t.(type) {
+		case *imageOption:
+			o.gammaCorrection = enable
+		default:
+			panic("texture: misuse of GammaCorrect option")
+		}
 	}
 }

@@ -88,7 +88,7 @@ func bench(opt *benchOpts) {
 		}
 		data := texture.MustLoadImage(
 			"../../testdata/bunny.png",
-			texture.WithGammaCorrection(opt.gammaCorrection),
+			texture.GammaCorrect(opt.gammaCorrection),
 		)
 		m.SetMaterial(material.NewBlinnPhong(
 			material.Texture(texture.NewTexture(
@@ -109,7 +109,7 @@ func bench(opt *benchOpts) {
 		}
 
 		data = texture.MustLoadImage("../../testdata/ground.png",
-			texture.WithGammaCorrection(opt.gammaCorrection))
+			texture.GammaCorrect(opt.gammaCorrection))
 		m.SetMaterial(material.NewBlinnPhong(
 			material.Texture(texture.NewTexture(
 				texture.Image(data),

@@ -46,7 +46,9 @@ func NewWorkerPool(limit uint64) *WorkerPool {
 		}
 	}()
 	go func() {
-		fanout(func(m int) int { return rand.Intn(m) }, taskQueue, workers...)
+		fanout(func(m int) int {
+			return rand.Intn(m)
+		}, taskQueue, workers...)
 	}()
 	return p
 }

@@ -18,21 +18,8 @@ import (
 	"poly.red/internal/utils"
 )
 
-// ImageOption offers several basic custom conversions of the image.
-type ImageOption struct {
-	gammaCorrection bool
-}
-
-type ReadImageOption func(o *ImageOption)
-
-func WithGammaCorrection(enable bool) ReadImageOption {
-	return func(o *ImageOption) {
-		o.gammaCorrection = enable
-	}
-}
-
 // MustLoadImage loads a given file into a texture.
-func MustLoadImage(path string, opts ...ReadImageOption) *image.RGBA {
+func MustLoadImage(path string, opts ...Opt) *image.RGBA {
 	img, err := LoadImage(path, opts...)
 	if err != nil {
 		panic(err)
@@ -40,10 +27,15 @@ func MustLoadImage(path string, opts ...ReadImageOption) *image.RGBA {
 	return img
 }
 
-func LoadImage(path string, opts ...ReadImageOption) (*image.RGBA, error) {
-	option := &ImageOption{
+type imageOption struct {
+	gammaCorrection bool
+}
+
+func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
+	option := imageOption{
 		gammaCorrection: false,
 	}
+
 	for _, opt := range opts {
 		opt(option)
 	}
@@ -65,6 +57,7 @@ func LoadImage(path string, opts ...ReadImageOption) (*image.RGBA, error) {
 		data = image.NewRGBA(image.Rect(0, 0, img.Bounds().Dx(), img.Bounds().Dy()))
 		draw.Draw(data, data.Bounds(), img, img.Bounds().Min, draw.Src)
 	}
+
 	// Gamma correction, assume input space in sRGB and converting it to linear.
 	if option.gammaCorrection {
 		pool := utils.NewWorkerPool(uint64(runtime.GOMAXPROCS(0)))

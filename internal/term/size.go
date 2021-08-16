@@ -2,6 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
+//go:build !windows
 // +build !windows
 
 package term
@@ -12,8 +13,6 @@ import (
 	"unsafe"
 )
 
-const defaultRatio = 16.0 / 9
-
 // termSize returns the terminal columns, rows, and cursor aspect ratio
 func GetSize() (int, int, error) {
 	var size [4]uint16
@@ -21,8 +20,9 @@ func GetSize() (int, int, error) {
 		return 0, 0, err
 	}
 
-	return size[0], size[1], nil
+	return int(size[0]), int(size[1]), nil
 
+	// const defaultRatio = 16.0 / 9
 	// rows, cols, width, height := size[0], size[1], size[2], size[3]
 	// var whratio = defaultRatio
 	// if width > 0 && height > 0 {
