@@ -16,7 +16,6 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
-	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -117,7 +116,7 @@ func TestRasterizer(t *testing.T) {
 
 	path := "../testdata/render.jpg"
 	fmt.Printf("render saved at: %s\n", path)
-	utils.Save(buf, path)
+	imageutil.Save(buf, path)
 }
 
 func BenchmarkRasterizer(b *testing.B) {

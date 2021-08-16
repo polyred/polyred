@@ -10,7 +10,7 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/internal/utils"
+	"poly.red/internal/profiling"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -33,14 +33,14 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 	var done func()
 
 	// load a mesh
-	done = utils.Timed("loading mesh")
+	done = profiling.Timed("loading mesh")
 	m, err := mesh.Load("../testdata/bunny-smooth.obj")
 	if err != nil {
 		panic(err)
 	}
 	done()
 
-	done = utils.Timed("loading texture")
+	done = profiling.Timed("loading texture")
 	data := imageutil.MustLoadImage("../testdata/bunny.png")
 	tex := texture.NewTexture(
 		texture.Image(data),

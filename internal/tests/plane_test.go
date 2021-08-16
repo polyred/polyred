@@ -14,8 +14,7 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
-
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 func TestPlane(t *testing.T) {
@@ -39,5 +38,5 @@ func TestPlane(t *testing.T) {
 		render.Scene(s),
 		render.Background(color.FromHex("#181818")),
 	)
-	utils.Save(r.Render(), "plane.png")
+	imageutil.Save(r.Render(), "plane.png")
 }

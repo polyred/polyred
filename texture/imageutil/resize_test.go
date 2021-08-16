@@ -14,10 +14,12 @@ import (
 var dst *image.RGBA
 
 func BenchmarkResize(b *testing.B) {
-	img := imageutil.MustLoadImage("../examples/out/shadow.png")
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		dst = imageutil.Resize(img.Bounds().Dx()/2, img.Bounds().Dy()/2, img)
-	}
+	b.Run("ScaleDown2x", func(b *testing.B) {
+		img := imageutil.MustLoadImage("../examples/out/shadow.png")
+		b.ReportAllocs()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			dst = imageutil.Resize(img.Bounds().Dx()/2, img.Bounds().Dy()/2, img)
+		}
+	})
 }

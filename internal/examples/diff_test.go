@@ -12,7 +12,6 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -96,7 +95,7 @@ func TestDiff(t *testing.T) {
 		render.GammaCorrection(true),
 	)
 	goalImg := goalR.Render()
-	utils.Save(goalImg, "./out/goal.png")
+	imageutil.Save(goalImg, "./out/goal.png")
 
 	searchR := render.NewRenderer(
 		render.Size(width, height),
@@ -112,9 +111,9 @@ func TestDiff(t *testing.T) {
 		searchS, cam := NewDiffScene(width, height, Isearch)
 		searchR.Options(render.Camera(cam), render.Scene(searchS))
 		searchImg := searchR.Render()
-		utils.Save(searchImg, "./out/search.png")
+		imageutil.Save(searchImg, "./out/search.png")
 		diffImg, diffScore := texture.MseDiff(goalImg, searchImg)
-		utils.Save(diffImg, fmt.Sprintf("./out/diff-%d-search-%f-score-%f.png", iter, Isearch, diffScore))
+		imageutil.Save(diffImg, fmt.Sprintf("./out/diff-%d-search-%f-score-%f.png", iter, Isearch, diffScore))
 		iter++
 		if diffScore < 1000 {
 			break

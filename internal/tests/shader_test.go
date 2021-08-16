@@ -17,8 +17,7 @@ import (
 	"poly.red/render"
 	"poly.red/shader"
 	"poly.red/texture/buffer"
-
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 func init() {
@@ -83,7 +82,7 @@ func TestShader(t *testing.T) {
 		return frag.Col
 	})
 
-	utils.Save(buf.Image(), "./shader.png")
+	imageutil.Save(buf.Image(), "./shader.png")
 }
 
 func BenchmarkShaderPrograms(b *testing.B) {

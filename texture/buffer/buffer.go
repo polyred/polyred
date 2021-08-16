@@ -26,10 +26,8 @@ type Buffer struct {
 	rect      image.Rectangle
 
 	format PixelFormat // define the alignment of color values
-
-	// TODO: using []uint8 to better support pixel format
-	depth []uint8
-	color []uint8
+	depth  []uint8
+	color  []uint8
 }
 
 type PixelFormat int
@@ -81,6 +79,10 @@ func (b *Buffer) Clear() {
 	}
 }
 
+func (b *Buffer) Format() PixelFormat {
+	return b.format
+}
+
 func (b *Buffer) Image() *image.RGBA {
 	return &image.RGBA{
 		Stride: 4 * b.stride,
@@ -121,6 +123,47 @@ func (b *Buffer) At(x, y int) Fragment {
 	info := b.fragments[i]
 	b.lock[i].Unlock()
 	return info
+}
+
+func (b *Buffer) MustSet(x, y int, info Fragment) {
+	if !(image.Point{x, b.rect.Max.Y - y}.In(b.rect)) {
+		return
+	}
+
+	i := b.fragmentOffset(x, b.rect.Max.Y-y)
+	j := b.pixelOffset(x, b.rect.Max.Y-y)
+	// Write color and depth information to the two dedicated color and
+	// depth buffers.
+	d := b.depth[j : j+4 : j+4] // Small cap improves performance, see https://golang.org/issue/27857
+	c := b.color[j : j+4 : j+4]
+
+	b.lock[i].Lock()
+	defer b.lock[i].Unlock()
+
+	switch b.format {
+	case PixelFormatBGRA:
+		d[2] = uint8(info.Depth * 0xff)
+		d[1] = uint8(info.Depth * 0xff)
+		d[0] = uint8(info.Depth * 0xff)
+		d[3] = 0xff
+
+		c[2] = info.Col.R
+		c[1] = info.Col.G
+		c[0] = info.Col.B
+		c[3] = info.Col.A
+	default: // PixelFormatRGBA:
+		d[0] = uint8(info.Depth * 0xff)
+		d[1] = uint8(info.Depth * 0xff)
+		d[2] = uint8(info.Depth * 0xff)
+		d[3] = 0xff
+
+		c[0] = info.Col.R
+		c[1] = info.Col.G
+		c[2] = info.Col.B
+		c[3] = info.Col.A
+	}
+
+	b.fragments[i] = info
 }
 
 func (b *Buffer) Set(x, y int, info Fragment) {

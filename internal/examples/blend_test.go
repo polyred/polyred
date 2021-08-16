@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"poly.red/geometry/primitive"
-	"poly.red/internal/utils"
 	"poly.red/render"
 	"poly.red/texture"
 	"poly.red/texture/imageutil"
@@ -29,8 +28,8 @@ func TestBlending(t *testing.T) {
 		return img2.RGBAAt(f.X, f.Y)
 	})
 
-	utils.Save(dst, "./out/dst.png")
+	imageutil.Save(dst, "./out/dst.png")
 	diff, num := texture.MseDiff(want, dst)
-	utils.Save(diff, "./out/diff.png")
+	imageutil.Save(diff, "./out/diff.png")
 	fmt.Println("total diff: ", num, img1.Bounds().Dx()*img1.Bounds().Dy())
 }

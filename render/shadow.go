@@ -13,13 +13,13 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/profiling"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/object"
+	"poly.red/texture/imageutil"
 	"poly.red/texture/shadow"
-
-	"poly.red/internal/utils"
 )
 
 type shadowInfo struct {
@@ -99,7 +99,7 @@ func (r *Renderer) passShadows(index int) {
 	w := r.width * r.msaa
 	h := r.height * r.msaa
 	if r.debug {
-		done := utils.Timed("forward pass (shadow)")
+		done := profiling.Timed("forward pass (shadow)")
 		defer done()
 		defer func() {
 			img := image.NewRGBA(image.Rect(0, 0, w, h))
@@ -116,7 +116,7 @@ func (r *Renderer) passShadows(index int) {
 			}
 			file := fmt.Sprintf("shadow-%d.png", index)
 			fmt.Printf("saving (shadow map)... %s\n", file)
-			utils.Save(img, file)
+			imageutil.Save(img, file)
 		}()
 	}
 

@@ -13,7 +13,6 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -141,7 +140,7 @@ func bench(opt *benchOpts) {
 			buf = r.Render()
 		}
 		b.StopTimer()
-		utils.Save(buf, "./benchmark.png")
+		imageutil.Save(buf, "./benchmark.png")
 	})
 
 	ns := time.Duration(result.NsPerOp())

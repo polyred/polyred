@@ -14,8 +14,8 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/profiling"
 	"poly.red/internal/sched"
-	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -122,7 +122,7 @@ func (r *Renderer) Render() *image.RGBA {
 	if r.debug {
 		runtime.GOMAXPROCS(r.gomaxprocs)
 		fmt.Printf("rendering under GOMAXPROCS=%v\n", r.gomaxprocs)
-		total := utils.Timed("entire rendering")
+		total := profiling.Timed("entire rendering")
 		defer total()
 	}
 
@@ -175,7 +175,7 @@ type gInfo struct {
 
 func (r *Renderer) passForward() {
 	if r.debug {
-		done := utils.Timed("forward pass (world)")
+		done := profiling.Timed("forward pass (world)")
 		defer done()
 	}
 
@@ -237,7 +237,7 @@ func (r *Renderer) passForward() {
 
 func (r *Renderer) passDeferred() {
 	if r.debug {
-		done := utils.Timed("deferred pass (shading)")
+		done := profiling.Timed("deferred pass (shading)")
 		defer done()
 	}
 	w := r.width * r.msaa
@@ -315,7 +315,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) color.RGBA {
 
 func (r *Renderer) passAntialiasing() {
 	if r.debug {
-		done := utils.Timed("antialiasing")
+		done := profiling.Timed("antialiasing")
 		defer done()
 	}
 

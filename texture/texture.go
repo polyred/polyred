@@ -9,7 +9,6 @@ import (
 	"image"
 	"image/color"
 
-	"poly.red/internal/utils"
 	"poly.red/math"
 	"poly.red/texture/imageutil"
 )
@@ -64,7 +63,7 @@ func NewTexture(opts ...Opt) *Texture {
 		height := dy / int(math.Pow(2, float64(i)))
 		t.mipmap[i] = imageutil.Resize(width, height, t.image)
 		if t.debug {
-			utils.Save(t.mipmap[i], fmt.Sprintf("%d.png", i))
+			imageutil.Save(t.mipmap[i], fmt.Sprintf("%d.png", i))
 		}
 	}
 	return t

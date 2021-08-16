@@ -14,8 +14,7 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/render"
-
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 func BenchmarkAlphaBlend(b *testing.B) {
@@ -61,7 +60,7 @@ func TestScreenPass(t *testing.T) {
 
 		if counter != uint32(tt.w)*uint32(tt.h) {
 			t.Errorf("#%d incorrect execution number, want %d, got %d", i, tt.w*tt.h, counter)
-			utils.Save(img, fmt.Sprintf("%d.png", i))
+			imageutil.Save(img, fmt.Sprintf("%d.png", i))
 		}
 	}
 }

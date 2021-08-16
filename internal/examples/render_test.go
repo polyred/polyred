@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"poly.red/internal/utils"
 	"poly.red/render"
 	"poly.red/scene"
+	"poly.red/texture/imageutil"
 )
 
 type BasicOpt struct {
@@ -68,5 +68,5 @@ func Render(t *testing.T, s *scene.Scene, opt *BasicOpt, opts ...render.Opt) {
 
 	path := fmt.Sprintf("./out/%s.png", opt.Name)
 	t.Logf("saving result to: %s", path)
-	utils.Save(r.Render(), path)
+	imageutil.Save(r.Render(), path)
 }
