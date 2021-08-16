@@ -20,6 +20,7 @@ import (
 	"poly.red/object"
 	"poly.red/scene"
 
+	"poly.red/internal/sched"
 	"poly.red/internal/utils"
 )
 
@@ -49,7 +50,7 @@ type Renderer struct {
 	lightEnv       []light.Environment
 	concurrentSize int32
 	gomaxprocs     int
-	sched          *utils.WorkerPool
+	sched          *sched.Pool
 	lockBuf        []sync.Mutex
 	gBuf           []gInfo
 	frameBuf       *image.RGBA
@@ -86,7 +87,10 @@ func NewRenderer(opts ...Opt) *Renderer {
 	r.lockBuf = make([]sync.Mutex, w*h)
 	r.gBuf = make([]gInfo, w*h)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
-	r.sched = utils.NewWorkerPool(uint64(r.gomaxprocs))
+	r.sched = sched.New(sched.Workers(r.gomaxprocs))
+	runtime.SetFinalizer(r, func(r *Renderer) {
+		r.sched.Release()
+	})
 
 	if r.scene != nil {
 		r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
@@ -217,7 +221,7 @@ func (r *Renderer) passForward() {
 
 		mesh.Faces(func(f primitive.Face, m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
-				r.sched.Execute(func() {
+				r.sched.Run(func() {
 					if t.IsValid() {
 						r.draw(uniforms, t, m)
 					}

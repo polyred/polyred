@@ -15,7 +15,7 @@ import (
 	_ "image/png"
 
 	"poly.red/color"
-	"poly.red/internal/utils"
+	"poly.red/internal/sched"
 )
 
 // MustLoadImage loads a given file into a texture.
@@ -32,7 +32,7 @@ type imageOption struct {
 }
 
 func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
-	option := imageOption{
+	option := &imageOption{
 		gammaCorrection: false,
 	}
 
@@ -60,7 +60,7 @@ func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
 
 	// Gamma correction, assume input space in sRGB and converting it to linear.
 	if option.gammaCorrection {
-		pool := utils.NewWorkerPool(uint64(runtime.GOMAXPROCS(0)))
+		pool := sched.New(sched.Workers(runtime.GOMAXPROCS(0)))
 		batch := 1 << 12 // empirical
 		length := len(data.Pix)
 		batcheEnd := length / (4 * batch)
@@ -69,7 +69,7 @@ func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
 		// All batches with equal sizes
 		for i := 0; i < batcheEnd*(4*batch); i += 4 * batch {
 			offset := i
-			pool.Execute(func() {
+			pool.Run(func() {
 				for j := 0; j < 4*batch; j += 4 {
 					data.Pix[offset+j+0] = uint8(color.FromsRGB2Linear(float64(data.Pix[offset+j+0])/0xff)*0xff + 0.5)
 					data.Pix[offset+j+1] = uint8(color.FromsRGB2Linear(float64(data.Pix[offset+j+1])/0xff)*0xff + 0.5)
@@ -77,7 +77,7 @@ func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
 				}
 			})
 		}
-		pool.Execute(func() {
+		pool.Run(func() {
 			for i := batcheEnd * (4 * batch); i < length; i += 4 {
 				data.Pix[i+0] = uint8(color.FromsRGB2Linear(float64(data.Pix[i+0])/0xff)*0xff + 0.5)
 				data.Pix[i+1] = uint8(color.FromsRGB2Linear(float64(data.Pix[i+1])/0xff)*0xff + 0.5)
@@ -86,6 +86,7 @@ func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
 		})
 
 		pool.Wait()
+		pool.Release()
 	}
 
 	return data, nil

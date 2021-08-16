@@ -63,7 +63,7 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 
 		// Note: sadly that the executing function will escape to the
 		// heap which increases the memory allocation. No workaround.
-		r.sched.Execute(func() {
+		r.sched.Run(func() {
 			for x := 0; x < w; x++ {
 				for y := 0; y < h; y++ {
 					old := buf.RGBAAt(x, y)
@@ -88,7 +88,7 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 		for j := 0; j < hsteps*blockSize; j += blockSize {
 			ii := i
 			jj := j
-			r.sched.Execute(func() {
+			r.sched.Run(func() {
 				for k := 0; k < blockSize; k++ {
 					for l := 0; l < blockSize; l++ {
 						x := ii + k
@@ -110,7 +110,7 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 		}
 	}
 
-	r.sched.Execute(func() {
+	r.sched.Run(func() {
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := 0; y < hsteps*blockSize; y++ {
 				old := buf.RGBAAt(x, y)

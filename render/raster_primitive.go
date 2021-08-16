@@ -36,7 +36,7 @@ func (r *Renderer) PrimitivePass(
 		v2 := vertBuf[i+1]
 		v3 := vertBuf[i+2]
 		tri := primitive.NewTriangle(v1, v2, v3)
-		r.sched.Execute(func() {
+		r.sched.Run(func() {
 			if !tri.IsValid() {
 				return
 			}

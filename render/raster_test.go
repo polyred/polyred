@@ -122,7 +122,7 @@ func TestRasterizer(t *testing.T) {
 
 func BenchmarkRasterizer(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(render.Concurrency(int32(block)))
+		r.Options(render.Concurrency(int32(block)), render.Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -135,7 +135,7 @@ func BenchmarkRasterizer(b *testing.B) {
 
 func BenchmarkForwardPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(render.Concurrency(int32(block)))
+		r.Options(render.Concurrency(int32(block)), render.Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -148,7 +148,7 @@ func BenchmarkForwardPass(b *testing.B) {
 
 func BenchmarkDeferredPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(render.Concurrency(int32(block)))
+		r.Options(render.Concurrency(int32(block)), render.Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -189,6 +189,7 @@ func BenchmarkResetBuf(b *testing.B) {
 }
 
 func BenchmarkDraw(b *testing.B) {
+
 	for block := 1; block <= 1024; block *= 2 {
 		matView := c.ViewMatrix()
 		matProj := c.ProjMatrix()
