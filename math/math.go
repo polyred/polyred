@@ -30,6 +30,7 @@ var (
 	Sqrt       = math.Sqrt
 	IsNaN      = math.IsNaN
 	Modf       = math.Modf
+	Ceil       = math.Ceil
 )
 
 const (

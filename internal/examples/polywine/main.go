@@ -1,6 +1,6 @@
-// Copyright 2021 Changkun Ou. All rights reserved.
-// Use of this source code is governed by a license
-// that can be found in the LICENSE file.
+// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
 
 package main
 
@@ -17,6 +17,7 @@ import (
 	"poly.red/render"
 	"poly.red/texture"
 	"poly.red/texture/buffer"
+	"poly.red/texture/imageutil"
 )
 
 type TextureShader struct {
@@ -70,7 +71,7 @@ func main() {
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 
 	tex := texture.NewTexture(
-		texture.Image(texture.MustLoadImage("../../testdata/bunny.png")),
+		texture.Image(imageutil.MustLoadImage("../../testdata/bunny.png")),
 		texture.IsoMipmap(true),
 	)
 

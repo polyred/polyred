@@ -11,6 +11,7 @@ import (
 
 	"poly.red/internal/utils"
 	"poly.red/math"
+	"poly.red/texture/imageutil"
 )
 
 var defaultTexture = &image.RGBA{
@@ -61,7 +62,7 @@ func NewTexture(opts ...Opt) *Texture {
 	for i := 1; i < L; i++ {
 		width := dx / int(math.Pow(2, float64(i)))
 		height := dy / int(math.Pow(2, float64(i)))
-		t.mipmap[i] = utils.Resize(width, height, t.image)
+		t.mipmap[i] = imageutil.Resize(width, height, t.image)
 		if t.debug {
 			utils.Save(t.mipmap[i], fmt.Sprintf("%d.png", i))
 		}

@@ -17,6 +17,7 @@ import (
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
+	"poly.red/texture/imageutil"
 )
 
 func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
@@ -40,7 +41,7 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 	done()
 
 	done = utils.Timed("loading texture")
-	data := texture.MustLoadImage("../testdata/bunny.png")
+	data := imageutil.MustLoadImage("../testdata/bunny.png")
 	tex := texture.NewTexture(
 		texture.Image(data),
 		texture.IsoMipmap(true),

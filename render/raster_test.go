@@ -16,6 +16,7 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -23,8 +24,7 @@ import (
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
-
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 var (
@@ -60,7 +60,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 		panic(err)
 	}
 
-	data := texture.MustLoadImage("../internal/testdata/bunny.png")
+	data := imageutil.MustLoadImage("../internal/testdata/bunny.png")
 	mat := material.NewBlinnPhong(
 		material.Texture(texture.NewTexture(
 			texture.Image(data),

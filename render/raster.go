@@ -14,14 +14,14 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/sched"
+	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
-
-	"poly.red/internal/sched"
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 // 1 second / 60fps = 16.6666 ms/frame
@@ -320,7 +320,7 @@ func (r *Renderer) passAntialiasing() {
 	}
 
 	r.passGammaCorrect()
-	r.outBuf = utils.Resize(r.width, r.height, r.frameBuf)
+	r.outBuf = imageutil.Resize(r.width, r.height, r.frameBuf)
 }
 
 func (r *Renderer) draw(

@@ -1,0 +1,23 @@
+// Copyright 2021 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
+
+package imageutil_test
+
+import (
+	"image"
+	"testing"
+
+	"poly.red/texture/imageutil"
+)
+
+var dst *image.RGBA
+
+func BenchmarkResize(b *testing.B) {
+	img := imageutil.MustLoadImage("../examples/out/shadow.png")
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		dst = imageutil.Resize(img.Bounds().Dx()/2, img.Bounds().Dy()/2, img)
+	}
+}

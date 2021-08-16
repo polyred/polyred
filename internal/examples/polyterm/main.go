@@ -6,7 +6,7 @@ package main
 
 import (
 	"poly.red/internal/term"
-	"poly.red/texture"
+	"poly.red/texture/imageutil"
 )
 
 var t *term.Terminal
@@ -22,6 +22,6 @@ func init() {
 }
 
 func main() {
-	t.Draw(texture.MustLoadImage("../out/shadow.png"))
+	t.Draw(imageutil.MustLoadImage("../out/shadow.png"))
 	t.Flush()
 }

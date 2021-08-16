@@ -12,14 +12,14 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
+	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
-
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Interface) {
@@ -40,8 +40,8 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 		material.Texture(
 			texture.NewTexture(
 				texture.Image(
-					texture.MustLoadImage("../testdata/bunny.png",
-						texture.GammaCorrect(true)),
+					imageutil.MustLoadImage("../testdata/bunny.png",
+						imageutil.GammaCorrect(true)),
 				),
 				texture.IsoMipmap(true),
 			),
@@ -61,8 +61,8 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(texture.NewTexture(
 			texture.Image(
-				texture.MustLoadImage("../testdata/ground.png",
-					texture.GammaCorrect(true)),
+				imageutil.MustLoadImage("../testdata/ground.png",
+					imageutil.GammaCorrect(true)),
 			),
 			texture.IsoMipmap(true),
 		),

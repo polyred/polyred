@@ -11,10 +11,11 @@ import (
 
 	"poly.red/color"
 	"poly.red/texture"
+	"poly.red/texture/imageutil"
 )
 
 func mustLoadTexture(path string) *texture.Texture {
-	data := texture.MustLoadImage(path)
+	data := imageutil.MustLoadImage(path)
 	return texture.NewTexture(
 		texture.Image(data),
 		texture.IsoMipmap(true),

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package texture
+package imageutil
 
 import (
 	"fmt"
@@ -17,6 +17,20 @@ import (
 	"poly.red/color"
 	"poly.red/internal/sched"
 )
+
+type Opt func(t interface{})
+
+// GammaCorrect is a gamma correction option
+func GammaCorrect(enable bool) Opt {
+	return func(t interface{}) {
+		switch o := t.(type) {
+		case *imageOption:
+			o.gammaCorrection = enable
+		default:
+			panic("texture: misuse of GammaCorrect option")
+		}
+	}
+}
 
 // MustLoadImage loads a given file into a texture.
 func MustLoadImage(path string, opts ...Opt) *image.RGBA {

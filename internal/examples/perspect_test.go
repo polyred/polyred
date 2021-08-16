@@ -11,6 +11,7 @@ import (
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
+	"poly.red/texture/imageutil"
 )
 
 func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
@@ -19,7 +20,7 @@ func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	m := mesh.NewPlane(1, 1)
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(texture.NewTexture(
-			texture.Image(texture.MustLoadImage("../testdata/uvgrid2.png")),
+			texture.Image(imageutil.MustLoadImage("../testdata/uvgrid2.png")),
 			texture.IsoMipmap(true),
 		)),
 		material.Kdiff(0.6), material.Kspec(0.5),

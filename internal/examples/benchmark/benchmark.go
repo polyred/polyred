@@ -13,14 +13,14 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
+	"poly.red/internal/utils"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
-
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 type benchOpts struct {
@@ -86,9 +86,9 @@ func bench(opt *benchOpts) {
 		if err != nil {
 			panic(err)
 		}
-		data := texture.MustLoadImage(
+		data := imageutil.MustLoadImage(
 			"../../testdata/bunny.png",
-			texture.GammaCorrect(opt.gammaCorrection),
+			imageutil.GammaCorrect(opt.gammaCorrection),
 		)
 		m.SetMaterial(material.NewBlinnPhong(
 			material.Texture(texture.NewTexture(
@@ -108,8 +108,8 @@ func bench(opt *benchOpts) {
 			panic(err)
 		}
 
-		data = texture.MustLoadImage("../../testdata/ground.png",
-			texture.GammaCorrect(opt.gammaCorrection))
+		data = imageutil.MustLoadImage("../../testdata/ground.png",
+			imageutil.GammaCorrect(opt.gammaCorrection))
 		m.SetMaterial(material.NewBlinnPhong(
 			material.Texture(texture.NewTexture(
 				texture.Image(data),

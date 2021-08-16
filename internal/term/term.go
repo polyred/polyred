@@ -11,7 +11,7 @@ import (
 	"io"
 	"os"
 
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 // Terminal is a drawing canvas on system terminal.
@@ -72,7 +72,7 @@ func (t *Terminal) Draw(src *image.RGBA) {
 	draw.Draw(dst, dst.Bounds(), src, image.Pt(0, 0), draw.Over)
 
 	// FIXME: should resize depends on the terminal pixel ratio.
-	dst = utils.Resize(t.width*2, t.height, dst)
+	dst = imageutil.Resize(t.width*2, t.height, dst)
 
 	for j := 0; j < t.height; j++ {
 		for i := 0; i < t.width; i++ {

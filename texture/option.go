@@ -44,15 +44,3 @@ func IsoMipmap(enable bool) Opt {
 		}
 	}
 }
-
-// GammaCorrect is a gamma correction option
-func GammaCorrect(enable bool) Opt {
-	return func(t interface{}) {
-		switch o := t.(type) {
-		case *imageOption:
-			o.gammaCorrection = enable
-		default:
-			panic("texture: misuse of GammaCorrect option")
-		}
-	}
-}

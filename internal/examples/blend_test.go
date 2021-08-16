@@ -10,16 +10,16 @@ import (
 	"testing"
 
 	"poly.red/geometry/primitive"
+	"poly.red/internal/utils"
 	"poly.red/render"
 	"poly.red/texture"
-
-	"poly.red/internal/utils"
+	"poly.red/texture/imageutil"
 )
 
 func TestBlending(t *testing.T) {
-	img1 := texture.MustLoadImage("../testdata/src1.png")
-	img2 := texture.MustLoadImage("../testdata/src2.png")
-	want := texture.MustLoadImage("../testdata/blend.png")
+	img1 := imageutil.MustLoadImage("../testdata/src1.png")
+	img2 := imageutil.MustLoadImage("../testdata/src2.png")
+	want := imageutil.MustLoadImage("../testdata/blend.png")
 	r := render.NewRenderer(
 		render.Size(img1.Bounds().Dx(), img1.Bounds().Dy()),
 		render.Blending(render.AlphaBlend),

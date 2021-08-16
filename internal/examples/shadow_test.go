@@ -15,6 +15,7 @@ import (
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
+	"poly.red/texture/imageutil"
 )
 
 func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
@@ -41,7 +42,7 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 		panic(err)
 	}
 
-	data := texture.MustLoadImage("../testdata/bunny.png")
+	data := imageutil.MustLoadImage("../testdata/bunny.png")
 	tex := texture.NewTexture(
 		texture.Image(data),
 		texture.IsoMipmap(true),
@@ -59,7 +60,7 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	if err != nil {
 		panic(err)
 	}
-	data = texture.MustLoadImage("../testdata/ground.png")
+	data = imageutil.MustLoadImage("../testdata/ground.png")
 	tex = texture.NewTexture(
 		texture.Image(data),
 		texture.IsoMipmap(true),

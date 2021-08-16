@@ -2,22 +2,15 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package utils
+package imageutil
 
 import (
 	"image"
-	"math"
 	"runtime"
 	"sync"
-)
 
-func linear(in float64) float64 {
-	in = math.Abs(in)
-	if in <= 1 {
-		return 1 - in
-	}
-	return 0
-}
+	"poly.red/math"
+)
 
 // Resize scales an image to new width and height using bilinear interpolation.
 func Resize(width, height int, img *image.RGBA) *image.RGBA {
@@ -50,7 +43,7 @@ func Resize(width, height int, img *image.RGBA) *image.RGBA {
 	coeffs, offset, filterLength := createWeights8(temp.Bounds().Dy(), 2, scaleX, linear)
 	wg.Add(cpus)
 	for i := 0; i < cpus; i++ {
-		slice := makeSlice(temp, i, cpus).(*image.RGBA)
+		slice := makeSlice(temp, i, cpus)
 		go func() {
 			defer wg.Done()
 			resizeRGBA(img, slice, scaleX, coeffs, offset, filterLength)
@@ -62,7 +55,7 @@ func Resize(width, height int, img *image.RGBA) *image.RGBA {
 	coeffs, offset, filterLength = createWeights8(result.Bounds().Dy(), 2, scaleY, linear)
 	wg.Add(cpus)
 	for i := 0; i < cpus; i++ {
-		slice := makeSlice(result, i, cpus).(*image.RGBA)
+		slice := makeSlice(result, i, cpus)
 		go func() {
 			defer wg.Done()
 			resizeRGBA(temp, slice, scaleY, coeffs, offset, filterLength)
@@ -70,6 +63,14 @@ func Resize(width, height int, img *image.RGBA) *image.RGBA {
 	}
 	wg.Wait()
 	return result
+}
+
+func linear(in float64) float64 {
+	in = math.Abs(in)
+	if in <= 1 {
+		return 1 - in
+	}
+	return 0
 }
 
 func resizeRGBA(in *image.RGBA, out *image.RGBA, scale float64, coeffs []int16, offset []int, filterLength int) {
@@ -105,11 +106,10 @@ func resizeRGBA(in *image.RGBA, out *image.RGBA, scale float64, coeffs []int16, 
 			}
 
 			xo := (y-newBounds.Min.Y)*out.Stride + (x-newBounds.Min.X)*4
-
-			out.Pix[xo+0] = clampUint8(rgba[0] / sum)
-			out.Pix[xo+1] = clampUint8(rgba[1] / sum)
-			out.Pix[xo+2] = clampUint8(rgba[2] / sum)
-			out.Pix[xo+3] = clampUint8(rgba[3] / sum)
+			out.Pix[xo+0] = uint8(math.ClampInt(int(rgba[0]/sum), 0, 255))
+			out.Pix[xo+1] = uint8(math.ClampInt(int(rgba[1]/sum), 0, 255))
+			out.Pix[xo+2] = uint8(math.ClampInt(int(rgba[2]/sum), 0, 255))
+			out.Pix[xo+3] = uint8(math.ClampInt(int(rgba[3]/sum), 0, 255))
 		}
 	}
 }
@@ -135,27 +135,12 @@ func calcFactors(width, height int, oldWidth, oldHeight float64) (scaleX, scaleY
 	return
 }
 
-type imageWithSubImage interface {
-	image.Image
-	SubImage(image.Rectangle) image.Image
-}
-
-func makeSlice(img imageWithSubImage, i, n int) image.Image {
-	return img.SubImage(image.Rect(img.Bounds().Min.X, img.Bounds().Min.Y+i*img.Bounds().Dy()/n, img.Bounds().Max.X, img.Bounds().Min.Y+(i+1)*img.Bounds().Dy()/n))
-}
-
-// Keep value in [0,255] range.
-func clampUint8(in int32) uint8 {
-	// casting a negative int to an uint will result in an overflown
-	// large uint. this behavior will be exploited here and in other functions
-	// to achieve a higher performance.
-	if uint32(in) < 256 {
-		return uint8(in)
-	}
-	if in > 255 {
-		return 255
-	}
-	return 0
+func makeSlice(img *image.RGBA, i, n int) *image.RGBA {
+	origX := img.Bounds().Min.X
+	origY := img.Bounds().Min.Y
+	maxX := img.Bounds().Max.X
+	dY := img.Bounds().Dy()
+	return img.SubImage(image.Rect(origX, origY+i*dY/n, maxX, origY+(i+1)*dY/n)).(*image.RGBA)
 }
 
 // range [-256,256]
