@@ -14,10 +14,16 @@ var (
 	bgcolors = bgTermRGB[16:232]
 )
 
-// Bytes colorizes the foreground with the terminal color that matches
+// fgBytes colorizes the foreground with the terminal color that matches
 // the closest the RGB color.
 func fgBytes(in []byte, r, g, b uint8) []byte {
 	return colorize(col(r, g, b, true), in)
+}
+
+// bgBytes colorizes the background with the terminal color that matches
+// the closest the RGB color.
+func bgBytes(in []byte, r, g, b uint8) []byte {
+	return colorize(col(r, g, b, false), in)
 }
 
 func colorize(color, in []byte) []byte {

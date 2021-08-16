@@ -5,19 +5,23 @@
 package main
 
 import (
-	"os"
-
 	"poly.red/internal/term"
-	"poly.red/internal/utils"
 	"poly.red/texture"
 )
 
-func main() {
-	img := texture.MustLoadImage("../out/shadow.png")
-	w, h, _ := term.GetSize()
-	img = utils.Resize(w, h, img)
+var t *term.Terminal
 
-	t := term.New(term.Size(w, h))
-	t.Draw(img)
-	t.Flush(os.Stdout)
+func init() {
+	tw, th, err := term.GetSize()
+	if err != nil {
+		panic(err)
+	}
+
+	// subtract 5 lines of additiona console output.
+	t = term.New(term.Size(tw, th-5))
+}
+
+func main() {
+	t.Draw(texture.MustLoadImage("../out/shadow.png"))
+	t.Flush()
 }
