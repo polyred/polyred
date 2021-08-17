@@ -6,9 +6,9 @@ package buffer
 
 import (
 	"image"
-	"sync"
 
 	"poly.red/geometry/primitive"
+	"poly.red/internal/spinlock"
 )
 
 // Fragment is a collection regarding the relevant geometry information of a fragment.
@@ -20,7 +20,7 @@ type Fragment struct {
 // Buffer is a rendering buffer that supports concurrent-safe
 // depth testing and pixel operation.
 type Buffer struct {
-	lock      []sync.Mutex
+	lock      []spinlock.SpinLock
 	fragments []Fragment
 	stride    int
 	rect      image.Rectangle
@@ -49,7 +49,7 @@ func Format(format PixelFormat) Opt {
 
 func NewBuffer(r image.Rectangle, opts ...Opt) *Buffer {
 	buf := &Buffer{
-		lock:      make([]sync.Mutex, r.Dx()*r.Dy()),
+		lock:      make([]spinlock.SpinLock, r.Dx()*r.Dy()),
 		depth:     make([]uint8, 4*r.Dx()*r.Dy()),
 		color:     make([]uint8, 4*r.Dx()*r.Dy()),
 		fragments: make([]Fragment, r.Dx()*r.Dy()),

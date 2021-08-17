@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"sync"
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/internal/profiling"
+	"poly.red/internal/spinlock"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -26,7 +26,7 @@ type shadowInfo struct {
 	active   bool
 	settings *shadow.Map
 	depths   []float64
-	lock     []sync.Mutex
+	lock     []spinlock.SpinLock
 }
 
 func (r *Renderer) initShadowMaps() {
@@ -87,7 +87,7 @@ func (r *Renderer) initShadowMaps() {
 		r.shadowBufs[i].active = true
 		r.shadowBufs[i].settings = shadow.NewMap(shadow.Camera(c))
 		r.shadowBufs[i].depths = make([]float64, w*h)
-		r.shadowBufs[i].lock = make([]sync.Mutex, w*h)
+		r.shadowBufs[i].lock = make([]spinlock.SpinLock, w*h)
 	}
 }
 

@@ -77,12 +77,12 @@ func (r *Renderer) Draw(buf *buffer.Buffer, prog shader.Program,
 
 	// View frustum culling
 	// TODO: deal with window resizing
-	// if !r.inViewFrustum(v1.Pos, v2.Pos, v3.Pos) {
-	// 	return false
-	// }
+	if !r.inViewFrustum(buf, v1.Pos, v2.Pos, v3.Pos) {
+		return false
+	}
 
 	// All vertices are inside the viewport, let's rasterize directly
-	if r.inViewport2(v1.Pos) && r.inViewport2(v2.Pos) && r.inViewport2(v3.Pos) {
+	if r.inViewport2(buf, v1.Pos) && r.inViewport2(buf, v2.Pos) && r.inViewport2(buf, v3.Pos) {
 		r.rasterize(buf, prog, &v1, &v2, &v3, recipw)
 		return true
 	}
@@ -92,10 +92,10 @@ func (r *Renderer) Draw(buf *buffer.Buffer, prog shader.Program,
 	return true
 }
 
-func (r *Renderer) inViewFrustum(v1, v2, v3 math.Vec4) bool {
+func (r *Renderer) inViewFrustum(buf *buffer.Buffer, v1, v2, v3 math.Vec4) bool {
 	// TODO: can be optimize?
 	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float64(r.width*r.msaa), float64(r.height*r.msaa), 1),
+		math.NewVec3(float64(buf.Bounds().Dx()*r.msaa), float64(buf.Bounds().Dy()*r.msaa), 1),
 		math.NewVec3(0, 0, 0),
 		math.NewVec3(0, 0, -1),
 	)
@@ -103,9 +103,9 @@ func (r *Renderer) inViewFrustum(v1, v2, v3 math.Vec4) bool {
 	return viewportAABB.Intersect(triangleAABB)
 }
 
-func (r *Renderer) inViewport2(v math.Vec4) bool {
-	w := float64(r.msaa * r.width)
-	h := float64(r.msaa * r.height)
+func (r *Renderer) inViewport2(buf *buffer.Buffer, v math.Vec4) bool {
+	w := float64(r.msaa * buf.Bounds().Dx())
+	h := float64(r.msaa * buf.Bounds().Dy())
 	if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
 		return false
 	}

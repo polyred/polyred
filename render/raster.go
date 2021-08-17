@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"image"
 	"runtime"
-	"sync"
 
 	"poly.red/camera"
 	"poly.red/color"
@@ -16,6 +15,7 @@ import (
 	"poly.red/geometry/primitive"
 	"poly.red/internal/profiling"
 	"poly.red/internal/sched"
+	"poly.red/internal/spinlock"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -51,7 +51,7 @@ type Renderer struct {
 	concurrentSize int32
 	gomaxprocs     int
 	sched          *sched.Pool
-	lockBuf        []sync.Mutex
+	lockBuf        []spinlock.SpinLock
 	gBuf           []gInfo
 	frameBuf       *image.RGBA
 	renderCamera   camera.Interface
@@ -84,7 +84,7 @@ func NewRenderer(opts ...Opt) *Renderer {
 	h := r.height * r.msaa
 
 	// initialize rendering caches
-	r.lockBuf = make([]sync.Mutex, w*h)
+	r.lockBuf = make([]spinlock.SpinLock, w*h)
 	r.gBuf = make([]gInfo, w*h)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
 	r.sched = sched.New(sched.Workers(r.gomaxprocs))

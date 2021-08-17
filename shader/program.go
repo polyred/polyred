@@ -18,6 +18,10 @@ type (
 	FragmentProgram func(primitive.Fragment) color.RGBA
 )
 
+// FIXME: returning a copy may be problematic for primitive.Vertex.
+// It has a map[K]V field which is actually a pointer. Need figure out
+// a better way of returning a resulting vertex.
+
 // Program is a interface that describes a pair of shader programs.
 type Program interface {
 	VertexShader(primitive.Vertex) primitive.Vertex

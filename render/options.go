@@ -7,9 +7,9 @@ package render
 import (
 	"image"
 	"image/color"
-	"sync"
 
 	"poly.red/camera"
+	"poly.red/internal/spinlock"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/object"
@@ -100,7 +100,7 @@ func (r *Renderer) Options(opts ...Opt) {
 	h := r.height * r.msaa
 
 	// calibrate rendering size
-	r.lockBuf = make([]sync.Mutex, w*h)
+	r.lockBuf = make([]spinlock.SpinLock, w*h)
 	r.gBuf = make([]gInfo, w*h)
 	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
 
