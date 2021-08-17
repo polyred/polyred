@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"image"
 	"image/draw"
+	_ "image/jpeg"
+	_ "image/png"
 	"os"
 	"runtime"
 
-	_ "image/jpeg"
-	_ "image/png"
-
 	"poly.red/color"
+
 	"poly.red/internal/sched"
 )
 

@@ -9,11 +9,12 @@ import (
 	"image/color"
 
 	"poly.red/camera"
-	"poly.red/internal/spinlock"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
+
+	"poly.red/internal/spinlock"
 )
 
 // Opt represents a rendering Opt

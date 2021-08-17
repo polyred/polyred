@@ -10,7 +10,6 @@ import (
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/internal/profiling"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -18,6 +17,8 @@ import (
 	"poly.red/scene"
 	"poly.red/texture"
 	"poly.red/texture/imageutil"
+
+	"poly.red/internal/profiling"
 )
 
 func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {

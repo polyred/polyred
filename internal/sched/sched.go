@@ -16,7 +16,11 @@ type Pool struct {
 	workers    []chan funcdata
 }
 
-type funcdata struct{ fn func() }
+type funcdata struct {
+	fn func()
+	fg func(interface{})
+	ar interface{}
+}
 
 // Opt is a scheduler option.
 type Opt func(w *Pool)
@@ -61,7 +65,11 @@ func New(opts ...Opt) *Pool {
 	for i := 0; i < p.numWorkers; i++ {
 		go func(workerId int) {
 			for d := range p.workers[workerId] {
-				d.fn()
+				if d.fn != nil {
+					d.fn()
+				} else {
+					d.fg(d.ar)
+				}
 				p.complete()
 			}
 		}(i)
@@ -76,6 +84,11 @@ func (p *Pool) Run(f ...func()) {
 		ii := p.randomizer(0, p.numWorkers)
 		p.workers[ii] <- funcdata{fn: f[i]}
 	}
+}
+
+func (p *Pool) RunWithArgs(f func(args interface{}), args interface{}) {
+	ii := p.randomizer(0, p.numWorkers)
+	p.workers[ii] <- funcdata{fg: f, ar: args}
 }
 
 func (p *Pool) Add(numTasks uint64) uint64 {

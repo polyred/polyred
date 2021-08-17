@@ -12,12 +12,13 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
-	"poly.red/internal/gui"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/texture"
 	"poly.red/texture/buffer"
 	"poly.red/texture/imageutil"
+
+	"poly.red/internal/gui"
 )
 
 type TextureShader struct {

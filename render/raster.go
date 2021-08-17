@@ -13,15 +13,16 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
-	"poly.red/internal/profiling"
-	"poly.red/internal/sched"
-	"poly.red/internal/spinlock"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
 	"poly.red/texture/imageutil"
+
+	"poly.red/internal/profiling"
+	"poly.red/internal/sched"
+	"poly.red/internal/spinlock"
 )
 
 // 1 second / 60fps = 16.6666 ms/frame

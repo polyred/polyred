@@ -8,6 +8,7 @@ import (
 	"image"
 
 	"poly.red/geometry/primitive"
+
 	"poly.red/internal/spinlock"
 )
 

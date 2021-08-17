@@ -12,14 +12,15 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
-	"poly.red/internal/profiling"
-	"poly.red/internal/spinlock"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/texture/imageutil"
 	"poly.red/texture/shadow"
+
+	"poly.red/internal/profiling"
+	"poly.red/internal/spinlock"
 )
 
 type shadowInfo struct {
@@ -106,7 +107,7 @@ func (r *Renderer) passShadows(index int) {
 			for i := 0; i < w; i++ {
 				for j := 0; j < h; j++ {
 					z := r.shadowBufs[index].depths[i+(h-j-1)*w]
-					img.Set(i, j, color.RGBA{
+					img.SetRGBA(i, j, color.RGBA{
 						uint8(z * 255),
 						uint8(z * 255),
 						uint8(z * 255),

@@ -76,7 +76,9 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 					if r.blendFunc != nil {
 						col = r.blendFunc(buf.RGBAAt(x, y), col)
 					}
-					buf.Set(x, y, col)
+					// Use SetRGBA instead of Set can avoid memory allocation.
+					// See https://golang.org/issue/44808.
+					buf.SetRGBA(x, y, col)
 				}
 			}
 		})
@@ -103,7 +105,9 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 						if r.blendFunc != nil {
 							col = r.blendFunc(buf.RGBAAt(x, y), col)
 						}
-						buf.Set(x, y, col)
+						// Use SetRGBA instead of Set can avoid memory allocation.
+						// See https://golang.org/issue/44808.
+						buf.SetRGBA(x, y, col)
 					}
 				}
 			})
@@ -123,7 +127,9 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 				if r.blendFunc != nil {
 					col = r.blendFunc(buf.RGBAAt(x, y), col)
 				}
-				buf.Set(x, y, col)
+				// Use SetRGBA instead of Set can avoid memory allocation.
+				// See https://golang.org/issue/44808.
+				buf.SetRGBA(x, y, col)
 			}
 		}
 	}, func() {
@@ -139,7 +145,9 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 				if r.blendFunc != nil {
 					col = r.blendFunc(buf.RGBAAt(x, y), col)
 				}
-				buf.Set(x, y, col)
+				// Use SetRGBA instead of Set can avoid memory allocation.
+				// See https://golang.org/issue/44808.
+				buf.SetRGBA(x, y, col)
 			}
 		}
 		for x := wsteps * blockSize; x < w; x++ {
@@ -154,7 +162,9 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 				if r.blendFunc != nil {
 					col = r.blendFunc(buf.RGBAAt(x, y), col)
 				}
-				buf.Set(x, y, col)
+				// Use SetRGBA instead of Set can avoid memory allocation.
+				// See https://golang.org/issue/44808.
+				buf.SetRGBA(x, y, col)
 			}
 		}
 	})

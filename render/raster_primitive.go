@@ -349,12 +349,15 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, prog shader.Program,
 // interpoVaryings perspective correct interpolates
 func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
 	recipw, bc [3]float64) {
+	l := len(frag)
 	for name := range v1 {
 		switch val1 := v1[name].(type) {
 		case float64:
-			frag[name] = r.interpolate([3]float64{
-				val1, v2[name].(float64), v3[name].(float64),
-			}, recipw, bc)
+			if l > 0 {
+				frag[name] = r.interpolate([3]float64{
+					val1, v2[name].(float64), v3[name].(float64),
+				}, recipw, bc)
+			}
 		case math.Vec2:
 			x := r.interpolate([3]float64{
 				val1.X,
@@ -366,7 +369,9 @@ func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
 				v2[name].(math.Vec4).Y,
 				v3[name].(math.Vec4).Y,
 			}, recipw, bc)
-			frag[name] = math.NewVec2(x, y)
+			if l > 0 {
+				frag[name] = math.NewVec2(x, y)
+			}
 		case math.Vec3:
 			x := r.interpolate([3]float64{
 				val1.X,
@@ -383,7 +388,9 @@ func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
 				v2[name].(math.Vec4).Z,
 				v3[name].(math.Vec4).Z,
 			}, recipw, bc)
-			frag[name] = math.NewVec3(x, y, z)
+			if l > 0 {
+				frag[name] = math.NewVec3(x, y, z)
+			}
 		case math.Vec4:
 			x := r.interpolate([3]float64{
 				val1.X,
@@ -405,7 +412,9 @@ func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
 				v2[name].(math.Vec4).W,
 				v3[name].(math.Vec4).W,
 			}, recipw, bc)
-			frag[name] = math.NewVec4(x, y, z, w)
+			if l > 0 {
+				frag[name] = math.NewVec4(x, y, z, w)
+			}
 		}
 	}
 }

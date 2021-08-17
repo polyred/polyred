@@ -7,10 +7,11 @@ package main
 import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/internal/gui"
 	"poly.red/light"
 	"poly.red/render"
 	"poly.red/scene"
+
+	"poly.red/internal/gui"
 )
 
 func main() {
@@ -18,7 +19,7 @@ func main() {
 	s := scene.NewScene()
 
 	// Load and add the mesh to the scene graph
-	s.Add(mesh.MustLoad("../../testdata/bunny.obj"))
+	s.Add(mesh.MustLoad("../../testdata/scene.obj"))
 
 	// Create and add a point light to the scene graph
 	s.Add(light.NewPoint())

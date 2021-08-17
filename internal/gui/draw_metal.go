@@ -13,8 +13,9 @@ import (
 	"unsafe"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"poly.red/internal/driver/mtl"
 	"poly.red/texture/buffer"
+
+	"poly.red/internal/driver/mtl"
 )
 
 // driverInfo contains graphics driver informations.

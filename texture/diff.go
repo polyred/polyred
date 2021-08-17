@@ -12,7 +12,7 @@ import (
 
 // MseDiff computes the mean sequare error difference of two given images.
 // If the two given images have different sizes, the function panics.
-func MseDiff(img1, img2 image.Image) (*image.RGBA, float64) {
+func MseDiff(img1, img2 image.RGBA) (*image.RGBA, float64) {
 	if !img1.Bounds().Eq(img2.Bounds()) {
 		panic("image: incorrect image bounds")
 	}
@@ -25,8 +25,8 @@ func MseDiff(img1, img2 image.Image) (*image.RGBA, float64) {
 	sum := 0.0
 	for i := 0; i < w; i++ {
 		for j := 0; j < h; j++ {
-			diff := colorDiff2(img1.At(i, j), img2.At(i, j))
-			diffImg.Set(i, j, colorDiff(img1.At(i, j), img2.At(i, j)))
+			diff := colorDiff2(img1.RGBAAt(i, j), img2.RGBAAt(i, j))
+			diffImg.SetRGBA(i, j, colorDiff(img1.RGBAAt(i, j), img2.RGBAAt(i, j)))
 			sum += diff
 		}
 	}
@@ -34,7 +34,7 @@ func MseDiff(img1, img2 image.Image) (*image.RGBA, float64) {
 	return diffImg, sum / float64(w*h)
 }
 
-func colorL2diff2(c1, c2 color.Color) float64 {
+func colorL2diff2(c1, c2 color.RGBA) float64 {
 	r1, g1, b1, _ := c1.RGBA()
 	r2, g2, b2, _ := c2.RGBA()
 
@@ -45,7 +45,7 @@ func colorL2diff2(c1, c2 color.Color) float64 {
 	return float64(dr + dg + db)
 }
 
-func colorDiff(c1, c2 color.Color) color.Color {
+func colorDiff(c1, c2 color.RGBA) color.RGBA {
 	r1, g1, b1, _ := c1.RGBA()
 	r2, g2, b2, _ := c2.RGBA()
 	dr := uint8(r1 - r2)
@@ -55,7 +55,7 @@ func colorDiff(c1, c2 color.Color) color.Color {
 }
 
 // colorDiff2 implements https://www.compuphase.com/cmetric.htm
-func colorDiff2(c1, c2 color.Color) float64 {
+func colorDiff2(c1, c2 color.RGBA) float64 {
 	r1, g1, b1, _ := c1.RGBA()
 	r2, g2, b2, _ := c2.RGBA()
 	dr := (r1 - r2) * (r1 - r2)
