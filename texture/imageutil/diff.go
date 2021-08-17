@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package texture
+package imageutil
 
 import (
 	"image"
@@ -10,9 +10,15 @@ import (
 	"math"
 )
 
-// MseDiff computes the mean sequare error difference of two given images.
+// DiffKernel is a kernel function that consumes two colors and returns
+// their difference.
+type DiffKernel func(c1, c2 color.RGBA) float64
+
+// Diff computes the error difference of two given images with respect to the
+// given kernel function.
+//
 // If the two given images have different sizes, the function panics.
-func MseDiff(img1, img2 image.RGBA) (*image.RGBA, float64) {
+func Diff(img1, img2 *image.RGBA, kernel DiffKernel) (*image.RGBA, float64) {
 	if !img1.Bounds().Eq(img2.Bounds()) {
 		panic("image: incorrect image bounds")
 	}
@@ -25,16 +31,16 @@ func MseDiff(img1, img2 image.RGBA) (*image.RGBA, float64) {
 	sum := 0.0
 	for i := 0; i < w; i++ {
 		for j := 0; j < h; j++ {
-			diff := colorDiff2(img1.RGBAAt(i, j), img2.RGBAAt(i, j))
+			score := kernel(img1.RGBAAt(i, j), img2.RGBAAt(i, j)) // colorDiff2
 			diffImg.SetRGBA(i, j, colorDiff(img1.RGBAAt(i, j), img2.RGBAAt(i, j)))
-			sum += diff
+			sum += score
 		}
 	}
 
 	return diffImg, sum / float64(w*h)
 }
 
-func colorL2diff2(c1, c2 color.RGBA) float64 {
+func MseKernel(c1, c2 color.RGBA) float64 {
 	r1, g1, b1, _ := c1.RGBA()
 	r2, g2, b2, _ := c2.RGBA()
 
@@ -44,6 +50,9 @@ func colorL2diff2(c1, c2 color.RGBA) float64 {
 
 	return float64(dr + dg + db)
 }
+
+// TODO: figure out how to export diff image?
+// Maybe a kernel: func(color.RGBA, color.RGBA) (color.RGBA, float64)?
 
 func colorDiff(c1, c2 color.RGBA) color.RGBA {
 	r1, g1, b1, _ := c1.RGBA()

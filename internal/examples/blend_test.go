@@ -11,7 +11,6 @@ import (
 
 	"poly.red/geometry/primitive"
 	"poly.red/render"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
@@ -29,7 +28,7 @@ func TestBlending(t *testing.T) {
 	})
 
 	imageutil.Save(dst, "./out/dst.png")
-	diff, num := texture.MseDiff(want, dst)
+	diff, num := imageutil.Diff(want, dst, imageutil.MseKernel)
 	imageutil.Save(diff, "./out/diff.png")
 	fmt.Println("total diff: ", num, img1.Bounds().Dx()*img1.Bounds().Dy())
 }

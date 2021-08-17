@@ -112,7 +112,7 @@ func TestDiff(t *testing.T) {
 		searchR.Options(render.Camera(cam), render.Scene(searchS))
 		searchImg := searchR.Render()
 		imageutil.Save(searchImg, "./out/search.png")
-		diffImg, diffScore := texture.MseDiff(goalImg, searchImg)
+		diffImg, diffScore := imageutil.Diff(goalImg, searchImg, imageutil.MseKernel)
 		imageutil.Save(diffImg, fmt.Sprintf("./out/diff-%d-search-%f-score-%f.png", iter, Isearch, diffScore))
 		iter++
 		if diffScore < 1000 {
