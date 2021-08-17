@@ -25,65 +25,6 @@ type driverInfo struct {
 	cq     mtl.CommandQueue
 }
 
-func (w *win) initCallbacks() {
-	// Setup event callbacks
-	w.win.SetSizeCallback(func(x *glfw.Window, width int, height int) {
-		fbw, fbh := x.GetFramebufferSize()
-		w.evSize.Width = width
-		w.evSize.Height = height
-		w.scaleX = float64(fbw) / float64(width)
-		w.scaleY = float64(fbh) / float64(height)
-		w.dispatcher.Dispatch(OnResize, &w.evSize)
-
-		// The following replaces the w.bufs on the main thread.
-		//
-		// It does not involve with data race. Because the draw call is
-		// also handled on the main thread, which is currently not possible
-		// to execute.
-		w.ml.SetDrawableSize(fbw, fbh)
-		w.resize <- image.Rect(0, 0, fbw, fbh)
-	})
-	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
-		w.evCursor.Xpos = xpos
-		w.evCursor.Ypos = ypos
-		w.evCursor.Mods = w.mods
-		w.dispatcher.Dispatch(OnCursor, &w.evCursor)
-	})
-	w.win.SetMouseButtonCallback(func(x *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
-		xpos, ypos := x.GetCursorPos()
-		w.evMouse.Button = MouseButton(button)
-		w.evMouse.Mods = ModifierKey(mods)
-		w.evMouse.Xpos = xpos
-		w.evMouse.Ypos = ypos
-
-		switch action {
-		case glfw.Press:
-			w.dispatcher.Dispatch(OnMouseDown, &w.evMouse)
-		case glfw.Release:
-			w.dispatcher.Dispatch(OnMouseUp, &w.evMouse)
-		}
-	})
-	w.win.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
-		w.evScroll.Xoffset = xoff
-		w.evScroll.Yoffset = yoff
-		w.evScroll.Mods = w.mods
-		w.dispatcher.Dispatch(OnScroll, &w.evScroll)
-	})
-	w.win.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
-		w.evKey.Key = Key(key)
-		w.evKey.Mods = ModifierKey(mods)
-		w.mods = w.evKey.Mods
-		switch action {
-		case glfw.Press:
-			w.dispatcher.Dispatch(OnKeyDown, &w.evKey)
-		case glfw.Release:
-			w.dispatcher.Dispatch(OnKeyUp, &w.evKey)
-		case glfw.Repeat:
-			w.dispatcher.Dispatch(OnKeyRepeat, &w.evKey)
-		}
-	})
-}
-
 func (w *win) initWinHints() {
 	glfw.WindowHint(glfw.ClientAPI, glfw.NoAPI)
 }
@@ -108,6 +49,10 @@ func (w *win) initDriver() {
 	cv.SetWantsLayer(true)
 	cq := device.MakeCommandQueue()
 	w.driverInfo = driverInfo{device: device, ml: ml, cq: cq}
+}
+
+func (w *win) initContext() {
+	// Nothing needs to be done on Metal.
 }
 
 // flush flushes the containing pixel buffer of the given image to the
@@ -158,7 +103,15 @@ func (w *win) flush(img *image.RGBA) error {
 // resetBuffers assign new buffers to the caches window buffers (w.bufs)
 // Note: with Metal, we always use BGRA pixel format.
 func (w *win) resetBufs(r image.Rectangle) {
+	// The following replaces the w.bufs on the main thread.
+	//
+	// It does not involve with data race. Because the draw call is
+	// also handled on the main thread, which is currently not possible
+	// to execute.
 	for i := 0; i < w.buflen; i++ {
 		w.bufs[i] = buffer.NewBuffer(r, buffer.Format(buffer.PixelFormatBGRA))
 	}
+
+	// SetDrawableSize later so that all buffers are prepared for flushing.
+	w.ml.SetDrawableSize(r.Dx(), r.Dy())
 }

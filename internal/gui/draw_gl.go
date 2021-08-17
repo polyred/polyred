@@ -21,64 +21,6 @@ type driverInfo struct {
 	// Nothing for GL
 }
 
-func (w *win) initCallbacks() {
-	// Setup event callbacks
-	w.win.SetSizeCallback(func(x *glfw.Window, width int, height int) {
-		fbw, fbh := x.GetFramebufferSize()
-		w.evSize.Width = width
-		w.evSize.Height = height
-		w.scaleX = float64(fbw) / float64(width)
-		w.scaleY = float64(fbh) / float64(height)
-		w.dispatcher.Dispatch(OnResize, &w.evSize)
-
-		// The following replaces the w.bufs on the main thread.
-		//
-		// It does not involve with data race. Because the draw call is
-		// also handled on the main thread, which is currently not possible
-		// to execute.
-		w.resize <- image.Rect(0, 0, fbw, fbh)
-	})
-	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
-		w.evCursor.Xpos = xpos
-		w.evCursor.Ypos = ypos
-		w.evCursor.Mods = w.mods
-		w.dispatcher.Dispatch(OnCursor, &w.evCursor)
-	})
-	w.win.SetMouseButtonCallback(func(x *glfw.Window, button glfw.MouseButton, action glfw.Action, mods glfw.ModifierKey) {
-		xpos, ypos := x.GetCursorPos()
-		w.evMouse.Button = MouseButton(button)
-		w.evMouse.Mods = ModifierKey(mods)
-		w.evMouse.Xpos = xpos
-		w.evMouse.Ypos = ypos
-
-		switch action {
-		case glfw.Press:
-			w.dispatcher.Dispatch(OnMouseDown, &w.evMouse)
-		case glfw.Release:
-			w.dispatcher.Dispatch(OnMouseUp, &w.evMouse)
-		}
-	})
-	w.win.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
-		w.evScroll.Xoffset = xoff
-		w.evScroll.Yoffset = yoff
-		w.evScroll.Mods = w.mods
-		w.dispatcher.Dispatch(OnScroll, &w.evScroll)
-	})
-	w.win.SetKeyCallback(func(_ *glfw.Window, key glfw.Key, scancode int, action glfw.Action, mods glfw.ModifierKey) {
-		w.evKey.Key = Key(key)
-		w.evKey.Mods = ModifierKey(mods)
-		w.mods = w.evKey.Mods
-		switch action {
-		case glfw.Press:
-			w.dispatcher.Dispatch(OnKeyDown, &w.evKey)
-		case glfw.Release:
-			w.dispatcher.Dispatch(OnKeyUp, &w.evKey)
-		case glfw.Repeat:
-			w.dispatcher.Dispatch(OnKeyRepeat, &w.evKey)
-		}
-	})
-}
-
 func (w *win) initWinHints() {
 	glfw.WindowHint(glfw.ContextVersionMajor, 2)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
@@ -87,6 +29,10 @@ func (w *win) initWinHints() {
 }
 
 func (w *win) initDriver() {
+	// Nothing needs to be done on OpenGL.
+}
+
+func (w *win) initContext() {
 	w.win.MakeContextCurrent()
 	err := gl.Init()
 	if err != nil {
