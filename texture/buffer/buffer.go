@@ -69,12 +69,24 @@ func (b *Buffer) Clear() {
 	// This loop involves compiler optimization, see:
 	// https://golang.org/issue/5373
 
+	b.ClearFragments()
+	b.ClearDepth()
+	b.ClearFrameBuf()
+}
+
+func (b *Buffer) ClearFragments() {
 	for i := range b.fragments {
 		b.fragments[i] = Fragment{}
 	}
+}
+
+func (b *Buffer) ClearDepth() {
 	for i := range b.depth {
 		b.depth[i] = 0
 	}
+}
+
+func (b *Buffer) ClearFrameBuf() {
 	for i := range b.color {
 		b.color[i] = 0
 	}

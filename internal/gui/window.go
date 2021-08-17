@@ -76,10 +76,12 @@ var window *win
 
 // Show shows the given image on a window.
 func Show(img *image.RGBA) {
-	// TODO: fix on darwin about scaling issue.
-	err := InitWindow(
-		WithSize(img.Bounds().Dx()/2, img.Bounds().Dy()/2),
-	)
+	// TODO: fix on darwin about scaling issue, compute dynamically
+	opt := WithSize(img.Bounds().Dx(), img.Bounds().Dy())
+	if runtime.GOOS == "darwin" {
+		opt = WithSize(img.Bounds().Dx()/2, img.Bounds().Dy()/2)
+	}
+	err := InitWindow(opt)
 	if err != nil {
 		panic(err)
 	}

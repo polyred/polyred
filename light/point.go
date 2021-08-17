@@ -31,7 +31,7 @@ func NewPoint(opts ...Opt) Source {
 	l := &Point{
 		intensity:    1,
 		color:        color.RGBA{255, 255, 255, 255},
-		pos:          math.Vec3{},
+		pos:          math.Vec3{X: 1, Y: 1, Z: 1},
 		useShadowMap: false,
 	}
 

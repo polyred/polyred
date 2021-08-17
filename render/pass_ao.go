@@ -7,24 +7,23 @@ package render
 import (
 	"image/color"
 
+	"poly.red/material"
 	"poly.red/math"
+	"poly.red/texture/buffer"
 )
 
-type ambientOcclusionPass struct {
-	w, h    int
-	gbuffer []gInfo
-}
+type ambientOcclusionPass struct{ buf *buffer.Buffer }
 
 func (ao *ambientOcclusionPass) Shade(x, y int, col color.RGBA) color.RGBA {
 	// FIXME: naive and super slow SSAO implementation. Optimize
 	// when denoiser is available.
-	w := ao.w
-	idx := x + w*y
-	info := &ao.gbuffer[idx]
-	if info.mat == nil {
-		return col
+
+	info := ao.buf.At(x, y)
+	mat, ok := info.AttrFlat["Mat"].(material.Material)
+	if !ok {
+		mat = nil
 	}
-	if !info.mat.AmbientOcclusion() {
+	if mat == nil || !mat.AmbientOcclusion() {
 		return col
 	}
 
@@ -47,7 +46,7 @@ func (ao *ambientOcclusionPass) maxElevationAngle(x, y int, dirX, dirY float64) 
 	maxangle := 0.0
 	for t := 0.0; t < 100; t += 1 {
 		cur := p.Add(dir.Scale(t, t, 1, 1))
-		if cur.X >= float64(ao.w) || cur.Y >= float64(ao.h) || cur.X < 0 || cur.Y < 0 {
+		if !ao.buf.In(int(cur.X), int(cur.Y)) {
 			return maxangle
 		}
 
@@ -55,11 +54,23 @@ func (ao *ambientOcclusionPass) maxElevationAngle(x, y int, dirX, dirY float64) 
 		if distance < 1 {
 			continue
 		}
-		shadeIdx := int(cur.X) + ao.w*int(cur.Y)
-		traceIdx := int(p.X) + ao.w*int(p.Y)
 
-		elevation := ao.gbuffer[shadeIdx].z - ao.gbuffer[traceIdx].z
+		// FIXME: I think the implementation here has internal bugs.
+		// The minimum depth is assumed to be -1, otherwise the calculation
+		// can be wrong. Figure out why.
+		shadeInfo := ao.buf.At(int(cur.X), int(cur.Y))
+		traceInfo := ao.buf.At(int(p.X), int(p.Y))
+		shadeDepth := shadeInfo.Depth
+		traceDepth := traceInfo.Depth
+		if !shadeInfo.Ok {
+			shadeDepth = -1
+		}
+		if !traceInfo.Ok {
+			traceDepth = -1
+		}
+		elevation := shadeDepth - traceDepth
 		maxangle = math.Max(maxangle, math.Atan(elevation/distance))
 	}
+
 	return maxangle
 }

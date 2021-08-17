@@ -16,6 +16,7 @@ import (
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/object"
+	"poly.red/texture/buffer"
 	"poly.red/texture/imageutil"
 	"poly.red/texture/shadow"
 
@@ -31,8 +32,6 @@ type shadowInfo struct {
 }
 
 func (r *Renderer) initShadowMaps() {
-	w := r.width * r.msaa
-	h := r.width * r.msaa
 	r.shadowBufs = make([]shadowInfo, len(r.lightSources))
 	for i := 0; i < len(r.lightSources); i++ {
 		if !r.lightSources[i].CastShadow() {
@@ -87,8 +86,8 @@ func (r *Renderer) initShadowMaps() {
 		}
 		r.shadowBufs[i].active = true
 		r.shadowBufs[i].settings = shadow.NewMap(shadow.Camera(c))
-		r.shadowBufs[i].depths = make([]float64, w*h)
-		r.shadowBufs[i].lock = make([]spinlock.SpinLock, w*h)
+		r.shadowBufs[i].depths = make([]float64, r.buf.Bounds().Dx()*r.buf.Bounds().Dy())
+		r.shadowBufs[i].lock = make([]spinlock.SpinLock, r.buf.Bounds().Dx()*r.buf.Bounds().Dy())
 	}
 }
 
@@ -97,16 +96,14 @@ func (r *Renderer) passShadows(index int) {
 		return
 	}
 
-	w := r.width * r.msaa
-	h := r.height * r.msaa
 	if r.debug {
 		done := profiling.Timed("forward pass (shadow)")
 		defer done()
 		defer func() {
-			img := image.NewRGBA(image.Rect(0, 0, w, h))
-			for i := 0; i < w; i++ {
-				for j := 0; j < h; j++ {
-					z := r.shadowBufs[index].depths[i+(h-j-1)*w]
+			img := image.NewRGBA(image.Rect(0, 0, r.buf.Bounds().Dx(), r.buf.Bounds().Dy()))
+			for i := 0; i < r.buf.Bounds().Dx(); i++ {
+				for j := 0; j < r.buf.Bounds().Dy(); j++ {
+					z := r.shadowBufs[index].depths[i+(r.buf.Bounds().Dy()-j-1)*r.buf.Bounds().Dx()]
 					img.SetRGBA(i, j, color.RGBA{
 						uint8(z * 255),
 						uint8(z * 255),
@@ -124,7 +121,7 @@ func (r *Renderer) passShadows(index int) {
 	c := r.shadowBufs[index].settings.Camera()
 	matView := c.ViewMatrix()
 	matProj := c.ProjMatrix()
-	matVP := math.ViewportMatrix(float64(w), float64(h))
+	matVP := math.ViewportMatrix(float64(r.buf.Bounds().Dx()), float64(r.buf.Bounds().Dy()))
 	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
 			return true
@@ -206,20 +203,16 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 	xmax := int(math.Round(aabb.Max.X) + 1)
 	ymin := int(math.Round(aabb.Min.Y) - 1)
 	ymax := int(math.Round(aabb.Max.Y) + 1)
-	w := r.width * r.msaa
-	h := r.height * r.msaa
 	for x := xmin; x <= xmax; x++ {
 		for y := ymin; y <= ymax; y++ {
-			if x < 0 || x >= w || y < 0 || y >= h {
+			if !r.buf.In(x, y) {
 				continue
 			}
 			p := math.NewVec2(float64(x)+0.5, float64(y)+0.5)
 			bc := math.Barycoord(p, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
 
 			// Is inside triangle?
-			if bc[0] < -math.Epsilon ||
-				bc[1] < -math.Epsilon ||
-				bc[2] < -math.Epsilon {
+			if bc[0] < -math.Epsilon || bc[1] < -math.Epsilon || bc[2] < -math.Epsilon {
 				continue
 			}
 
@@ -230,7 +223,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 			}
 
 			// update shadow map
-			idx := x + y*w
+			idx := x + y*r.buf.Bounds().Dx()
 			r.shadowBufs[index].lock[idx].Lock()
 			r.shadowBufs[index].depths[idx] = z
 			r.shadowBufs[index].lock[idx].Unlock()
@@ -239,8 +232,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 }
 
 func (r *Renderer) shadowDepthTest(index int, x, y int, z float64) bool {
-	w := r.width * r.msaa
-	idx := x + y*w
+	idx := x + y*r.buf.Bounds().Dx()
 	buf := r.shadowBufs[index]
 
 	buf.lock[idx].Lock()
@@ -251,7 +243,7 @@ func (r *Renderer) shadowDepthTest(index int, x, y int, z float64) bool {
 func (r *Renderer) shadingVisibility(
 	x, y int,
 	shadowIdx int,
-	info *gInfo,
+	info buffer.Fragment,
 	uniforms map[string]interface{},
 ) bool {
 	if !r.lightSources[shadowIdx].CastShadow() {
@@ -263,15 +255,14 @@ func (r *Renderer) shadingVisibility(
 	shadowMap := &r.shadowBufs[shadowIdx]
 
 	// transform scrren coordinate to light viewport
-	screenCoord := math.NewVec4(float64(x), float64(y), info.z, 1).
+	screenCoord := math.NewVec4(float64(x), float64(y), info.Depth, 1).
 		Apply(matScreenToWorld).
 		Apply(shadowMap.settings.Camera().ViewMatrix()).
 		Apply(shadowMap.settings.Camera().ProjMatrix()).
 		Apply(matVP).Pos()
 
 	lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
-	w := r.width * r.msaa
-	bufIdx := lightX + lightY*w
+	bufIdx := lightX + lightY*r.buf.Bounds().Dx()
 
 	shadow := 0
 	if bufIdx > 0 && bufIdx < len(shadowMap.depths) {

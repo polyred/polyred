@@ -67,6 +67,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 		)),
 		material.Kdiff(0.8), material.Kspec(1),
 		material.Shininess(100),
+		material.AmbientOcclusion(true),
 	)
 	m.SetMaterial(mat)
 	m.Rotate(math.NewVec3(0, 1, 0), -math.Pi/6)
@@ -83,7 +84,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	)
 }
 
-func TestRasterizer(t *testing.T) {
+func TestRender(t *testing.T) {
 	w, h, msaa := 1920, 1080, 2
 	s, c := newscene(w, h)
 	r := render.NewRenderer(
@@ -114,7 +115,7 @@ func TestRasterizer(t *testing.T) {
 	mem.Close()
 	f.Close()
 
-	path := "../testdata/render.jpg"
+	path := "../internal/testdata/render.png"
 	fmt.Printf("render saved at: %s\n", path)
 	imageutil.Save(buf, path)
 }
@@ -174,21 +175,7 @@ func BenchmarkAntiGammaCorrection(b *testing.B) {
 	}
 }
 
-func BenchmarkResetBuf(b *testing.B) {
-	for block := 1; block <= 1024; block *= 2 {
-		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
-			b.ReportAllocs()
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				render.ResetGBuf(r)
-				render.ResetFrameBuf(r)
-			}
-		})
-	}
-}
-
 func BenchmarkDraw(b *testing.B) {
-
 	for block := 1; block <= 1024; block *= 2 {
 		matView := c.ViewMatrix()
 		matProj := c.ProjMatrix()

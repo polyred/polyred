@@ -13,8 +13,7 @@ import (
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
-
-	"poly.red/internal/spinlock"
+	"poly.red/texture/buffer"
 )
 
 // Opt represents a rendering Opt
@@ -97,14 +96,8 @@ func (r *Renderer) Options(opts ...Opt) {
 		opt(r)
 	}
 
-	w := r.width * r.msaa
-	h := r.height * r.msaa
-
 	// calibrate rendering size
-	r.lockBuf = make([]spinlock.SpinLock, w*h)
-	r.gBuf = make([]gInfo, w*h)
-	r.frameBuf = image.NewRGBA(image.Rect(0, 0, w, h))
-
+	r.buf = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa))
 	r.lightSources = []light.Source{}
 	r.lightEnv = []light.Environment{}
 	if r.scene != nil {
@@ -128,6 +121,6 @@ func (r *Renderer) Options(opts ...Opt) {
 		r.initShadowMaps()
 	}
 
-	r.resetGBuf()
-	r.resetFrameBuf()
+	r.buf.ClearFragments()
+	r.buf.ClearFrameBuf()
 }

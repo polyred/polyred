@@ -12,18 +12,6 @@ import (
 	"poly.red/math"
 )
 
-func (r *Renderer) resetGBuf() {
-	for i := range r.gBuf {
-		r.gBuf[i] = gInfo{z: -1}
-	}
-}
-
-func (r *Renderer) resetFrameBuf() {
-	for i := range r.frameBuf.Pix {
-		r.frameBuf.Pix[i] = 0
-	}
-}
-
 // wait waits the current rendering terminates
 func (r *Renderer) wait() {
 	atomic.StoreUint32(&r.stop, 1)

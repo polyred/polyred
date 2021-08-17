@@ -11,7 +11,7 @@ import (
 	"poly.red/render"
 	"poly.red/scene"
 
-	"poly.red/internal/gui"
+	"poly.red/internal/gui" // TODO: make this public
 )
 
 func main() {

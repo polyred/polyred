@@ -14,12 +14,6 @@ var (
 	Draw = func(r *Renderer, uniforms map[string]interface{}, tri *primitive.Triangle, modelMatrix math.Mat4, m material.Material) {
 		r.draw(uniforms, tri, m)
 	}
-	ResetGBuf = func(r *Renderer) {
-		r.resetGBuf()
-	}
-	ResetFrameBuf = func(r *Renderer) {
-		r.resetFrameBuf()
-	}
 	PassForward = func(r *Renderer) {
 		r.passForward()
 	}
