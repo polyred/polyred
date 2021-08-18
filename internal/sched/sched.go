@@ -2,14 +2,12 @@ package sched
 
 import (
 	"math/rand"
-	"runtime"
 	"sync/atomic"
 )
 
 // Pool is a worker pool.
 type Pool struct {
 	running    uint64
-	taskQcap   int
 	numWorkers int
 	randomizer func(int, int) int
 	done       chan struct{}
@@ -47,8 +45,7 @@ func New(opts ...Opt) *Pool {
 			return rand.Intn(max)
 		},
 		running:    0,
-		taskQcap:   runtime.GOMAXPROCS(0),
-		numWorkers: runtime.GOMAXPROCS(0),
+		numWorkers: 4,
 		done:       make(chan struct{}),
 	}
 
@@ -58,7 +55,7 @@ func New(opts ...Opt) *Pool {
 
 	p.workers = make([]chan funcdata, p.numWorkers)
 	for i := 0; i < p.numWorkers; i++ {
-		p.workers[i] = make(chan funcdata, 1000)
+		p.workers[i] = make(chan funcdata, 128)
 	}
 
 	// Start workers

@@ -49,8 +49,8 @@ type Renderer struct {
 	// rendering caches
 	lightSources   []light.Source
 	lightEnv       []light.Environment
-	concurrentSize int32
-	gomaxprocs     int
+	batchSize      int32
+	workers        int
 	sched          *sched.Pool
 	buf            *buffer.Buffer
 	renderCamera   camera.Interface
@@ -64,26 +64,24 @@ type Renderer struct {
 // The returned renderer implements a rasterization rendering pipeline.
 func NewRenderer(opts ...Opt) *Renderer {
 	r := &Renderer{ // default settings
-		buf:            nil,
-		width:          800,
-		height:         500,
-		msaa:           1,
-		useShadowMap:   false,
-		debug:          false,
-		scene:          nil,
-		gomaxprocs:     runtime.GOMAXPROCS(0),
-		concurrentSize: 32,
-		lightSources:   []light.Source{},
-		lightEnv:       []light.Environment{},
+		buf:          nil,
+		width:        800,
+		height:       500,
+		msaa:         1,
+		useShadowMap: false,
+		debug:        false,
+		scene:        nil,
+		workers:      runtime.NumCPU(),
+		batchSize:    32, // heuristic
+		lightSources: []light.Source{},
+		lightEnv:     []light.Environment{},
 	}
 	for _, opt := range opts {
 		opt(r)
 	}
 
-	// initialize rendering caches if necessary
 	r.buf = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa))
-
-	r.sched = sched.New(sched.Workers(r.gomaxprocs))
+	r.sched = sched.New(sched.Workers(r.workers))
 	runtime.SetFinalizer(r, func(r *Renderer) {
 		r.sched.Release()
 	})
@@ -116,8 +114,8 @@ func NewRenderer(opts ...Opt) *Renderer {
 // Render renders a scene.
 func (r *Renderer) Render() *image.RGBA {
 	if r.debug {
-		runtime.GOMAXPROCS(r.gomaxprocs)
-		fmt.Printf("rendering under GOMAXPROCS=%v\n", r.gomaxprocs)
+		runtime.GOMAXPROCS(r.workers)
+		fmt.Printf("rendering under GOMAXPROCS=%v\n", r.workers)
 		total := profiling.Timed("entire rendering")
 		defer total()
 	}

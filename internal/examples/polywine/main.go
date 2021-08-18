@@ -7,7 +7,6 @@ package main
 import (
 	"image"
 	"image/color"
-	"runtime"
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
@@ -55,7 +54,7 @@ func main() {
 		render.Size(width, height),
 		render.Camera(cam),
 		render.Blending(render.AlphaBlend),
-		render.ThreadLimit(runtime.GOMAXPROCS(2)),
+		render.Workers(2),
 	)
 
 	// Use a different model

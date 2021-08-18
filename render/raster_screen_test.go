@@ -43,10 +43,7 @@ func TestDrawPixels(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		r := render.NewRenderer(
-			render.Size(tt.w, tt.h),
-			render.Concurrency(128),
-		)
+		r := render.NewRenderer(render.Size(tt.w, tt.h))
 		img := image.NewRGBA(image.Rect(0, 0, tt.w, tt.h))
 
 		counter := uint32(0)
@@ -69,10 +66,7 @@ func BenchmarkDrawPixels_Size(b *testing.B) {
 	w, h := 100, 100
 	for i := 1; i < 128; i *= 2 {
 		ww, hh := w*i, h*i
-		r := render.NewRenderer(
-			render.Size(ww, hh),
-			render.Concurrency(128),
-		)
+		r := render.NewRenderer(render.Size(ww, hh))
 		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
 
 		b.Run(fmt.Sprintf("%d-%d", ww, hh), func(b *testing.B) {
@@ -99,7 +93,7 @@ func BenchmarkDrawPixels_Block_Parallel(b *testing.B) {
 		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
 		r := render.NewRenderer(
 			render.Size(ww, hh),
-			render.Concurrency(int32(i)),
+			render.BatchSize(int32(i)),
 		)
 		b.Run(fmt.Sprintf("%d-%d-%d", ww, hh, i), func(b *testing.B) {
 			b.ReportAllocs()

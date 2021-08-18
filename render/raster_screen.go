@@ -63,7 +63,7 @@ func (r *Renderer) DrawPixels(buf *image.RGBA, shade shader.FragmentProgram) {
 	w := buf.Bounds().Dx()
 	h := buf.Bounds().Dy()
 
-	blockSize := int(r.concurrentSize)
+	blockSize := int(r.batchSize)
 	wsteps := w / blockSize
 	hsteps := h / blockSize
 

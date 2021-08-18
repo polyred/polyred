@@ -32,7 +32,7 @@ func Resize(width, height int, img *image.RGBA) *image.RGBA {
 		return img
 	}
 
-	cpus := runtime.GOMAXPROCS(0)
+	cpus := runtime.NumCPU()
 	wg := sync.WaitGroup{}
 
 	// 8-bit precision

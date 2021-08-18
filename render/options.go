@@ -53,42 +53,58 @@ func MSAA(n int) Opt {
 	}
 }
 
+// ShadowMap is an option that customizes whether to use shadow map or not.
 func ShadowMap(enable bool) Opt {
 	return func(r *Renderer) {
 		r.useShadowMap = enable
 	}
 }
 
+// GammaCorrection is an option that customizes whether gamma correction
+// should be applied or not.
 func GammaCorrection(enable bool) Opt {
 	return func(r *Renderer) {
 		r.correctGamma = enable
 	}
 }
 
+// Blending is an option that customizes the blend function.
 func Blending(f BlendFunc) Opt {
 	return func(r *Renderer) {
 		r.blendFunc = f
 	}
 }
 
+// Debug is an option that activates the debugging information of
+// the given renderer.
+//
+// TODO: allow set a logger.
 func Debug(enable bool) Opt {
 	return func(r *Renderer) {
 		r.debug = enable
 	}
 }
 
-func Concurrency(n int32) Opt {
+// BatchSize is an option for customizing the number of pixel to run as
+// a concurrent task. By default the number of batch size is 32 (heuristic).
+func BatchSize(n int32) Opt {
 	return func(r *Renderer) {
-		r.concurrentSize = n
+		r.batchSize = n
 	}
 }
 
-func ThreadLimit(n int) Opt {
+// Workers is an option for customizing the number of internal workers
+// for a renderer. By default the number of workers equals to the number
+// of CPUs.
+func Workers(n int) Opt {
 	return func(r *Renderer) {
-		r.gomaxprocs = n
+		r.workers = n
 	}
 }
 
+// Options updates the settings of the given renderer.
+// If the renderer is running, the function waits until the rendering
+// task is complete.
 func (r *Renderer) Options(opts ...Opt) {
 	r.wait() // wait last frame to finish
 
@@ -96,7 +112,6 @@ func (r *Renderer) Options(opts ...Opt) {
 		opt(r)
 	}
 
-	// calibrate rendering size
 	r.buf = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa))
 	r.lightSources = []light.Source{}
 	r.lightEnv = []light.Environment{}
