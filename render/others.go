@@ -14,19 +14,21 @@ import (
 
 // wait waits the current rendering terminates
 func (r *Renderer) wait() {
+	backoff := 1
 	atomic.StoreUint32(&r.stop, 1)
-	for r.isRunning() {
-		runtime.Gosched()
+	for atomic.LoadUint32(&r.running) == 1 {
+		for i := 0; i < backoff; i++ {
+			runtime.Gosched()
+		}
+		if backoff < 128 {
+			backoff <<= 1
+		}
 	}
 	atomic.StoreUint32(&r.stop, 0)
 }
 
 func (r *Renderer) startRunning() {
 	atomic.StoreUint32(&r.running, 1)
-}
-
-func (r *Renderer) isRunning() bool {
-	return atomic.LoadUint32(&r.running) == 1
 }
 
 func (r *Renderer) stopRunning() {
