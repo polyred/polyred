@@ -105,8 +105,8 @@ func (ctx *TransformContext) Translate(tx, ty, tz float64) {
 func (ctx *TransformContext) TranslateX(tx float64) {
 	ctx.translate = NewMat4(
 		1, 0, 0, tx,
-		0, 1, 0, 1,
-		0, 0, 1, 1,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
 		0, 0, 0, 1,
 	).MulM(ctx.translate)
 	ctx.needUpdate = true
@@ -115,9 +115,9 @@ func (ctx *TransformContext) TranslateX(tx float64) {
 // TranslateY sets the translate matrix on Y-axis.
 func (ctx *TransformContext) TranslateY(ty float64) {
 	ctx.translate = NewMat4(
-		1, 0, 0, 1,
+		1, 0, 0, 0,
 		0, 1, 0, ty,
-		0, 0, 1, 1,
+		0, 0, 1, 0,
 		0, 0, 0, 1,
 	).MulM(ctx.translate)
 	ctx.needUpdate = true
@@ -126,8 +126,8 @@ func (ctx *TransformContext) TranslateY(ty float64) {
 // TranslateZ sets the translate matrix on Z-axis.
 func (ctx *TransformContext) TranslateZ(tz float64) {
 	ctx.translate = NewMat4(
-		1, 0, 0, 1,
-		0, 1, 0, 1,
+		1, 0, 0, 0,
+		0, 1, 0, 0,
 		0, 0, 1, tz,
 		0, 0, 0, 1,
 	).MulM(ctx.translate)

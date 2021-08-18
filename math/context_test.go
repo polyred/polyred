@@ -86,7 +86,9 @@ func TestTransformationContextScale(t *testing.T) {
 	t.Run("scale", func(t *testing.T) {
 
 		ctx1 := math.TransformContext{}
+		ctx1.ResetContext()
 		ctx2 := math.TransformContext{}
+		ctx2.ResetContext()
 
 		ctx1.Scale(2, 3, 4)
 		want := ctx1.ModelMatrix()
@@ -105,7 +107,9 @@ func TestTransformationContextScale(t *testing.T) {
 	t.Run("translate", func(t *testing.T) {
 
 		ctx1 := math.TransformContext{}
+		ctx1.ResetContext()
 		ctx2 := math.TransformContext{}
+		ctx2.ResetContext()
 
 		ctx1.Translate(2, 3, 4)
 		want := ctx1.ModelMatrix()
@@ -124,7 +128,9 @@ func TestTransformationContextScale(t *testing.T) {
 	t.Run("rotateX", func(t *testing.T) {
 
 		ctx1 := math.TransformContext{}
+		ctx1.ResetContext()
 		ctx2 := math.TransformContext{}
+		ctx2.ResetContext()
 
 		ctx1.Rotate(math.NewVec3(1, 0, 0), math.Pi/2)
 		want := ctx1.ModelMatrix()
@@ -141,7 +147,9 @@ func TestTransformationContextScale(t *testing.T) {
 	t.Run("rotateY", func(t *testing.T) {
 
 		ctx1 := math.TransformContext{}
+		ctx1.ResetContext()
 		ctx2 := math.TransformContext{}
+		ctx2.ResetContext()
 
 		ctx1.Rotate(math.NewVec3(0, 1, 0), math.Pi/2)
 		want := ctx1.ModelMatrix()
@@ -158,7 +166,9 @@ func TestTransformationContextScale(t *testing.T) {
 	t.Run("rotateZ", func(t *testing.T) {
 
 		ctx1 := math.TransformContext{}
+		ctx1.ResetContext()
 		ctx2 := math.TransformContext{}
+		ctx2.ResetContext()
 
 		ctx1.Rotate(math.NewVec3(0, 0, 1), math.Pi/2)
 		want := ctx1.ModelMatrix()
@@ -169,6 +179,5 @@ func TestTransformationContextScale(t *testing.T) {
 		if !want.Eq(got) {
 			t.Fatalf("unexpected model matrix, got %v, want %v", got, want)
 		}
-
 	})
 }
