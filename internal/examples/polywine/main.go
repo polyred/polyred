@@ -104,8 +104,8 @@ func main() {
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ProjMatrix = cam.ProjMatrix()
 
-		r.PrimitivePass(buf, prog, vi, vb)
-		r.ScreenPass(buf.Image(), prog.FragmentShader)
+		r.DrawPrimitives(buf, prog, vi, vb)
+		r.DrawFragments(buf, prog.FragmentShader)
 		return buf.Image()
 	})
 }

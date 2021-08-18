@@ -27,7 +27,7 @@ func BenchmarkAlphaBlend(b *testing.B) {
 	_ = c
 }
 
-func TestScreenPass(t *testing.T) {
+func TestDrawPixels(t *testing.T) {
 	tests := []struct {
 		w int
 		h int
@@ -50,7 +50,7 @@ func TestScreenPass(t *testing.T) {
 		img := image.NewRGBA(image.Rect(0, 0, tt.w, tt.h))
 
 		counter := uint32(0)
-		r.ScreenPass(img, func(frag primitive.Fragment) color.RGBA {
+		r.DrawPixels(img, func(frag primitive.Fragment) color.RGBA {
 			atomic.AddUint32(&counter, 1)
 			r := uint8(rand.Int())
 			g := uint8(rand.Int())
@@ -60,12 +60,12 @@ func TestScreenPass(t *testing.T) {
 
 		if counter != uint32(tt.w)*uint32(tt.h) {
 			t.Errorf("#%d incorrect execution number, want %d, got %d", i, tt.w*tt.h, counter)
-			imageutil.Save(img, fmt.Sprintf("%d.png", i))
+			imageutil.Save(img, fmt.Sprintf("../internal/examples/out/testdrawpixels-%d.png", i))
 		}
 	}
 }
 
-func BenchmarkScreenPass_Size(b *testing.B) {
+func BenchmarkDrawPixels_Size(b *testing.B) {
 	w, h := 100, 100
 	for i := 1; i < 128; i *= 2 {
 		ww, hh := w*i, h*i
@@ -79,7 +79,7 @@ func BenchmarkScreenPass_Size(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.ScreenPass(img, func(frag primitive.Fragment) color.RGBA {
+				r.DrawPixels(img, func(frag primitive.Fragment) color.RGBA {
 					return color.RGBA{uint8(frag.X), uint8(frag.X), uint8(frag.Y), uint8(frag.Y)}
 				})
 			}
@@ -87,7 +87,7 @@ func BenchmarkScreenPass_Size(b *testing.B) {
 	}
 }
 
-func BenchmarkScreenPass_Block(b *testing.B) {
+func BenchmarkDrawPixels_Block_Parallel(b *testing.B) {
 	// Notes & Observations:
 	//
 	// On Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with 16 cores.
@@ -95,7 +95,7 @@ func BenchmarkScreenPass_Block(b *testing.B) {
 	// a color to set, a screen pass requires ~2ms. For a 60fps goal,
 	// one must optimize the fragment shader down to 14ms.
 	ww, hh := 1920, 1080
-	for i := 1; i <= 1024; i *= 2 {
+	for i := 8; i < 1024; i *= 2 {
 		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
 		r := render.NewRenderer(
 			render.Size(ww, hh),
@@ -105,9 +105,51 @@ func BenchmarkScreenPass_Block(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.ScreenPass(img, func(frag primitive.Fragment) color.RGBA {
+				r.DrawPixels(img, func(frag primitive.Fragment) color.RGBA {
 					return color.RGBA{255, 255, 255, 255}
 				})
+			}
+		})
+	}
+}
+
+func BenchmarkDrawPixels_Block_NonParallel(b *testing.B) {
+	// Notes & Observations:
+	//
+	// On Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with 16 cores.
+	// The parallelized version only improves ~80% of the computation.
+	// See benchmark here:
+	//                                    NonParallel    Parallel
+	// DrawPixels_Block/1920-1080-8-16    21.6ms ±3%    5.3ms ±5%  -75.41%  (p=0.000 n=10+10)
+	// DrawPixels_Block/1920-1080-16-16   21.7ms ±3%    4.0ms ±2%  -81.74%  (p=0.000 n=10+10)
+	// DrawPixels_Block/1920-1080-32-16   21.7ms ±3%    3.8ms ±6%  -82.58%  (p=0.000 n=10+10)
+	// DrawPixels_Block/1920-1080-64-16   22.2ms ±3%    4.3ms ±1%  -80.62%  (p=0.000 n=10+10)
+	// DrawPixels_Block/1920-1080-128-16  22.0ms ±5%    4.7ms ±2%  -78.52%  (p=0.000 n=10+10)
+	// DrawPixels_Block/1920-1080-256-16  22.1ms ±4%    5.9ms ±3%  -73.25%  (p=0.000 n=10+10)
+	// DrawPixels_Block/1920-1080-512-16  21.9ms ±3%    8.9ms ±5%  -59.59%  (p=0.000 n=10+10)
+	//
+	// TODO: optimize the parallel version even better.
+
+	ww, hh := 1920, 1080
+	for i := 8; i < 1024; i *= 2 {
+		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
+		b.Run(fmt.Sprintf("%d-%d-%d", ww, hh, i), func(b *testing.B) {
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				for j := 0; j < img.Bounds().Dx(); j++ {
+					for k := 0; k < img.Bounds().Dy(); k++ {
+						img.SetRGBA(j, k, func() color.RGBA {
+							col := color.RGBA{}
+							col = img.RGBAAt(j, k)
+							col.R = 255
+							col.G = 255
+							col.B = 255
+							col.A = 255
+							return col
+						}())
+					}
+				}
 			}
 		})
 	}

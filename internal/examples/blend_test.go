@@ -23,7 +23,7 @@ func TestBlending(t *testing.T) {
 		render.Blending(render.AlphaBlend),
 	)
 	dst := img1
-	r.ScreenPass(dst, func(f primitive.Fragment) color.RGBA {
+	r.DrawPixels(dst, func(f primitive.Fragment) color.RGBA {
 		return img2.RGBAAt(f.X, f.Y)
 	})
 

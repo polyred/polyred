@@ -13,41 +13,38 @@ import (
 	"poly.red/texture/buffer"
 )
 
-// PrimitivePass is a pass that executes Draw call concurrently on all
+// DrawPrimitives is a pass that executes Draw call concurrently on all
 // given triangle primitives, and draws all geometric and rendering
 // information on the given buffer. This primitive uses supplied shader
 // programs (i.e. currently supports vertex shader and fragment shader)
 //
 // See shader.Program for more information regarding shader programming.
-func (r *Renderer) PrimitivePass(
-	buf *buffer.Buffer,
-	prog shader.Program,
-	indexBuf []uint64,
-	vertBuf []*primitive.Vertex,
+func (r *Renderer) DrawPrimitives(
+	buf *buffer.Buffer, p shader.Program, idx []uint64, verts []*primitive.Vertex,
 ) {
-	len := len(indexBuf)
+	len := len(idx)
 	if len%3 != 0 {
 		panic("index buffer must be a 3 multiple")
 	}
 
 	r.sched.Add(uint64(len / 3))
 	for i := 0; i < len; i += 3 {
-		v1 := vertBuf[i]
-		v2 := vertBuf[i+1]
-		v3 := vertBuf[i+2]
+		v1 := verts[i]
+		v2 := verts[i+1]
+		v3 := verts[i+2]
 		tri := primitive.NewTriangle(v1, v2, v3)
 		r.sched.Run(func() {
 			if !tri.IsValid() {
 				return
 			}
-			r.Draw(buf, prog, tri)
+			r.DrawPrimitive(buf, p, tri)
 		})
 	}
 	r.sched.Wait()
 }
 
-// Draw implements a triangle draw call of the rasteriation graphics pipeline.
-func (r *Renderer) Draw(buf *buffer.Buffer, prog shader.Program,
+// DrawPrimitive implements a triangle draw call of the rasteriation graphics pipeline.
+func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, prog shader.Program,
 	tri *primitive.Triangle) bool {
 	v1 := prog.VertexShader(tri.V1)
 	v2 := prog.VertexShader(tri.V2)

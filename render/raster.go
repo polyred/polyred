@@ -248,7 +248,7 @@ func (r *Renderer) passDeferred() {
 	}
 
 	ao := ambientOcclusionPass{buf: r.buf}
-	r.ScreenPass(r.buf.Image(), func(frag primitive.Fragment) color.RGBA {
+	r.DrawPixels(r.buf.Image(), func(frag primitive.Fragment) color.RGBA {
 		frag.Col = r.shade(frag.X, r.buf.Bounds().Dy()-frag.Y-1, uniforms)
 		return ao.Shade(frag.X, r.buf.Bounds().Dy()-frag.Y-1, frag.Col)
 	})
@@ -496,7 +496,7 @@ func (r *Renderer) passGammaCorrect() {
 		return
 	}
 
-	r.ScreenPass(r.buf.Image(), func(frag primitive.Fragment) color.RGBA {
+	r.DrawFragments(r.buf, func(frag primitive.Fragment) color.RGBA {
 		r := uint8(color.FromLinear2sRGB(float64(frag.Col.R)/0xff)*0xff + 0.5)
 		g := uint8(color.FromLinear2sRGB(float64(frag.Col.G)/0xff)*0xff + 0.5)
 		b := uint8(color.FromLinear2sRGB(float64(frag.Col.B)/0xff)*0xff + 0.5)

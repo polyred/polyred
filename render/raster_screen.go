@@ -10,6 +10,7 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/shader"
+	"poly.red/texture/buffer"
 )
 
 // BlendFunc is a blending function for two given colors and returns
@@ -37,11 +38,21 @@ func AlphaBlend(dst, src color.RGBA) color.RGBA {
 	return color.RGBA{uint8(r), uint8(g), uint8(b), uint8(aa)}
 }
 
-// ScreenPass is a concurrent executor of the given shader that travel
+// DrawFragment is a concurrent executor of the given shader that travel
 // through all pixels. Each pixel executes the given shader exactly once.
+//
 // One should not manipulate the given image buffer in the shader.
 // Instead, return the resulting color in the shader can avoid data race.
-func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
+func (r *Renderer) DrawFragments(buf *buffer.Buffer, shade shader.FragmentProgram) {
+	r.DrawPixels(buf.Image(), shade)
+}
+
+// DrawPixels is a concurrent executor of the given shader that travel
+// through all pixels. Each pixel executes the given shader exactly once.
+//
+// One should not manipulate the given image buffer in the shader.
+// Instead, return the resulting color in the shader can avoid data race.
+func (r *Renderer) DrawPixels(buf *image.RGBA, shade shader.FragmentProgram) {
 	if shade == nil {
 		return
 	}
@@ -66,7 +77,25 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 		r.sched.Run(func() {
 			for x := 0; x < w; x++ {
 				for y := 0; y < h; y++ {
-					old := buf.RGBAAt(x, y)
+
+					idx := buf.PixOffset(x, y)
+					s := buf.Pix[idx : idx+4 : idx+4]
+					old := color.RGBA{s[0], s[1], s[2], s[3]}
+
+					// TODO: support multiple shaders.
+					// The following code can impact performance significantly.
+					// Figure out why.
+					//
+					// var col color.RGBA
+					// for _, f := range shade {
+					// 	col = f(primitive.Fragment{X: x, Y: y, Col: old})
+					// 	if col == color.Discard {
+					// 		break
+					// 	}
+					// }
+					// if col == color.Discard {
+					// 	continue
+					// }
 					col := shade(primitive.Fragment{
 						X: x, Y: y, Col: old,
 					})
@@ -74,11 +103,14 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 						continue
 					}
 					if r.blendFunc != nil {
-						col = r.blendFunc(buf.RGBAAt(x, y), col)
+						col = r.blendFunc(old, col)
 					}
 					// Use SetRGBA instead of Set can avoid memory allocation.
-					// See https://golang.org/issue/44808.
-					buf.SetRGBA(x, y, col)
+					//
+					s[0] = col.R
+					s[1] = col.G
+					s[2] = col.B
+					s[3] = col.A
 				}
 			}
 		})
@@ -95,7 +127,11 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 					for l := 0; l < blockSize; l++ {
 						x := ii + k
 						y := jj + l
-						old := buf.RGBAAt(x, y)
+
+						idx := buf.PixOffset(x, y)
+						s := buf.Pix[idx : idx+4 : idx+4]
+						old := color.RGBA{s[0], s[1], s[2], s[3]}
+
 						col := shade(primitive.Fragment{
 							X: x, Y: y, Col: old,
 						})
@@ -103,11 +139,14 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 							continue
 						}
 						if r.blendFunc != nil {
-							col = r.blendFunc(buf.RGBAAt(x, y), col)
+							col = r.blendFunc(old, col)
 						}
 						// Use SetRGBA instead of Set can avoid memory allocation.
 						// See https://golang.org/issue/44808.
-						buf.SetRGBA(x, y, col)
+						s[0] = col.R
+						s[1] = col.G
+						s[2] = col.B
+						s[3] = col.A
 					}
 				}
 			})
@@ -117,7 +156,11 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 	r.sched.Run(func() {
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := 0; y < hsteps*blockSize; y++ {
-				old := buf.RGBAAt(x, y)
+
+				idx := buf.PixOffset(x, y)
+				s := buf.Pix[idx : idx+4 : idx+4]
+				old := color.RGBA{s[0], s[1], s[2], s[3]}
+
 				col := shade(primitive.Fragment{
 					X: x, Y: y, Col: old,
 				})
@@ -125,17 +168,24 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 					continue
 				}
 				if r.blendFunc != nil {
-					col = r.blendFunc(buf.RGBAAt(x, y), col)
+					col = r.blendFunc(old, col)
 				}
 				// Use SetRGBA instead of Set can avoid memory allocation.
 				// See https://golang.org/issue/44808.
-				buf.SetRGBA(x, y, col)
+				s[0] = col.R
+				s[1] = col.G
+				s[2] = col.B
+				s[3] = col.A
 			}
 		}
 	}, func() {
 		for x := 0; x < wsteps*blockSize; x++ {
 			for y := hsteps * blockSize; y < h; y++ {
-				old := buf.RGBAAt(x, y)
+
+				idx := buf.PixOffset(x, y)
+				s := buf.Pix[idx : idx+4 : idx+4]
+				old := color.RGBA{s[0], s[1], s[2], s[3]}
+
 				col := shade(primitive.Fragment{
 					X: x, Y: y, Col: old,
 				})
@@ -143,16 +193,23 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 					continue
 				}
 				if r.blendFunc != nil {
-					col = r.blendFunc(buf.RGBAAt(x, y), col)
+					col = r.blendFunc(old, col)
 				}
 				// Use SetRGBA instead of Set can avoid memory allocation.
 				// See https://golang.org/issue/44808.
-				buf.SetRGBA(x, y, col)
+				s[0] = col.R
+				s[1] = col.G
+				s[2] = col.B
+				s[3] = col.A
 			}
 		}
 		for x := wsteps * blockSize; x < w; x++ {
 			for y := hsteps * blockSize; y < h; y++ {
-				old := buf.RGBAAt(x, y)
+
+				idx := buf.PixOffset(x, y)
+				s := buf.Pix[idx : idx+4 : idx+4]
+				old := color.RGBA{s[0], s[1], s[2], s[3]}
+
 				col := shade(primitive.Fragment{
 					X: x, Y: y, Col: old,
 				})
@@ -160,11 +217,14 @@ func (r *Renderer) ScreenPass(buf *image.RGBA, shade shader.FragmentProgram) {
 					continue
 				}
 				if r.blendFunc != nil {
-					col = r.blendFunc(buf.RGBAAt(x, y), col)
+					col = r.blendFunc(old, col)
 				}
 				// Use SetRGBA instead of Set can avoid memory allocation.
 				// See https://golang.org/issue/44808.
-				buf.SetRGBA(x, y, col)
+				s[0] = col.R
+				s[1] = col.G
+				s[2] = col.B
+				s[3] = col.A
 			}
 		}
 	})
