@@ -27,8 +27,8 @@ package main
 
 import (
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/light"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 
@@ -39,20 +39,14 @@ func main() {
 	// Create a scene graph
 	s := scene.NewScene()
 
-	// Load and add the mesh to the scene graph
-	s.Add(mesh.MustLoad("bunny.obj"))
-
-	// Create and add a point light to the scene graph
-	s.Add(light.NewPoint())
+	// Create and add a point light and a bunny to the scene graph
+	s.Add(light.NewPoint(), model.StanfordBunny())
 
 	// Create a camera for the rendering
 	c := camera.NewPerspective()
 
 	// Create a renderer and specify scene and camera
-	r := render.NewRenderer(
-		render.Scene(s),
-		render.Camera(c),
-	)
+	r := render.NewRenderer(render.Scene(s), render.Camera(c))
 
 	// Render and show the result in a window
 	gui.Show(r.Render())
