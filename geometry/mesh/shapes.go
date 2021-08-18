@@ -7,15 +7,10 @@ package mesh
 import (
 	"image/color"
 	"math/rand"
-	"time"
 
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 )
-
-func init() {
-	rand.Seed(time.Now().Unix())
-}
 
 // NewPlane returns a triangle soup that represents a plane with the
 // given width and height.
@@ -53,38 +48,38 @@ func NewPlane(width, height float64) Mesh {
 // NewRandomTriangleSoup returns a mesh with given number of
 // random triangles.
 func NewRandomTriangleSoup(numTri int) Mesh {
-	idx := make([]uint64, numTri*3)
-	pos := make([]float64, numTri*3)
-	nor := make([]float64, numTri*3)
-	uv := make([]float64, numTri*2)
-	col := make([]float64, numTri*3)
+	vertIdx := make([]uint64, numTri*3)
+	vertPos := make([]float64, numTri*3*3)
+	vertNor := make([]float64, numTri*3*3)
+	vertCol := make([]float64, numTri*3*4)
+	vertUV := make([]float64, numTri*3*2)
 
-	for i := uint64(0); i < uint64(numTri); i++ {
-		idx[3*i] = i
-		idx[3*i+1] = i + 1
-		idx[3*i+2] = i + 2
+	for vid := uint64(0); vid < uint64(numTri)*3; vid++ {
+		vertIdx[vid] = vid
 
-		pos[3*i] = rand.Float64()*2 - 1
-		pos[3*i+1] = rand.Float64()*2 - 1
-		pos[3*i+2] = rand.Float64()*2 - 1
+		vertPos[3*vid] = rand.Float64()
+		vertPos[3*vid+1] = rand.Float64()
+		vertPos[3*vid+2] = rand.Float64()
 
-		nor[3*i] = rand.Float64()*2 - 1
-		nor[3*i+1] = rand.Float64()*2 - 1
-		nor[3*i+2] = rand.Float64()*2 - 1
+		n := math.NewVec3(rand.Float64()*2-1, rand.Float64()*2-1, rand.Float64()*2-1).Unit()
+		vertNor[3*vid] = n.X
+		vertNor[3*vid+1] = n.Y
+		vertNor[3*vid+2] = n.Z
 
-		col[3*i] = math.Clamp(rand.Float64()*0xff, 0, 255)
-		col[3*i+1] = math.Clamp(rand.Float64()*0xff, 0, 255)
-		col[3*i+2] = math.Clamp(rand.Float64()*0xff, 0, 255)
+		vertCol[4*vid] = rand.Float64()
+		vertCol[4*vid+1] = rand.Float64()
+		vertCol[4*vid+2] = rand.Float64()
+		vertCol[4*vid+3] = 1
 
-		uv[2*i] = rand.Float64()*2 - 1
-		uv[2*i+1] = rand.Float64()*2 - 1
+		vertUV[2*vid] = rand.Float64()
+		vertUV[2*vid+1] = rand.Float64()
 	}
 
 	bm := NewBufferedMesh()
-	bm.SetVertexIndex(idx)
-	bm.SetAttribute(AttributePos, NewBufferAttribute(3, pos))
-	bm.SetAttribute(AttributeNor, NewBufferAttribute(3, nor))
-	bm.SetAttribute(AttributeCol, NewBufferAttribute(3, col))
-	bm.SetAttribute(AttributeUV, NewBufferAttribute(2, uv))
+	bm.SetVertexIndex(vertIdx)
+	bm.SetAttribute(AttributePos, NewBufferAttribute(3, vertPos))
+	bm.SetAttribute(AttributeNor, NewBufferAttribute(3, vertNor))
+	bm.SetAttribute(AttributeCol, NewBufferAttribute(4, vertCol))
+	bm.SetAttribute(AttributeUV, NewBufferAttribute(2, vertUV))
 	return bm
 }
