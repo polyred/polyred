@@ -46,14 +46,14 @@ func TestShader(t *testing.T) {
 	r, buf, prog, idx, tri := prepare(100)
 
 	// 1. Render Primitives
-	r.DrawPrimitives(buf, prog, idx, tri)
+	r.DrawPrimitives(buf, prog.VertexShader, idx, tri)
 
 	// 2. Render Screen-space Effects
-	r.DrawFragments(buf, func(frag primitive.Fragment) color.RGBA {
-		if frag.Col == color.Discard {
+	r.DrawFragments(buf, prog.FragmentShader, func(f primitive.Fragment) color.RGBA {
+		if f.Col == color.Discard {
 			return color.White
 		}
-		return frag.Col
+		return f.Col
 	})
 
 	imageutil.Save(buf.Image(), "../internal/examples/out/shader.png")
@@ -65,12 +65,7 @@ func BenchmarkShaderPrograms(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r.DrawPrimitives(buf, prog, idx, tri)
-		r.DrawFragments(buf, func(frag primitive.Fragment) color.RGBA {
-			if frag.Col == color.Discard {
-				return color.White
-			}
-			return frag.Col
-		})
+		r.DrawPrimitives(buf, prog.VertexShader, idx, tri)
+		r.DrawFragments(buf, prog.FragmentShader)
 	}
 }

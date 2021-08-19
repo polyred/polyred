@@ -6,35 +6,18 @@ package main
 
 import (
 	"image"
-	"image/color"
 
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/render"
+	"poly.red/shader"
 	"poly.red/texture"
 	"poly.red/texture/buffer"
 	"poly.red/texture/imageutil"
 
 	"poly.red/internal/gui"
 )
-
-type TextureShader struct {
-	ModelMatrix math.Mat4
-	ViewMatrix  math.Mat4
-	ProjMatrix  math.Mat4
-	Texture     *texture.Texture
-}
-
-func (s *TextureShader) VertexShader(v primitive.Vertex) primitive.Vertex {
-	v.Pos = s.ProjMatrix.MulM(s.ViewMatrix).MulM(s.ModelMatrix).MulV(v.Pos)
-	return v
-}
-
-func (s *TextureShader) FragmentShader(frag primitive.Fragment) color.RGBA {
-	return s.Texture.Query(0, frag.UV.X, 1-frag.UV.Y)
-}
 
 func main() {
 	width, height := 400, 400
@@ -76,7 +59,7 @@ func main() {
 	)
 
 	// Shader
-	prog := &TextureShader{
+	prog := &shader.TextureShader{
 		ModelMatrix: m.ModelMatrix(),
 		ViewMatrix:  cam.ViewMatrix(),
 		ProjMatrix:  cam.ProjMatrix(),
@@ -103,7 +86,7 @@ func main() {
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ProjMatrix = cam.ProjMatrix()
 
-		r.DrawPrimitives(buf, prog, vi, vb)
+		r.DrawPrimitives(buf, prog.VertexShader, vi, vb)
 		r.DrawFragments(buf, prog.FragmentShader)
 		return buf.Image()
 	})

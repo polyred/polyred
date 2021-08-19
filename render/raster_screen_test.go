@@ -14,6 +14,7 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/render"
+	"poly.red/texture/buffer"
 	"poly.red/texture/imageutil"
 )
 
@@ -43,11 +44,14 @@ func TestDrawPixels(t *testing.T) {
 	}
 
 	for i, tt := range tests {
-		r := render.NewRenderer(render.Size(tt.w, tt.h))
-		img := image.NewRGBA(image.Rect(0, 0, tt.w, tt.h))
+		r := render.NewRenderer(
+			render.Size(tt.w, tt.h),
+			render.BatchSize(128), // use 128 to make sure all tests covers all cases
+		)
+		buf := buffer.NewBuffer(image.Rect(0, 0, tt.w, tt.h))
 
 		counter := uint32(0)
-		r.DrawPixels(img, func(frag primitive.Fragment) color.RGBA {
+		r.DrawFragments(buf, func(frag primitive.Fragment) color.RGBA {
 			atomic.AddUint32(&counter, 1)
 			r := uint8(rand.Int())
 			g := uint8(rand.Int())
@@ -57,23 +61,60 @@ func TestDrawPixels(t *testing.T) {
 
 		if counter != uint32(tt.w)*uint32(tt.h) {
 			t.Errorf("#%d incorrect execution number, want %d, got %d", i, tt.w*tt.h, counter)
-			imageutil.Save(img, fmt.Sprintf("../internal/examples/out/testdrawpixels-%d.png", i))
+			imageutil.Save(buf.Image(), fmt.Sprintf("../internal/examples/out/testdrawpixels-%d.png", i))
 		}
 	}
 }
 
-func BenchmarkDrawPixels_Size(b *testing.B) {
+func BenchmarkDrawFragment(b *testing.B) {
+	r := render.NewRenderer(render.Size(1920, 1080))
+	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
+	f := func(f primitive.Fragment) color.RGBA { return f.Col }
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.DrawFragment(buf, 42, 42, f)
+	}
+}
+
+func BenchmarkDrawFragment_NonParallel(b *testing.B) {
+	r := render.NewRenderer(render.Size(1920, 1080))
+	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
+	f := func(f primitive.Fragment) color.RGBA { return f.Col }
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for x := 0; x < 1920; x++ {
+			for y := 0; y < 1080; y++ {
+				r.DrawFragment(buf, x, y, f)
+			}
+		}
+	}
+}
+
+func BenchmarkDrawFragment_Parallel(b *testing.B) {
+	r := render.NewRenderer(render.Size(1920, 1080))
+	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
+	f := func(f primitive.Fragment) color.RGBA { return f.Col }
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		r.DrawFragments(buf, f)
+	}
+}
+
+func BenchmarkDrawFragments_Size(b *testing.B) {
 	w, h := 100, 100
 	for i := 1; i < 128; i *= 2 {
 		ww, hh := w*i, h*i
 		r := render.NewRenderer(render.Size(ww, hh))
-		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
+		buf := buffer.NewBuffer(image.Rect(0, 0, ww, hh))
 
 		b.Run(fmt.Sprintf("%d-%d", ww, hh), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.DrawPixels(img, func(frag primitive.Fragment) color.RGBA {
+				r.DrawFragments(buf, func(frag primitive.Fragment) color.RGBA {
 					return color.RGBA{uint8(frag.X), uint8(frag.X), uint8(frag.Y), uint8(frag.Y)}
 				})
 			}
@@ -81,7 +122,7 @@ func BenchmarkDrawPixels_Size(b *testing.B) {
 	}
 }
 
-func BenchmarkDrawPixels_Block_Parallel(b *testing.B) {
+func BenchmarkDrawFragments_Block_Parallel(b *testing.B) {
 	// Notes & Observations:
 	//
 	// On Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with 16 cores.
@@ -90,7 +131,7 @@ func BenchmarkDrawPixels_Block_Parallel(b *testing.B) {
 	// one must optimize the fragment shader down to 14ms.
 	ww, hh := 1920, 1080
 	for i := 8; i < 1024; i *= 2 {
-		img := image.NewRGBA(image.Rect(0, 0, ww, hh))
+		buf := buffer.NewBuffer(image.Rect(0, 0, ww, hh))
 		r := render.NewRenderer(
 			render.Size(ww, hh),
 			render.BatchSize(int32(i)),
@@ -99,7 +140,7 @@ func BenchmarkDrawPixels_Block_Parallel(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				r.DrawPixels(img, func(frag primitive.Fragment) color.RGBA {
+				r.DrawFragments(buf, func(frag primitive.Fragment) color.RGBA {
 					return color.RGBA{255, 255, 255, 255}
 				})
 			}
@@ -107,7 +148,7 @@ func BenchmarkDrawPixels_Block_Parallel(b *testing.B) {
 	}
 }
 
-func BenchmarkDrawPixels_Block_NonParallel(b *testing.B) {
+func BenchmarkDrawFragments_Block_NonParallel(b *testing.B) {
 	// Notes & Observations:
 	//
 	// On Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz with 16 cores.

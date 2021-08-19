@@ -149,6 +149,10 @@ func (b *Buffer) In(x, y int) bool {
 	return image.Point{x, y}.In(b.rect)
 }
 
+// TODO: we should be consistent with image package.
+// If image.At(a, b) result in color c1, then buffer.At(a, b) will result
+// in color image.At(a, h-b-1).
+
 func (b *Buffer) At(x, y int) Fragment {
 	if !(image.Point{x, b.rect.Max.Y - y - 1}.In(b.rect)) {
 		return Fragment{}

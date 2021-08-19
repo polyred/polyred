@@ -240,11 +240,8 @@ func (r *Renderer) shadowDepthTest(index int, x, y int, z float64) bool {
 	return !(z <= buf.depths[idx])
 }
 
-func (r *Renderer) shadingVisibility(
-	x, y int,
-	shadowIdx int,
-	info buffer.Fragment,
-	uniforms map[string]interface{},
+func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
+	info buffer.Fragment, uniforms map[string]interface{},
 ) bool {
 	if !r.lightSources[shadowIdx].CastShadow() {
 		return true

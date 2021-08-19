@@ -246,14 +246,13 @@ func (r *Renderer) passDeferred() {
 	}
 
 	ao := ambientOcclusionPass{buf: r.buf}
-	r.DrawPixels(r.buf.Image(), func(frag primitive.Fragment) color.RGBA {
-		frag.Col = r.shade(frag.X, r.buf.Bounds().Dy()-frag.Y-1, uniforms)
-		return ao.Shade(frag.X, r.buf.Bounds().Dy()-frag.Y-1, frag.Col)
+	r.DrawFragments(r.buf, func(frag primitive.Fragment) color.RGBA {
+		frag.Col = r.shade(r.buf.UnsafeAt(frag.X, frag.Y), uniforms)
+		return ao.Shade(frag.X, frag.Y, frag.Col)
 	})
 }
 
-func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) color.RGBA {
-	info := r.buf.At(x, y)
+func (r *Renderer) shade(info buffer.Fragment, uniforms map[string]interface{}) color.RGBA {
 	if !info.Ok {
 		return r.background
 	}
@@ -286,7 +285,7 @@ func (r *Renderer) shade(x, y int, uniforms map[string]interface{}) color.RGBA {
 		visibles := 0.0
 		ns := len(r.shadowBufs)
 		for i := 0; i < ns; i++ {
-			visible := r.shadingVisibility(x, y, i, info, uniforms)
+			visible := r.shadingVisibility(info.X, info.Y, i, info, uniforms)
 			if visible {
 				visibles++
 			}
@@ -471,6 +470,8 @@ func (r *Renderer) drawClipped(
 			r.buf.Set(x, y, buffer.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
+					X:     x,
+					Y:     y,
 					Depth: z,
 					UV:    math.NewVec2(uvX, uvY),
 					Du:    du,

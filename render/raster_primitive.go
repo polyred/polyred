@@ -20,7 +20,7 @@ import (
 //
 // See shader.Program for more information regarding shader programming.
 func (r *Renderer) DrawPrimitives(
-	buf *buffer.Buffer, p shader.Program, idx []uint64, verts []*primitive.Vertex,
+	buf *buffer.Buffer, p shader.VertexProgram, idx []uint64, verts []*primitive.Vertex,
 ) {
 	len := len(idx)
 	if len%3 != 0 {
@@ -44,11 +44,11 @@ func (r *Renderer) DrawPrimitives(
 }
 
 // DrawPrimitive implements a triangle draw call of the rasteriation graphics pipeline.
-func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, prog shader.Program,
+func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, p shader.VertexProgram,
 	tri *primitive.Triangle) bool {
-	v1 := prog.VertexShader(tri.V1)
-	v2 := prog.VertexShader(tri.V2)
-	v3 := prog.VertexShader(tri.V3)
+	v1 := p(tri.V1)
+	v2 := p(tri.V2)
+	v3 := p(tri.V3)
 
 	// For perspective corrected interpolation
 	recipw := [3]float64{1, 1, 1}
@@ -80,12 +80,12 @@ func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, prog shader.Program,
 
 	// All vertices are inside the viewport, let's rasterize directly
 	if r.inViewport2(buf, v1.Pos) && r.inViewport2(buf, v2.Pos) && r.inViewport2(buf, v3.Pos) {
-		r.rasterize(buf, prog, &v1, &v2, &v3, recipw)
+		r.rasterize(buf, &v1, &v2, &v3, recipw)
 		return true
 	}
 
 	// Clipping into smaller triangles
-	r.drawClip(buf, prog, &v1, &v2, &v3, recipw)
+	r.drawClip(buf, &v1, &v2, &v3, recipw)
 	return true
 }
 
@@ -109,8 +109,7 @@ func (r *Renderer) inViewport2(buf *buffer.Buffer, v math.Vec4) bool {
 	return true
 }
 
-func (r *Renderer) drawClip(buf *buffer.Buffer, prog shader.Program,
-	v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
+func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
 	w := float64(buf.Bounds().Dx())
 	h := float64(buf.Bounds().Dy())
 
@@ -239,13 +238,12 @@ func (r *Renderer) drawClip(buf *buffer.Buffer, prog shader.Program,
 			},
 		}
 
-		r.rasterize(buf, prog, &t1, &t2, &t3, recipw)
+		r.rasterize(buf, &t1, &t2, &t3, recipw)
 	}
 }
 
 // rasterize implements the rasterization process of a given primitive.
-func (r *Renderer) rasterize(buf *buffer.Buffer, prog shader.Program,
-	v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
+func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
 	// Compute AABB make the AABB a little bigger that align with
 	// pixels to contain the entire triangle
 	aabb := primitive.NewAABB(v1.Pos.ToVec3(), v2.Pos.ToVec3(), v3.Pos.ToVec3())
@@ -331,10 +329,6 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, prog shader.Program,
 				r.interpoVaryings(v1.AttrSmooth, v2.AttrSmooth, v3.AttrSmooth, frag.AttrSmooth, recipw, bc)
 			}
 
-			frag.Col = prog.FragmentShader(frag)
-
-			// TODO: alpha test and blending?
-
 			buf.Set(x, y, buffer.Fragment{
 				Ok:       true,
 				Fragment: frag,
@@ -416,19 +410,18 @@ func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
 	}
 }
 
-// interpolate interpolates the given varying.
+// interpolate does perspective-correct interpolation for the given varying.
 //
-// It also implements the perspective corrected interpolation. See:
-// Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
+// See: Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 // Department of Computer Science, University of North Carolina at
 // Chapel Hill (2002).
 func (r *Renderer) interpolate(varying, recipw, barycoord [3]float64) float64 {
 	recipw[0] *= barycoord[0]
 	recipw[1] *= barycoord[1]
 	recipw[2] *= barycoord[2]
-	norm := 1.0
+	norm := recipw[0]*varying[0] + recipw[1]*varying[1] + recipw[2]*varying[2]
 	if r.renderPerspect {
-		norm = 1 / (recipw[0] + recipw[1] + recipw[2])
+		norm *= 1 / (recipw[0] + recipw[1] + recipw[2])
 	}
-	return norm * (recipw[0]*varying[0] + recipw[1]*varying[1] + recipw[2]*varying[2])
+	return norm
 }
