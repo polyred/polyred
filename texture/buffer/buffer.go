@@ -31,8 +31,11 @@ type Buffer struct {
 	color  []uint8
 }
 
+// PixelFormat represents the internal pixel format of the buffer,
+// which determines the order of colors in its internal frame buffer.
 type PixelFormat int
 
+// All kinds of pixel format.
 const (
 	PixelFormatRGBA PixelFormat = iota
 	PixelFormatBGRA
@@ -48,6 +51,8 @@ func Format(format PixelFormat) Opt {
 	}
 }
 
+// NewBuffer returns a rendering buffer. The caller must specify its size.
+// By default, it uses RGBA pixel format.
 func NewBuffer(r image.Rectangle, opts ...Opt) *Buffer {
 	buf := &Buffer{
 		lock:      make([]spinlock.SpinLock, r.Dx()*r.Dy()),
@@ -64,29 +69,47 @@ func NewBuffer(r image.Rectangle, opts ...Opt) *Buffer {
 	return buf
 }
 
+// Clear clears the entire buffer.
+//
+// Note that the function is not thread-safe, it is caller's
+// responsibility to guarantee that the buffer can be cleared.
 func (b *Buffer) Clear() {
-	// Clear using zero values.
-	// This loop involves compiler optimization, see:
-	// https://golang.org/issue/5373
-
 	b.ClearFragments()
 	b.ClearDepth()
 	b.ClearFrameBuf()
 }
 
+// ClearFragments clears the buffer's fragments.
+//
+// Note that the function is not thread-safe, it is caller's
+// responsibility to guarantee that the buffer can be cleared.
 func (b *Buffer) ClearFragments() {
+	// Clear using zero value looping, which involves compiler optimization.
+	// See: https://golang.org/issue/5373
 	for i := range b.fragments {
 		b.fragments[i] = Fragment{}
 	}
 }
 
+// ClearDepth clears the buffer's internal depth buffer.
+//
+// Note that the function is not thread-safe, it is caller's
+// responsibility to guarantee that the buffer can be cleared.
 func (b *Buffer) ClearDepth() {
+	// Clear using zero value looping, which involves compiler optimization.
+	// See: https://golang.org/issue/5373
 	for i := range b.depth {
 		b.depth[i] = 0
 	}
 }
 
+// ClearFrameBuf clears the buffer's frame buffer.
+//
+// Note that the function is not thread-safe, it is caller's
+// responsibility to guarantee that the buffer can be cleared.
 func (b *Buffer) ClearFrameBuf() {
+	// Clear using zero value looping, which involves compiler optimization.
+	// See: https://golang.org/issue/5373
 	for i := range b.color {
 		b.color[i] = 0
 	}
@@ -114,11 +137,11 @@ func (b *Buffer) Depth() *image.RGBA {
 
 func (b *Buffer) Bounds() image.Rectangle { return b.rect }
 
-func (b *Buffer) fragmentOffset(x, y int) int {
+func (b *Buffer) FragmentOffset(x, y int) int {
 	return (y-b.rect.Min.Y)*b.stride + (x - b.rect.Min.X)
 }
 
-func (b *Buffer) pixelOffset(x, y int) int {
+func (b *Buffer) PixelOffset(x, y int) int {
 	return (y-b.rect.Min.Y)*b.stride*4 + (x-b.rect.Min.X)*4
 }
 
@@ -127,10 +150,10 @@ func (b *Buffer) In(x, y int) bool {
 }
 
 func (b *Buffer) At(x, y int) Fragment {
-	if !(image.Point{x, b.rect.Max.Y - y}.In(b.rect)) {
+	if !(image.Point{x, b.rect.Max.Y - y - 1}.In(b.rect)) {
 		return Fragment{}
 	}
-	i := b.fragmentOffset(x, b.rect.Max.Y-y)
+	i := b.FragmentOffset(x, b.rect.Max.Y-y-1)
 
 	b.lock[i].Lock()
 	info := b.fragments[i]
@@ -138,52 +161,11 @@ func (b *Buffer) At(x, y int) Fragment {
 	return info
 }
 
-func (b *Buffer) MustSet(x, y int, info Fragment) {
-	if !(image.Point{x, b.rect.Max.Y - y}.In(b.rect)) {
-		return
-	}
-
-	i := b.fragmentOffset(x, b.rect.Max.Y-y)
-	j := b.pixelOffset(x, b.rect.Max.Y-y)
-	// Write color and depth information to the two dedicated color and
-	// depth buffers.
-	d := b.depth[j : j+4 : j+4] // Small cap improves performance, see https://golang.org/issue/27857
-	c := b.color[j : j+4 : j+4]
-
-	b.lock[i].Lock()
-	defer b.lock[i].Unlock()
-
-	switch b.format {
-	case PixelFormatBGRA:
-		d[2] = uint8(info.Depth * 0xff)
-		d[1] = uint8(info.Depth * 0xff)
-		d[0] = uint8(info.Depth * 0xff)
-		d[3] = 0xff
-
-		c[2] = info.Col.R
-		c[1] = info.Col.G
-		c[0] = info.Col.B
-		c[3] = info.Col.A
-	default: // PixelFormatRGBA:
-		d[0] = uint8(info.Depth * 0xff)
-		d[1] = uint8(info.Depth * 0xff)
-		d[2] = uint8(info.Depth * 0xff)
-		d[3] = 0xff
-
-		c[0] = info.Col.R
-		c[1] = info.Col.G
-		c[2] = info.Col.B
-		c[3] = info.Col.A
-	}
-
-	b.fragments[i] = info
-}
-
 func (b *Buffer) Set(x, y int, info Fragment) {
-	if !(image.Point{x, b.rect.Max.Y - y}.In(b.rect)) {
+	if !(image.Point{x, b.rect.Max.Y - y - 1}.In(b.rect)) {
 		return
 	}
-	i := b.fragmentOffset(x, b.rect.Max.Y-y)
+	i := b.FragmentOffset(x, b.rect.Max.Y-y-1)
 
 	b.lock[i].Lock()
 	defer b.lock[i].Unlock()
@@ -192,7 +174,7 @@ func (b *Buffer) Set(x, y int, info Fragment) {
 		return
 	}
 
-	j := b.pixelOffset(x, b.rect.Max.Y-y)
+	j := b.PixelOffset(x, b.rect.Max.Y-y-1)
 
 	// Write color and depth information to the two dedicated color and
 	// depth buffers.
@@ -227,14 +209,57 @@ func (b *Buffer) Set(x, y int, info Fragment) {
 
 // DepthTest conducts the depth test.
 func (b *Buffer) DepthTest(x, y int, depth float64) bool {
-	if !(image.Point{x, b.rect.Max.Y - y}.In(b.rect)) {
+	if !(image.Point{x, b.rect.Max.Y - y - 1}.In(b.rect)) {
 		return false
 	}
-	i := b.fragmentOffset(x, b.rect.Max.Y-y)
+	i := b.FragmentOffset(x, b.rect.Max.Y-y-1)
 
 	b.lock[i].Lock()
 	defer b.lock[i].Unlock()
 	// If the fragments is not ok to use, or the depth greater than the
 	// existing depth value, pass the test.
 	return (!b.fragments[i].Ok) || depth > b.fragments[i].Depth
+}
+
+// UnsafeAt returns a pointer the the underlying fragment without
+// bound checks. If the provided pixel coords are invalid, this
+// function will result in a panic.
+func (b *Buffer) UnsafeAt(x, y int) Fragment {
+	i := b.FragmentOffset(x, b.rect.Max.Y-y-1)
+	return b.fragments[i]
+}
+
+// UnsafeSet sets the given fragment to the underlying frame and
+// depth buffer without bound checks. If the provided pixel coords
+// are invalid, this function will result in a panic.
+func (b *Buffer) UnsafeSet(x, y int, info Fragment) {
+	i := b.FragmentOffset(x, b.rect.Max.Y-y-1)
+	j := b.PixelOffset(x, b.rect.Max.Y-y-1)
+
+	d := b.depth[j : j+4 : j+4]
+	c := b.color[j : j+4 : j+4]
+	switch b.format {
+	case PixelFormatBGRA:
+		d[2] = uint8(info.Depth * 0xff)
+		d[1] = uint8(info.Depth * 0xff)
+		d[0] = uint8(info.Depth * 0xff)
+		d[3] = 0xff
+
+		c[2] = info.Col.R
+		c[1] = info.Col.G
+		c[0] = info.Col.B
+		c[3] = info.Col.A
+	default: // PixelFormatRGBA:
+		d[0] = uint8(info.Depth * 0xff)
+		d[1] = uint8(info.Depth * 0xff)
+		d[2] = uint8(info.Depth * 0xff)
+		d[3] = 0xff
+
+		c[0] = info.Col.R
+		c[1] = info.Col.G
+		c[2] = info.Col.B
+		c[3] = info.Col.A
+	}
+
+	b.fragments[i] = info
 }
