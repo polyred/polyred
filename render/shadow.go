@@ -156,7 +156,7 @@ func (r *Renderer) passShadows(index int) {
 		mesh.Faces(func(f primitive.Face, m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
 				r.sched.Run(func() {
-					if t.IsValid() {
+					if primitive.IsValidTriangle(t.V1.Pos.ToVec3(), t.V2.Pos.ToVec3(), t.V3.Pos.ToVec3()) {
 						r.drawDepth(index, uniforms, t, m)
 					}
 				})

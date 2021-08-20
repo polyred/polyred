@@ -7,6 +7,7 @@ package mesh
 import (
 	_ "image/jpeg" // for jpg encoding
 
+	"poly.red/geometry"
 	"poly.red/geometry/primitive"
 	"poly.red/material"
 	"poly.red/object"
@@ -14,6 +15,7 @@ import (
 
 type Mesh interface {
 	object.Object
+	geometry.Renderable
 
 	AABB() primitive.AABB
 	Normalize()

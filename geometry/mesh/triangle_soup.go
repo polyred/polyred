@@ -25,6 +25,9 @@ type TriangleSoup struct {
 	aabb *primitive.AABB
 
 	math.TransformContext
+
+	ibo []uint64
+	vbo []*primitive.Vertex
 }
 
 func (f *TriangleSoup) Type() object.Type {
@@ -115,25 +118,34 @@ func (m *TriangleSoup) Normalize() {
 	m.ResetContext()
 }
 
-func (m *TriangleSoup) GetVertexIndex() []uint64 {
-	index := make([]uint64, len(m.faces)*3)
-
-	for i := range index {
-		index[i] = uint64(i)
-	}
-	return index
+func (m *TriangleSoup) PrimitiveType() primitive.Type {
+	return primitive.TypeTriangle
 }
 
-func (m *TriangleSoup) GetVertexBuffer() []*primitive.Vertex {
-	vs := make([]*primitive.Vertex, len(m.faces)*3)
-	i := 0
-	m.Faces(func(f primitive.Face, m material.Material) bool {
-		f.Vertices(func(v *primitive.Vertex) bool {
-			vs[i] = v
-			i++
+func (m *TriangleSoup) IndexBuffer() []uint64 {
+	if m.ibo == nil {
+		index := make([]uint64, len(m.faces)*3)
+		for i := range index {
+			index[i] = uint64(i)
+		}
+		m.ibo = index
+	}
+	return m.ibo
+}
+
+func (m *TriangleSoup) VertexBuffer() []*primitive.Vertex {
+	if m.vbo == nil {
+		vs := make([]*primitive.Vertex, len(m.faces)*3)
+		i := 0
+		m.Faces(func(f primitive.Face, m material.Material) bool {
+			f.Vertices(func(v *primitive.Vertex) bool {
+				vs[i] = v
+				i++
+				return true
+			})
 			return true
 		})
-		return true
-	})
-	return vs
+		m.vbo = vs
+	}
+	return m.vbo
 }

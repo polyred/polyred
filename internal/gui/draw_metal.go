@@ -108,9 +108,7 @@ func (w *win) resetBufs(r image.Rectangle) {
 	// It does not involve with data race. Because the draw call is
 	// also handled on the main thread, which is currently not possible
 	// to execute.
-	for i := 0; i < w.buflen; i++ {
-		w.bufs[i] = buffer.NewBuffer(r, buffer.Format(buffer.PixelFormatBGRA))
-	}
+	w.renderer.Options(render.Size(r.Dx(), r.Dy()), render.Format(buffer.PixelFormatBGRA))
 
 	// SetDrawableSize later so that all buffers are prepared for flushing.
 	w.ml.SetDrawableSize(r.Dx(), r.Dy())

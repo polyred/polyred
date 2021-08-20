@@ -45,10 +45,10 @@ func NewTriangle(v1, v2, v3 *Vertex) *Triangle {
 
 // IsValid is an assertion to check if the given triangle is valid or not.
 func (t *Triangle) IsValid() bool {
-	p1 := t.V1.Pos
-	p2 := t.V2.Pos
-	p3 := t.V3.Pos
+	return IsValidTriangle(t.V1.Pos.ToVec3(), t.V2.Pos.ToVec3(), t.V3.Pos.ToVec3())
+}
 
+func IsValidTriangle(p1, p2, p3 math.Vec3) bool {
 	p1p2 := p2.Sub(p1)
 	p1p3 := p3.Sub(p1)
 	if p1p2.IsZero() {

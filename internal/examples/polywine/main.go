@@ -5,43 +5,20 @@
 package main
 
 import (
-	"image"
-
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
+	"poly.red/internal/gui"
 	"poly.red/math"
-	"poly.red/render"
+	render "poly.red/render2"
 	"poly.red/shader"
 	"poly.red/texture"
 	"poly.red/texture/buffer"
 	"poly.red/texture/imageutil"
-
-	"poly.red/internal/gui"
 )
 
 func main() {
-	width, height := 400, 400
-	gui.InitWindow(
-		gui.WithTitle("polyred"),
-		gui.WithSize(width, height),
-		gui.WithFPS(),
-	)
-
-	// camera and renderer
-	cam := camera.NewPerspective(
-		camera.Position(math.NewVec3(0, 3, 3)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 10),
-	)
-
-	r := render.NewRenderer(
-		render.Size(width, height),
-		render.Camera(cam),
-		render.Blending(render.AlphaBlend),
-		render.Workers(2),
-	)
-
 	// Use a different model
-	mod, err := mesh.Load("../../testdata/bunny.obj")
+	mod, err := mesh.Load("../../testdata/ground.obj")
 	if err != nil {
 		panic(err)
 	}
@@ -51,12 +28,29 @@ func main() {
 	}
 
 	m.Normalize()
-	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 
 	tex := texture.NewTexture(
-		texture.Image(imageutil.MustLoadImage("../../testdata/bunny.png")),
+		texture.Image(imageutil.MustLoadImage("../../testdata/uvgrid2.png")),
 		texture.IsoMipmap(true),
 	)
+
+	width, height := 400, 400
+	// camera and renderer
+	cam := camera.NewPerspective(
+		camera.Position(math.NewVec3(0, 3, 3)),
+		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 10),
+	)
+
+	r := render.NewRenderer(
+		render.Size(width, height),
+		render.Camera(cam),
+		render.Workers(2),
+	)
+
+	w, err := gui.InitWindow(r, gui.WithTitle("polyred"), gui.WithFPS())
+	if err != nil {
+		panic(err)
+	}
 
 	// Shader
 	prog := &shader.TextureShader{
@@ -66,7 +60,7 @@ func main() {
 		Texture:     tex,
 	}
 	// Handling window resizing
-	gui.Window().Subscribe(gui.OnResize, func(name gui.EventName, e gui.Event) {
+	w.Subscribe(gui.OnResize, func(name gui.EventName, e gui.Event) {
 		ev := e.(*gui.SizeEvent)
 		cam.SetAspect(float64(ev.Width), float64(ev.Height))
 		prog.ViewMatrix = cam.ViewMatrix()
@@ -74,20 +68,21 @@ func main() {
 	})
 
 	// Orbit controls
-	ctrl := gui.NewOrbitControl(cam)
-	gui.Window().Subscribe(gui.OnMouseUp, ctrl.OnMouse)
-	gui.Window().Subscribe(gui.OnMouseDown, ctrl.OnMouse)
-	gui.Window().Subscribe(gui.OnCursor, ctrl.OnCursor)
-	gui.Window().Subscribe(gui.OnScroll, ctrl.OnScroll)
+	ctrl := gui.NewOrbitControl(w, cam)
+	w.Subscribe(gui.OnMouseUp, ctrl.OnMouse)
+	w.Subscribe(gui.OnMouseDown, ctrl.OnMouse)
+	w.Subscribe(gui.OnCursor, ctrl.OnCursor)
+	w.Subscribe(gui.OnScroll, ctrl.OnScroll)
 
 	// Starts the main rendering loop
-	gui.MainLoop(func(buf *buffer.Buffer) *image.RGBA {
+	w.MainLoop(func() *buffer.Buffer {
 		prog.ModelMatrix = m.ModelMatrix()
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ProjMatrix = cam.ProjMatrix()
 
-		r.DrawPrimitives(buf, prog.VertexShader, vi, vb)
+		buf := r.NextBuffer()
+		r.DrawPrimitives(buf, m, prog.VertexShader)
 		r.DrawFragments(buf, prog.FragmentShader)
-		return buf.Image()
+		return buf
 	})
 }

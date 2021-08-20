@@ -2,27 +2,6 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-// Package gui implements a minimum windowing utility that collaborate
-// with render.Buffer.
-//
-// A basic window program is as follows:
-//
-// 	package main
-//
-// 	import (
-// 		"image"
-//
-// 		"poly.red/gui"
-// 		"poly.red/render"
-// 	)
-//
-// 	func main() {
-// 		gui.InitWindow()
-// 		gui.MainLoop(func(buf *render.Buffer) *image.RGBA {
-// 			return nil
-// 		})
-// 	}
-//
 package gui
 
 import (
@@ -36,6 +15,7 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
+	render "poly.red/render2"
 	"poly.red/texture/buffer"
 )
 
@@ -43,7 +23,7 @@ func init() {
 	runtime.LockOSThread()
 }
 
-type win struct {
+type Window struct {
 	win           *glfw.Window
 	title         string
 	width, height uint32
@@ -51,10 +31,9 @@ type win struct {
 	scaleY        float64
 
 	// buffers and draw queue
-	buflen int
-	bufs   []*buffer.Buffer
-	drawQ  chan *image.RGBA
-	resize chan image.Rectangle
+	renderer *render.Renderer
+	drawQ    chan *image.RGBA
+	resize   chan image.Rectangle
 
 	// Settings
 	showFPS bool
@@ -72,45 +51,28 @@ type win struct {
 	driverInfo
 }
 
-var window *win
-
-// Show shows the given image on a window.
+// Show is a wrapper that wraps window features for showing a single image.
 func Show(img *image.RGBA) {
-	// TODO: fix on darwin about scaling issue, compute dynamically
-	opt := WithSize(img.Bounds().Dx(), img.Bounds().Dy())
-	if runtime.GOOS == "darwin" {
-		opt = WithSize(img.Bounds().Dx()/2, img.Bounds().Dy()/2)
-	}
-	err := InitWindow(opt)
+	r := render.NewRenderer(render.Size(img.Bounds().Dx(), img.Bounds().Dy()))
+	w, err := InitWindow(r)
 	if err != nil {
 		panic(err)
 	}
 
-	// TODO: rethink about the main loop and speedup. if
-	// the callback is returning the same image, why not caching
-	// the result?
-	//
-	// Possible issues: double buffering.
-	MainLoop(func(buf *buffer.Buffer) *image.RGBA { return img })
-}
+	buf := r.NextBuffer()
+	r.DrawImage(buf, img)
 
-// Window returns the window instance
-func Window() *win {
-	if window != nil {
-		return window
-	}
-	panic("must call gui.InitWindow() first")
+	w.MainLoop(func() *buffer.Buffer { return buf })
 }
 
 // InitWindow constructs a new graphical window.
-func InitWindow(opts ...Option) error {
-	w := &win{
+func InitWindow(r *render.Renderer, opts ...Option) (*Window, error) {
+	w := &Window{
 		title:      "polyred-gui",
-		width:      800,
-		height:     500,
+		width:      uint32(r.CurrentBuffer().Bounds().Dx()),
+		height:     uint32(r.CurrentBuffer().Bounds().Dy()),
 		showFPS:    false,
 		dispatcher: newDispatcher(),
-		buflen:     2, // use two buffers by default.
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -125,7 +87,7 @@ func InitWindow(opts ...Option) error {
 
 	err := glfw.Init()
 	if err != nil {
-		return fmt.Errorf("failed to initialize glfw context: %w", err)
+		return nil, fmt.Errorf("failed to initialize glfw context: %w", err)
 	}
 	w.initWinHints()
 
@@ -141,30 +103,21 @@ func InitWindow(opts ...Option) error {
 
 	w.drawQ = make(chan *image.RGBA)
 	w.resize = make(chan image.Rectangle)
-	w.bufs = make([]*buffer.Buffer, w.buflen)
-	w.resetBufs(image.Rect(0, 0, fbw, fbh))
-
-	if window != nil {
-		panic("gui: double window initialization")
-	}
-
-	window = w
-	return nil
+	w.renderer = render.NewRenderer(render.Size(fbw, fbh))
+	return w, nil
 }
 
 // Subscribe subscribes the given event and registers the given callback.
-func (w *win) Subscribe(eventName EventName, cb EventCallBack) {
+func (w *Window) Subscribe(eventName EventName, cb EventCallBack) {
 	w.dispatcher.eventMap[eventName] = append(w.dispatcher.eventMap[eventName], subscription{
 		id: nil,
 		cb: cb,
 	})
 }
 
-// MainLoop executes the given f on a loop, then schedules the returned
-// image and renders it to the created window.
-func MainLoop(f func(buf *buffer.Buffer) *image.RGBA) {
-	w := window
-
+// MainLoop executes the given f for every frame, then schedules the
+// returned buffer and renders it to the created window.
+func (w *Window) MainLoop(f func() *buffer.Buffer) {
 	// Rendering Thread
 	go func() {
 		for !w.win.ShouldClose() {
@@ -193,10 +146,7 @@ func MainLoop(f func(buf *buffer.Buffer) *image.RGBA) {
 				// Maybe we can make framebuf abstraction to be a linked list,
 				// in this way, the API remains one buffer parameter, but
 				// be able to access previous frames using frame.Prev()?
-				for i := range w.bufs {
-					w.bufs[i].Clear()
-					w.drawQ <- f(w.bufs[i])
-				}
+				w.drawQ <- f().Image()
 			}
 		}
 	}()
@@ -258,7 +208,7 @@ func MainLoop(f func(buf *buffer.Buffer) *image.RGBA) {
 	glfw.Terminate()
 }
 
-func (w *win) initCallbacks() {
+func (w *Window) initCallbacks() {
 	// Setup event callbacks
 	w.win.SetSizeCallback(func(x *glfw.Window, width int, height int) {
 		fbw, fbh := x.GetFramebufferSize()

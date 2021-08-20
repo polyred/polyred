@@ -5,7 +5,6 @@
 package render_test
 
 import (
-	"image"
 	"math/rand"
 	"testing"
 
@@ -13,10 +12,9 @@ import (
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
-	"poly.red/render"
+	render "poly.red/render2"
 	"poly.red/shader"
 	"poly.red/texture"
-	"poly.red/texture/buffer"
 	"poly.red/texture/imageutil"
 )
 
@@ -24,7 +22,6 @@ var (
 	rend *render.Renderer
 	m    *mesh.TriangleSoup
 	prog shader.Program
-	buf  *buffer.Buffer
 )
 
 func init() {
@@ -33,11 +30,7 @@ func init() {
 		camera.Position(math.NewVec3(0, 3, 3)),
 		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 10),
 	)
-	rend = render.NewRenderer(
-		render.Size(width, height),
-		render.Camera(cam),
-		render.Blending(render.AlphaBlend),
-	)
+	rend = render.NewRenderer(render.Size(width, height), render.Camera(cam))
 
 	// Use a different model
 	mod, err := mesh.Load("../internal/testdata/bunny.obj")
@@ -61,35 +54,35 @@ func init() {
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     tex,
 	}
-	buf = buffer.NewBuffer(image.Rect(0, 0, width, height))
 }
 
 func TestDrawPrimitives(t *testing.T) {
+	buf := rend.NextBuffer()
 	rend.DrawPrimitives(buf, m, prog.VertexShader)
 	rend.DrawFragments(buf, prog.FragmentShader)
-	imageutil.Save(buf.Image(), "../internal/examples/out/draw-primitives.png")
+	imageutil.Save(rend.CurrentBuffer().Image(), "../internal/examples/out/draw-primitives.png")
 }
 
 func BenchmarkDrawPrimitive(b *testing.B) {
 	rand.Seed(42)
 
-	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
-	r := render.NewRenderer()
+	r := render.NewRenderer(render.Size(1920, 1080))
 	p := shader.BasicShader{}
+	buf := r.NextBuffer()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r.DrawPrimitive(buf, p.VertexShader, &)
+		r.DrawPrimitive(buf, p.VertexShader, primitive.NewRandomVertex(), primitive.NewRandomVertex(), primitive.NewRandomVertex())
 	}
 }
 
 func BenchmarkDrawPrimitives(b *testing.B) {
 	rand.Seed(42)
 
-	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
-	r := render.NewRenderer()
+	r := render.NewRenderer(render.Size(1920, 1080))
 	p := shader.BasicShader{}
+	buf := r.NextBuffer()
 
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {

@@ -5,8 +5,8 @@
 package render
 
 import (
-	"poly.red/camera"
 	"poly.red/color"
+	"poly.red/geometry"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/shader"
@@ -19,9 +19,10 @@ import (
 // programs (i.e. currently supports vertex shader and fragment shader)
 //
 // See shader.Program for more information regarding shader programming.
-func (r *Renderer) DrawPrimitives(
-	buf *buffer.Buffer, p shader.VertexProgram, idx []uint64, verts []*primitive.Vertex,
-) {
+func (r *Renderer) DrawPrimitives(m geometry.Renderable, p shader.VertexProgram) {
+	idx := m.IndexBuffer()
+	verts := m.VertexBuffer()
+
 	len := len(idx)
 	if len%3 != 0 {
 		panic("index buffer must be a 3 multiple")
@@ -32,89 +33,52 @@ func (r *Renderer) DrawPrimitives(
 		v1 := verts[i]
 		v2 := verts[i+1]
 		v3 := verts[i+2]
-		tri := primitive.NewTriangle(v1, v2, v3)
 		r.sched.Run(func() {
-			if !tri.IsValid() {
-				return
+			if primitive.IsValidTriangle(v1.Pos.ToVec3(), v2.Pos.ToVec3(), v3.Pos.ToVec3()) {
+				r.DrawPrimitive(p, v1, v2, v3)
 			}
-			r.DrawPrimitive(buf, p, tri)
 		})
 	}
 	r.sched.Wait()
 }
 
 // DrawPrimitive implements a triangle draw call of the rasteriation graphics pipeline.
-func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, p shader.VertexProgram,
-	tri *primitive.Triangle) bool {
-	v1 := p(tri.V1)
-	v2 := p(tri.V2)
-	v3 := p(tri.V3)
+func (r *Renderer) DrawPrimitive(p shader.VertexProgram, p1, p2, p3 *primitive.Vertex) {
+	v1 := p(*p1)
+	v2 := p(*p2)
+	v3 := p(*p3)
 
 	// For perspective corrected interpolation
 	recipw := [3]float64{1, 1, 1}
-	if _, ok := r.renderCamera.(*camera.Perspective); ok {
+	if r.renderPerspect {
 		recipw[0] = -1 / v1.Pos.W
 		recipw[1] = -1 / v2.Pos.W
 		recipw[2] = -1 / v3.Pos.W
 	}
+	r.rasterize(&v1, &v2, &v3, recipw)
 
-	viewportMatrix := math.ViewportMatrix(
-		float64(buf.Bounds().Dx()),
-		float64(buf.Bounds().Dy()),
-	)
-
-	v1.Pos = v1.Pos.Apply(viewportMatrix).Pos()
-	v2.Pos = v2.Pos.Apply(viewportMatrix).Pos()
-	v3.Pos = v3.Pos.Apply(viewportMatrix).Pos()
-
-	// Back-face culling
-	if v2.Pos.Sub(v1.Pos).Cross(v3.Pos.Sub(v1.Pos)).Z < 0 {
-		return false
-	}
-
-	// View frustum culling
-	// TODO: deal with window resizing
-	if !r.inViewFrustum(buf, v1.Pos, v2.Pos, v3.Pos) {
-		return false
-	}
-
-	// All vertices are inside the viewport, let's rasterize directly
-	if r.inViewport2(buf, v1.Pos) && r.inViewport2(buf, v2.Pos) && r.inViewport2(buf, v3.Pos) {
-		r.rasterize(buf, &v1, &v2, &v3, recipw)
-		return true
-	}
-
-	// Clipping into smaller triangles
-	r.drawClip(buf, &v1, &v2, &v3, recipw)
-	return true
+	// v1ok := isVisible(v1.Pos)
+	// v2ok := isVisible(v2.Pos)
+	// v3ok := isVisible(v3.Pos)
+	// if v1ok && v2ok && v3ok {
+	// 	r.rasterize(buf, &v1, &v2, &v3, recipw)
+	// 	return
+	// }
+	// r.clipping(buf, &v1, &v2, &v3, recipw)
 }
 
-func (r *Renderer) inViewFrustum(buf *buffer.Buffer, v1, v2, v3 math.Vec4) bool {
-	// TODO: can be optimize?
-	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float64(buf.Bounds().Dx()*r.msaa), float64(buf.Bounds().Dy()*r.msaa), 1),
-		math.NewVec3(0, 0, 0),
-		math.NewVec3(0, 0, -1),
-	)
-	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
-	return viewportAABB.Intersect(triangleAABB)
+func isVisible(v math.Vec4) bool {
+	return (math.Abs(v.X) <= -v.W) && (math.Abs(v.Y) <= -v.W) && (math.Abs(v.Z) <= -v.W)
 }
 
-func (r *Renderer) inViewport2(buf *buffer.Buffer, v math.Vec4) bool {
-	w := float64(r.msaa * buf.Bounds().Dx())
-	h := float64(r.msaa * buf.Bounds().Dy())
-	if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
-		return false
-	}
-	return true
-}
-
-func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
-	w := float64(buf.Bounds().Dx())
-	h := float64(buf.Bounds().Dy())
+// clipping clips the given triangle into smaller triangles then rasterize
+// then onto the given buffer.
+func (r *Renderer) clipping(v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
+	w := float64(r.buf.Bounds().Dx())
+	h := float64(r.buf.Bounds().Dy())
 
 	// Sutherland Hodgman clipping algorithm
-	planes := [6]plane{
+	planes := [6]struct{ pos, nor math.Vec4 }{
 		{math.NewVec4(w, 0, 0, 1), math.NewVec4(-1, 0, 0, 1)},
 		{math.NewVec4(0, 0, 0, 1), math.NewVec4(1, 0, 0, 1)},
 		{math.NewVec4(0, h, 0, 1), math.NewVec4(0, -1, 0, 1)},
@@ -126,7 +90,7 @@ func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, re
 	// TODO: need optimize
 	input := []math.Vec4{v1.Pos, v2.Pos, v3.Pos}
 	clips := input
-	for _, plane := range planes {
+	for i := 0; i < 6; i++ {
 		input := clips
 		clips = nil
 		if len(input) == 0 {
@@ -134,116 +98,154 @@ func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, re
 			break
 		}
 
+		// fmt.Println("ok")
+
 		s := input[len(input)-1]
 		for _, e := range input {
-			if plane.pointInFront(e) {
-				if !plane.pointInFront(s) {
-					x := plane.intersectSegment(s, e)
+			if e.Sub(planes[i].pos).Dot(planes[i].nor) > 0 {
+				if !(s.Sub(planes[i].pos).Dot(planes[i].nor) > 0) {
+					u := e.Sub(s)
+					w := s.Sub(planes[i].pos)
+					d := planes[i].nor.Dot(u)
+					n := -planes[i].nor.Dot(w)
+					ss := n / d
+					x := s.Add(u.Scale(ss, ss, ss, ss))
 					clips = append(clips, x)
 				}
 				clips = append(clips, e)
-			} else if plane.pointInFront(s) {
-				x := plane.intersectSegment(s, e)
+			} else if s.Sub(planes[i].pos).Dot(planes[i].nor) > 0 {
+				u := e.Sub(s)
+				w := s.Sub(planes[i].pos)
+				d := planes[i].nor.Dot(u)
+				n := -planes[i].nor.Dot(w)
+				ss := n / d
+				x := s.Add(u.Scale(ss, ss, ss, ss))
 				clips = append(clips, x)
 			}
 			s = e
 		}
 	}
 
-	total := len(clips)
-	for i := 2; i < total; i++ {
-		b1bc := math.Barycoord(math.NewVec2(clips[0].X, clips[0].Y),
-			v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
-		b2bc := math.Barycoord(math.NewVec2(clips[i-1].X, clips[i-1].Y),
-			v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
-		b3bc := math.Barycoord(math.NewVec2(clips[i].X, clips[i].Y),
-			v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
+	l := len(clips)
+	v1p := v1.Pos.ToVec2()
+	v2p := v2.Pos.ToVec2()
+	v3p := v3.Pos.ToVec2()
 
+	for i := 2; i < l; i++ {
+		b1bc := math.Barycoord(clips[0].ToVec2(), v1p, v2p, v3p)
 		t1 := primitive.Vertex{
 			Pos: math.Vec4{
 				X: b1bc[0]*v1.Pos.X + b1bc[1]*v2.Pos.X + b1bc[2]*v3.Pos.X,
 				Y: b1bc[0]*v1.Pos.Y + b1bc[1]*v2.Pos.Y + b1bc[2]*v3.Pos.Y,
 				Z: b1bc[0]*v1.Pos.Z + b1bc[1]*v2.Pos.Z + b1bc[2]*v3.Pos.Z,
-				W: 1,
-			},
-			UV: math.Vec4{
-				X: b1bc[0]*v1.UV.X + b1bc[1]*v2.UV.X + b1bc[2]*v3.UV.X,
-				Y: b1bc[0]*v1.UV.Y + b1bc[1]*v2.UV.Y + b1bc[2]*v3.UV.Y,
-				Z: 0,
-				W: 1,
-			},
-			Nor: math.Vec4{
-				X: b1bc[0]*v1.Nor.X + b1bc[1]*v2.Nor.X + b1bc[2]*v3.Nor.X,
-				Y: b1bc[0]*v1.Nor.Y + b1bc[1]*v2.Nor.Y + b1bc[2]*v3.Nor.Y,
-				Z: b1bc[0]*v1.Nor.Z + b1bc[1]*v2.Nor.Z + b1bc[2]*v3.Nor.Z,
-				W: 0,
-			},
-			Col: color.RGBA{
-				R: uint8(math.Clamp(b1bc[0]*float64(v1.Col.R)+b1bc[1]*float64(v2.Col.R)+b1bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b1bc[0]*float64(v1.Col.G)+b1bc[1]*float64(v2.Col.G)+b1bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b1bc[0]*float64(v1.Col.B)+b1bc[1]*float64(v2.Col.B)+b1bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b1bc[0]*float64(v1.Col.A)+b1bc[1]*float64(v2.Col.A)+b1bc[2]*float64(v3.Col.A), 0, 0xff)),
+				W: b1bc[0]*v1.Pos.W + b1bc[1]*v2.Pos.W + b1bc[2]*v3.Pos.W,
 			},
 		}
+		u := r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, b1bc)
+		v := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, b1bc)
+		t1.UV = math.NewVec4(u, v, 0, 1)
+		if !v1.Nor.IsZero() && !v2.Nor.IsZero() && !v3.Nor.IsZero() {
+			nx := r.interpolate([3]float64{v1.Nor.X, v2.Nor.X, v3.Nor.X}, recipw, b1bc)
+			ny := r.interpolate([3]float64{v1.Nor.Y, v2.Nor.Y, v3.Nor.Y}, recipw, b1bc)
+			nz := r.interpolate([3]float64{v1.Nor.Z, v2.Nor.Z, v3.Nor.Z}, recipw, b1bc)
+			t1.Nor = math.NewVec4(nx, ny, nz, 0)
+		}
+		if v1.Col != color.Discard || v2.Col != color.Discard || v3.Col != color.Discard {
+			cr := r.interpolate([3]float64{float64(v1.Col.R), float64(v2.Col.R), float64(v3.Col.R)}, recipw, b1bc)
+			cg := r.interpolate([3]float64{float64(v1.Col.G), float64(v2.Col.G), float64(v3.Col.G)}, recipw, b1bc)
+			cb := r.interpolate([3]float64{float64(v1.Col.B), float64(v2.Col.B), float64(v3.Col.B)}, recipw, b1bc)
+			ca := r.interpolate([3]float64{float64(v1.Col.A), float64(v2.Col.A), float64(v3.Col.A)}, recipw, b1bc)
+			t1.Col = color.RGBA{
+				R: uint8(math.Clamp(cr, 0, 0xff)),
+				G: uint8(math.Clamp(cg, 0, 0xff)),
+				B: uint8(math.Clamp(cb, 0, 0xff)),
+				A: uint8(math.Clamp(ca, 0, 0xff)),
+			}
+		}
+
+		b2bc := math.Barycoord(clips[i-1].ToVec2(), v1p, v2p, v3p)
 		t2 := primitive.Vertex{
 			Pos: math.Vec4{
 				X: b2bc[0]*v1.Pos.X + b2bc[1]*v2.Pos.X + b2bc[2]*v3.Pos.X,
 				Y: b2bc[0]*v1.Pos.Y + b2bc[1]*v2.Pos.Y + b2bc[2]*v3.Pos.Y,
 				Z: b2bc[0]*v1.Pos.Z + b2bc[1]*v2.Pos.Z + b2bc[2]*v3.Pos.Z,
-				W: 1,
-			},
-			UV: math.Vec4{
-				X: b2bc[0]*v1.UV.X + b2bc[1]*v2.UV.X + b2bc[2]*v3.UV.X,
-				Y: b2bc[0]*v1.UV.Y + b2bc[1]*v2.UV.Y + b2bc[2]*v3.UV.Y,
-				Z: 0,
-				W: 1,
-			},
-			Nor: math.Vec4{
-				X: b2bc[0]*v1.Nor.X + b2bc[1]*v2.Nor.X + b2bc[2]*v3.Nor.X,
-				Y: b2bc[0]*v1.Nor.Y + b2bc[1]*v2.Nor.Y + b2bc[2]*v3.Nor.Y,
-				Z: b2bc[0]*v1.Nor.Z + b2bc[1]*v2.Nor.Z + b2bc[2]*v3.Nor.Z,
-				W: 0,
-			},
-			Col: color.RGBA{
-				R: uint8(math.Clamp(b2bc[0]*float64(v1.Col.R)+b2bc[1]*float64(v2.Col.R)+b2bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b2bc[0]*float64(v1.Col.G)+b2bc[1]*float64(v2.Col.G)+b2bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b2bc[0]*float64(v1.Col.B)+b2bc[1]*float64(v2.Col.B)+b2bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b2bc[0]*float64(v1.Col.A)+b2bc[1]*float64(v2.Col.A)+b2bc[2]*float64(v3.Col.A), 0, 0xff)),
+				W: b2bc[0]*v1.Pos.W + b2bc[1]*v2.Pos.W + b2bc[2]*v3.Pos.W,
 			},
 		}
+		u = r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, b2bc)
+		v = r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, b2bc)
+		t2.UV = math.NewVec4(u, v, 0, 1)
+		if !v1.Nor.IsZero() && !v2.Nor.IsZero() && !v3.Nor.IsZero() {
+			nx := r.interpolate([3]float64{v1.Nor.X, v2.Nor.X, v3.Nor.X}, recipw, b2bc)
+			ny := r.interpolate([3]float64{v1.Nor.Y, v2.Nor.Y, v3.Nor.Y}, recipw, b2bc)
+			nz := r.interpolate([3]float64{v1.Nor.Z, v2.Nor.Z, v3.Nor.Z}, recipw, b2bc)
+			t2.Nor = math.NewVec4(nx, ny, nz, 0)
+		}
+		if v1.Col != color.Discard || v2.Col != color.Discard || v3.Col != color.Discard {
+			cr := r.interpolate([3]float64{float64(v1.Col.R), float64(v2.Col.R), float64(v3.Col.R)}, recipw, b2bc)
+			cg := r.interpolate([3]float64{float64(v1.Col.G), float64(v2.Col.G), float64(v3.Col.G)}, recipw, b2bc)
+			cb := r.interpolate([3]float64{float64(v1.Col.B), float64(v2.Col.B), float64(v3.Col.B)}, recipw, b2bc)
+			ca := r.interpolate([3]float64{float64(v1.Col.A), float64(v2.Col.A), float64(v3.Col.A)}, recipw, b2bc)
+			t1.Col = color.RGBA{
+				R: uint8(math.Clamp(cr, 0, 0xff)),
+				G: uint8(math.Clamp(cg, 0, 0xff)),
+				B: uint8(math.Clamp(cb, 0, 0xff)),
+				A: uint8(math.Clamp(ca, 0, 0xff)),
+			}
+		}
+
+		b3bc := math.Barycoord(clips[i].ToVec2(), v1p, v2p, v3p)
 		t3 := primitive.Vertex{
 			Pos: math.Vec4{
 				X: b3bc[0]*v1.Pos.X + b3bc[1]*v2.Pos.X + b3bc[2]*v3.Pos.X,
 				Y: b3bc[0]*v1.Pos.Y + b3bc[1]*v2.Pos.Y + b3bc[2]*v3.Pos.Y,
 				Z: b3bc[0]*v1.Pos.Z + b3bc[1]*v2.Pos.Z + b3bc[2]*v3.Pos.Z,
-				W: 1,
-			},
-			UV: math.Vec4{
-				X: b3bc[0]*v1.UV.X + b3bc[1]*v2.UV.X + b3bc[2]*v3.UV.X,
-				Y: b3bc[0]*v1.UV.Y + b3bc[1]*v2.UV.Y + b3bc[2]*v3.UV.Y,
-				Z: 0,
-				W: 1,
-			},
-			Nor: math.Vec4{
-				X: b3bc[0]*v1.Nor.X + b3bc[1]*v2.Nor.X + b3bc[2]*v3.Nor.X,
-				Y: b3bc[0]*v1.Nor.Y + b3bc[1]*v2.Nor.Y + b3bc[2]*v3.Nor.Y,
-				Z: b3bc[0]*v1.Nor.Z + b3bc[1]*v2.Nor.Z + b3bc[2]*v3.Nor.Z,
-				W: 0,
-			},
-			Col: color.RGBA{
-				R: uint8(math.Clamp(b3bc[0]*float64(v1.Col.R)+b3bc[1]*float64(v2.Col.R)+b3bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b3bc[0]*float64(v1.Col.G)+b3bc[1]*float64(v2.Col.G)+b3bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b3bc[0]*float64(v1.Col.B)+b3bc[1]*float64(v2.Col.B)+b3bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b3bc[0]*float64(v1.Col.A)+b3bc[1]*float64(v2.Col.A)+b3bc[2]*float64(v3.Col.A), 0, 0xff)),
+				W: b3bc[0]*v1.Pos.W + b3bc[1]*v2.Pos.W + b3bc[2]*v3.Pos.W,
 			},
 		}
-
-		r.rasterize(buf, &t1, &t2, &t3, recipw)
+		u = r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, b3bc)
+		v = r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, b3bc)
+		t3.UV = math.NewVec4(u, v, 0, 1)
+		if !v1.Nor.IsZero() && !v2.Nor.IsZero() && !v3.Nor.IsZero() {
+			nx := r.interpolate([3]float64{v1.Nor.X, v2.Nor.X, v3.Nor.X}, recipw, b3bc)
+			ny := r.interpolate([3]float64{v1.Nor.Y, v2.Nor.Y, v3.Nor.Y}, recipw, b3bc)
+			nz := r.interpolate([3]float64{v1.Nor.Z, v2.Nor.Z, v3.Nor.Z}, recipw, b3bc)
+			t3.Nor = math.NewVec4(nx, ny, nz, 0)
+		}
+		if v1.Col != color.Discard || v2.Col != color.Discard || v3.Col != color.Discard {
+			cr := r.interpolate([3]float64{float64(v1.Col.R), float64(v2.Col.R), float64(v3.Col.R)}, recipw, b3bc)
+			cg := r.interpolate([3]float64{float64(v1.Col.G), float64(v2.Col.G), float64(v3.Col.G)}, recipw, b3bc)
+			cb := r.interpolate([3]float64{float64(v1.Col.B), float64(v2.Col.B), float64(v3.Col.B)}, recipw, b3bc)
+			ca := r.interpolate([3]float64{float64(v1.Col.A), float64(v2.Col.A), float64(v3.Col.A)}, recipw, b3bc)
+			t1.Col = color.RGBA{
+				R: uint8(math.Clamp(cr, 0, 0xff)),
+				G: uint8(math.Clamp(cg, 0, 0xff)),
+				B: uint8(math.Clamp(cb, 0, 0xff)),
+				A: uint8(math.Clamp(ca, 0, 0xff)),
+			}
+		}
+		r.rasterize(&t1, &t2, &t3, recipw)
 	}
 }
 
 // rasterize implements the rasterization process of a given primitive.
-func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
+func (r *Renderer) rasterize(v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
+	v1.Pos = v1.Pos.Apply(r.viewportMatrix).Pos()
+	v2.Pos = v2.Pos.Apply(r.viewportMatrix).Pos()
+	v3.Pos = v3.Pos.Apply(r.viewportMatrix).Pos()
+
+	// TODO: which should be the first?
+
+	// Back-face culling
+	if v2.Pos.Sub(v1.Pos).Cross(v3.Pos.Sub(v1.Pos)).Z < 0 {
+		return
+	}
+
+	// View frustum culling
+	if !r.cullViewFrustum(v1.Pos, v2.Pos, v3.Pos) {
+		return
+	}
+
 	// Compute AABB make the AABB a little bigger that align with
 	// pixels to contain the entire triangle
 	aabb := primitive.NewAABB(v1.Pos.ToVec3(), v2.Pos.ToVec3(), v3.Pos.ToVec3())
@@ -256,7 +258,7 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 	// contention
 	for x := xmin; x <= xmax; x++ {
 		for y := ymin; y <= ymax; y++ {
-			if !buf.In(x, y) {
+			if !r.buf.In(x, y) {
 				continue
 			}
 
@@ -275,7 +277,7 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 			// the smallest depth value is 0. This collaborate with the buffer
 			// clearing.
 			z := ((bc[0]*v1.Pos.Z + bc[1]*v2.Pos.Z + bc[2]*v3.Pos.Z) + 1) / 2
-			if !buf.DepthTest(x, y, z) {
+			if !r.buf.DepthTest(x, y, z) {
 				continue
 			}
 
@@ -329,12 +331,24 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 				r.interpoVaryings(v1.AttrSmooth, v2.AttrSmooth, v3.AttrSmooth, frag.AttrSmooth, recipw, bc)
 			}
 
-			buf.Set(x, y, buffer.Fragment{
+			r.buf.Set(x, y, buffer.Fragment{
 				Ok:       true,
 				Fragment: frag,
 			})
 		}
 	}
+}
+
+// ~200ns
+func (r *Renderer) cullViewFrustum(v1, v2, v3 math.Vec4) bool {
+	// TODO: can be optimize?
+	viewportAABB := primitive.NewAABB(
+		math.NewVec3(float64(r.buf.Bounds().Dx()), float64(r.buf.Bounds().Dy()), 1),
+		math.NewVec3(0, 0, 0),
+		math.NewVec3(0, 0, -1),
+	)
+	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
+	return viewportAABB.Intersect(triangleAABB)
 }
 
 // interpoVaryings perspective correct interpolates

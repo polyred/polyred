@@ -57,6 +57,7 @@ type Renderer struct {
 	renderPerspect bool
 	shadowBufs     []shadowInfo
 	outBuf         *image.RGBA
+	viewportMatrix math.Mat4
 }
 
 // NewRenderer creates a new renderer.
@@ -81,6 +82,7 @@ func NewRenderer(opts ...Opt) *Renderer {
 	}
 
 	r.buf = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa))
+	r.viewportMatrix = math.ViewportMatrix(float64(r.buf.Bounds().Dx()), float64(r.buf.Bounds().Dy()))
 	r.sched = sched.New(sched.Workers(r.workers))
 	runtime.SetFinalizer(r, func(r *Renderer) {
 		r.sched.Release()
@@ -156,14 +158,6 @@ func (r *Renderer) Render() *image.RGBA {
 	return r.outBuf
 }
 
-// FrameBuf is a best effort way to return the current frame buffer.
-func (r *Renderer) FrameBuf() *image.RGBA {
-	if r.outBuf != nil {
-		return r.outBuf
-	}
-	return r.buf.Image()
-}
-
 func (r *Renderer) passForward() {
 	if r.debug {
 		done := profiling.Timed("forward pass (world)")
@@ -211,7 +205,7 @@ func (r *Renderer) passForward() {
 		mesh.Faces(func(f primitive.Face, m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
 				r.sched.Run(func() {
-					if t.IsValid() {
+					if primitive.IsValidTriangle(t.V1.Pos.ToVec3(), t.V2.Pos.ToVec3(), t.V3.Pos.ToVec3()) {
 						r.draw(uniforms, t, m)
 					}
 				})

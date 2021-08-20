@@ -225,11 +225,15 @@ func (bm *BufferedMesh) Faces(iter func(primitive.Face, material.Material) bool)
 	}
 }
 
-func (bm *BufferedMesh) GetVertexIndex() []uint64 {
+func (bm *BufferedMesh) PrimitiveType() primitive.Type {
+	return primitive.TypeTriangle
+}
+
+func (bm *BufferedMesh) IndexBuffer() []uint64 {
 	return bm.vertIdx
 }
 
-func (bm *BufferedMesh) GetVertexBuffer() []*primitive.Vertex {
+func (bm *BufferedMesh) VertexBuffer() []*primitive.Vertex {
 	attrPos := bm.GetAttribute(AttributePos)
 	attrNor := bm.GetAttribute(AttributeNor)
 	attrColor := bm.GetAttribute(AttributeCol)

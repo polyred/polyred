@@ -75,6 +75,10 @@ func New(opts ...Opt) *Pool {
 	return p
 }
 
+// TODO: function literals can escape to the heap. RunWithArgs is an interface
+// hence the args will always escape. Write this scheduler using generics to
+// avoid memory allocations.
+
 // Run runs f in the current pool.
 func (p *Pool) Run(f ...func()) {
 	for i := range f {
