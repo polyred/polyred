@@ -52,7 +52,10 @@ type Renderer struct {
 	batchSize      int32
 	workers        int
 	sched          *sched.Pool
-	buf            *buffer.Buffer
+	pixelFormat    buffer.PixelFormat
+	bufcur         int
+	buflen         int
+	bufs           []*buffer.Buffer
 	renderCamera   camera.Interface
 	renderPerspect bool
 	shadowBufs     []shadowInfo
@@ -64,7 +67,9 @@ type Renderer struct {
 // The returned renderer implements a rasterization rendering pipeline.
 func NewRenderer(opts ...Opt) *Renderer {
 	r := &Renderer{ // default settings
-		buf:          nil,
+		pixelFormat:  buffer.PixelFormatRGBA,
+		buflen:       2, // use 2 by default.
+		bufs:         nil,
 		width:        800,
 		height:       500,
 		msaa:         1,
@@ -80,7 +85,9 @@ func NewRenderer(opts ...Opt) *Renderer {
 		opt(r)
 	}
 
-	r.buf = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa))
+	r.bufs = make([]*buffer.Buffer, r.buflen)
+	r.resetBufs()
+
 	r.sched = sched.New(sched.Workers(r.workers))
 	runtime.SetFinalizer(r, func(r *Renderer) {
 		r.sched.Release()
@@ -104,11 +111,20 @@ func NewRenderer(opts ...Opt) *Renderer {
 	// initialize shadow maps
 	if r.scene != nil && r.useShadowMap {
 		r.initShadowMaps()
+		r.bufs[0].ClearFragments()
+		r.bufs[0].ClearFrameBuf()
 	}
 
-	r.buf.ClearFragments()
-	r.buf.ClearFrameBuf()
 	return r
+}
+
+// resetBuffers assign new buffers to the caches window buffers (w.bufs)
+// Note: with Metal, we always use RGBA pixel format.
+func (r *Renderer) resetBufs() {
+	for i := 0; i < r.buflen; i++ {
+		r.bufs[i] = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa),
+			buffer.Format(r.pixelFormat))
+	}
 }
 
 // Render renders a scene.
@@ -125,7 +141,7 @@ func (r *Renderer) Render() *image.RGBA {
 	defer r.stopRunning()
 
 	// reset buffers
-	r.buf.ClearFragments()
+	r.bufs[0].ClearFragments()
 	if r.shouldStop() {
 		return r.outBuf
 	}
@@ -138,7 +154,7 @@ func (r *Renderer) Render() *image.RGBA {
 				return r.outBuf
 			}
 		}
-		r.buf.ClearFragments()
+		r.bufs[0].ClearFragments()
 	}
 
 	r.passForward()
@@ -146,7 +162,7 @@ func (r *Renderer) Render() *image.RGBA {
 		return r.outBuf
 	}
 
-	r.buf.ClearFrameBuf()
+	r.bufs[0].ClearFrameBuf()
 	r.passDeferred()
 	if r.shouldStop() {
 		return r.outBuf
@@ -156,12 +172,27 @@ func (r *Renderer) Render() *image.RGBA {
 	return r.outBuf
 }
 
-// FrameBuf is a best effort way to return the current frame buffer.
-func (r *Renderer) FrameBuf() *image.RGBA {
-	if r.outBuf != nil {
-		return r.outBuf
+func (r *Renderer) CurrBuffer() *buffer.Buffer {
+	return r.bufs[r.bufcur]
+}
+
+func (r *Renderer) NextBuffer() *buffer.Buffer {
+	r.bufcur = (r.bufcur + 1) % r.buflen
+	r.bufs[r.bufcur].Clear()
+	return r.bufs[r.bufcur]
+}
+
+func (r *Renderer) DrawImage(buf *buffer.Buffer, img *image.RGBA) {
+	for i := 0; i < buf.Bounds().Dx(); i++ {
+		for j := 0; j < buf.Bounds().Dy(); j++ {
+			buf.Set(i, j, buffer.Fragment{
+				Ok: true,
+				Fragment: primitive.Fragment{
+					X: i, Y: j, Col: img.RGBAAt(i, img.Bounds().Dy()),
+				},
+			})
+		}
 	}
-	return r.buf.Image()
 }
 
 func (r *Renderer) passForward() {
@@ -172,7 +203,7 @@ func (r *Renderer) passForward() {
 
 	matView := r.renderCamera.ViewMatrix()
 	matProj := r.renderCamera.ProjMatrix()
-	matVP := math.ViewportMatrix(float64(r.buf.Bounds().Dx()), float64(r.buf.Bounds().Dy()))
+	matVP := math.ViewportMatrix(float64(r.bufs[0].Bounds().Dx()), float64(r.bufs[0].Bounds().Dy()))
 
 	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
@@ -233,7 +264,7 @@ func (r *Renderer) passDeferred() {
 	matViewInv := matView.Inv()
 	matProj := r.renderCamera.ProjMatrix()
 	matProjInv := matProj.Inv()
-	matVP := math.ViewportMatrix(float64(r.buf.Bounds().Dx()), float64(r.buf.Bounds().Dy()))
+	matVP := math.ViewportMatrix(float64(r.bufs[0].Bounds().Dx()), float64(r.bufs[0].Bounds().Dy()))
 	matVPInv := matVP.Inv()
 	matScreenToWorld := matViewInv.MulM(matProjInv).MulM(matVPInv)
 	uniforms := map[string]interface{}{
@@ -245,9 +276,9 @@ func (r *Renderer) passDeferred() {
 		"matScreenToWorld": matScreenToWorld,
 	}
 
-	ao := ambientOcclusionPass{buf: r.buf}
-	r.DrawFragments(r.buf, func(frag primitive.Fragment) color.RGBA {
-		frag.Col = r.shade(r.buf.UnsafeAt(frag.X, frag.Y), uniforms)
+	ao := ambientOcclusionPass{buf: r.bufs[0]}
+	r.DrawFragments(r.bufs[0], func(frag primitive.Fragment) color.RGBA {
+		frag.Col = r.shade(r.bufs[0].UnsafeAt(frag.X, frag.Y), uniforms)
 		return ao.Shade(frag.X, frag.Y, frag.Col)
 	})
 }
@@ -306,7 +337,7 @@ func (r *Renderer) passAntialiasing() {
 	}
 
 	r.passGammaCorrect()
-	r.outBuf = imageutil.Resize(r.width, r.height, r.buf.Image())
+	r.outBuf = imageutil.Resize(r.width, r.height, r.bufs[0].Image())
 }
 
 func (r *Renderer) draw(
@@ -346,8 +377,8 @@ func (r *Renderer) draw(
 		return
 	}
 
-	w := float64(r.buf.Bounds().Dx())
-	h := float64(r.buf.Bounds().Dy())
+	w := float64(r.bufs[0].Bounds().Dx())
+	h := float64(r.bufs[0].Bounds().Dy())
 
 	// t1 is outside the viewfrustum
 	outside := func(v *math.Vec4, w, h float64) bool {
@@ -393,7 +424,7 @@ func (r *Renderer) drawClipped(
 
 	for x := xmin; x <= xmax; x++ {
 		for y := ymin; y <= ymax; y++ {
-			if !r.buf.In(x, y) {
+			if !r.bufs[0].In(x, y) {
 				continue
 			}
 
@@ -407,7 +438,7 @@ func (r *Renderer) drawClipped(
 
 			// Z-test
 			z := bc[0]*t1.Pos.Z + bc[1]*t2.Pos.Z + bc[2]*t3.Pos.Z
-			if !r.buf.DepthTest(x, y, z) {
+			if !r.bufs[0].DepthTest(x, y, z) {
 				continue
 			}
 
@@ -467,7 +498,7 @@ func (r *Renderer) drawClipped(
 			}
 
 			// update G-buffer
-			r.buf.Set(x, y, buffer.Fragment{
+			r.bufs[0].Set(x, y, buffer.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
 					X:     x,
@@ -495,7 +526,7 @@ func (r *Renderer) passGammaCorrect() {
 		return
 	}
 
-	r.DrawFragments(r.buf, func(frag primitive.Fragment) color.RGBA {
+	r.DrawFragments(r.bufs[0], func(frag primitive.Fragment) color.RGBA {
 		r := uint8(color.FromLinear2sRGB(float64(frag.Col.R)/0xff)*0xff + 0.5)
 		g := uint8(color.FromLinear2sRGB(float64(frag.Col.G)/0xff)*0xff + 0.5)
 		b := uint8(color.FromLinear2sRGB(float64(frag.Col.B)/0xff)*0xff + 0.5)
@@ -505,7 +536,7 @@ func (r *Renderer) passGammaCorrect() {
 
 func (r *Renderer) inViewport(v1, v2, v3 math.Vec4) bool {
 	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float64(r.buf.Bounds().Dx()), float64(r.buf.Bounds().Dy()), 1),
+		math.NewVec3(float64(r.bufs[0].Bounds().Dx()), float64(r.bufs[0].Bounds().Dy()), 1),
 		math.NewVec3(0, 0, 0),
 		math.NewVec3(0, 0, -1),
 	)

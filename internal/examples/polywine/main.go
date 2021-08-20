@@ -5,8 +5,6 @@
 package main
 
 import (
-	"image"
-
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/math"
@@ -60,11 +58,7 @@ func main() {
 		Texture:     tex,
 	}
 
-	w, err := gui.NewWindow(
-		gui.WithTitle("polyred"),
-		gui.WithSize(width, height),
-		gui.WithFPS(),
-	)
+	w, err := gui.NewWindow(r, gui.WithTitle("polyred"), gui.WithFPS())
 	if err != nil {
 		panic(err)
 	}
@@ -85,13 +79,14 @@ func main() {
 	w.Subscribe(gui.OnScroll, ctrl.OnScroll)
 
 	// Starts the main rendering loop
-	w.MainLoop(func(buf *buffer.Buffer) *image.RGBA {
+	w.MainLoop(func() *buffer.Buffer {
 		prog.ModelMatrix = m.ModelMatrix()
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ProjMatrix = cam.ProjMatrix()
 
+		buf := r.NextBuffer()
 		r.DrawPrimitives(buf, prog.VertexShader, vi, vb)
 		r.DrawFragments(buf, prog.FragmentShader)
-		return buf.Image()
+		return buf
 	})
 }

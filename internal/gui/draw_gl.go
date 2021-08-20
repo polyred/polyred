@@ -14,7 +14,6 @@ import (
 
 	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"poly.red/texture/buffer"
 )
 
 type driverInfo struct {
@@ -69,9 +68,7 @@ func (w *Window) flush(img *image.RGBA) error {
 }
 
 // resetBuffers assign new buffers to the caches window buffers (w.bufs)
-// Note: with Metal, we always use RGBA pixel format.
+// Note: with Metal, we always use BGRA pixel format.
 func (w *Window) resetBufs(r image.Rectangle) {
-	for i := 0; i < w.buflen; i++ {
-		w.bufs[i] = buffer.NewBuffer(r, buffer.Format(buffer.PixelFormatRGBA))
-	}
+	// Nothing on OpenGL.
 }

@@ -5,7 +5,6 @@
 package render
 
 import (
-	"image"
 	"image/color"
 
 	"poly.red/camera"
@@ -23,6 +22,12 @@ func Size(width, height int) Opt {
 	return func(r *Renderer) {
 		r.width = width
 		r.height = height
+	}
+}
+
+func PixelFormat(format buffer.PixelFormat) Opt {
+	return func(r *Renderer) {
+		r.pixelFormat = format
 	}
 }
 
@@ -112,7 +117,8 @@ func (r *Renderer) Options(opts ...Opt) {
 		opt(r)
 	}
 
-	r.buf = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa))
+	r.bufs = make([]*buffer.Buffer, r.buflen)
+	r.resetBufs()
 	r.lightSources = []light.Source{}
 	r.lightEnv = []light.Environment{}
 	if r.scene != nil {
@@ -134,8 +140,7 @@ func (r *Renderer) Options(opts ...Opt) {
 	// initialize shadow maps
 	if r.scene != nil && r.useShadowMap {
 		r.initShadowMaps()
+		r.bufs[0].ClearFragments()
+		r.bufs[0].ClearFrameBuf()
 	}
-
-	r.buf.ClearFragments()
-	r.buf.ClearFrameBuf()
 }

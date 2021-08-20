@@ -14,22 +14,6 @@ func WithTitle(title string) Option {
 	}
 }
 
-// WithSize option sets the width and height of the window.
-func WithSize(width, height int) Option {
-	return func(o *Window) {
-		o.width = uint32(width)
-		o.height = uint32(height)
-	}
-}
-
-// WithNumBufs option sets the number of switching buffers are used
-// internally for the rendering.
-func WithNumBufs(num int) Option {
-	return func(w *Window) {
-		w.buflen = num
-	}
-}
-
 // WithFPS sets the window to show FPS.
 func WithFPS() Option {
 	return func(o *Window) {

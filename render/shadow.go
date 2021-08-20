@@ -86,8 +86,8 @@ func (r *Renderer) initShadowMaps() {
 		}
 		r.shadowBufs[i].active = true
 		r.shadowBufs[i].settings = shadow.NewMap(shadow.Camera(c))
-		r.shadowBufs[i].depths = make([]float64, r.buf.Bounds().Dx()*r.buf.Bounds().Dy())
-		r.shadowBufs[i].lock = make([]spinlock.SpinLock, r.buf.Bounds().Dx()*r.buf.Bounds().Dy())
+		r.shadowBufs[i].depths = make([]float64, r.bufs[0].Bounds().Dx()*r.bufs[0].Bounds().Dy())
+		r.shadowBufs[i].lock = make([]spinlock.SpinLock, r.bufs[0].Bounds().Dx()*r.bufs[0].Bounds().Dy())
 	}
 }
 
@@ -100,10 +100,10 @@ func (r *Renderer) passShadows(index int) {
 		done := profiling.Timed("forward pass (shadow)")
 		defer done()
 		defer func() {
-			img := image.NewRGBA(image.Rect(0, 0, r.buf.Bounds().Dx(), r.buf.Bounds().Dy()))
-			for i := 0; i < r.buf.Bounds().Dx(); i++ {
-				for j := 0; j < r.buf.Bounds().Dy(); j++ {
-					z := r.shadowBufs[index].depths[i+(r.buf.Bounds().Dy()-j-1)*r.buf.Bounds().Dx()]
+			img := image.NewRGBA(image.Rect(0, 0, r.bufs[0].Bounds().Dx(), r.bufs[0].Bounds().Dy()))
+			for i := 0; i < r.bufs[0].Bounds().Dx(); i++ {
+				for j := 0; j < r.bufs[0].Bounds().Dy(); j++ {
+					z := r.shadowBufs[index].depths[i+(r.bufs[0].Bounds().Dy()-j-1)*r.bufs[0].Bounds().Dx()]
 					img.SetRGBA(i, j, color.RGBA{
 						uint8(z * 255),
 						uint8(z * 255),
@@ -121,7 +121,7 @@ func (r *Renderer) passShadows(index int) {
 	c := r.shadowBufs[index].settings.Camera()
 	matView := c.ViewMatrix()
 	matProj := c.ProjMatrix()
-	matVP := math.ViewportMatrix(float64(r.buf.Bounds().Dx()), float64(r.buf.Bounds().Dy()))
+	matVP := math.ViewportMatrix(float64(r.bufs[0].Bounds().Dx()), float64(r.bufs[0].Bounds().Dy()))
 	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
 			return true
@@ -205,7 +205,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 	ymax := int(math.Round(aabb.Max.Y) + 1)
 	for x := xmin; x <= xmax; x++ {
 		for y := ymin; y <= ymax; y++ {
-			if !r.buf.In(x, y) {
+			if !r.bufs[0].In(x, y) {
 				continue
 			}
 			p := math.NewVec2(float64(x)+0.5, float64(y)+0.5)
@@ -223,7 +223,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 			}
 
 			// update shadow map
-			idx := x + y*r.buf.Bounds().Dx()
+			idx := x + y*r.bufs[0].Bounds().Dx()
 			r.shadowBufs[index].lock[idx].Lock()
 			r.shadowBufs[index].depths[idx] = z
 			r.shadowBufs[index].lock[idx].Unlock()
@@ -232,7 +232,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 }
 
 func (r *Renderer) shadowDepthTest(index int, x, y int, z float64) bool {
-	idx := x + y*r.buf.Bounds().Dx()
+	idx := x + y*r.bufs[0].Bounds().Dx()
 	buf := r.shadowBufs[index]
 
 	buf.lock[idx].Lock()
@@ -259,7 +259,7 @@ func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
 		Apply(matVP).Pos()
 
 	lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
-	bufIdx := lightX + lightY*r.buf.Bounds().Dx()
+	bufIdx := lightX + lightY*r.bufs[0].Bounds().Dx()
 
 	shadow := 0
 	if bufIdx > 0 && bufIdx < len(shadowMap.depths) {

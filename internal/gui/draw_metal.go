@@ -13,7 +13,6 @@ import (
 	"unsafe"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"poly.red/texture/buffer"
 
 	"poly.red/internal/driver/mtl"
 )
@@ -103,15 +102,6 @@ func (w *Window) flush(img *image.RGBA) error {
 // resetBuffers assign new buffers to the caches window buffers (w.bufs)
 // Note: with Metal, we always use BGRA pixel format.
 func (w *Window) resetBufs(r image.Rectangle) {
-	// The following replaces the w.bufs on the main thread.
-	//
-	// It does not involve with data race. Because the draw call is
-	// also handled on the main thread, which is currently not possible
-	// to execute.
-	for i := 0; i < w.buflen; i++ {
-		w.bufs[i] = buffer.NewBuffer(r, buffer.Format(buffer.PixelFormatBGRA))
-	}
-
 	// SetDrawableSize later so that all buffers are prepared for flushing.
 	w.ml.SetDrawableSize(r.Dx(), r.Dy())
 }

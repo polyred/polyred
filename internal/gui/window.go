@@ -15,6 +15,7 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
+	"poly.red/render"
 	"poly.red/texture/buffer"
 )
 
@@ -25,15 +26,14 @@ func init() {
 type Window struct {
 	win           *glfw.Window
 	title         string
-	width, height uint32
+	width, height int
 	scaleX        float64
 	scaleY        float64
 
-	// buffers and draw queue
-	buflen int
-	bufs   []*buffer.Buffer
-	drawQ  chan *image.RGBA
-	resize chan image.Rectangle
+	// renderer and draw queue
+	renderer *render.Renderer
+	drawQ    chan *image.RGBA
+	resize   chan image.Rectangle
 
 	// Settings
 	showFPS bool
@@ -53,33 +53,26 @@ type Window struct {
 
 // Show shows the given image on a window.
 func Show(img *image.RGBA) {
-	// TODO: fix on darwin about scaling issue, compute dynamically
-	opt := WithSize(img.Bounds().Dx(), img.Bounds().Dy())
-	if runtime.GOOS == "darwin" {
-		opt = WithSize(img.Bounds().Dx()/2, img.Bounds().Dy()/2)
-	}
-	w, err := NewWindow(opt)
+	r := render.NewRenderer(render.Size(img.Bounds().Dx(), img.Bounds().Dy()))
+	w, err := NewWindow(r)
 	if err != nil {
 		panic(err)
 	}
 
-	// TODO: rethink about the main loop and speedup. if
-	// the callback is returning the same image, why not caching
-	// the result?
-	//
-	// Possible issues: double buffering.
-	w.MainLoop(func(buf *buffer.Buffer) *image.RGBA { return img })
+	buf := r.NextBuffer()
+	r.DrawImage(buf, img)
+	w.MainLoop(func() *buffer.Buffer { return buf })
 }
 
 // NewWindow constructs a new graphical window.
-func NewWindow(opts ...Option) (*Window, error) {
+func NewWindow(r *render.Renderer, opts ...Option) (*Window, error) {
 	w := &Window{
 		title:      "polyred-gui",
-		width:      800,
-		height:     500,
+		width:      r.CurrBuffer().Bounds().Dx(),
+		height:     r.CurrBuffer().Bounds().Dy(),
 		showFPS:    false,
 		dispatcher: newDispatcher(),
-		buflen:     2, // use two buffers by default.
+		renderer:   r,
 	}
 	for _, opt := range opts {
 		opt(w)
@@ -110,8 +103,7 @@ func NewWindow(opts ...Option) (*Window, error) {
 
 	w.drawQ = make(chan *image.RGBA)
 	w.resize = make(chan image.Rectangle)
-	w.bufs = make([]*buffer.Buffer, w.buflen)
-	w.resetBufs(image.Rect(0, 0, fbw, fbh))
+	r.Options(render.Size(fbw, fbh))
 	return w, nil
 }
 
@@ -125,12 +117,13 @@ func (w *Window) Subscribe(eventName EventName, cb EventCallBack) {
 
 // MainLoop executes the given f on a loop, then schedules the returned
 // image and renders it to the created window.
-func (w *Window) MainLoop(f func(buf *buffer.Buffer) *image.RGBA) {
+func (w *Window) MainLoop(f func() *buffer.Buffer) {
 	// Rendering Thread
 	go func() {
 		for !w.win.ShouldClose() {
 			select {
 			case r := <-w.resize:
+				w.renderer.Options(render.Size(w.width, w.height))
 				w.resetBufs(r)
 			default:
 				// We use multiple switching buffers for the drawing, which
@@ -154,10 +147,7 @@ func (w *Window) MainLoop(f func(buf *buffer.Buffer) *image.RGBA) {
 				// Maybe we can make framebuf abstraction to be a linked list,
 				// in this way, the API remains one buffer parameter, but
 				// be able to access previous frames using frame.Prev()?
-				for i := range w.bufs {
-					w.bufs[i].Clear()
-					w.drawQ <- f(w.bufs[i])
-				}
+				w.drawQ <- f().Image()
 			}
 		}
 	}()
@@ -225,6 +215,8 @@ func (w *Window) initCallbacks() {
 		fbw, fbh := x.GetFramebufferSize()
 		w.evSize.Width = width
 		w.evSize.Height = height
+		w.width = width
+		w.height = height
 		w.scaleX = float64(fbw) / float64(width)
 		w.scaleY = float64(fbh) / float64(height)
 		w.dispatcher.Dispatch(OnResize, &w.evSize)
