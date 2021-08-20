@@ -27,12 +27,11 @@ package main
 
 import (
 	"poly.red/camera"
+	"poly.red/gui"
 	"poly.red/light"
 	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
-
-	"poly.red/internal/gui" // TODO: make this public
 )
 
 func main() {

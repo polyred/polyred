@@ -7,14 +7,13 @@ package main
 import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
+	"poly.red/gui"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/shader"
 	"poly.red/texture"
 	"poly.red/texture/buffer"
 	"poly.red/texture/imageutil"
-
-	"poly.red/internal/gui"
 )
 
 func main() {
