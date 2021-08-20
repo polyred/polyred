@@ -57,11 +57,13 @@ type OrbitControl struct {
 	rotStart  math.Vec2
 	panStart  math.Vec2
 	zoomStart float64
+
+	win *Window
 }
 
 // NewOrbitControl creates and returns a pointer to a new orbit control
 // for the specified camera.
-func NewOrbitControl(cam camera.Interface) *OrbitControl {
+func NewOrbitControl(win *Window, cam camera.Interface) *OrbitControl {
 
 	oc := &OrbitControl{
 		cam:     cam,
@@ -77,6 +79,8 @@ func NewOrbitControl(cam camera.Interface) *OrbitControl {
 		MaxAzimuthAngle: math.Inf(1),
 		RotSpeed:        1.0,
 		ZoomSpeed:       0.1,
+
+		win: win,
 	}
 	return oc
 }
@@ -162,7 +166,7 @@ func (oc *OrbitControl) Pan(deltaX, deltaY float64) {
 	// Conversion constant between an on-screen cursor delta and its
 	// projection on the target plane
 	c := 2 * vdir.Len() * math.Tan(math.DegToRad(oc.cam.Fov()/2.0)) /
-		math.Max(float64(window.width), float64(window.height))
+		math.Max(float64(oc.win.width), float64(oc.win.height))
 
 	// Calculate pan components, scale by the converted offsets and
 	// combine them
@@ -223,7 +227,7 @@ func (oc *OrbitControl) OnCursor(evname EventName, ev Event) {
 	mev := ev.(*CursorEvent)
 	switch oc.state {
 	case stateRotate:
-		c := -2 * math.Pi * oc.RotSpeed / math.Max(float64(window.width), float64(window.height))
+		c := -2 * math.Pi * oc.RotSpeed / math.Max(float64(oc.win.width), float64(oc.win.height))
 		oc.Rotate(c*(mev.Xpos-oc.rotStart.X), c*(mev.Ypos-oc.rotStart.Y))
 		oc.rotStart.X = mev.Xpos
 		oc.rotStart.Y = mev.Ypos

@@ -21,12 +21,6 @@ import (
 
 func main() {
 	width, height := 400, 400
-	gui.InitWindow(
-		gui.WithTitle("polyred"),
-		gui.WithSize(width, height),
-		gui.WithFPS(),
-	)
-
 	// camera and renderer
 	cam := camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 3, 3)),
@@ -65,8 +59,18 @@ func main() {
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     tex,
 	}
+
+	w, err := gui.NewWindow(
+		gui.WithTitle("polyred"),
+		gui.WithSize(width, height),
+		gui.WithFPS(),
+	)
+	if err != nil {
+		panic(err)
+	}
+
 	// Handling window resizing
-	gui.Window().Subscribe(gui.OnResize, func(name gui.EventName, e gui.Event) {
+	w.Subscribe(gui.OnResize, func(name gui.EventName, e gui.Event) {
 		ev := e.(*gui.SizeEvent)
 		cam.SetAspect(float64(ev.Width), float64(ev.Height))
 		prog.ViewMatrix = cam.ViewMatrix()
@@ -74,14 +78,14 @@ func main() {
 	})
 
 	// Orbit controls
-	ctrl := gui.NewOrbitControl(cam)
-	gui.Window().Subscribe(gui.OnMouseUp, ctrl.OnMouse)
-	gui.Window().Subscribe(gui.OnMouseDown, ctrl.OnMouse)
-	gui.Window().Subscribe(gui.OnCursor, ctrl.OnCursor)
-	gui.Window().Subscribe(gui.OnScroll, ctrl.OnScroll)
+	ctrl := gui.NewOrbitControl(w, cam)
+	w.Subscribe(gui.OnMouseUp, ctrl.OnMouse)
+	w.Subscribe(gui.OnMouseDown, ctrl.OnMouse)
+	w.Subscribe(gui.OnCursor, ctrl.OnCursor)
+	w.Subscribe(gui.OnScroll, ctrl.OnScroll)
 
 	// Starts the main rendering loop
-	gui.MainLoop(func(buf *buffer.Buffer) *image.RGBA {
+	w.MainLoop(func(buf *buffer.Buffer) *image.RGBA {
 		prog.ModelMatrix = m.ModelMatrix()
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ProjMatrix = cam.ProjMatrix()

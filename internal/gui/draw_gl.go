@@ -21,18 +21,18 @@ type driverInfo struct {
 	// Nothing for GL
 }
 
-func (w *win) initWinHints() {
+func (w *Window) initWinHints() {
 	glfw.WindowHint(glfw.ContextVersionMajor, 2)
 	glfw.WindowHint(glfw.ContextVersionMinor, 1)
 	glfw.WindowHint(glfw.DoubleBuffer, glfw.False)
 	glfw.WindowHint(glfw.Resizable, glfw.True)
 }
 
-func (w *win) initDriver() {
+func (w *Window) initDriver() {
 	// Nothing needs to be done on OpenGL.
 }
 
-func (w *win) initContext() {
+func (w *Window) initContext() {
 	w.win.MakeContextCurrent()
 	err := gl.Init()
 	if err != nil {
@@ -45,7 +45,7 @@ func (w *win) initContext() {
 // flush flushes the containing pixel buffer of the given image to the
 // hardware frame buffer for display prupose. The given image is assumed
 // to be non-nil pointer.
-func (w *win) flush(img *image.RGBA) error {
+func (w *Window) flush(img *image.RGBA) error {
 	dx, dy := int32(img.Bounds().Dx()), int32(img.Bounds().Dy())
 	gl.RasterPos2d(-1, 1)
 	gl.Viewport(0, 0, dx, dy)
@@ -70,7 +70,7 @@ func (w *win) flush(img *image.RGBA) error {
 
 // resetBuffers assign new buffers to the caches window buffers (w.bufs)
 // Note: with Metal, we always use RGBA pixel format.
-func (w *win) resetBufs(r image.Rectangle) {
+func (w *Window) resetBufs(r image.Rectangle) {
 	for i := 0; i < w.buflen; i++ {
 		w.bufs[i] = buffer.NewBuffer(r, buffer.Format(buffer.PixelFormatRGBA))
 	}

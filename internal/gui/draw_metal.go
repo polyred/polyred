@@ -25,11 +25,11 @@ type driverInfo struct {
 	cq     mtl.CommandQueue
 }
 
-func (w *win) initWinHints() {
+func (w *Window) initWinHints() {
 	glfw.WindowHint(glfw.ClientAPI, glfw.NoAPI)
 }
 
-func (w *win) initDriver() {
+func (w *Window) initDriver() {
 	device, err := mtl.CreateSystemDefaultDevice()
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize metal: %w", err))
@@ -51,14 +51,14 @@ func (w *win) initDriver() {
 	w.driverInfo = driverInfo{device: device, ml: ml, cq: cq}
 }
 
-func (w *win) initContext() {
+func (w *Window) initContext() {
 	// Nothing needs to be done on Metal.
 }
 
 // flush flushes the containing pixel buffer of the given image to the
 // hardware frame buffer for display prupose. The given image is assumed
 // to be non-nil pointer.
-func (w *win) flush(img *image.RGBA) error {
+func (w *Window) flush(img *image.RGBA) error {
 	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
 	drawable, err := w.ml.NextDrawable()
 	if err != nil {
@@ -102,7 +102,7 @@ func (w *win) flush(img *image.RGBA) error {
 
 // resetBuffers assign new buffers to the caches window buffers (w.bufs)
 // Note: with Metal, we always use BGRA pixel format.
-func (w *win) resetBufs(r image.Rectangle) {
+func (w *Window) resetBufs(r image.Rectangle) {
 	// The following replaces the w.bufs on the main thread.
 	//
 	// It does not involve with data race. Because the draw call is
