@@ -169,6 +169,7 @@ func BenchmarkQuery(b *testing.B) {
 	for i, tt := range tests {
 		ttt := tt
 		b.Run(fmt.Sprintf("#%d", i), func(b *testing.B) {
+			b.ReportAllocs()
 			for j := 0; j < b.N; j++ {
 				tt.tex.Query(ttt.u, ttt.v, ttt.lod)
 			}

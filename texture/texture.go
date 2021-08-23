@@ -134,12 +134,12 @@ func (t *Texture) queryL0(u, v float64) color.RGBA {
 	dx := float64(tex.Bounds().Dx())
 	dy := float64(tex.Bounds().Dy())
 	if dx == 1 && dy == 1 {
-		return tex.At(0, 0).(color.RGBA)
+		return tex.RGBAAt(0, 0)
 	}
 
 	x := int(math.Floor(u * (dx - 1))) // very coarse approximation.
 	y := int(math.Floor(v * (dy - 1))) // very coarse approximation.
-	return tex.At(x, y).(color.RGBA)
+	return tex.RGBAAt(x, y)
 }
 
 func (t *Texture) queryTrilinear(h, l int, p, u, v float64) color.RGBA {
@@ -153,7 +153,7 @@ func (t *Texture) queryBilinear(lod int, u, v float64) color.RGBA {
 	dx := buf.Bounds().Dx()
 	dy := buf.Bounds().Dy()
 	if dx == 1 && dy == 1 {
-		return buf.At(0, 0).(color.RGBA)
+		return buf.RGBAAt(0, 0)
 	}
 	x := u * (float64(dx) - 1)
 	y := v * (float64(dy) - 1)
@@ -165,23 +165,23 @@ func (t *Texture) queryBilinear(lod int, u, v float64) color.RGBA {
 	j := int(y0)
 
 	var p1, p2, p3, p4 color.RGBA
-	p1 = buf.At(i, j).(color.RGBA)
+	p1 = buf.RGBAAt(i, j)
 	if i < dx-1 {
-		p2 = buf.At(i+1, j).(color.RGBA)
+		p2 = buf.RGBAAt(i+1, j)
 	} else {
-		p2 = buf.At(i, j).(color.RGBA)
+		p2 = buf.RGBAAt(i, j)
 	}
 	interpo1 := math.LerpC(p1, p2, x-x0)
 
 	if j < dy-1 {
-		p3 = buf.At(i, j+1).(color.RGBA)
+		p3 = buf.RGBAAt(i, j+1)
 	} else {
-		p3 = buf.At(i, j).(color.RGBA)
+		p3 = buf.RGBAAt(i, j)
 	}
 	if i < dx-1 && j < dy-1 {
-		p4 = buf.At(i+1, j+1).(color.RGBA)
+		p4 = buf.RGBAAt(i+1, j+1)
 	} else {
-		p4 = buf.At(i, j).(color.RGBA)
+		p4 = buf.RGBAAt(i, j)
 	}
 	interpo2 := math.LerpC(p3, p4, x-x0)
 	return math.LerpC(interpo1, interpo2, y-y0)

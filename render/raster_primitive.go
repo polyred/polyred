@@ -28,11 +28,10 @@ func (r *Renderer) DrawPrimitives(
 	}
 
 	r.sched.Add(uint64(len / 3))
+
 	for i := 0; i < len; i += 3 {
-		v1 := verts[i]
-		v2 := verts[i+1]
-		v3 := verts[i+2]
-		tri := primitive.NewTriangle(v1, v2, v3)
+		vs := verts[i : i+3 : i+3]
+		tri := primitive.NewTriangle(vs[0], vs[1], vs[2])
 		r.sched.Run(func() {
 			if !tri.IsValid() {
 				return
@@ -265,9 +264,7 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 			// Compute barycentric coordinates of a triangle in screen
 			// space and check if the fragment is inside triangle.
 			bc := math.Barycoord(p, v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
-			if bc[0] < -math.Epsilon ||
-				bc[1] < -math.Epsilon ||
-				bc[2] < -math.Epsilon {
+			if bc[0] < -math.Epsilon || bc[1] < -math.Epsilon || bc[2] < -math.Epsilon {
 				continue
 			}
 

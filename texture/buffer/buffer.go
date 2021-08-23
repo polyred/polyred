@@ -182,7 +182,8 @@ func (b *Buffer) Set(x, y int, info Fragment) {
 
 	// Write color and depth information to the two dedicated color and
 	// depth buffers.
-	d := b.depth[j : j+4 : j+4] // Small cap improves performance, see https://golang.org/issue/27857
+	// Bound check elimination improves performance. See https://golang.org/issue/27857
+	d := b.depth[j : j+4 : j+4]
 	c := b.color[j : j+4 : j+4]
 
 	switch b.format {
@@ -240,6 +241,9 @@ func (b *Buffer) UnsafeSet(x, y int, info Fragment) {
 	i := b.FragmentOffset(x, b.rect.Max.Y-y-1)
 	j := b.PixelOffset(x, b.rect.Max.Y-y-1)
 
+	// Write color and depth information to the two dedicated color and
+	// depth buffers.
+	// Small cap improves performance, see https://golang.org/issue/27857
 	d := b.depth[j : j+4 : j+4]
 	c := b.color[j : j+4 : j+4]
 	switch b.format {

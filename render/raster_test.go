@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package render_test
+package render
 
 import (
 	"fmt"
@@ -20,7 +20,6 @@ import (
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/object"
-	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture"
 	"poly.red/texture/imageutil"
@@ -29,17 +28,17 @@ import (
 var (
 	s *scene.Scene
 	c camera.Interface
-	r *render.Renderer
+	r *Renderer
 )
 
 func init() {
 	w, h, msaa := 1920, 1080, 2
 	s, c = newscene(w, h)
-	r = render.NewRenderer(
-		render.Size(w, h),
-		render.MSAA(msaa),
-		render.Scene(s),
-		render.Background(color.RGBA{0, 127, 255, 255}),
+	r = NewRenderer(
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Background(color.RGBA{0, 127, 255, 255}),
 	)
 }
 
@@ -87,12 +86,12 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 func TestRender(t *testing.T) {
 	w, h, msaa := 1920, 1080, 2
 	s, c := newscene(w, h)
-	r := render.NewRenderer(
-		render.Camera(c),
-		render.Size(w, h),
-		render.MSAA(msaa),
-		render.Scene(s),
-		render.Background(color.RGBA{0, 127, 255, 255}),
+	r := NewRenderer(
+		Camera(c),
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Background(color.RGBA{0, 127, 255, 255}),
 	)
 
 	f, err := os.Create("cpu.pprof")
@@ -122,7 +121,7 @@ func TestRender(t *testing.T) {
 
 func BenchmarkRasterizer(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(render.BatchSize(int32(block)), render.Camera(c))
+		r.Options(BatchSize(int32(block)), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -135,12 +134,12 @@ func BenchmarkRasterizer(b *testing.B) {
 
 func BenchmarkForwardPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(render.BatchSize(int32(block)), render.Camera(c))
+		r.Options(BatchSize(int32(block)), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				render.PassForward(r)
+				r.passForward()
 			}
 		})
 	}
@@ -148,12 +147,12 @@ func BenchmarkForwardPass(b *testing.B) {
 
 func BenchmarkDeferredPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(render.BatchSize(int32(block)), render.Camera(c))
+		r.Options(BatchSize(int32(block)), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				render.PassDeferred(r)
+				r.passDeferred()
 			}
 		})
 	}
@@ -163,7 +162,7 @@ func BenchmarkAntiAliasingPass(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		render.PassAntiAliasing(r)
+		r.passAntialiasing()
 	}
 }
 
@@ -171,7 +170,7 @@ func BenchmarkAntiGammaCorrection(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		render.PassGammaCorrect(r)
+		r.passGammaCorrect()
 	}
 }
 
@@ -225,8 +224,22 @@ func BenchmarkDraw(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				f := ts[i%int(nt)]
-				render.Draw(r, uniforms, f, modelMat, mat)
+				Draw(r, uniforms, f, modelMat, mat)
 			}
 		})
+	}
+}
+
+func BenchmarkInViewport(b *testing.B) {
+	v1, v2, v3 := math.NewRandVec4(), math.NewRandVec4(), math.NewRandVec4()
+	for i := 0; i < b.N; i++ {
+		r.inViewport(v1, v2, v3)
+	}
+}
+
+func BenchmarkInViewport2(b *testing.B) {
+	v1, v2, v3 := math.NewRandVec4(), math.NewRandVec4(), math.NewRandVec4()
+	for i := 0; i < b.N; i++ {
+		r.inViewFrustum(r.CurrBuffer(), v1, v2, v3)
 	}
 }
