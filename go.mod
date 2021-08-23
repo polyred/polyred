@@ -1,6 +1,6 @@
 module poly.red
 
-go 1.17
+go 1.18
 
 require (
 	github.com/go-gl/gl v0.0.0-20190320180904-bf2b1f2f34d7
