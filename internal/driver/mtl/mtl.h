@@ -4,6 +4,8 @@
 
 // +build darwin
 
+#include <stdint.h>
+
 typedef unsigned long uint_t;
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
@@ -94,6 +96,7 @@ void * CommandQueue_MakeCommandBuffer(void * commandQueue);
 void   CommandBuffer_PresentDrawable(void * commandBuffer, void * drawable);
 void   CommandBuffer_Commit(void * commandBuffer);
 void   CommandBuffer_WaitUntilCompleted(void * commandBuffer);
+void   CommandBuffer_AddCompletedHandler(void *commandBuffer);
 void * CommandBuffer_MakeRenderCommandEncoder(void * commandBuffer, struct RenderPassDescriptor descriptor);
 void * CommandBuffer_MakeBlitCommandEncoder(void * commandBuffer);
 

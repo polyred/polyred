@@ -5,6 +5,8 @@
 package main
 
 import (
+	"runtime"
+
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/gui"
@@ -30,6 +32,11 @@ func main() {
 		render.Blending(render.AlphaBlend),
 		render.Workers(2),
 	)
+
+	// TODO: determine based on the type of driver instead of OS.
+	if runtime.GOOS == "darwin" {
+		r.Options(render.PixelFormat(buffer.PixelFormatBGRA))
+	}
 
 	// Use a different model
 	mod, err := mesh.Load("../../testdata/bunny.obj")

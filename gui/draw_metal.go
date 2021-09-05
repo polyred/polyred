@@ -57,8 +57,14 @@ func (w *Window) initContext() {
 // flush flushes the containing pixel buffer of the given image to the
 // hardware frame buffer for display prupose. The given image is assumed
 // to be non-nil pointer.
-func (w *Window) flush(img *image.RGBA) error {
-	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
+func (w *Window) flush(buf *frameBuf) error {
+	// Make sure the previous frame is complete.
+	if buf.done != nil {
+		<-buf.done
+	}
+	buf.done = make(chan struct{})
+
+	dx, dy := buf.img.Bounds().Dx(), buf.img.Bounds().Dy()
 	drawable, err := w.ml.NextDrawable()
 	if err != nil {
 		return fmt.Errorf("gui: couldn't get the next drawable: %w", err)
@@ -76,7 +82,7 @@ func (w *Window) flush(img *image.RGBA) error {
 		StorageMode: mtl.StorageModeManaged,
 	})
 	region := mtl.RegionMake2D(0, 0, dx, dy)
-	tex.ReplaceRegion(region, 0, &img.Pix[0], uintptr(4*dx))
+	tex.ReplaceRegion(region, 0, &buf.img.Pix[0], uintptr(4*dx))
 	cb := w.cq.MakeCommandBuffer()
 	bce := cb.MakeBlitCommandEncoder()
 	bce.CopyFromTexture(tex, 0, 0, mtl.Origin{},
@@ -84,6 +90,7 @@ func (w *Window) flush(img *image.RGBA) error {
 		drawable.Texture(), 0, 0, mtl.Origin{})
 	bce.EndEncoding()
 	cb.PresentDrawable(drawable)
+	cb.AddCompletedHandler(func() { close(buf.done) })
 	cb.Commit()
 
 	// We need a synchornization here. Similar to glFinish,

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
+//go:build darwin
 // +build darwin
 
 // Package mtl provides access to Apple's Metal API.
@@ -13,6 +14,7 @@ package mtl
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"unsafe"
 )
 
@@ -21,10 +23,6 @@ import (
 #include <stdlib.h>
 #include <stdbool.h>
 #include "mtl.h"
-
-struct Library Go_Device_MakeLibrary(void * device, _GoString_ source) {
-	return Device_MakeLibrary(device, _GoStringPtr(source), _GoStringLen(source));
-}
 */
 import "C"
 
@@ -332,7 +330,10 @@ func (d Device) MakeCommandQueue() CommandQueue {
 // the functions stored in the specified source string.
 // https://developer.apple.com/documentation/metal/mtldevice/1433431-makelibrary.
 func (d Device) MakeLibrary(source string, opt CompileOptions) (Library, error) {
-	l := C.Go_Device_MakeLibrary(d.device, source) // TODO: opt.
+	cs := C.CString(source)
+	defer C.free(unsafe.Pointer(cs))
+
+	l := C.Device_MakeLibrary(d.device, cs, C.size_t(len(source))) // TODO: opt.
 	if l.Library == nil {
 		return Library{}, errors.New(C.GoString(l.Error))
 	}
@@ -431,6 +432,26 @@ func (cb CommandBuffer) Commit() {
 // https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443039-waituntilcompleted.
 func (cb CommandBuffer) WaitUntilCompleted() {
 	C.CommandBuffer_WaitUntilCompleted(cb.commandBuffer)
+}
+
+var commandBufferCompletedHandlers = sync.Map{} // map[unsafe.Pointer]func(){}
+
+// AddCompletedHandler registers a block of code that Metal calls immediately after the GPU finishes executing the commands in the command buffer.
+//
+// Reference: https://developer.apple.com/documentation/metal/mtlcommandbuffer/1442997-addcompletedhandler
+func (cb CommandBuffer) AddCompletedHandler(f func()) {
+	commandBufferCompletedHandlers.Store(cb.commandBuffer, f)
+	C.CommandBuffer_AddCompletedHandler(cb.commandBuffer)
+}
+
+//export commandBufferCompletedCallback
+func commandBufferCompletedCallback(commandBuffer unsafe.Pointer) {
+	f, ok := commandBufferCompletedHandlers.LoadAndDelete(commandBuffer)
+	if !ok {
+		return
+	}
+
+	f.(func())()
 }
 
 // MakeRenderCommandEncoder creates an encoder object that can

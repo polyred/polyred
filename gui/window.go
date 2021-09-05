@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/go-gl/glfw/v3.3/glfw"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
-	"golang.org/x/image/math/fixed"
+	"poly.red/internal/font"
+	"poly.red/math"
 	"poly.red/render"
 	"poly.red/texture/buffer"
 )
@@ -32,7 +31,7 @@ type Window struct {
 
 	// renderer and draw queue
 	renderer *render.Renderer
-	drawQ    chan *image.RGBA
+	drawQ    chan *buffer.Buffer
 	resize   chan image.Rectangle
 
 	// Settings
@@ -81,8 +80,8 @@ func NewWindow(r *render.Renderer, opts ...Option) (*Window, error) {
 	w.drawer = &font.Drawer{
 		Dst:  nil,
 		Src:  image.NewUniform(color.RGBA{200, 100, 0, 255}),
-		Face: basicfont.Face7x13,
-		Dot:  fixed.P(0*64, 13*64),
+		Face: font.Face7x13,
+		Dot:  math.P(0*64, 13*64),
 	}
 
 	err := glfw.Init()
@@ -101,7 +100,7 @@ func NewWindow(r *render.Renderer, opts ...Option) (*Window, error) {
 	w.scaleX = float64(fbw) / float64(w.width)
 	w.scaleY = float64(fbh) / float64(w.height)
 
-	w.drawQ = make(chan *image.RGBA)
+	w.drawQ = make(chan *buffer.Buffer)
 	w.resize = make(chan image.Rectangle)
 	r.Options(render.Size(fbw, fbh))
 	return w, nil
@@ -113,6 +112,11 @@ func (w *Window) Subscribe(eventName EventName, cb EventCallBack) {
 		id: nil,
 		cb: cb,
 	})
+}
+
+type frameBuf struct {
+	img  *image.RGBA
+	done chan struct{}
 }
 
 // MainLoop executes the given f on a loop, then schedules the returned
@@ -147,7 +151,7 @@ func (w *Window) MainLoop(f func() *buffer.Buffer) {
 				// Maybe we can make framebuf abstraction to be a linked list,
 				// in this way, the API remains one buffer parameter, but
 				// be able to access previous frames using frame.Prev()?
-				w.drawQ <- f().Image()
+				w.drawQ <- f()
 			}
 		}
 	}()
@@ -159,6 +163,10 @@ func (w *Window) MainLoop(f func() *buffer.Buffer) {
 		runtime.LockOSThread()
 		w.initContext()
 
+		// Triple buffering
+		bufs := [3]*frameBuf{{}, {}, {}}
+		bufIdx := 0
+
 		last := time.Now()
 		tPerFrame := time.Second / 240 // permit maximum 120 fps
 		for buf := range w.drawQ {
@@ -169,7 +177,7 @@ func (w *Window) MainLoop(f func() *buffer.Buffer) {
 			}
 			if w.showFPS {
 				// FIXME: should draw based on buffer.Buffer format.
-				w.drawer.Dot = fixed.P(5, 15)
+				w.drawer.Dot = math.P(5, 15)
 				w.drawer.Dst = buf
 				w.drawer.DrawString(fmt.Sprintf("%d", time.Second/t))
 			}
@@ -182,7 +190,9 @@ func (w *Window) MainLoop(f func() *buffer.Buffer) {
 			// long to start execute event processing, which may laggy.
 			// Hence, we should run it into a non-mainthread call. See:
 			// https://golang.design/research/ultimate-channel/
-			w.flush(buf)
+			fbuf := bufs[bufIdx%3]
+			fbuf.img = buf.Image()
+			w.flush(fbuf)
 		}
 	}()
 

@@ -44,11 +44,16 @@ func (w *Window) initContext() {
 // flush flushes the containing pixel buffer of the given image to the
 // hardware frame buffer for display prupose. The given image is assumed
 // to be non-nil pointer.
-func (w *Window) flush(img *image.RGBA) error {
-	dx, dy := int32(img.Bounds().Dx()), int32(img.Bounds().Dy())
+func (w *Window) flush(buf *frameBuf) error {
+	if buf.done != nil {
+		<-buf.done
+	}
+	buf.done = make(chan struct{})
+
+	dx, dy := int32(buf.img.Bounds().Dx()), int32(buf.img.Bounds().Dy())
 	gl.RasterPos2d(-1, 1)
 	gl.Viewport(0, 0, dx, dy)
-	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, unsafe.Pointer(&img.Pix[0]))
+	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, unsafe.Pointer(&buf.img.Pix[0]))
 
 	// We need a synchornization here. Similar to commandBuffer.WaitUntilCompleted.
 	// See a general discussion about CPU, GPU and display synchornization here:
@@ -62,8 +67,8 @@ func (w *Window) flush(img *image.RGBA) error {
 	//
 	// We may not need such an wait, if we are doing perfect timing.
 	// See: https://golang.design/research/ultimate-channel/
-	// gl.Finish()
-	gl.Flush()
+	gl.Finish()
+	close(buf.done)
 	return nil
 }
 

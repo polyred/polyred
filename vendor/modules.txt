@@ -10,8 +10,3 @@ github.com/go-gl/glfw/v3.3/glfw/glfw/deps/mingw
 github.com/go-gl/glfw/v3.3/glfw/glfw/deps/vs2008
 github.com/go-gl/glfw/v3.3/glfw/glfw/include/GLFW
 github.com/go-gl/glfw/v3.3/glfw/glfw/src
-# golang.org/x/image v0.0.0-20210628002857-a66eb6448b8d
-## explicit; go 1.12
-golang.org/x/image/font
-golang.org/x/image/font/basicfont
-golang.org/x/image/math/fixed

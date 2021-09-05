@@ -7,6 +7,9 @@
 #import <Metal/Metal.h>
 #include "mtl.h"
 
+// commandBufferCompletedCallback is an exported function from Go.
+void commandBufferCompletedCallback(void *commandBuffer);
+
 struct Device CreateSystemDefaultDevice() {
 	id<MTLDevice> device = MTLCreateSystemDefaultDevice();
 	if (!device) {
@@ -121,6 +124,12 @@ void CommandBuffer_Commit(void * commandBuffer) {
 
 void CommandBuffer_WaitUntilCompleted(void * commandBuffer) {
 	[(id<MTLCommandBuffer>)commandBuffer waitUntilCompleted];
+}
+
+void CommandBuffer_AddCompletedHandler(void *commandBuffer) {
+	[(id<MTLCommandBuffer>)commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
+		commandBufferCompletedCallback(cb);
+	}];
 }
 
 void * CommandBuffer_MakeRenderCommandEncoder(void * commandBuffer, struct RenderPassDescriptor descriptor) {
