@@ -14,12 +14,12 @@ import (
 
 // Resize scales an image to new width and height using bilinear interpolation.
 func Resize(width, height int, img *image.RGBA) *image.RGBA {
-	scaleX, scaleY := calcFactors(width, height, float64(img.Bounds().Dx()), float64(img.Bounds().Dy()))
+	scaleX, scaleY := calcFactors(width, height, float32(img.Bounds().Dx()), float32(img.Bounds().Dy()))
 	if width == 0 {
-		width = int(0.7 + float64(img.Bounds().Dx())/scaleX)
+		width = int(0.7 + float32(img.Bounds().Dx())/scaleX)
 	}
 	if height == 0 {
-		height = int(0.7 + float64(img.Bounds().Dy())/scaleY)
+		height = int(0.7 + float32(img.Bounds().Dy())/scaleY)
 	}
 
 	// Trivial case: return input image
@@ -65,7 +65,7 @@ func Resize(width, height int, img *image.RGBA) *image.RGBA {
 	return result
 }
 
-func linear(in float64) float64 {
+func linear(in float32) float32 {
 	in = math.Abs(in)
 	if in <= 1 {
 		return 1 - in
@@ -73,7 +73,7 @@ func linear(in float64) float64 {
 	return 0
 }
 
-func resizeRGBA(in *image.RGBA, out *image.RGBA, scale float64, coeffs []int16, offset []int, filterLength int) {
+func resizeRGBA(in *image.RGBA, out *image.RGBA, scale float32, coeffs []int16, offset []int, filterLength int) {
 	newBounds := out.Bounds()
 	maxX := in.Bounds().Dx() - 1
 
@@ -115,21 +115,21 @@ func resizeRGBA(in *image.RGBA, out *image.RGBA, scale float64, coeffs []int16, 
 }
 
 // Calculates scaling factors using old and new image dimensions.
-func calcFactors(width, height int, oldWidth, oldHeight float64) (scaleX, scaleY float64) {
+func calcFactors(width, height int, oldWidth, oldHeight float32) (scaleX, scaleY float32) {
 	if width == 0 {
 		if height == 0 {
 			scaleX = 1.0
 			scaleY = 1.0
 		} else {
-			scaleY = oldHeight / float64(height)
+			scaleY = oldHeight / float32(height)
 			scaleX = scaleY
 		}
 	} else {
-		scaleX = oldWidth / float64(width)
+		scaleX = oldWidth / float32(width)
 		if height == 0 {
 			scaleY = scaleX
 		} else {
-			scaleY = oldHeight / float64(height)
+			scaleY = oldHeight / float32(height)
 		}
 	}
 	return
@@ -144,18 +144,18 @@ func makeSlice(img *image.RGBA, i, n int) *image.RGBA {
 }
 
 // range [-256,256]
-func createWeights8(dy, filterLength int, scale float64, kernel func(float64) float64) ([]int16, []int, int) {
+func createWeights8(dy, filterLength int, scale float32, kernel func(float32) float32) ([]int16, []int, int) {
 	filterLength = filterLength * int(math.Max(math.Ceil(scale), 1))
 	filterFactor := math.Min(1./(scale), 1)
 
 	coeffs := make([]int16, dy*filterLength)
 	start := make([]int, dy)
 	for y := 0; y < dy; y++ {
-		interpX := scale*(float64(y)+0.5) - 0.5
+		interpX := scale*(float32(y)+0.5) - 0.5
 		start[y] = int(interpX) - filterLength/2 + 1
-		interpX -= float64(start[y])
+		interpX -= float32(start[y])
 		for i := 0; i < filterLength; i++ {
-			in := (interpX - float64(i)) * filterFactor
+			in := (interpX - float32(i)) * filterFactor
 			coeffs[y*filterLength+i] = int16(kernel(in) * 256)
 		}
 	}

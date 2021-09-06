@@ -163,7 +163,7 @@ func TestVec_Dot(t *testing.T) {
 		v1 := math.NewVec2(1, 1)
 		v2 := math.NewVec2(2, 2)
 		got := v1.Dot(v2)
-		want := 4.0
+		want := float32(4.0)
 		if !math.ApproxEq(want, got, math.Epsilon) {
 			t.Fatalf("unexpected Add, got %v, want %v", got, want)
 		}
@@ -172,7 +172,7 @@ func TestVec_Dot(t *testing.T) {
 		v1 := math.NewVec3(1, 1, 3)
 		v2 := math.NewVec3(2, 2, 3)
 		got := v1.Dot(v2)
-		want := 13.0
+		want := float32(13.0)
 		if !math.ApproxEq(want, got, math.Epsilon) {
 			t.Fatalf("unexpected Add, got %v, want %v", got, want)
 		}
@@ -181,7 +181,7 @@ func TestVec_Dot(t *testing.T) {
 		v1 := math.NewVec4(1, 1, 2, 5)
 		v2 := math.NewVec4(2, 2, 2, 5)
 		got := v1.Dot(v2)
-		want := 33.0
+		want := float32(33.0)
 		if !math.ApproxEq(want, got, math.Epsilon) {
 			t.Fatalf("unexpected Add, got %v, want %v", got, want)
 		}

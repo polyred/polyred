@@ -47,7 +47,7 @@ func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 
 	return s, camera.NewPerspective(
 		camera.Position(math.NewVec3(1, 1, 2)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 0.01, 600),
+		camera.ViewFrustum(45, float32(width)/float32(height), 0.01, 600),
 	)
 }
 

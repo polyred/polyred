@@ -5,7 +5,7 @@
 package math
 
 // Clamp clamps a given value in [min, max].
-func Clamp(n, min, max float64) float64 {
+func Clamp(n, min, max float32) float32 {
 	if n < min {
 		return min
 	}
@@ -27,7 +27,7 @@ func ClampInt(n, min, max int) int {
 }
 
 // ClampVec4 clamps a Vec4 in [min, max].
-func ClampVec4(v Vec4, min, max float64) Vec4 {
+func ClampVec4(v Vec4, min, max float32) Vec4 {
 	return Vec4{
 		Clamp(v.X, min, max),
 		Clamp(v.Y, min, max),
@@ -37,7 +37,7 @@ func ClampVec4(v Vec4, min, max float64) Vec4 {
 }
 
 // ClampVec3 clamps a Vec4 in [min, max].
-func ClampVec3(v Vec3, min, max float64) Vec3 {
+func ClampVec3(v Vec3, min, max float32) Vec3 {
 	return Vec3{
 		Clamp(v.X, min, max),
 		Clamp(v.Y, min, max),
@@ -46,7 +46,7 @@ func ClampVec3(v Vec3, min, max float64) Vec3 {
 }
 
 // ClampVec2 clamps a Vec2 in [min, max].
-func ClampVec2(v Vec2, min, max float64) Vec2 {
+func ClampVec2(v Vec2, min, max float32) Vec2 {
 	return Vec2{
 		Clamp(v.X, min, max),
 		Clamp(v.Y, min, max),

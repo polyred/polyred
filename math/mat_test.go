@@ -106,10 +106,10 @@ func TestMat_Get(t *testing.T) {
 			3, 4,
 		)
 
-		counter := 1
+		counter := float32(1)
 		for i := 0; i < 2; i++ {
 			for j := 0; j < 2; j++ {
-				if m.Get(i, j) == float64(counter) {
+				if m.Get(i, j) == counter {
 					counter++
 					continue
 				}
@@ -125,10 +125,10 @@ func TestMat_Get(t *testing.T) {
 			7, 8, 9,
 		)
 
-		counter := 1
+		counter := float32(1)
 		for i := 0; i < 3; i++ {
 			for j := 0; j < 3; j++ {
-				if m.Get(i, j) == float64(counter) {
+				if m.Get(i, j) == counter {
 					counter++
 					continue
 				}
@@ -145,10 +145,10 @@ func TestMat_Get(t *testing.T) {
 			13, 14, 15, 16,
 		)
 
-		counter := 1
+		counter := float32(1)
 		for i := 0; i < 4; i++ {
 			for j := 0; j < 4; j++ {
-				if m.Get(i, j) == float64(counter) {
+				if m.Get(i, j) == counter {
 					counter++
 					continue
 				}
@@ -223,10 +223,10 @@ func TestMat_Set(t *testing.T) {
 		)
 		got := math.Mat2Zero
 
-		counter := 1
+		counter := float32(1)
 		for i := 0; i < 2; i++ {
 			for j := 0; j < 2; j++ {
-				got.Set(i, j, float64(counter))
+				got.Set(i, j, counter)
 				counter++
 			}
 		}
@@ -244,10 +244,10 @@ func TestMat_Set(t *testing.T) {
 		)
 		got := math.Mat3Zero
 
-		counter := 1
+		counter := float32(1)
 		for i := 0; i < 3; i++ {
 			for j := 0; j < 3; j++ {
-				got.Set(i, j, float64(counter))
+				got.Set(i, j, counter)
 				counter++
 			}
 		}
@@ -266,10 +266,10 @@ func TestMat_Set(t *testing.T) {
 		)
 		got := math.Mat4Zero
 
-		counter := 1
+		counter := float32(1)
 		for i := 0; i < 4; i++ {
 			for j := 0; j < 4; j++ {
-				got.Set(i, j, float64(counter))
+				got.Set(i, j, counter)
 				counter++
 			}
 		}
@@ -600,7 +600,7 @@ func TestMat_Det(t *testing.T) {
 			3, 4,
 		)
 
-		want := -2.0
+		want := float32(-2.0)
 
 		if m.Det() != want {
 			t.Fatalf("unexpected Det, got %v, want %v", m.Det(), want)
@@ -615,7 +615,7 @@ func TestMat_Det(t *testing.T) {
 			3, 4, 4,
 		)
 
-		want := 9.0
+		want := float32(9.0)
 
 		if m.Det() != want {
 			t.Fatalf("unexpected Det, got %v, want %v", m.Det(), want)
@@ -630,7 +630,7 @@ func TestMat_Det(t *testing.T) {
 			5, 1, 1, 4,
 			2, 1, 7, 5,
 		}
-		want := -44.0
+		want := float32(-44.0)
 
 		if m.Det() != want {
 			t.Fatalf("unexpected Det, got %v, want %v", m.Det(), want)

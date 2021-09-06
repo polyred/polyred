@@ -63,7 +63,7 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 	cam := camera.NewPerspective(
 		camera.Position(math.NewVec3(-550, 194, 734)),
 		camera.LookAt(math.NewVec3(-1000, 0, 0), math.NewVec3(0, 1, 1)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 100, 600),
+		camera.ViewFrustum(45, float32(width)/float32(height), 100, 600),
 	)
 	return s, cam
 }

@@ -5,14 +5,13 @@
 package math_test
 
 import (
-	"math/rand"
 	"testing"
 
 	"poly.red/math"
 )
 
 var (
-	v    float64
+	v    float32
 	vv   math.Vec2
 	vvv  math.Vec3
 	vvvv math.Vec4
@@ -20,8 +19,8 @@ var (
 
 func BenchmarkVec_Eq(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
-		v2 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
+		v2 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -30,8 +29,8 @@ func BenchmarkVec_Eq(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
+		v2 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -40,8 +39,8 @@ func BenchmarkVec_Eq(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
+		v2 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -53,8 +52,8 @@ func BenchmarkVec_Eq(b *testing.B) {
 
 func BenchmarkVec_Add(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
-		v2 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
+		v2 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -63,8 +62,8 @@ func BenchmarkVec_Add(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
+		v2 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -73,8 +72,8 @@ func BenchmarkVec_Add(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
+		v2 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -86,8 +85,8 @@ func BenchmarkVec_Add(b *testing.B) {
 
 func BenchmarkVec_Sub(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
-		v2 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
+		v2 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -96,8 +95,8 @@ func BenchmarkVec_Sub(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
+		v2 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -106,8 +105,8 @@ func BenchmarkVec_Sub(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
+		v2 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -118,7 +117,7 @@ func BenchmarkVec_Sub(b *testing.B) {
 }
 func BenchmarkVec_IsZero(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -127,7 +126,7 @@ func BenchmarkVec_IsZero(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -136,7 +135,7 @@ func BenchmarkVec_IsZero(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -148,7 +147,7 @@ func BenchmarkVec_IsZero(b *testing.B) {
 
 func BenchmarkVec_Scale(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -157,7 +156,7 @@ func BenchmarkVec_Scale(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -166,7 +165,7 @@ func BenchmarkVec_Scale(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -178,7 +177,7 @@ func BenchmarkVec_Scale(b *testing.B) {
 
 func BenchmarkVec_Translate(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -187,7 +186,7 @@ func BenchmarkVec_Translate(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -196,7 +195,7 @@ func BenchmarkVec_Translate(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -208,8 +207,8 @@ func BenchmarkVec_Translate(b *testing.B) {
 
 func BenchmarkVec_Dot(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
-		v2 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
+		v2 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -218,8 +217,8 @@ func BenchmarkVec_Dot(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
+		v2 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -228,8 +227,8 @@ func BenchmarkVec_Dot(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
+		v2 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -241,7 +240,7 @@ func BenchmarkVec_Dot(b *testing.B) {
 
 func BenchmarkVec_Len(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -250,7 +249,7 @@ func BenchmarkVec_Len(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -259,7 +258,7 @@ func BenchmarkVec_Len(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -271,7 +270,7 @@ func BenchmarkVec_Len(b *testing.B) {
 
 func BenchmarkVec_Unit(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -280,7 +279,7 @@ func BenchmarkVec_Unit(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -289,7 +288,7 @@ func BenchmarkVec_Unit(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -300,7 +299,7 @@ func BenchmarkVec_Unit(b *testing.B) {
 }
 func BenchmarkVec_Apply(b *testing.B) {
 	b.Run("Vec2", func(b *testing.B) {
-		v1 := math.NewVec2(rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec2()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -309,7 +308,7 @@ func BenchmarkVec_Apply(b *testing.B) {
 		}
 	})
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -318,7 +317,7 @@ func BenchmarkVec_Apply(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -330,8 +329,8 @@ func BenchmarkVec_Apply(b *testing.B) {
 
 func BenchmarkVec_Cross(b *testing.B) {
 	b.Run("Vec3", func(b *testing.B) {
-		v1 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec3(rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec3()
+		v2 := math.NewRandVec3()
 
 		b.ReportAllocs()
 		b.ResetTimer()
@@ -340,8 +339,8 @@ func BenchmarkVec_Cross(b *testing.B) {
 		}
 	})
 	b.Run("Vec4", func(b *testing.B) {
-		v1 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
-		v2 := math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), rand.Float64())
+		v1 := math.NewRandVec4()
+		v2 := math.NewRandVec4()
 
 		b.ReportAllocs()
 		b.ResetTimer()

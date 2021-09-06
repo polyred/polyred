@@ -16,10 +16,10 @@ type Perspective struct {
 	position math.Vec3
 	target   math.Vec3
 	up       math.Vec3
-	aspect   float64
-	fov      float64
-	near     float64 // 0 < near < far
-	far      float64
+	aspect   float32
+	fov      float32
+	near     float32 // 0 < near < far
+	far      float32
 }
 
 // NewPerspective creates a new perspective camera with the provided
@@ -47,17 +47,17 @@ func (c *Perspective) Type() object.Type {
 }
 
 // Fov returns the field of view of the given camera
-func (c *Perspective) Fov() float64 {
+func (c *Perspective) Fov() float32 {
 	return c.fov
 }
 
 // Aspect returns the aspect of the given camera
-func (c *Perspective) Aspect() float64 {
+func (c *Perspective) Aspect() float32 {
 	return c.aspect
 }
 
 // SetAspect sets the aspect of the given camera
-func (c *Perspective) SetAspect(width, height float64) {
+func (c *Perspective) SetAspect(width, height float32) {
 	c.aspect = width / height
 }
 

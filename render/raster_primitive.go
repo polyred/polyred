@@ -50,7 +50,7 @@ func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, p shader.VertexProgram,
 	v3 := p(tri.V3)
 
 	// For perspective corrected interpolation
-	recipw := [3]float64{1, 1, 1}
+	recipw := [3]float32{1, 1, 1}
 	if _, ok := r.renderCamera.(*camera.Perspective); ok {
 		recipw[0] = -1 / v1.Pos.W
 		recipw[1] = -1 / v2.Pos.W
@@ -58,8 +58,8 @@ func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, p shader.VertexProgram,
 	}
 
 	viewportMatrix := math.ViewportMatrix(
-		float64(buf.Bounds().Dx()),
-		float64(buf.Bounds().Dy()),
+		float32(buf.Bounds().Dx()),
+		float32(buf.Bounds().Dy()),
 	)
 
 	v1.Pos = v1.Pos.Apply(viewportMatrix).Pos()
@@ -91,7 +91,7 @@ func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, p shader.VertexProgram,
 func (r *Renderer) inViewFrustum(buf *buffer.Buffer, v1, v2, v3 math.Vec4) bool {
 	// TODO: can be optimize?
 	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float64(buf.Bounds().Dx()*r.msaa), float64(buf.Bounds().Dy()*r.msaa), 1),
+		math.NewVec3(float32(buf.Bounds().Dx()*r.msaa), float32(buf.Bounds().Dy()*r.msaa), 1),
 		math.NewVec3(0, 0, 0),
 		math.NewVec3(0, 0, -1),
 	)
@@ -100,17 +100,17 @@ func (r *Renderer) inViewFrustum(buf *buffer.Buffer, v1, v2, v3 math.Vec4) bool 
 }
 
 func (r *Renderer) inViewport2(buf *buffer.Buffer, v math.Vec4) bool {
-	w := float64(r.msaa * buf.Bounds().Dx())
-	h := float64(r.msaa * buf.Bounds().Dy())
+	w := float32(r.msaa * buf.Bounds().Dx())
+	h := float32(r.msaa * buf.Bounds().Dy())
 	if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
 		return false
 	}
 	return true
 }
 
-func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
-	w := float64(buf.Bounds().Dx())
-	h := float64(buf.Bounds().Dy())
+func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float32) {
+	w := float32(buf.Bounds().Dx())
+	h := float32(buf.Bounds().Dy())
 
 	// Sutherland Hodgman clipping algorithm
 	planes := [6]plane{
@@ -178,10 +178,10 @@ func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, re
 				W: 0,
 			},
 			Col: color.RGBA{
-				R: uint8(math.Clamp(b1bc[0]*float64(v1.Col.R)+b1bc[1]*float64(v2.Col.R)+b1bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b1bc[0]*float64(v1.Col.G)+b1bc[1]*float64(v2.Col.G)+b1bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b1bc[0]*float64(v1.Col.B)+b1bc[1]*float64(v2.Col.B)+b1bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b1bc[0]*float64(v1.Col.A)+b1bc[1]*float64(v2.Col.A)+b1bc[2]*float64(v3.Col.A), 0, 0xff)),
+				R: uint8(math.Clamp(b1bc[0]*float32(v1.Col.R)+b1bc[1]*float32(v2.Col.R)+b1bc[2]*float32(v3.Col.R), 0, 0xff)),
+				G: uint8(math.Clamp(b1bc[0]*float32(v1.Col.G)+b1bc[1]*float32(v2.Col.G)+b1bc[2]*float32(v3.Col.G), 0, 0xff)),
+				B: uint8(math.Clamp(b1bc[0]*float32(v1.Col.B)+b1bc[1]*float32(v2.Col.B)+b1bc[2]*float32(v3.Col.B), 0, 0xff)),
+				A: uint8(math.Clamp(b1bc[0]*float32(v1.Col.A)+b1bc[1]*float32(v2.Col.A)+b1bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
 		t2 := primitive.Vertex{
@@ -204,10 +204,10 @@ func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, re
 				W: 0,
 			},
 			Col: color.RGBA{
-				R: uint8(math.Clamp(b2bc[0]*float64(v1.Col.R)+b2bc[1]*float64(v2.Col.R)+b2bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b2bc[0]*float64(v1.Col.G)+b2bc[1]*float64(v2.Col.G)+b2bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b2bc[0]*float64(v1.Col.B)+b2bc[1]*float64(v2.Col.B)+b2bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b2bc[0]*float64(v1.Col.A)+b2bc[1]*float64(v2.Col.A)+b2bc[2]*float64(v3.Col.A), 0, 0xff)),
+				R: uint8(math.Clamp(b2bc[0]*float32(v1.Col.R)+b2bc[1]*float32(v2.Col.R)+b2bc[2]*float32(v3.Col.R), 0, 0xff)),
+				G: uint8(math.Clamp(b2bc[0]*float32(v1.Col.G)+b2bc[1]*float32(v2.Col.G)+b2bc[2]*float32(v3.Col.G), 0, 0xff)),
+				B: uint8(math.Clamp(b2bc[0]*float32(v1.Col.B)+b2bc[1]*float32(v2.Col.B)+b2bc[2]*float32(v3.Col.B), 0, 0xff)),
+				A: uint8(math.Clamp(b2bc[0]*float32(v1.Col.A)+b2bc[1]*float32(v2.Col.A)+b2bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
 		t3 := primitive.Vertex{
@@ -230,10 +230,10 @@ func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, re
 				W: 0,
 			},
 			Col: color.RGBA{
-				R: uint8(math.Clamp(b3bc[0]*float64(v1.Col.R)+b3bc[1]*float64(v2.Col.R)+b3bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b3bc[0]*float64(v1.Col.G)+b3bc[1]*float64(v2.Col.G)+b3bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b3bc[0]*float64(v1.Col.B)+b3bc[1]*float64(v2.Col.B)+b3bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b3bc[0]*float64(v1.Col.A)+b3bc[1]*float64(v2.Col.A)+b3bc[2]*float64(v3.Col.A), 0, 0xff)),
+				R: uint8(math.Clamp(b3bc[0]*float32(v1.Col.R)+b3bc[1]*float32(v2.Col.R)+b3bc[2]*float32(v3.Col.R), 0, 0xff)),
+				G: uint8(math.Clamp(b3bc[0]*float32(v1.Col.G)+b3bc[1]*float32(v2.Col.G)+b3bc[2]*float32(v3.Col.G), 0, 0xff)),
+				B: uint8(math.Clamp(b3bc[0]*float32(v1.Col.B)+b3bc[1]*float32(v2.Col.B)+b3bc[2]*float32(v3.Col.B), 0, 0xff)),
+				A: uint8(math.Clamp(b3bc[0]*float32(v1.Col.A)+b3bc[1]*float32(v2.Col.A)+b3bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
 
@@ -242,7 +242,7 @@ func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, re
 }
 
 // rasterize implements the rasterization process of a given primitive.
-func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float64) {
+func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float32) {
 	// Compute AABB make the AABB a little bigger that align with
 	// pixels to contain the entire triangle
 	aabb := primitive.NewAABB(v1.Pos.ToVec3(), v2.Pos.ToVec3(), v3.Pos.ToVec3())
@@ -259,7 +259,7 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 				continue
 			}
 
-			p := math.NewVec2(float64(x)+0.5, float64(y)+0.5)
+			p := math.NewVec2(float32(x)+0.5, float32(y)+0.5)
 
 			// Compute barycentric coordinates of a triangle in screen
 			// space and check if the fragment is inside triangle.
@@ -283,8 +283,8 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 			}
 
 			// Interpolating UV
-			uvX := r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bc)
-			uvY := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bc)
+			uvX := r.interpolate([3]float32{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bc)
+			uvY := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bc)
 			frag.UV = math.NewVec2(uvX, uvY)
 
 			p1 := math.NewVec2(p.X+1, p.Y)
@@ -292,27 +292,27 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 			bcx := math.Barycoord(p1, v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 			bcy := math.Barycoord(p2, v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 
-			uvdU := r.interpolate([3]float64{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bcx)
-			uvdX := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcx)
-			uvdV := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
-			uvdY := r.interpolate([3]float64{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
+			uvdU := r.interpolate([3]float32{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bcx)
+			uvdX := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcx)
+			uvdV := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
+			uvdY := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
 			frag.Du = math.Sqrt((uvdU-uvX)*(uvdU-uvX) + (uvdX-uvY)*(uvdX-uvY))
 			frag.Dv = math.Sqrt((uvdV-uvX)*(uvdV-uvX) + (uvdY-uvY)*(uvdY-uvY))
 
 			// Interpolate normal
 			if !v1.Nor.IsZero() && !v2.Nor.IsZero() && !v3.Nor.IsZero() {
-				nx := r.interpolate([3]float64{v1.Nor.X, v2.Nor.X, v3.Nor.X}, recipw, bc)
-				ny := r.interpolate([3]float64{v1.Nor.Y, v2.Nor.Y, v3.Nor.Y}, recipw, bc)
-				nz := r.interpolate([3]float64{v1.Nor.Z, v2.Nor.Z, v3.Nor.Z}, recipw, bc)
+				nx := r.interpolate([3]float32{v1.Nor.X, v2.Nor.X, v3.Nor.X}, recipw, bc)
+				ny := r.interpolate([3]float32{v1.Nor.Y, v2.Nor.Y, v3.Nor.Y}, recipw, bc)
+				nz := r.interpolate([3]float32{v1.Nor.Z, v2.Nor.Z, v3.Nor.Z}, recipw, bc)
 				frag.Nor = math.NewVec4(nx, ny, nz, 0)
 			}
 
 			// Interpolate colors
 			if v1.Col != color.Discard || v2.Col != color.Discard || v3.Col != color.Discard {
-				cr := r.interpolate([3]float64{float64(v1.Col.R), float64(v2.Col.R), float64(v3.Col.R)}, recipw, bc)
-				cg := r.interpolate([3]float64{float64(v1.Col.G), float64(v2.Col.G), float64(v3.Col.G)}, recipw, bc)
-				cb := r.interpolate([3]float64{float64(v1.Col.B), float64(v2.Col.B), float64(v3.Col.B)}, recipw, bc)
-				ca := r.interpolate([3]float64{float64(v1.Col.A), float64(v2.Col.A), float64(v3.Col.A)}, recipw, bc)
+				cr := r.interpolate([3]float32{float32(v1.Col.R), float32(v2.Col.R), float32(v3.Col.R)}, recipw, bc)
+				cg := r.interpolate([3]float32{float32(v1.Col.G), float32(v2.Col.G), float32(v3.Col.G)}, recipw, bc)
+				cb := r.interpolate([3]float32{float32(v1.Col.B), float32(v2.Col.B), float32(v3.Col.B)}, recipw, bc)
+				ca := r.interpolate([3]float32{float32(v1.Col.A), float32(v2.Col.A), float32(v3.Col.A)}, recipw, bc)
 				frag.Col = color.RGBA{
 					R: uint8(math.Clamp(cr, 0, 0xff)),
 					G: uint8(math.Clamp(cg, 0, 0xff)),
@@ -336,23 +336,23 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 
 // interpoVaryings perspective correct interpolates
 func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
-	recipw, bc [3]float64) {
+	recipw, bc [3]float32) {
 	l := len(frag)
 	for name := range v1 {
 		switch val1 := v1[name].(type) {
-		case float64:
+		case float32:
 			if l > 0 {
-				frag[name] = r.interpolate([3]float64{
-					val1, v2[name].(float64), v3[name].(float64),
+				frag[name] = r.interpolate([3]float32{
+					val1, v2[name].(float32), v3[name].(float32),
 				}, recipw, bc)
 			}
 		case math.Vec2:
-			x := r.interpolate([3]float64{
+			x := r.interpolate([3]float32{
 				val1.X,
 				v2[name].(math.Vec4).X,
 				v3[name].(math.Vec4).X,
 			}, recipw, bc)
-			y := r.interpolate([3]float64{
+			y := r.interpolate([3]float32{
 				val1.Y,
 				v2[name].(math.Vec4).Y,
 				v3[name].(math.Vec4).Y,
@@ -361,17 +361,17 @@ func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
 				frag[name] = math.NewVec2(x, y)
 			}
 		case math.Vec3:
-			x := r.interpolate([3]float64{
+			x := r.interpolate([3]float32{
 				val1.X,
 				v2[name].(math.Vec4).X,
 				v3[name].(math.Vec4).X,
 			}, recipw, bc)
-			y := r.interpolate([3]float64{
+			y := r.interpolate([3]float32{
 				val1.Y,
 				v2[name].(math.Vec4).Y,
 				v3[name].(math.Vec4).Y,
 			}, recipw, bc)
-			z := r.interpolate([3]float64{
+			z := r.interpolate([3]float32{
 				val1.Z,
 				v2[name].(math.Vec4).Z,
 				v3[name].(math.Vec4).Z,
@@ -380,22 +380,22 @@ func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
 				frag[name] = math.NewVec3(x, y, z)
 			}
 		case math.Vec4:
-			x := r.interpolate([3]float64{
+			x := r.interpolate([3]float32{
 				val1.X,
 				v2[name].(math.Vec4).X,
 				v3[name].(math.Vec4).X,
 			}, recipw, bc)
-			y := r.interpolate([3]float64{
+			y := r.interpolate([3]float32{
 				val1.Y,
 				v2[name].(math.Vec4).Y,
 				v3[name].(math.Vec4).Y,
 			}, recipw, bc)
-			z := r.interpolate([3]float64{
+			z := r.interpolate([3]float32{
 				val1.Z,
 				v2[name].(math.Vec4).Z,
 				v3[name].(math.Vec4).Z,
 			}, recipw, bc)
-			w := r.interpolate([3]float64{
+			w := r.interpolate([3]float32{
 				val1.W,
 				v2[name].(math.Vec4).W,
 				v3[name].(math.Vec4).W,
@@ -412,7 +412,7 @@ func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
 // See: Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 // Department of Computer Science, University of North Carolina at
 // Chapel Hill (2002).
-func (r *Renderer) interpolate(varying, recipw, barycoord [3]float64) float64 {
+func (r *Renderer) interpolate(varying, recipw, barycoord [3]float32) float32 {
 	recipw[0] *= barycoord[0]
 	recipw[1] *= barycoord[1]
 	recipw[2] *= barycoord[2]

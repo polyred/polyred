@@ -49,7 +49,7 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 	return s, camera.NewPerspective(
 		camera.Position(math.NewVec3(-3, 1.25, -2)),
 		camera.LookAt(math.NewVec3(0, -0.1, -0.1), math.NewVec3(0, 1, 0)),
-		camera.ViewFrustum(30, float64(w)/float64(h), 0.01, 1000),
+		camera.ViewFrustum(30, float32(w)/float32(h), 0.01, 1000),
 	)
 }
 

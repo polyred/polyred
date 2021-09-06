@@ -8,7 +8,7 @@ import (
 
 type Opt func(l interface{})
 
-func Intensity(I float64) Opt {
+func Intensity(I float32) Opt {
 	return func(l interface{}) {
 		switch a := l.(type) {
 		case *Ambient:

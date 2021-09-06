@@ -26,8 +26,8 @@ type Window struct {
 	win           *glfw.Window
 	title         string
 	width, height int
-	scaleX        float64
-	scaleY        float64
+	scaleX        float32
+	scaleY        float32
 
 	// renderer and draw queue
 	renderer *render.Renderer
@@ -97,8 +97,8 @@ func NewWindow(r *render.Renderer, opts ...Option) (*Window, error) {
 
 	// Ratio test. for high DPI, e.g. macOS Retina
 	fbw, fbh := w.win.GetFramebufferSize()
-	w.scaleX = float64(fbw) / float64(w.width)
-	w.scaleY = float64(fbh) / float64(w.height)
+	w.scaleX = float32(fbw) / float32(w.width)
+	w.scaleY = float32(fbh) / float32(w.height)
 
 	w.drawQ = make(chan *buffer.Buffer)
 	w.resize = make(chan image.Rectangle)
@@ -227,14 +227,14 @@ func (w *Window) initCallbacks() {
 		w.evSize.Height = height
 		w.width = width
 		w.height = height
-		w.scaleX = float64(fbw) / float64(width)
-		w.scaleY = float64(fbh) / float64(height)
+		w.scaleX = float32(fbw) / float32(width)
+		w.scaleY = float32(fbh) / float32(height)
 		w.dispatcher.Dispatch(OnResize, &w.evSize)
 		w.resize <- image.Rect(0, 0, fbw, fbh)
 	})
 	w.win.SetCursorPosCallback(func(_ *glfw.Window, xpos, ypos float64) {
-		w.evCursor.Xpos = xpos
-		w.evCursor.Ypos = ypos
+		w.evCursor.Xpos = float32(xpos)
+		w.evCursor.Ypos = float32(ypos)
 		w.evCursor.Mods = w.mods
 		w.dispatcher.Dispatch(OnCursor, &w.evCursor)
 	})
@@ -242,8 +242,8 @@ func (w *Window) initCallbacks() {
 		xpos, ypos := x.GetCursorPos()
 		w.evMouse.Button = MouseButton(button)
 		w.evMouse.Mods = ModifierKey(mods)
-		w.evMouse.Xpos = xpos
-		w.evMouse.Ypos = ypos
+		w.evMouse.Xpos = float32(xpos)
+		w.evMouse.Ypos = float32(ypos)
 
 		switch action {
 		case glfw.Press:
@@ -253,8 +253,8 @@ func (w *Window) initCallbacks() {
 		}
 	})
 	w.win.SetScrollCallback(func(_ *glfw.Window, xoff, yoff float64) {
-		w.evScroll.Xoffset = xoff
-		w.evScroll.Yoffset = yoff
+		w.evScroll.Xoffset = float32(xoff)
+		w.evScroll.Yoffset = float32(yoff)
 		w.evScroll.Mods = w.mods
 		w.dispatcher.Dispatch(OnScroll, &w.evScroll)
 	})

@@ -213,7 +213,7 @@ func (b *Buffer) Set(x, y int, info Fragment) {
 }
 
 // DepthTest conducts the depth test.
-func (b *Buffer) DepthTest(x, y int, depth float64) bool {
+func (b *Buffer) DepthTest(x, y int, depth float32) bool {
 	if !(image.Point{x, b.rect.Max.Y - y - 1}.In(b.rect)) {
 		return false
 	}

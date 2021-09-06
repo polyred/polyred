@@ -15,7 +15,7 @@ var dst *image.RGBA
 
 func BenchmarkResize(b *testing.B) {
 	b.Run("ScaleDown2x", func(b *testing.B) {
-		img := imageutil.MustLoadImage("../examples/out/shadow.png")
+		img := imageutil.MustLoadImage("../../internal/examples/out/shadow.png")
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

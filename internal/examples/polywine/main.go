@@ -23,7 +23,7 @@ func main() {
 	// camera and renderer
 	cam := camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 3, 3)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 10),
+		camera.ViewFrustum(45, float32(width)/float32(height), 0.1, 10),
 	)
 
 	r := render.NewRenderer(
@@ -72,7 +72,7 @@ func main() {
 	// Handling window resizing
 	w.Subscribe(gui.OnResize, func(name gui.EventName, e gui.Event) {
 		ev := e.(*gui.SizeEvent)
-		cam.SetAspect(float64(ev.Width), float64(ev.Height))
+		cam.SetAspect(float32(ev.Width), float32(ev.Height))
 		prog.ViewMatrix = cam.ViewMatrix()
 		prog.ModelMatrix = cam.ModelMatrix()
 	})

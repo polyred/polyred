@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	global  float64
+	global  float32
 	globalV math.Vec4
 	globalC color.RGBA
 )
@@ -31,8 +31,8 @@ func TestLerp(t *testing.T) {
 }
 
 func BenchmarkLerp(b *testing.B) {
-	t := 0.5
-	var r float64
+	t := float32(0.5)
+	var r float32
 	for i := 0; i < b.N; i++ {
 		r = math.Lerp(0, 1, t)
 	}
@@ -41,7 +41,7 @@ func BenchmarkLerp(b *testing.B) {
 
 func TestLerpVec(t *testing.T) {
 	t.Run("Vec4", func(t *testing.T) {
-		tt := 0.5
+		tt := float32(0.5)
 		v1 := math.Vec4{0, 0, 0, 1}
 		v2 := math.Vec4{1, 1, 1, 1}
 		want := math.Vec4{0.5, 0.5, 0.5, 1}
@@ -50,7 +50,7 @@ func TestLerpVec(t *testing.T) {
 		}
 	})
 	t.Run("Vec3", func(t *testing.T) {
-		tt := 0.5
+		tt := float32(0.5)
 		v1 := math.Vec3{0, 0, 0}
 		v2 := math.Vec3{1, 1, 1}
 		want := math.Vec3{0.5, 0.5, 0.5}
@@ -59,7 +59,7 @@ func TestLerpVec(t *testing.T) {
 		}
 	})
 	t.Run("Vec2", func(t *testing.T) {
-		tt := 0.5
+		tt := float32(0.5)
 		v1 := math.Vec2{0, 0}
 		v2 := math.Vec2{1, 1}
 		want := math.Vec2{0.5, 0.5}
@@ -70,7 +70,7 @@ func TestLerpVec(t *testing.T) {
 }
 
 func BenchmarkLerpV(b *testing.B) {
-	t := 0.5
+	t := float32(0.5)
 	v1 := math.Vec4{0, 0, 0, 1}
 	v2 := math.Vec4{1, 1, 1, 1}
 	var r math.Vec4
@@ -81,7 +81,7 @@ func BenchmarkLerpV(b *testing.B) {
 }
 
 func TestLerpC(t *testing.T) {
-	tt := 0.5
+	tt := float32(0.5)
 	v1 := color.RGBA{0, 0, 0, 255}
 	v2 := color.RGBA{255, 255, 255, 255}
 	want := color.RGBA{127, 127, 127, 255}
@@ -91,7 +91,7 @@ func TestLerpC(t *testing.T) {
 }
 
 func BenchmarkLerpC(b *testing.B) {
-	t := 0.5
+	t := float32(0.5)
 	v1 := color.RGBA{0, 0, 0, 255}
 	v2 := color.RGBA{255, 255, 255, 255}
 	var r color.RGBA

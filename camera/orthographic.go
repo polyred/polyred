@@ -16,12 +16,12 @@ type Orthographic struct {
 	position math.Vec3
 	target   math.Vec3
 	up       math.Vec3
-	left     float64
-	right    float64
-	bottom   float64
-	top      float64
-	near     float64
-	far      float64
+	left     float32
+	right    float32
+	bottom   float32
+	top      float32
+	near     float32
+	far      float32
 }
 
 // NewOrthographic creates an orthographic camera with the provided
@@ -52,17 +52,17 @@ func (c *Orthographic) Type() object.Type {
 }
 
 // Fov returns the field of view of the given camera
-func (c *Orthographic) Fov() float64 {
+func (c *Orthographic) Fov() float32 {
 	return 2 * math.Atan(c.top/math.Abs(c.near))
 }
 
 // Aspect returns the aspect of the given camera
-func (c *Orthographic) Aspect() float64 {
+func (c *Orthographic) Aspect() float32 {
 	return c.right / c.top
 }
 
 // SetAspect sets the aspect of the given camera
-func (c *Orthographic) SetAspect(width, height float64) {
+func (c *Orthographic) SetAspect(width, height float32) {
 	c.top = height / 2
 	c.bottom = -height / 2
 	c.right = width / 2

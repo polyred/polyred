@@ -29,22 +29,22 @@ type SizeEvent struct {
 
 // MouseEvent describes a mouse event over the window
 type MouseEvent struct {
-	Xpos   float64
-	Ypos   float64
+	Xpos   float32
+	Ypos   float32
 	Button MouseButton
 	Mods   ModifierKey
 }
 
 // CursorEvent describes a cursor position change event
 type CursorEvent struct {
-	Xpos, Ypos float64
+	Xpos, Ypos float32
 	Mods       ModifierKey
 }
 
 // ScrollEvent describes a scroll event
 type ScrollEvent struct {
-	Xoffset float64
-	Yoffset float64
+	Xoffset float32
+	Yoffset float32
 	Mods    ModifierKey
 }
 

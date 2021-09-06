@@ -13,27 +13,27 @@ import (
 )
 
 func TestMinMax(t *testing.T) {
-	a, b, c := 1.0, 2.0, 3.0
+	a, b, c := float32(1.0), float32(2.0), float32(3.0)
 
 	got := math.Min(a, b, c)
-	want := 1.0
+	want := float32(1.0)
 	if got != want {
 		t.Fatalf("unexpected Min, got %v, want %v", got, want)
 	}
 
 	got = math.Max(a, b, c)
-	want = 3.0
+	want = float32(3.0)
 	if got != want {
 		t.Fatalf("unexpected Max, got %v, want %v", got, want)
 	}
 }
 
 func TestRadDeg(t *testing.T) {
-	if math.RadToDeg(math.Pi) != 180 {
-		t.Fatalf("unexpected RadToDeg, got %v, want 180.0", math.RadToDeg(math.Pi))
+	if math.RadToDeg(float32(math.Pi)) != 180 {
+		t.Fatalf("unexpected RadToDeg, got %v, want 180.0", math.RadToDeg(float32(math.Pi)))
 	}
-	if math.DegToRad(180) != math.Pi {
-		t.Fatalf("unexpected DegToRad, got %v, want Pi", math.RadToDeg(math.Pi))
+	if math.DegToRad(180) != float32(math.Pi) {
+		t.Fatalf("unexpected DegToRad, got %v, want Pi", math.RadToDeg(float32(math.Pi)))
 	}
 }
 
@@ -51,8 +51,8 @@ func TestViewportMatrix(t *testing.T) {
 }
 
 func BenchmarkApproxEq(b *testing.B) {
-	v1 := 0.000000002
-	v2 := 0.000000001
+	v1 := float32(0.000000002)
+	v2 := float32(0.000000001)
 
 	var bb bool
 	for i := 0; i < b.N; i++ {
@@ -64,13 +64,13 @@ func BenchmarkApproxEq(b *testing.B) {
 func BenchmarkMin(b *testing.B) {
 	for j := 1; j < 10000; j *= 2 {
 		n := j
-		vs := make([]float64, n)
+		vs := make([]float32, n)
 		for i := 0; i < n; i++ {
-			vs[i] = rand.Float64()
+			vs[i] = rand.Float32()
 		}
 
 		b.Run(fmt.Sprintf("%d", j), func(b *testing.B) {
-			var v float64
+			var v float32
 			for i := 0; i < n; i++ {
 				v = math.Min(vs...)
 			}
@@ -82,13 +82,13 @@ func BenchmarkMin(b *testing.B) {
 func BenchmarkMax(b *testing.B) {
 	for j := 1; j < 10000; j *= 2 {
 		n := j
-		vs := make([]float64, n)
+		vs := make([]float32, n)
 		for i := 0; i < n; i++ {
-			vs[i] = rand.Float64()
+			vs[i] = rand.Float32()
 		}
 
 		b.Run(fmt.Sprintf("%d", j), func(b *testing.B) {
-			var v float64
+			var v float32
 			for i := 0; i < n; i++ {
 				v = math.Max(vs...)
 			}
@@ -98,7 +98,7 @@ func BenchmarkMax(b *testing.B) {
 }
 
 func BenchmarkViewportMatrix(b *testing.B) {
-	w, h := 1920.0, 1080.0
+	w, h := float32(1920.0), float32(1080.0)
 
 	var m math.Mat4
 	for i := 0; i < b.N; i++ {

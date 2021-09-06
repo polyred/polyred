@@ -16,10 +16,10 @@ func TestCameraProperties(t *testing.T) {
 	pos := math.NewVec3(-550, 194, 734)
 	lookAt := math.NewVec3(-1000, 0, 0)
 	up := math.NewVec3(0, 1, 1)
-	fov := 45.0
-	aspect := 1.6
-	near := -100.0
-	far := -600.0
+	fov := float32(45.0)
+	aspect := float32(1.6)
+	near := float32(-100.0)
+	far := float32(-600.0)
 
 	oc := camera.NewOrthographic(
 		camera.Position(pos),
@@ -107,22 +107,22 @@ func TestViewMatrix(t *testing.T) {
 	pos := math.NewVec3(-550, 194, 734)
 	lookAt := math.NewVec3(-1000, 0, 0)
 	up := math.NewVec3(0, 1, 1)
-	fov := 45.0
-	aspect := 1.6
-	near := -100.0
-	far := -600.0
+	fov := float32(45.0)
+	aspect := float32(1.6)
+	near := float32(-100.0)
+	far := float32(-600.0)
 
 	want := math.NewMat4(
-		0.6469966392206304, 0.5391638660171921, -0.5391638660171921, 646.9966392206305,
-		-0.5669309063966456, 0.8130082437851895, 0.13269115610921495, -566.9309063966456,
-		0.5098869445372056, 0.21981792720048418, 0.8316822606451308, -372.6616376949569,
+		0.6469966, 0.5391638, -0.5391638, 646.9966,
+		-0.56693095, 0.8130083, 0.13269116, -566.93097,
+		0.5098869, 0.21981792, 0.83168226, -372.66165,
 		0, 0, 0, 1,
 	)
 
 	vm := camera.ViewMatrix(pos, lookAt, up)
 
 	if !vm.Eq(want) {
-		t.Errorf("view matrix is wrong, want %v got %v", want, vm)
+		t.Errorf("view matrix is wrong,\nwant\n%v\ngot\n%v", want, vm)
 	}
 
 	cp := camera.NewPerspective(
@@ -149,14 +149,14 @@ func TestProjMatrix(t *testing.T) {
 	pos := math.NewVec3(-550, 194, 734)
 	lookAt := math.NewVec3(-1000, 0, 0)
 	up := math.NewVec3(0, 1, 1)
-	fov := 45.0
-	aspect := 1.6
-	near := -100.0
-	far := -600.0
+	fov := float32(45.0)
+	aspect := float32(1.6)
+	near := float32(-100.0)
+	far := float32(-600.0)
 
 	want := math.NewMat4(
-		-1.5088834764831844, 0, 0, 0,
-		0, -2.414213562373095, 0, 0,
+		-1.5088835, 0, 0, 0,
+		0, -2.4142134, 0, 0,
 		0, 0, -1.4, 240,
 		0, 0, 1, 0,
 	)
@@ -168,19 +168,19 @@ func TestProjMatrix(t *testing.T) {
 	)
 	vm := cp.ProjMatrix()
 	if !vm.Eq(want) {
-		t.Errorf("perspective projection matrix is wrong, want %v got %v", want, vm)
+		t.Errorf("perspective projection matrix is wrong,\nwant\n%v\ngot\n%v", want, vm)
 	}
 
-	left := -0.5
-	right := 0.5
-	top := 1.0
-	bottom := -0.5
-	near = 0.0
-	far = -3.0
+	left := float32(-0.5)
+	right := float32(0.5)
+	top := float32(1.0)
+	bottom := float32(-0.5)
+	near = float32(0.0)
+	far = float32(-3.0)
 	want = math.NewMat4(
 		2, 0, 0, 0,
-		0, 1.3333333, 0, -0.3333333,
-		0, 0, 0.6666666, 1,
+		0, 1.3333334, 0, -0.33333334,
+		0, 0, 0.6666667, 1,
 		0, 0, 0, 1,
 	)
 	op := camera.NewOrthographic(
@@ -190,24 +190,19 @@ func TestProjMatrix(t *testing.T) {
 	)
 	vm = op.ProjMatrix()
 	if !vm.Eq(want) {
-		t.Errorf("view matrix is wrong, want %v got %v", want, vm)
+		t.Errorf("view matrix is wrong,\nwant\n%v\ngot\n%v", want, vm)
 	}
 }
 
 func BenchmarkCamera(b *testing.B) {
-	w, h := 1920, 1080
+	w, h := float32(1920), float32(1080)
 	c1 := camera.NewPerspective(
 		camera.Position(math.NewVec3(-0.5, 0.5, 0.5)),
 		camera.LookAt(
 			math.NewVec3(0, 0, -0.5),
 			math.NewVec3(0, 1, 0),
 		),
-		camera.ViewFrustum(
-			45,
-			float64(w)/float64(h),
-			-0.1,
-			-3,
-		),
+		camera.ViewFrustum(45, w/h, -0.1, -3),
 	)
 
 	b.Run("Perspective_ViewMatrix", func(b *testing.B) {

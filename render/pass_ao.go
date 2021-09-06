@@ -27,24 +27,24 @@ func (ao *ambientOcclusionPass) Shade(x, y int, col color.RGBA) color.RGBA {
 		return col
 	}
 
-	total := 0.0
-	for a := 0.0; a < math.Pi*2-1e-4; a += math.Pi / 4 {
-		total += math.Pi/2 - ao.maxElevationAngle(x, y, math.Cos(a), math.Sin(a))
+	total := float32(0.0)
+	for a := float32(0.0); a < math.TwoPi-1e-4; a += math.Pi / 4 {
+		total += math.HalfPi - ao.maxElevationAngle(x, y, math.Cos(a), math.Sin(a))
 	}
 	total /= (math.Pi / 2) * 8
 	total = math.Pow(total, 10000)
 
 	return color.RGBA{
-		uint8(total * float64(col.R)),
-		uint8(total * float64(col.G)),
-		uint8(total * float64(col.B)), col.A}
+		uint8(total * float32(col.R)),
+		uint8(total * float32(col.G)),
+		uint8(total * float32(col.B)), col.A}
 }
 
-func (ao *ambientOcclusionPass) maxElevationAngle(x, y int, dirX, dirY float64) float64 {
-	p := math.NewVec4(float64(x), float64(y), 0, 1)
+func (ao *ambientOcclusionPass) maxElevationAngle(x, y int, dirX, dirY float32) float32 {
+	p := math.NewVec4(float32(x), float32(y), 0, 1)
 	dir := math.NewVec4(dirX, dirY, 0, 0)
-	maxangle := 0.0
-	for t := 0.0; t < 100; t += 1 {
+	maxangle := float32(0.0)
+	for t := float32(0.0); t < 100; t += 1 {
 		cur := p.Add(dir.Scale(t, t, 1, 1))
 		if !ao.buf.In(int(cur.X), int(cur.Y)) {
 			return maxangle

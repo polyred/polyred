@@ -24,9 +24,9 @@ type Interface interface {
 	object.Object
 	Type() object.Type
 
-	Fov() float64
-	Aspect() float64
-	SetAspect(float64, float64)
+	Fov() float32
+	Aspect() float32
+	SetAspect(float32, float32)
 	Position() math.Vec3
 	SetPosition(math.Vec3)
 	LookAt() (math.Vec3, math.Vec3)

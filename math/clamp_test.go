@@ -116,9 +116,9 @@ func TestClamp(t *testing.T) {
 }
 
 func BenchmarkClamp(b *testing.B) {
-	v := 128.0
+	v := float32(128.0)
 
-	var bb float64
+	var bb float32
 	for i := 0; i < b.N; i++ {
 		bb = math.Clamp(v, 0, 255)
 	}

@@ -12,11 +12,11 @@ import (
 
 // Vec2 represents a 2D vector (x, y).
 type Vec2 struct {
-	X, Y float64
+	X, Y float32
 }
 
 // NewVec2 creates a 2D vector with given parameters.
-func NewVec2(x, y float64) Vec2 {
+func NewVec2(x, y float32) Vec2 {
 	return Vec2{x, y}
 }
 
@@ -24,8 +24,8 @@ func NewVec2(x, y float64) Vec2 {
 // sitting in range [0, 1].
 func NewRandVec2() Vec2 {
 	return Vec2{
-		rand.Float64(),
-		rand.Float64(),
+		rand.Float32(),
+		rand.Float32(),
 	}
 }
 
@@ -63,23 +63,23 @@ func (v Vec2) IsZero() bool {
 }
 
 // Scale scales the given 2D vector and returns the resulting vector.
-func (v Vec2) Scale(x, y float64) Vec2 {
+func (v Vec2) Scale(x, y float32) Vec2 {
 	return Vec2{v.X * x, v.Y * y}
 }
 
 // Translate translates the given 2D vector and returns the resulting vector.
-func (v Vec2) Translate(x, y float64) Vec2 {
+func (v Vec2) Translate(x, y float32) Vec2 {
 	return Vec2{v.X + x, v.Y + y}
 }
 
 // Dot computes the dot product of two given vectors.
-func (v Vec2) Dot(u Vec2) float64 {
+func (v Vec2) Dot(u Vec2) float32 {
 	return v.X*u.X + v.Y*u.Y
 }
 
 // Len returns the length of the given vector.
-func (v Vec2) Len() float64 {
-	return math.Sqrt(v.Dot(v))
+func (v Vec2) Len() float32 {
+	return float32(math.Sqrt(float64(v.Dot(v))))
 }
 
 // Unit computes the unit vector along the direction of the given vector.

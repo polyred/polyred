@@ -85,17 +85,17 @@ func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
 			offset := i
 			pool.Run(func() {
 				for j := 0; j < 4*batch; j += 4 {
-					data.Pix[offset+j+0] = uint8(color.FromsRGB2Linear(float64(data.Pix[offset+j+0])/0xff)*0xff + 0.5)
-					data.Pix[offset+j+1] = uint8(color.FromsRGB2Linear(float64(data.Pix[offset+j+1])/0xff)*0xff + 0.5)
-					data.Pix[offset+j+2] = uint8(color.FromsRGB2Linear(float64(data.Pix[offset+j+2])/0xff)*0xff + 0.5)
+					data.Pix[offset+j+0] = uint8(color.FromsRGB2Linear(float32(data.Pix[offset+j+0])/0xff)*0xff + 0.5)
+					data.Pix[offset+j+1] = uint8(color.FromsRGB2Linear(float32(data.Pix[offset+j+1])/0xff)*0xff + 0.5)
+					data.Pix[offset+j+2] = uint8(color.FromsRGB2Linear(float32(data.Pix[offset+j+2])/0xff)*0xff + 0.5)
 				}
 			})
 		}
 		pool.Run(func() {
 			for i := batcheEnd * (4 * batch); i < length; i += 4 {
-				data.Pix[i+0] = uint8(color.FromsRGB2Linear(float64(data.Pix[i+0])/0xff)*0xff + 0.5)
-				data.Pix[i+1] = uint8(color.FromsRGB2Linear(float64(data.Pix[i+1])/0xff)*0xff + 0.5)
-				data.Pix[i+2] = uint8(color.FromsRGB2Linear(float64(data.Pix[i+2])/0xff)*0xff + 0.5)
+				data.Pix[i+0] = uint8(color.FromsRGB2Linear(float32(data.Pix[i+0])/0xff)*0xff + 0.5)
+				data.Pix[i+1] = uint8(color.FromsRGB2Linear(float32(data.Pix[i+1])/0xff)*0xff + 0.5)
+				data.Pix[i+2] = uint8(color.FromsRGB2Linear(float32(data.Pix[i+2])/0xff)*0xff + 0.5)
 			}
 		})
 

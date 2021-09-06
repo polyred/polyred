@@ -203,7 +203,7 @@ func (r *Renderer) passForward() {
 
 	matView := r.renderCamera.ViewMatrix()
 	matProj := r.renderCamera.ProjMatrix()
-	matVP := math.ViewportMatrix(float64(r.bufs[0].Bounds().Dx()), float64(r.bufs[0].Bounds().Dy()))
+	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
 
 	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
@@ -264,7 +264,7 @@ func (r *Renderer) passDeferred() {
 	matViewInv := matView.Inv()
 	matProj := r.renderCamera.ProjMatrix()
 	matProjInv := matProj.Inv()
-	matVP := math.ViewportMatrix(float64(r.bufs[0].Bounds().Dx()), float64(r.bufs[0].Bounds().Dy()))
+	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
 	matVPInv := matVP.Inv()
 	matScreenToWorld := matViewInv.MulM(matProjInv).MulM(matVPInv)
 	uniforms := map[string]interface{}{
@@ -297,9 +297,9 @@ func (r *Renderer) shade(info buffer.Fragment, uniforms map[string]interface{}) 
 	pos := info.AttrFlat["Pos"].(math.Vec4)
 	fN := info.AttrFlat["fN"].(math.Vec4)
 	if mat != nil {
-		lod := 0.0
+		lod := float32(0.0)
 		if mat.Texture().UseMipmap() {
-			siz := float64(mat.Texture().Size()) * math.Sqrt(math.Max(info.Du, info.Dv))
+			siz := float32(mat.Texture().Size()) * math.Sqrt(math.Max(info.Du, info.Dv))
 			if siz < 1 {
 				siz = 1
 			}
@@ -313,7 +313,7 @@ func (r *Renderer) shade(info buffer.Fragment, uniforms map[string]interface{}) 
 	}
 
 	if r.useShadowMap && mat != nil && mat.ReceiveShadow() {
-		visibles := 0.0
+		visibles := float32(0.0)
 		ns := len(r.shadowBufs)
 		for i := 0; i < ns; i++ {
 			visible := r.shadingVisibility(info.X, info.Y, i, info, uniforms)
@@ -322,9 +322,9 @@ func (r *Renderer) shade(info buffer.Fragment, uniforms map[string]interface{}) 
 			}
 		}
 		w := math.Pow(0.5, visibles)
-		r := uint8(float64(col.R) * w)
-		g := uint8(float64(col.G) * w)
-		b := uint8(float64(col.B) * w)
+		r := uint8(float32(col.R) * w)
+		g := uint8(float32(col.G) * w)
+		b := uint8(float32(col.B) * w)
 		col = color.RGBA{r, g, b, col.A}
 	}
 	return col
@@ -377,11 +377,11 @@ func (r *Renderer) draw(
 		return
 	}
 
-	w := float64(r.bufs[0].Bounds().Dx())
-	h := float64(r.bufs[0].Bounds().Dy())
+	w := float32(r.bufs[0].Bounds().Dx())
+	h := float32(r.bufs[0].Bounds().Dy())
 
 	// t1 is outside the viewfrustum
-	outside := func(v *math.Vec4, w, h float64) bool {
+	outside := func(v *math.Vec4, w, h float32) bool {
 		if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
 			return true
 		}
@@ -428,7 +428,7 @@ func (r *Renderer) drawClipped(
 				continue
 			}
 
-			p := math.NewVec2(float64(x)+0.5, float64(y)+0.5)
+			p := math.NewVec2(float32(x)+0.5, float32(y)+0.5)
 			bc := math.Barycoord(p, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
 
 			// Is inside triangle?
@@ -446,7 +446,7 @@ func (r *Renderer) drawClipped(
 			// Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 			// Department of Computer Science, University of North Carolina at Chapel Hill (2002).
 			wc1, wc2, wc3 := recipw.X*bc[0], recipw.Y*bc[1], recipw.Z*bc[2]
-			norm := 1.0
+			norm := float32(1.0)
 			if _, ok := r.renderCamera.(*camera.Perspective); ok {
 				norm = 1 / (wc1 + wc2 + wc3)
 			}
@@ -456,7 +456,7 @@ func (r *Renderer) drawClipped(
 			uvY := (wc1*t1.UV.Y + wc2*t2.UV.Y + wc3*t3.UV.Y) * norm
 
 			// Compute du dv
-			var du, dv float64
+			var du, dv float32
 			if mat != nil && mat.Texture().UseMipmap() {
 				p1 := math.NewVec2(p.X+1, p.Y)
 				p2 := math.NewVec2(p.X, p.Y+1)
@@ -491,10 +491,10 @@ func (r *Renderer) drawClipped(
 				W: 1,
 			}
 			col := color.RGBA{
-				R: uint8(math.Clamp((wc1*float64(t1.Col.R)+wc2*float64(t2.Col.R)+wc3*float64(t3.Col.R))*norm, 0, 0xff)),
-				G: uint8(math.Clamp((wc1*float64(t1.Col.G)+wc2*float64(t2.Col.G)+wc3*float64(t3.Col.G))*norm, 0, 0xff)),
-				B: uint8(math.Clamp((wc1*float64(t1.Col.B)+wc2*float64(t2.Col.B)+wc3*float64(t3.Col.B))*norm, 0, 0xff)),
-				A: uint8(math.Clamp((wc1*float64(t1.Col.A)+wc2*float64(t2.Col.A)+wc3*float64(t3.Col.A))*norm, 0, 0xff)),
+				R: uint8(math.Clamp((wc1*float32(t1.Col.R)+wc2*float32(t2.Col.R)+wc3*float32(t3.Col.R))*norm, 0, 0xff)),
+				G: uint8(math.Clamp((wc1*float32(t1.Col.G)+wc2*float32(t2.Col.G)+wc3*float32(t3.Col.G))*norm, 0, 0xff)),
+				B: uint8(math.Clamp((wc1*float32(t1.Col.B)+wc2*float32(t2.Col.B)+wc3*float32(t3.Col.B))*norm, 0, 0xff)),
+				A: uint8(math.Clamp((wc1*float32(t1.Col.A)+wc2*float32(t2.Col.A)+wc3*float32(t3.Col.A))*norm, 0, 0xff)),
 			}
 
 			// update G-buffer
@@ -527,16 +527,16 @@ func (r *Renderer) passGammaCorrect() {
 	}
 
 	r.DrawFragments(r.bufs[0], func(frag primitive.Fragment) color.RGBA {
-		r := uint8(color.FromLinear2sRGB(float64(frag.Col.R)/0xff)*0xff + 0.5)
-		g := uint8(color.FromLinear2sRGB(float64(frag.Col.G)/0xff)*0xff + 0.5)
-		b := uint8(color.FromLinear2sRGB(float64(frag.Col.B)/0xff)*0xff + 0.5)
+		r := uint8(color.FromLinear2sRGB(float32(frag.Col.R)/0xff)*0xff + 0.5)
+		g := uint8(color.FromLinear2sRGB(float32(frag.Col.G)/0xff)*0xff + 0.5)
+		b := uint8(color.FromLinear2sRGB(float32(frag.Col.B)/0xff)*0xff + 0.5)
 		return color.RGBA{r, g, b, frag.Col.A}
 	})
 }
 
 func (r *Renderer) inViewport(v1, v2, v3 math.Vec4) bool {
 	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float64(r.bufs[0].Bounds().Dx()), float64(r.bufs[0].Bounds().Dy()), 1),
+		math.NewVec3(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()), 1),
 		math.NewVec3(0, 0, 0),
 		math.NewVec3(0, 0, -1),
 	)

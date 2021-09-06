@@ -44,19 +44,19 @@ type OrbitControl struct {
 	enabled OrbitEnabled     // Which controls are enabled
 	state   orbitState       // Current control state
 
-	MinDistance     float64 // Minimum distance from target (default is 1)
-	MaxDistance     float64 // Maximum distance from target (default is infinity)
-	MinPolarAngle   float64 // Minimum polar angle in radians (default is 0)
-	MaxPolarAngle   float64 // Maximum polar angle in radians (default is Pi)
-	MinAzimuthAngle float64 // Minimum azimuthal angle in radians (default is negative infinity)
-	MaxAzimuthAngle float64 // Maximum azimuthal angle in radians (default is infinity)
-	RotSpeed        float64 // Rotation speed factor (default is 1)
-	ZoomSpeed       float64 // Zoom speed factor (default is 0.1)
+	MinDistance     float32 // Minimum distance from target (default is 1)
+	MaxDistance     float32 // Maximum distance from target (default is infinity)
+	MinPolarAngle   float32 // Minimum polar angle in radians (default is 0)
+	MaxPolarAngle   float32 // Maximum polar angle in radians (default is Pi)
+	MinAzimuthAngle float32 // Minimum azimuthal angle in radians (default is negative infinity)
+	MaxAzimuthAngle float32 // Maximum azimuthal angle in radians (default is infinity)
+	RotSpeed        float32 // Rotation speed factor (default is 1)
+	ZoomSpeed       float32 // Zoom speed factor (default is 0.1)
 
 	// Internal
 	rotStart  math.Vec2
 	panStart  math.Vec2
-	zoomStart float64
+	zoomStart float32
 
 	win *Window
 }
@@ -112,7 +112,7 @@ func (oc *OrbitControl) SetEnabled(bitmask OrbitEnabled) {
 }
 
 // Rotate rotates the camera around the target by the specified angles.
-func (oc *OrbitControl) Rotate(thetaDelta, phiDelta float64) {
+func (oc *OrbitControl) Rotate(thetaDelta, phiDelta float32) {
 	// Compute direction vector from target to camera
 	tcam := oc.cam.Position()
 	tcam = tcam.Sub(oc.target)
@@ -139,7 +139,7 @@ func (oc *OrbitControl) Rotate(thetaDelta, phiDelta float64) {
 
 // Zoom moves the camera closer or farther from the target the specified
 // amount and also updates the camera's orthographic size to match.
-func (oc *OrbitControl) Zoom(delta float64) {
+func (oc *OrbitControl) Zoom(delta float32) {
 
 	// Compute direction vector from target to camera
 	tcam := oc.cam.Position()
@@ -157,7 +157,7 @@ func (oc *OrbitControl) Zoom(delta float64) {
 
 // Pan pans the camera and target the specified amount on the plane
 // perpendicular to the viewing direction.
-func (oc *OrbitControl) Pan(deltaX, deltaY float64) {
+func (oc *OrbitControl) Pan(deltaX, deltaY float32) {
 	// Compute direction vector from camera to target
 	pos := oc.cam.Position()
 	target, up := oc.cam.LookAt()
@@ -166,7 +166,7 @@ func (oc *OrbitControl) Pan(deltaX, deltaY float64) {
 	// Conversion constant between an on-screen cursor delta and its
 	// projection on the target plane
 	c := 2 * vdir.Len() * math.Tan(math.DegToRad(oc.cam.Fov()/2.0)) /
-		math.Max(float64(oc.win.width), float64(oc.win.height))
+		math.Max(float32(oc.win.width), float32(oc.win.height))
 
 	// Calculate pan components, scale by the converted offsets and
 	// combine them
@@ -227,7 +227,7 @@ func (oc *OrbitControl) OnCursor(evname EventName, ev Event) {
 	mev := ev.(*CursorEvent)
 	switch oc.state {
 	case stateRotate:
-		c := -2 * math.Pi * oc.RotSpeed / math.Max(float64(oc.win.width), float64(oc.win.height))
+		c := -2 * math.Pi * oc.RotSpeed / math.Max(float32(oc.win.width), float32(oc.win.height))
 		oc.Rotate(c*(mev.Xpos-oc.rotStart.X), c*(mev.Ypos-oc.rotStart.Y))
 		oc.rotStart.X = mev.Xpos
 		oc.rotStart.Y = mev.Ypos

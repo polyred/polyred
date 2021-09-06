@@ -54,13 +54,13 @@ func NewTexture(opts ...Opt) *Texture {
 		return t
 	}
 
-	L := int(math.Log2(math.Max(float64(dx), float64(dy)))) + 1
+	L := int(math.Log2(math.Max(float32(dx), float32(dy)))) + 1
 	t.mipmap = make([]*image.RGBA, L)
 	t.mipmap[0] = t.image
 
 	for i := 1; i < L; i++ {
-		width := dx / int(math.Pow(2, float64(i)))
-		height := dy / int(math.Pow(2, float64(i)))
+		width := dx / int(math.Pow(2, float32(i)))
+		height := dy / int(math.Pow(2, float32(i)))
 		t.mipmap[i] = imageutil.Resize(width, height, t.image)
 		if t.debug {
 			imageutil.Save(t.mipmap[i], fmt.Sprintf("%d.png", i))
@@ -81,7 +81,7 @@ func (t *Texture) UseMipmap() bool {
 
 // Query fetches the color of at pixel (u, v). This function is a naive
 // mipmap implementation that does magnification and minification.
-func (t *Texture) Query(lod, u, v float64) color.RGBA {
+func (t *Texture) Query(lod, u, v float32) color.RGBA {
 	iu, u := math.Modf(u)
 	if iu != 0 && u == 0 {
 		u = 1
@@ -105,8 +105,8 @@ func (t *Texture) Query(lod, u, v float64) color.RGBA {
 	// Make sure LOD is sitting on a valid range before proceed.
 	if lod < 0 {
 		lod = 0
-	} else if lod >= float64(len(t.mipmap)) {
-		lod = float64(len(t.mipmap) - 1)
+	} else if lod >= float32(len(t.mipmap)) {
+		lod = float32(len(t.mipmap) - 1)
 	}
 
 	if lod <= 1 {
@@ -122,17 +122,17 @@ func (t *Texture) Query(lod, u, v float64) color.RGBA {
 		return t.queryBilinear(h, u, v)
 	}
 
-	p := lod - float64(h)
+	p := lod - float32(h)
 	if math.ApproxEq(p, 0, math.Epsilon) {
 		return t.queryBilinear(h, u, v)
 	}
 	return t.queryTrilinear(h, l, p, u, v)
 }
 
-func (t *Texture) queryL0(u, v float64) color.RGBA {
+func (t *Texture) queryL0(u, v float32) color.RGBA {
 	tex := t.mipmap[0]
-	dx := float64(tex.Bounds().Dx())
-	dy := float64(tex.Bounds().Dy())
+	dx := float32(tex.Bounds().Dx())
+	dy := float32(tex.Bounds().Dy())
 	if dx == 1 && dy == 1 {
 		return tex.RGBAAt(0, 0)
 	}
@@ -142,21 +142,21 @@ func (t *Texture) queryL0(u, v float64) color.RGBA {
 	return tex.RGBAAt(x, y)
 }
 
-func (t *Texture) queryTrilinear(h, l int, p, u, v float64) color.RGBA {
+func (t *Texture) queryTrilinear(h, l int, p, u, v float32) color.RGBA {
 	L1 := t.queryBilinear(h, u, v)
 	L2 := t.queryBilinear(l, u, v)
 	return math.LerpC(L1, L2, p)
 }
 
-func (t *Texture) queryBilinear(lod int, u, v float64) color.RGBA {
+func (t *Texture) queryBilinear(lod int, u, v float32) color.RGBA {
 	buf := t.mipmap[lod]
 	dx := buf.Bounds().Dx()
 	dy := buf.Bounds().Dy()
 	if dx == 1 && dy == 1 {
 		return buf.RGBAAt(0, 0)
 	}
-	x := u * (float64(dx) - 1)
-	y := v * (float64(dy) - 1)
+	x := u * (float32(dx) - 1)
+	y := v * (float32(dy) - 1)
 
 	x0 := math.Floor(x)
 	y0 := math.Floor(y)

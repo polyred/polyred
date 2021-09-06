@@ -42,13 +42,15 @@ func TestLoadImage(t *testing.T) {
 
 func BenchmarkLoadImage(b *testing.B) {
 	b.Run("without-correction", func(b *testing.B) {
+		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			imageutil.MustLoadImage("../internal/testdata/ground.png", imageutil.GammaCorrect(false))
+			imageutil.MustLoadImage("../../internal/testdata/ground.png", imageutil.GammaCorrect(false))
 		}
 	})
 	b.Run("with-correction", func(b *testing.B) {
+		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			imageutil.MustLoadImage("../internal/testdata/ground.png", imageutil.GammaCorrect(true))
+			imageutil.MustLoadImage("../../internal/testdata/ground.png", imageutil.GammaCorrect(true))
 		}
 	})
 }

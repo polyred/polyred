@@ -21,7 +21,7 @@ type Point struct {
 	math.TransformContext
 
 	pos          math.Vec3
-	intensity    float64
+	intensity    float32
 	color        color.RGBA
 	useShadowMap bool
 }
@@ -47,7 +47,7 @@ func (l *Point) Type() object.Type {
 	return object.TypeLight
 }
 
-func (l *Point) Intensity() float64 {
+func (l *Point) Intensity() float32 {
 	return l.intensity
 }
 

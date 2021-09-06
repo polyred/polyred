@@ -30,15 +30,15 @@ type Mat3 struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 3x4 Mat3.
 	// See benchmarks at https://golang.design/research/pointer-params/.
-	X00, X01, X02 float64
-	X10, X11, X12 float64
-	X20, X21, X22 float64
+	X00, X01, X02 float32
+	X10, X11, X12 float32
+	X20, X21, X22 float32
 }
 
 func NewMat3(
 	X00, X01, X02,
 	X10, X11, X12,
-	X20, X21, X22 float64) Mat3 {
+	X20, X21, X22 float32) Mat3 {
 	return Mat3{
 		X00, X01, X02,
 		X10, X11, X12,
@@ -55,7 +55,7 @@ func (m Mat3) String() string {
 }
 
 // Get gets the Mat3 elements
-func (m Mat3) Get(i, j int) float64 {
+func (m Mat3) Get(i, j int) float32 {
 	if i < 0 || i > 2 || j < 0 || j > 2 {
 		panic("invalid index")
 	}
@@ -85,7 +85,7 @@ func (m Mat3) Get(i, j int) float64 {
 }
 
 // Set set the Mat3 elements at row i and column j
-func (m *Mat3) Set(i, j int, v float64) {
+func (m *Mat3) Set(i, j int, v float32) {
 	if i < 0 || i > 2 || j < 0 || j > 2 {
 		panic("invalid index")
 	}
@@ -178,7 +178,7 @@ func (m Mat3) MulV(v Vec3) Vec3 {
 }
 
 // Det computes the determinant of the given matrix.
-func (m Mat3) Det() float64 {
+func (m Mat3) Det() float32 {
 	return (m.X00*m.X11*m.X22 - m.X21*m.X12) -
 		m.X10*(m.X01*m.X22-m.X21*m.X02) +
 		m.X20*(m.X01*m.X12-m.X11*m.X02)

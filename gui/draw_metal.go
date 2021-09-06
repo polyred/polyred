@@ -33,8 +33,8 @@ func (w *Window) initDriver() {
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize metal: %w", err))
 	}
-	dx := int(float64(w.width) * w.scaleX)
-	dy := int(float64(w.height) * w.scaleY)
+	dx := int(float32(w.width) * w.scaleX)
+	dy := int(float32(w.height) * w.scaleY)
 
 	ml := mtl.MakeMetalLayer()
 	ml.SetDevice(device)
@@ -90,8 +90,6 @@ func (w *Window) flush(buf *frameBuf) error {
 		drawable.Texture(), 0, 0, mtl.Origin{})
 	bce.EndEncoding()
 	cb.PresentDrawable(drawable)
-	cb.AddCompletedHandler(func() { close(buf.done) })
-	cb.Commit()
 
 	// We need a synchornization here. Similar to glFinish,
 	// instead of glFlush. See a general discussion about CPU, GPU
@@ -102,7 +100,9 @@ func (w *Window) flush(buf *frameBuf) error {
 	//
 	// We may not need such an wait, if we are doing perfect timing.
 	// See: https://golang.design/research/ultimate-channel/
-	// cb.WaitUntilCompleted()
+	cb.AddCompletedHandler(func() { close(buf.done) })
+
+	cb.Commit()
 	return nil
 }
 

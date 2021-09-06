@@ -88,7 +88,7 @@ func (m *TriangleSoup) Center() math.Vec3 {
 	return aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 }
 
-func (m *TriangleSoup) Radius() float64 {
+func (m *TriangleSoup) Radius() float32 {
 	aabb := m.AABB()
 	return aabb.Max.Sub(aabb.Min).Len() / 2
 }

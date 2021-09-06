@@ -23,9 +23,9 @@ type BlinnShader struct {
 	ProjectionMatrix math.Mat4
 	LightSources     []light.Source
 	LightEnviron     []light.Environment
-	Kdiff            float64
-	Kspec            float64
-	Shininess        float64
+	Kdiff            float32
+	Kspec            float32
+	Shininess        float32
 	Texture          *texture.Texture
 }
 
@@ -42,28 +42,28 @@ func (s *BlinnShader) FragmentShader(frag primitive.Fragment) color.RGBA {
 		col = s.Texture.Query(0, frag.UV.X, frag.UV.Y)
 	}
 
-	LaR := 0.0
-	LaG := 0.0
-	LaB := 0.0
+	LaR := float32(0.0)
+	LaG := float32(0.0)
+	LaB := float32(0.0)
 
 	for _, e := range s.LightEnviron {
-		LaR += e.Intensity() * float64(col.R)
-		LaG += e.Intensity() * float64(col.G)
-		LaB += e.Intensity() * float64(col.B)
+		LaR += e.Intensity() * float32(col.R)
+		LaG += e.Intensity() * float32(col.G)
+		LaB += e.Intensity() * float32(col.B)
 	}
 
-	LdR := 0.0
-	LdG := 0.0
-	LdB := 0.0
+	LdR := float32(0.0)
+	LdG := float32(0.0)
+	LdB := float32(0.0)
 
-	LsR := 0.0
-	LsG := 0.0
-	LsB := 0.0
+	LsR := float32(0.0)
+	LsG := float32(0.0)
+	LsB := float32(0.0)
 
 	for _, l := range s.LightSources {
 		var (
 			L math.Vec4
-			I float64
+			I float32
 		)
 		switch ll := l.(type) {
 		case *light.Point:
@@ -80,13 +80,13 @@ func (s *BlinnShader) FragmentShader(frag primitive.Fragment) color.RGBA {
 		Ld := math.Clamp(frag.Nor.Dot(L), 0, 1)
 		Ls := math.Pow(math.Clamp(frag.Nor.Dot(H), 0, 1), s.Shininess)
 
-		LdR += Ld * float64(col.R) * I
-		LdG += Ld * float64(col.G) * I
-		LdB += Ld * float64(col.B) * I
+		LdR += Ld * float32(col.R) * I
+		LdG += Ld * float32(col.G) * I
+		LdB += Ld * float32(col.B) * I
 
-		LsR += Ls * float64(l.Color().R) * I
-		LsG += Ls * float64(l.Color().G) * I
-		LsB += Ls * float64(l.Color().B) * I
+		LsR += Ls * float32(l.Color().R) * I
+		LsG += Ls * float32(l.Color().G) * I
+		LsB += Ls * float32(l.Color().B) * I
 	}
 
 	r := LaR + s.Kdiff*LdR + s.Kspec*LsR
@@ -97,5 +97,5 @@ func (s *BlinnShader) FragmentShader(frag primitive.Fragment) color.RGBA {
 		uint8(math.Clamp(r, 0, 0xff)),
 		uint8(math.Clamp(g, 0, 0xff)),
 		uint8(math.Clamp(b, 0, 0xff)),
-		uint8(math.Clamp(float64(col.A), 0, 0xff))}
+		uint8(math.Clamp(float32(col.A), 0, 0xff))}
 }

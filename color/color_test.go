@@ -36,7 +36,7 @@ func TestColor(t *testing.T) {
 
 func TestCoverConversion(t *testing.T) {
 
-	orig := 0.5
+	orig := float32(0.5)
 	v := color.FromLinear2sRGB(orig)
 	if !math.ApproxEq(color.FromsRGB2Linear(v), orig, math.Epsilon) {
 		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), orig)
@@ -60,9 +60,9 @@ func TestCoverConversion(t *testing.T) {
 
 	color.DisableLut()
 
-	orig = 0.5
+	orig = float32(0.5)
 	v = color.FromLinear2sRGB(orig)
-	if !math.ApproxEq(color.FromsRGB2Linear(v), orig, math.Epsilon) {
+	if !math.ApproxEq(color.FromsRGB2Linear(v), orig, 1e-6) {
 		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), orig)
 	}
 }

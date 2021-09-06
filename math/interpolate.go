@@ -10,19 +10,19 @@ import (
 
 // Lerp computes a linear interpolation between two given numbers
 // regarding the given t parameter.
-func Lerp(from, to, t float64) float64 {
+func Lerp(from, to, t float32) float32 {
 	return from + t*(to-from)
 }
 
 // Lerp computes a linear interpolation between two given integers
 // regarding the given t parameter.
-func LerpInt(from, to int, t float64) int {
-	return int(float64(from) + t*float64(to-from))
+func LerpInt(from, to int, t float32) int {
+	return int(float32(from) + t*float32(to-from))
 }
 
 // LerpV computes a linear interpolation between two given vectors
 // regarding the given t parameter.
-func LerpVec2(from, to Vec2, t float64) Vec2 {
+func LerpVec2(from, to Vec2, t float32) Vec2 {
 	return Vec2{
 		Lerp(from.X, to.X, t),
 		Lerp(from.Y, to.Y, t),
@@ -31,7 +31,7 @@ func LerpVec2(from, to Vec2, t float64) Vec2 {
 
 // LerpV computes a linear interpolation between two given vectors
 // regarding the given t parameter.
-func LerpVec3(from, to Vec3, t float64) Vec3 {
+func LerpVec3(from, to Vec3, t float32) Vec3 {
 	return Vec3{
 		Lerp(from.X, to.X, t),
 		Lerp(from.Y, to.Y, t),
@@ -41,7 +41,7 @@ func LerpVec3(from, to Vec3, t float64) Vec3 {
 
 // LerpV computes a linear interpolation between two given vectors
 // regarding the given t parameter.
-func LerpVec4(from, to Vec4, t float64) Vec4 {
+func LerpVec4(from, to Vec4, t float32) Vec4 {
 	return Vec4{
 		Lerp(from.X, to.X, t),
 		Lerp(from.Y, to.Y, t),
@@ -52,18 +52,18 @@ func LerpVec4(from, to Vec4, t float64) Vec4 {
 
 // LerpC computes a linear interpolation between two given colors
 // regarding the given t parameter.
-func LerpC(from color.RGBA, to color.RGBA, t float64) color.RGBA {
+func LerpC(from color.RGBA, to color.RGBA, t float32) color.RGBA {
 	return color.RGBA{
-		uint8(Lerp(float64(from.R), float64(to.R), t)),
-		uint8(Lerp(float64(from.G), float64(to.G), t)),
-		uint8(Lerp(float64(from.B), float64(to.B), t)),
-		uint8(Lerp(float64(from.A), float64(to.A), t)),
+		uint8(Lerp(float32(from.R), float32(to.R), t)),
+		uint8(Lerp(float32(from.G), float32(to.G), t)),
+		uint8(Lerp(float32(from.B), float32(to.B), t)),
+		uint8(Lerp(float32(from.A), float32(to.A), t)),
 	}
 }
 
 // Barycoord computes the barycentric coordinates of a given position
 // regards to the given three positions.
-func Barycoord(p, t1, t2, t3 Vec2) [3]float64 {
+func Barycoord(p, t1, t2, t3 Vec2) [3]float32 {
 	ap := NewVec3(p.X-t1.X, p.Y-t1.Y, 0)
 	ab := NewVec3(t2.X-t1.X, t2.Y-t1.Y, 0)
 	ac := NewVec3(t3.X-t1.X, t3.Y-t1.Y, 0)
@@ -74,7 +74,7 @@ func Barycoord(p, t1, t2, t3 Vec2) [3]float64 {
 	Sapc := ap.Cross(ac).Z
 	Sbcp := bc.Cross(bp).Z
 	w1, w2, w3 := Sbcp/Sabc, Sapc/Sabc, Sabp/Sabc
-	return [3]float64{w1, w2, w3}
+	return [3]float32{w1, w2, w3}
 }
 
 // IsInsideTriangle tests three given vertices and a position p, returns

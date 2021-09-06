@@ -32,7 +32,7 @@ var (
 )
 
 func init() {
-	w, h, msaa := 1920, 1080, 2
+	w, h, msaa := 800, 600, 2
 	s, c = newscene(w, h)
 	r = NewRenderer(
 		Size(w, h),
@@ -66,7 +66,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 		)),
 		material.Kdiff(0.8), material.Kspec(1),
 		material.Shininess(100),
-		material.AmbientOcclusion(true),
+		material.AmbientOcclusion(false),
 	)
 	m.SetMaterial(mat)
 	m.Rotate(math.NewVec3(0, 1, 0), -math.Pi/6)
@@ -79,7 +79,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 			math.NewVec3(0, 0, -0.5),
 			math.NewVec3(0, 1, 0),
 		),
-		camera.ViewFrustum(45, float64(w)/float64(h), 0.1, 3),
+		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 3),
 	)
 }
 

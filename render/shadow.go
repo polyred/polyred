@@ -27,7 +27,7 @@ import (
 type shadowInfo struct {
 	active   bool
 	settings *shadow.Map
-	depths   []float64
+	depths   []float32
 	lock     []spinlock.SpinLock
 }
 
@@ -86,7 +86,7 @@ func (r *Renderer) initShadowMaps() {
 		}
 		r.shadowBufs[i].active = true
 		r.shadowBufs[i].settings = shadow.NewMap(shadow.Camera(c))
-		r.shadowBufs[i].depths = make([]float64, r.bufs[0].Bounds().Dx()*r.bufs[0].Bounds().Dy())
+		r.shadowBufs[i].depths = make([]float32, r.bufs[0].Bounds().Dx()*r.bufs[0].Bounds().Dy())
 		r.shadowBufs[i].lock = make([]spinlock.SpinLock, r.bufs[0].Bounds().Dx()*r.bufs[0].Bounds().Dy())
 	}
 }
@@ -121,7 +121,7 @@ func (r *Renderer) passShadows(index int) {
 	c := r.shadowBufs[index].settings.Camera()
 	matView := c.ViewMatrix()
 	matProj := c.ProjMatrix()
-	matVP := math.ViewportMatrix(float64(r.bufs[0].Bounds().Dx()), float64(r.bufs[0].Bounds().Dy()))
+	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
 	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
 		if o.Type() != object.TypeMesh {
 			return true
@@ -208,7 +208,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 			if !r.bufs[0].In(x, y) {
 				continue
 			}
-			p := math.NewVec2(float64(x)+0.5, float64(y)+0.5)
+			p := math.NewVec2(float32(x)+0.5, float32(y)+0.5)
 			bc := math.Barycoord(p, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
 
 			// Is inside triangle?
@@ -231,7 +231,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *pr
 	}
 }
 
-func (r *Renderer) shadowDepthTest(index int, x, y int, z float64) bool {
+func (r *Renderer) shadowDepthTest(index int, x, y int, z float32) bool {
 	idx := x + y*r.bufs[0].Bounds().Dx()
 	buf := r.shadowBufs[index]
 
@@ -252,7 +252,7 @@ func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
 	shadowMap := &r.shadowBufs[shadowIdx]
 
 	// transform scrren coordinate to light viewport
-	screenCoord := math.NewVec4(float64(x), float64(y), info.Depth, 1).
+	screenCoord := math.NewVec4(float32(x), float32(y), info.Depth, 1).
 		Apply(matScreenToWorld).
 		Apply(shadowMap.settings.Camera().ViewMatrix()).
 		Apply(shadowMap.settings.Camera().ProjMatrix()).
@@ -261,7 +261,7 @@ func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
 	lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
 	bufIdx := lightX + lightY*r.bufs[0].Bounds().Dx()
 
-	shadow := 0
+	shadow := float32(0)
 	if bufIdx > 0 && bufIdx < len(shadowMap.depths) {
 		shadowZ := shadowMap.depths[bufIdx]
 		bias := shadowMap.settings.Bias()

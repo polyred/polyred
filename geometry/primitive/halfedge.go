@@ -21,7 +21,7 @@ func (he *Halfedge) Vec() math.Vec4 {
 	return he.next.v.Pos.Sub(he.v.Pos)
 }
 
-func (he *Halfedge) DihedralAngle() float64 {
+func (he *Halfedge) DihedralAngle() float32 {
 	if he.onBoundary || he.twin.onBoundary {
 		return 0
 	}
@@ -32,7 +32,7 @@ func (he *Halfedge) DihedralAngle() float64 {
 	return math.Atan2(n1.Cross(n2).Dot(w), n1.Dot(n2))
 }
 
-func (he *Halfedge) Cotan() float64 {
+func (he *Halfedge) Cotan() float32 {
 	if he.onBoundary {
 		return 0
 	}

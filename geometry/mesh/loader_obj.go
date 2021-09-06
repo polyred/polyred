@@ -90,11 +90,11 @@ func LoadOBJ(path string) (Mesh, error) {
 	return NewTriangleSoup(tris), s.Err()
 }
 
-func parseFloats(items []string) []float64 {
-	result := make([]float64, len(items))
+func parseFloats(items []string) []float32 {
+	result := make([]float32, len(items))
 	for i, item := range items {
-		f, _ := strconv.ParseFloat(item, 64)
-		result[i] = f
+		f, _ := strconv.ParseFloat(item, 32)
+		result[i] = float32(f)
 	}
 	return result
 }

@@ -17,7 +17,7 @@ type Environment interface {
 	object.Object
 
 	Color() color.RGBA
-	Intensity() float64
+	Intensity() float32
 }
 
 // Source represents the abstraction of a light source.
@@ -25,7 +25,7 @@ type Source interface {
 	object.Object
 
 	Color() color.RGBA
-	Intensity() float64
+	Intensity() float32
 	Position() math.Vec3
 	CastShadow() bool
 }

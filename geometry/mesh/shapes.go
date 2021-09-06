@@ -14,7 +14,7 @@ import (
 
 // NewPlane returns a triangle soup that represents a plane with the
 // given width and height.
-func NewPlane(width, height float64) Mesh {
+func NewPlane(width, height float32) Mesh {
 	v1 := primitive.Vertex{
 		Pos: math.NewVec4(-0.5*width, 0, -0.5*height, 1),
 		UV:  math.NewVec4(0, 1, 0, 1),
@@ -49,30 +49,30 @@ func NewPlane(width, height float64) Mesh {
 // random triangles.
 func NewRandomTriangleSoup(numTri int) Mesh {
 	vertIdx := make([]uint64, numTri*3)
-	vertPos := make([]float64, numTri*3*3)
-	vertNor := make([]float64, numTri*3*3)
-	vertCol := make([]float64, numTri*3*4)
-	vertUV := make([]float64, numTri*3*2)
+	vertPos := make([]float32, numTri*3*3)
+	vertNor := make([]float32, numTri*3*3)
+	vertCol := make([]float32, numTri*3*4)
+	vertUV := make([]float32, numTri*3*2)
 
 	for vid := uint64(0); vid < uint64(numTri)*3; vid++ {
 		vertIdx[vid] = vid
 
-		vertPos[3*vid] = rand.Float64()
-		vertPos[3*vid+1] = rand.Float64()
-		vertPos[3*vid+2] = rand.Float64()
+		vertPos[3*vid] = rand.Float32()
+		vertPos[3*vid+1] = rand.Float32()
+		vertPos[3*vid+2] = rand.Float32()
 
-		n := math.NewVec3(rand.Float64()*2-1, rand.Float64()*2-1, rand.Float64()*2-1).Unit()
+		n := math.NewVec3(rand.Float32()*2-1, rand.Float32()*2-1, rand.Float32()*2-1).Unit()
 		vertNor[3*vid] = n.X
 		vertNor[3*vid+1] = n.Y
 		vertNor[3*vid+2] = n.Z
 
-		vertCol[4*vid] = rand.Float64()
-		vertCol[4*vid+1] = rand.Float64()
-		vertCol[4*vid+2] = rand.Float64()
+		vertCol[4*vid] = rand.Float32()
+		vertCol[4*vid+1] = rand.Float32()
+		vertCol[4*vid+2] = rand.Float32()
 		vertCol[4*vid+3] = 1
 
-		vertUV[2*vid] = rand.Float64()
-		vertUV[2*vid+1] = rand.Float64()
+		vertUV[2*vid] = rand.Float32()
+		vertUV[2*vid+1] = rand.Float32()
 	}
 
 	bm := NewBufferedMesh()

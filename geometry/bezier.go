@@ -23,7 +23,7 @@ func NewBezierCurve(cp ...*primitive.Vertex) *BezierCurve {
 	return bc
 }
 
-func (bc *BezierCurve) At(t float64) math.Vec4 {
+func (bc *BezierCurve) At(t float32) math.Vec4 {
 	n := len(bc.controlPoints)
 
 	tc := make([]math.Vec4, n)

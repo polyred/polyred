@@ -13,21 +13,21 @@ import (
 // Vec4 uses homogeneous coordinates (x, y, z, w) that represents
 // either a point or a vector.
 type Vec4 struct {
-	X, Y, Z, W float64
+	X, Y, Z, W float32
 }
 
 // NewVec4 creates a point or a vector with given parameters.
-func NewVec4(x, y, z, w float64) Vec4 {
+func NewVec4(x, y, z, w float32) Vec4 {
 	return Vec4{x, y, z, w}
 }
 
 // NewRandVec4
 func NewRandVec4() Vec4 {
 	return Vec4{
-		rand.Float64(),
-		rand.Float64(),
-		rand.Float64(),
-		rand.Float64(),
+		rand.Float32(),
+		rand.Float32(),
+		rand.Float32(),
+		rand.Float32(),
 	}
 }
 
@@ -69,12 +69,12 @@ func (v Vec4) IsZero() bool {
 }
 
 // Scale scales the given vector using given scalars
-func (v Vec4) Scale(x, y, z, w float64) Vec4 {
+func (v Vec4) Scale(x, y, z, w float32) Vec4 {
 	return Vec4{v.X * x, v.Y * y, v.Z * z, v.W * w}
 }
 
 // Translate translates the given position or vector
-func (v Vec4) Translate(x, y, z float64) Vec4 {
+func (v Vec4) Translate(x, y, z float32) Vec4 {
 	if v.W == 0 {
 		return v
 	}
@@ -82,13 +82,13 @@ func (v Vec4) Translate(x, y, z float64) Vec4 {
 }
 
 // Dot implements dot product of two vectors
-func (v Vec4) Dot(u Vec4) float64 {
+func (v Vec4) Dot(u Vec4) float32 {
 	return v.X*u.X + v.Y*u.Y + v.Z*u.Z + v.W*u.W
 }
 
 // Len computes the length of the given Vector
-func (v Vec4) Len() float64 {
-	return math.Sqrt(v.Dot(v))
+func (v Vec4) Len() float32 {
+	return float32(math.Sqrt(float64(v.Dot(v))))
 }
 
 // Unit normalizes this vector to an unit vector

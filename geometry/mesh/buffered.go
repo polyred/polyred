@@ -26,10 +26,10 @@ var (
 
 type BufferAttribute struct {
 	Stride int
-	Values []float64
+	Values []float32
 }
 
-func NewBufferAttribute(stride int, values []float64) *BufferAttribute {
+func NewBufferAttribute(stride int, values []float32) *BufferAttribute {
 	return &BufferAttribute{stride, values}
 }
 
@@ -75,8 +75,8 @@ func (bm *BufferedMesh) Type() object.Type {
 
 func (bm *BufferedMesh) AABB() primitive.AABB {
 	if bm.aabb == nil {
-		min := math.NewVec3(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64)
-		max := math.NewVec3(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64)
+		min := math.NewVec3(math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
+		max := math.NewVec3(-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
 		attr := bm.GetAttribute(AttributePos)
 		for _, vIndex := range bm.vertIdx {
 			x := attr.Values[attr.Stride*int(vIndex)+0]
@@ -140,7 +140,7 @@ func (bm *BufferedMesh) Faces(iter func(primitive.Face, material.Material) bool)
 	attrUV := bm.GetAttribute(AttributeUV)
 
 	for i := 0; i < len(bm.vertIdx); i += 3 {
-		var px, py, pz, nx, ny, nz, u, v float64
+		var px, py, pz, nx, ny, nz, u, v float32
 		var cr, cb, cg, ca uint8
 		px = attrPos.Values[uint64(attrPos.Stride)*bm.vertIdx[i]+0]
 		py = attrPos.Values[uint64(attrPos.Stride)*bm.vertIdx[i]+1]
@@ -235,7 +235,7 @@ func (bm *BufferedMesh) GetVertexBuffer() []*primitive.Vertex {
 	attrColor := bm.GetAttribute(AttributeCol)
 	attrUV := bm.GetAttribute(AttributeUV)
 
-	var px, py, pz, nx, ny, nz, u, v float64
+	var px, py, pz, nx, ny, nz, u, v float32
 	var cr, cb, cg, ca uint8
 
 	vs := make([]*primitive.Vertex, len(bm.vertIdx))

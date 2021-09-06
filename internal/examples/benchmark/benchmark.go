@@ -124,7 +124,7 @@ func bench(opt *benchOpts) {
 		r := render.NewRenderer(
 			render.Camera(camera.NewPerspective(
 				camera.Position(math.NewVec3(0, 0.6, 0.9)),
-				camera.ViewFrustum(45, float64(opt.width)/float64(opt.height), 0.1, 2),
+				camera.ViewFrustum(45, float32(opt.width)/float32(opt.height), 0.1, 2),
 			)),
 			render.Size(opt.width, opt.height),
 			render.MSAA(opt.msaa),

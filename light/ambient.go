@@ -20,7 +20,7 @@ type Ambient struct {
 	math.TransformContext // not used
 
 	color     color.RGBA
-	intensity float64
+	intensity float32
 }
 
 func NewAmbient(opts ...Opt) *Ambient {
@@ -45,6 +45,6 @@ func (a *Ambient) Color() color.RGBA {
 	return a.color
 }
 
-func (a *Ambient) Intensity() float64 {
+func (a *Ambient) Intensity() float32 {
 	return a.intensity
 }

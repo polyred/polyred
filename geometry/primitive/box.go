@@ -13,8 +13,8 @@ type AABB struct {
 
 // NewAABB computes a new axis aligned bounding box of given vertices
 func NewAABB(vs ...math.Vec3) AABB {
-	min := math.NewVec3(math.MaxFloat64, math.MaxFloat64, math.MaxFloat64)
-	max := math.NewVec3(-math.MaxFloat64, -math.MaxFloat64, -math.MaxFloat64)
+	min := math.NewVec3(math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
+	max := math.NewVec3(-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
 	for i := range vs {
 		min.X = math.Min(min.X, vs[i].X)
 		min.Y = math.Min(min.Y, vs[i].Y)

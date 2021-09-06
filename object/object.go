@@ -17,11 +17,11 @@ const (
 
 type Object interface {
 	Type() Type
-	Rotate(dir math.Vec3, angle float64)
-	RotateX(a float64)
-	RotateY(a float64)
-	RotateZ(a float64)
-	Translate(x, y, z float64)
-	Scale(x, y, z float64)
+	Rotate(dir math.Vec3, angle float32)
+	RotateX(a float32)
+	RotateY(a float32)
+	RotateZ(a float32)
+	Translate(x, y, z float32)
+	Scale(x, y, z float32)
 	ModelMatrix() math.Mat4
 }

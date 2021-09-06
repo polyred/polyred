@@ -19,7 +19,7 @@ func Texture(tex *texture.Texture) Opt {
 	}
 }
 
-func Kdiff(val float64) Opt {
+func Kdiff(val float32) Opt {
 	return func(m Material) {
 		switch mat := m.(type) {
 		case *BlinnPhongMaterial:
@@ -30,7 +30,7 @@ func Kdiff(val float64) Opt {
 	}
 }
 
-func Kspec(val float64) Opt {
+func Kspec(val float32) Opt {
 	return func(m Material) {
 		switch mat := m.(type) {
 		case *BlinnPhongMaterial:
@@ -41,7 +41,7 @@ func Kspec(val float64) Opt {
 	}
 }
 
-func Shininess(val float64) Opt {
+func Shininess(val float32) Opt {
 	return func(m Material) {
 		switch mat := m.(type) {
 		case *BlinnPhongMaterial:

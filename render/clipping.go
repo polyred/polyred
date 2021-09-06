@@ -28,7 +28,7 @@ func (p plane) intersectSegment(v0, v1 math.Vec4) math.Vec4 {
 	return v0.Add(u.Scale(s, s, s, s))
 }
 
-func sutherlandHodgman(points []math.Vec4, w, h float64) []math.Vec4 {
+func sutherlandHodgman(points []math.Vec4, w, h float32) []math.Vec4 {
 	planes := []plane{
 		{math.NewVec4(w, 0, 0, 1), math.NewVec4(-1, 0, 0, 1)},
 		{math.NewVec4(0, 0, 0, 1), math.NewVec4(1, 0, 0, 1)},
@@ -64,7 +64,7 @@ func sutherlandHodgman(points []math.Vec4, w, h float64) []math.Vec4 {
 	return output
 }
 
-func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float64, recipw math.Vec4) []*primitive.Triangle {
+func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, recipw math.Vec4) []*primitive.Triangle {
 	p1 := v1.Pos
 	p2 := v2.Pos
 	p3 := v3.Pos
@@ -99,10 +99,10 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float64, reci
 				W: 0,
 			},
 			Col: color.RGBA{
-				R: uint8(math.Clamp(b1bc[0]*float64(v1.Col.R)+b1bc[1]*float64(v2.Col.R)+b1bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b1bc[0]*float64(v1.Col.G)+b1bc[1]*float64(v2.Col.G)+b1bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b1bc[0]*float64(v1.Col.B)+b1bc[1]*float64(v2.Col.B)+b1bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b1bc[0]*float64(v1.Col.A)+b1bc[1]*float64(v2.Col.A)+b1bc[2]*float64(v3.Col.A), 0, 0xff)),
+				R: uint8(math.Clamp(b1bc[0]*float32(v1.Col.R)+b1bc[1]*float32(v2.Col.R)+b1bc[2]*float32(v3.Col.R), 0, 0xff)),
+				G: uint8(math.Clamp(b1bc[0]*float32(v1.Col.G)+b1bc[1]*float32(v2.Col.G)+b1bc[2]*float32(v3.Col.G), 0, 0xff)),
+				B: uint8(math.Clamp(b1bc[0]*float32(v1.Col.B)+b1bc[1]*float32(v2.Col.B)+b1bc[2]*float32(v3.Col.B), 0, 0xff)),
+				A: uint8(math.Clamp(b1bc[0]*float32(v1.Col.A)+b1bc[1]*float32(v2.Col.A)+b1bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
 		t2 := primitive.Vertex{
@@ -125,10 +125,10 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float64, reci
 				W: 0,
 			},
 			Col: color.RGBA{
-				R: uint8(math.Clamp(b2bc[0]*float64(v1.Col.R)+b2bc[1]*float64(v2.Col.R)+b2bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b2bc[0]*float64(v1.Col.G)+b2bc[1]*float64(v2.Col.G)+b2bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b2bc[0]*float64(v1.Col.B)+b2bc[1]*float64(v2.Col.B)+b2bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b2bc[0]*float64(v1.Col.A)+b2bc[1]*float64(v2.Col.A)+b2bc[2]*float64(v3.Col.A), 0, 0xff)),
+				R: uint8(math.Clamp(b2bc[0]*float32(v1.Col.R)+b2bc[1]*float32(v2.Col.R)+b2bc[2]*float32(v3.Col.R), 0, 0xff)),
+				G: uint8(math.Clamp(b2bc[0]*float32(v1.Col.G)+b2bc[1]*float32(v2.Col.G)+b2bc[2]*float32(v3.Col.G), 0, 0xff)),
+				B: uint8(math.Clamp(b2bc[0]*float32(v1.Col.B)+b2bc[1]*float32(v2.Col.B)+b2bc[2]*float32(v3.Col.B), 0, 0xff)),
+				A: uint8(math.Clamp(b2bc[0]*float32(v1.Col.A)+b2bc[1]*float32(v2.Col.A)+b2bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
 		t3 := primitive.Vertex{
@@ -151,10 +151,10 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float64, reci
 				W: 0,
 			},
 			Col: color.RGBA{
-				R: uint8(math.Clamp(b3bc[0]*float64(v1.Col.R)+b3bc[1]*float64(v2.Col.R)+b3bc[2]*float64(v3.Col.R), 0, 0xff)),
-				G: uint8(math.Clamp(b3bc[0]*float64(v1.Col.G)+b3bc[1]*float64(v2.Col.G)+b3bc[2]*float64(v3.Col.G), 0, 0xff)),
-				B: uint8(math.Clamp(b3bc[0]*float64(v1.Col.B)+b3bc[1]*float64(v2.Col.B)+b3bc[2]*float64(v3.Col.B), 0, 0xff)),
-				A: uint8(math.Clamp(b3bc[0]*float64(v1.Col.A)+b3bc[1]*float64(v2.Col.A)+b3bc[2]*float64(v3.Col.A), 0, 0xff)),
+				R: uint8(math.Clamp(b3bc[0]*float32(v1.Col.R)+b3bc[1]*float32(v2.Col.R)+b3bc[2]*float32(v3.Col.R), 0, 0xff)),
+				G: uint8(math.Clamp(b3bc[0]*float32(v1.Col.G)+b3bc[1]*float32(v2.Col.G)+b3bc[2]*float32(v3.Col.G), 0, 0xff)),
+				B: uint8(math.Clamp(b3bc[0]*float32(v1.Col.B)+b3bc[1]*float32(v2.Col.B)+b3bc[2]*float32(v3.Col.B), 0, 0xff)),
+				A: uint8(math.Clamp(b3bc[0]*float32(v1.Col.A)+b3bc[1]*float32(v2.Col.A)+b3bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
 		result = append(result, primitive.NewTriangle(&t1, &t2, &t3))

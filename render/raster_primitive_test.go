@@ -31,7 +31,7 @@ func init() {
 	width, height := 400, 400
 	cam := camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 3, 3)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 10),
+		camera.ViewFrustum(45, float32(width)/float32(height), 0.1, 10),
 	)
 	rend = render.NewRenderer(
 		render.Size(width, height),

@@ -67,7 +67,7 @@ func (t *Triangle) IsValid() bool {
 }
 
 // Area returns the surface area of the given triangle.
-func (t *Triangle) Area() float64 {
+func (t *Triangle) Area() float32 {
 	p1 := t.V1.Pos
 	p2 := t.V2.Pos
 	p3 := t.V3.Pos

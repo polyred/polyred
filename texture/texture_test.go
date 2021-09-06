@@ -34,9 +34,9 @@ var (
 	tests = []struct {
 		name string
 		tex  *texture.Texture
-		u    float64
-		v    float64
-		lod  float64
+		u    float32
+		v    float32
+		lod  float32
 		want color.RGBA
 	}{
 		{"1x1", texture.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},

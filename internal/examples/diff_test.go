@@ -21,7 +21,7 @@ import (
 	"poly.red/texture/imageutil"
 )
 
-func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Interface) {
+func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Interface) {
 	// Create a scene graph
 	s := scene.NewScene()
 	s.Add(light.NewPoint(
@@ -75,7 +75,7 @@ func NewDiffScene(width, height int, lightI float64) (*scene.Scene, camera.Inter
 
 	return s, camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 0.6, 0.9)),
-		camera.ViewFrustum(45, float64(width)/float64(height), 0.1, 2),
+		camera.ViewFrustum(45, float32(width)/float32(height), 0.1, 2),
 	)
 }
 
@@ -85,7 +85,7 @@ func TestDiff(t *testing.T) {
 
 	width, height, msaa := 500, 500, 1
 	Igoal := 7
-	goal, cam := NewDiffScene(width, height, float64(Igoal))
+	goal, cam := NewDiffScene(width, height, float32(Igoal))
 	goalR := render.NewRenderer(
 		render.Camera(cam),
 		render.Size(width, height),
@@ -107,7 +107,7 @@ func TestDiff(t *testing.T) {
 	// naive random search.
 	iter := 0
 	for {
-		Isearch := rand.Float64() * 10
+		Isearch := rand.Float32() * 10
 		searchS, cam := NewDiffScene(width, height, Isearch)
 		searchR.Options(render.Camera(cam), render.Scene(searchS))
 		searchImg := searchR.Render()

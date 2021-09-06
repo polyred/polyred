@@ -30,7 +30,7 @@ func LookAt(target, up math.Vec3) Opt {
 //
 // If the frustum is using for a orthographic camera, the parameters
 // must be suuply in this order: left, right, bottom, top, near, far
-func ViewFrustum(params ...float64) Opt {
+func ViewFrustum(params ...float32) Opt {
 	return func(i Interface) {
 		switch ii := i.(type) {
 		case *Perspective:

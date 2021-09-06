@@ -5,11 +5,11 @@
 package math
 
 type Quaternion struct {
-	A float64
+	A float32
 	V Vec3
 }
 
-func NewQuaternion(a, b, c, d float64) Quaternion {
+func NewQuaternion(a, b, c, d float32) Quaternion {
 	return Quaternion{
 		A: a,
 		V: Vec3{b, c, d},

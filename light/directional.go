@@ -23,7 +23,7 @@ type Directional struct {
 
 	pos          math.Vec3
 	dir          math.Vec3
-	intensity    float64
+	intensity    float32
 	color        color.RGBA
 	useShadowMap bool
 }
@@ -49,7 +49,7 @@ func (d *Directional) Type() object.Type {
 	return object.TypeLight
 }
 
-func (d *Directional) Intensity() float64 {
+func (d *Directional) Intensity() float32 {
 	return d.intensity
 }
 

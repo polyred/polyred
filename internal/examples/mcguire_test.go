@@ -214,7 +214,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 
 	return scenes, camera.NewPerspective(
 		camera.Position(math.NewVec3(1, 1, 2)),
-		camera.ViewFrustum(50, float64(w)/float64(h), 0.1, 100),
+		camera.ViewFrustum(50, float32(w)/float32(h), 0.1, 100),
 	)
 }
 

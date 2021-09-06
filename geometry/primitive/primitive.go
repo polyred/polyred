@@ -24,10 +24,10 @@ type Vertex struct {
 // Fragment represents a pixel that conveys varied attributes.
 type Fragment struct {
 	X, Y       int
-	Depth      float64
+	Depth      float32
 	UV         math.Vec2
-	Du         float64
-	Dv         float64
+	Du         float32
+	Dv         float32
 	Nor        math.Vec4
 	Col        color.RGBA
 	AttrSmooth map[string]interface{}
@@ -36,9 +36,9 @@ type Fragment struct {
 
 func NewRandomVertex() *Vertex {
 	return &Vertex{
-		Pos: math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), 1),
-		UV:  math.NewVec4(rand.Float64(), rand.Float64(), 0, 1),
-		Nor: math.NewVec4(rand.Float64(), rand.Float64(), rand.Float64(), 1).Unit(),
+		Pos: math.NewVec4(rand.Float32(), rand.Float32(), rand.Float32(), 1),
+		UV:  math.NewVec4(rand.Float32(), rand.Float32(), 0, 1),
+		Nor: math.NewVec4(rand.Float32(), rand.Float32(), rand.Float32(), 1).Unit(),
 		Col: color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int())},
 	}
 }

@@ -12,11 +12,11 @@ import (
 
 // Vec3 represents a 3D vector (x, y, z).
 type Vec3 struct {
-	X, Y, Z float64
+	X, Y, Z float32
 }
 
 // NewVec3 creates a 3D vector with given parameters.
-func NewVec3(x, y, z float64) Vec3 {
+func NewVec3(x, y, z float32) Vec3 {
 	return Vec3{x, y, z}
 }
 
@@ -24,9 +24,9 @@ func NewVec3(x, y, z float64) Vec3 {
 // sitting in range [0, 1].
 func NewRandVec3() Vec3 {
 	return Vec3{
-		rand.Float64(),
-		rand.Float64(),
-		rand.Float64(),
+		rand.Float32(),
+		rand.Float32(),
+		rand.Float32(),
 	}
 }
 
@@ -57,33 +57,37 @@ func (v Vec3) Sub(u Vec3) Vec3 {
 
 // IsZero checks if the given vector is a zero vector.
 func (v Vec3) IsZero() bool {
-	if ApproxEq(v.X, 0, Epsilon) &&
-		ApproxEq(v.Y, 0, Epsilon) &&
-		ApproxEq(v.Z, 0, Epsilon) {
-		return true
+	if !ApproxEq(v.X, 0, Epsilon) {
+		return false
 	}
-	return false
+	if !ApproxEq(v.Y, 0, Epsilon) {
+		return false
+	}
+	if !ApproxEq(v.Z, 0, Epsilon) {
+		return false
+	}
+	return true
 }
 
 // Scale scales the given 3D vector and returns the resulting vector.
-func (v Vec3) Scale(x, y, z float64) Vec3 {
+func (v Vec3) Scale(x, y, z float32) Vec3 {
 	return Vec3{v.X * x, v.Y * y, v.Z * z}
 }
 
 // Translate translates the given 3D vector and returns the resulting
 // vector.
-func (v Vec3) Translate(x, y, z float64) Vec3 {
+func (v Vec3) Translate(x, y, z float32) Vec3 {
 	return Vec3{v.X + x, v.Y + y, v.Z + z}
 }
 
 // Dot computes the dot product of two given vectors.
-func (v Vec3) Dot(u Vec3) float64 {
+func (v Vec3) Dot(u Vec3) float32 {
 	return v.X*u.X + v.Y*u.Y + v.Z*u.Z
 }
 
 // Len returns the length of the given vector.
-func (v Vec3) Len() float64 {
-	return math.Sqrt(v.Dot(v))
+func (v Vec3) Len() float32 {
+	return float32(math.Sqrt(float64(v.Dot(v))))
 }
 
 // Unit computes the unit vector along the direction of the given vector.
@@ -93,7 +97,7 @@ func (v Vec3) Unit() Vec3 {
 }
 
 // ToVec4 converts to a Vec3 to Vec4 using the given w component.
-func (v Vec3) ToVec4(w float64) Vec4 {
+func (v Vec3) ToVec4(w float32) Vec4 {
 	return Vec4{v.X, v.Y, v.Z, w}
 }
 

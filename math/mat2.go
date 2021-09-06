@@ -27,14 +27,14 @@ type Mat2 struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 3x4 Mat2.
 	// See benchmarks at https://golang.design/research/pointer-params/.
-	X00, X01 float64
-	X10, X11 float64
+	X00, X01 float32
+	X10, X11 float32
 }
 
 // NewMat2 returns a new Mat2.
 func NewMat2(
 	X00, X01,
-	X10, X11 float64) Mat2 {
+	X10, X11 float32) Mat2 {
 	return Mat2{
 		X00, X01,
 		X10, X11,
@@ -47,7 +47,7 @@ func (m Mat2) String() string {
 }
 
 // Get gets the Mat2 elements
-func (m Mat2) Get(i, j int) float64 {
+func (m Mat2) Get(i, j int) float32 {
 	if i < 0 || i > 1 || j < 0 || j > 1 {
 		panic("invalid index")
 	}
@@ -67,7 +67,7 @@ func (m Mat2) Get(i, j int) float64 {
 }
 
 // Set set the Mat2 elements at row i and column j
-func (m *Mat2) Set(i, j int, v float64) {
+func (m *Mat2) Set(i, j int, v float32) {
 	if i < 0 || i > 1 || j < 0 || j > 1 {
 		panic("invalid index")
 	}
@@ -133,7 +133,7 @@ func (m Mat2) MulV(v Vec2) Vec2 {
 }
 
 // Det computes the determinant of the Mat2
-func (m Mat2) Det() float64 {
+func (m Mat2) Det() float32 {
 	return m.X00*m.X11 - m.X01*m.X10
 }
 

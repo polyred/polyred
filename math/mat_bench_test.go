@@ -135,7 +135,7 @@ func BenchmarkMat4_Det(b *testing.B) {
 		2, 1, 7, 25,
 	}
 
-	var m float64
+	var m float32
 	for i := 0; i < b.N; i++ {
 		m = m1.Det()
 	}

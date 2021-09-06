@@ -35,7 +35,7 @@ func drawLineLow(buf *buffer.Buffer, p1 math.Vec4, p2 math.Vec4, color color.RGB
 
 	dx := x1 - x0
 	dy := y1 - y0
-	yi := 1.0
+	yi := float32(1.0)
 	if dy < 0 {
 		yi = -1
 		dy = -dy
@@ -76,7 +76,7 @@ func drawLineHigh(buf *buffer.Buffer, p1 math.Vec4, p2 math.Vec4, color color.RG
 
 	dx := x1 - x0
 	dy := y1 - y0
-	xi := 1.0
+	xi := float32(1.0)
 	if dx < 0 {
 		xi = -1
 		dx = -dx

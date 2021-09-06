@@ -33,17 +33,17 @@ type Mat4 struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 4x4 Mat4.
 	// See benchmarks at https://golang.design/research/pointer-params/.
-	X00, X01, X02, X03 float64
-	X10, X11, X12, X13 float64
-	X20, X21, X22, X23 float64
-	X30, X31, X32, X33 float64
+	X00, X01, X02, X03 float32
+	X10, X11, X12, X13 float32
+	X20, X21, X22, X23 float32
+	X30, X31, X32, X33 float32
 }
 
 func NewMat4(
 	X00, X01, X02, X03,
 	X10, X11, X12, X13,
 	X20, X21, X22, X23,
-	X30, X31, X32, X33 float64) Mat4 {
+	X30, X31, X32, X33 float32) Mat4 {
 	return Mat4{
 		X00, X01, X02, X03,
 		X10, X11, X12, X13,
@@ -63,7 +63,7 @@ func (m Mat4) String() string {
 }
 
 // Get gets the Mat4 elements
-func (m Mat4) Get(i, j int) float64 {
+func (m Mat4) Get(i, j int) float32 {
 	if i < 0 || i > 3 || j < 0 || j > 3 {
 		panic("invalid index")
 	}
@@ -107,7 +107,7 @@ func (m Mat4) Get(i, j int) float64 {
 }
 
 // Set set the Mat4 elements at row i and column j
-func (m *Mat4) Set(i, j int, v float64) {
+func (m *Mat4) Set(i, j int, v float32) {
 	if i < 0 || i > 3 || j < 0 || j > 3 {
 		panic("invalid index")
 	}
@@ -225,7 +225,7 @@ func (m Mat4) MulV(v Vec4) Vec4 {
 }
 
 // Det computes the determinant of the Mat4
-func (m Mat4) Det() float64 {
+func (m Mat4) Det() float32 {
 	return m.X00*m.X11*m.X22*m.X33 - m.X00*m.X11*m.X23*m.X32 +
 		m.X00*m.X12*m.X23*m.X31 - m.X00*m.X12*m.X21*m.X33 +
 		m.X00*m.X13*m.X21*m.X32 - m.X00*m.X13*m.X22*m.X31 -

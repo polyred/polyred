@@ -42,7 +42,7 @@ func TestTransformationContext(t *testing.T) {
 	}
 
 	ctx.ResetContext()
-	ctx.Rotate(math.NewVec3(0, 1, 0), math.Pi/2)
+	ctx.Rotate(math.NewVec3(0, 1, 0), math.HalfPi)
 	modMat = ctx.ModelMatrix()
 	want = math.NewMat4(
 		0, 0, 1, 0,
@@ -55,7 +55,7 @@ func TestTransformationContext(t *testing.T) {
 	}
 
 	ctx.ResetContext()
-	ctx.Rotate(math.NewVec3(1, 0, 0), math.Pi/2)
+	ctx.Rotate(math.NewVec3(1, 0, 0), math.HalfPi)
 	modMat = ctx.ModelMatrix()
 	want = math.NewMat4(
 		1, 0, 0, 0,
@@ -68,7 +68,7 @@ func TestTransformationContext(t *testing.T) {
 	}
 
 	ctx.ResetContext()
-	ctx.Rotate(math.NewVec3(0, 0, 1), math.Pi/2)
+	ctx.Rotate(math.NewVec3(0, 0, 1), math.HalfPi)
 	modMat = ctx.ModelMatrix()
 	want = math.NewMat4(
 		0, -1, 0, 0,
@@ -132,10 +132,10 @@ func TestTransformationContextScale(t *testing.T) {
 		ctx2 := math.TransformContext{}
 		ctx2.ResetContext()
 
-		ctx1.Rotate(math.NewVec3(1, 0, 0), math.Pi/2)
+		ctx1.Rotate(math.NewVec3(1, 0, 0), math.HalfPi)
 		want := ctx1.ModelMatrix()
 
-		ctx2.RotateX(math.Pi / 2)
+		ctx2.RotateX(math.HalfPi)
 
 		got := ctx2.ModelMatrix()
 		if !want.Eq(got) {
@@ -151,10 +151,10 @@ func TestTransformationContextScale(t *testing.T) {
 		ctx2 := math.TransformContext{}
 		ctx2.ResetContext()
 
-		ctx1.Rotate(math.NewVec3(0, 1, 0), math.Pi/2)
+		ctx1.Rotate(math.NewVec3(0, 1, 0), math.HalfPi)
 		want := ctx1.ModelMatrix()
 
-		ctx2.RotateY(math.Pi / 2)
+		ctx2.RotateY(math.HalfPi)
 
 		got := ctx2.ModelMatrix()
 		if !want.Eq(got) {
@@ -170,10 +170,10 @@ func TestTransformationContextScale(t *testing.T) {
 		ctx2 := math.TransformContext{}
 		ctx2.ResetContext()
 
-		ctx1.Rotate(math.NewVec3(0, 0, 1), math.Pi/2)
+		ctx1.Rotate(math.NewVec3(0, 0, 1), math.HalfPi)
 		want := ctx1.ModelMatrix()
 
-		ctx2.RotateZ(math.Pi / 2)
+		ctx2.RotateZ(math.HalfPi)
 
 		got := ctx2.ModelMatrix()
 		if !want.Eq(got) {

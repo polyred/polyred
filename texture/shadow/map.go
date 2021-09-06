@@ -22,7 +22,7 @@ const (
 type Map struct {
 	typ    Type
 	camera camera.Interface
-	bias   float64
+	bias   float32
 }
 
 // Opt represents a shadow option
@@ -43,7 +43,7 @@ func Camera(c camera.Interface) Opt {
 }
 
 // Bias specifies a shadow bias.
-func Bias(bias float64) Opt {
+func Bias(bias float32) Opt {
 	return func(sm *Map) {
 		sm.bias = bias
 	}
@@ -68,6 +68,6 @@ func (sm *Map) Camera() camera.Interface {
 }
 
 // Bias returns the current shadow bias.
-func (sm *Map) Bias() float64 {
+func (sm *Map) Bias() float32 {
 	return sm.bias
 }
