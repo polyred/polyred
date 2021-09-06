@@ -39,11 +39,6 @@ func (w *Window) initContext() {
 // hardware frame buffer for display prupose. The given image is assumed
 // to be non-nil pointer.
 func (w *Window) flush(buf *frameBuf) error {
-	if buf.done != nil {
-		<-buf.done
-	}
-	buf.done = make(chan struct{})
-
 	dx, dy := int32(buf.img.Bounds().Dx()), int32(buf.img.Bounds().Dy())
 	gl.RasterPos2d(-1, 1)
 	gl.Viewport(0, 0, dx, dy)
@@ -62,7 +57,6 @@ func (w *Window) flush(buf *frameBuf) error {
 	// We may not need such an wait, if we are doing perfect timing.
 	// See: https://golang.design/research/ultimate-channel/
 	gl.Finish()
-	close(buf.done)
 	return nil
 }
 

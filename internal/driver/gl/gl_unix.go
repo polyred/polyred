@@ -7,9 +7,7 @@
 
 package gl
 
-import (
-	"unsafe"
-)
+import "unsafe"
 
 /*
 #cgo CFLAGS: -Werror
@@ -30,18 +28,6 @@ import (
 #endif
 */
 import "C"
-
-type (
-	Attrib uint
-	Enum   uint
-)
-
-const (
-	FRONT         Enum = 0x0404
-	UNSIGNED_BYTE Enum = 0x1401
-	RGBA          Enum = 0x1908
-	BGRA          Enum = 0x80E1
-)
 
 func DrawBuffer(buf Enum) {
 	C.glDrawBuffer(C.GLenum(buf))
