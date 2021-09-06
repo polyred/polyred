@@ -5,6 +5,7 @@
 package math
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -28,6 +29,11 @@ func NewRandVec4() Vec4 {
 		rand.Float64(),
 		rand.Float64(),
 	}
+}
+
+// String returns a string format of the given Vec4.
+func (m Vec4) String() string {
+	return fmt.Sprintf(`<%v, %v, %v, %v>`, m.X, m.Y, m.Z, m.W)
 }
 
 // Eq checks whether two vectors are equal.

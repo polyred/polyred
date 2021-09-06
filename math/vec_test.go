@@ -5,6 +5,7 @@
 package math_test
 
 import (
+	"strings"
 	"testing"
 
 	"poly.red/math"
@@ -66,6 +67,33 @@ func TestVec_Rand(t *testing.T) {
 		v2 := math.NewRandVec4()
 		if v1.Eq(v2) {
 			t.Fatalf("unexpected different random vectors, got %v, %v", v1, v2)
+		}
+	})
+}
+
+func TestVec_String(t *testing.T) {
+	t.Run("Vec2", func(t *testing.T) {
+		v := math.NewVec2(1, 2)
+		want := "<1, 2>"
+		t.Log(v)
+		if strings.Compare(v.String(), want) != 0 {
+			t.Fatalf("unexpected String, got %v, want %v", v.String(), want)
+		}
+	})
+	t.Run("Vec3", func(t *testing.T) {
+		v := math.NewVec3(1, 2, 3)
+		want := "<1, 2, 3>"
+		t.Log(v)
+		if strings.Compare(v.String(), want) != 0 {
+			t.Fatalf("unexpected String, got %v, want %v", v.String(), want)
+		}
+	})
+	t.Run("Vec4", func(t *testing.T) {
+		v := math.NewVec4(1, 2, 3, 4)
+		want := "<1, 2, 3, 4>"
+		t.Log(v)
+		if strings.Compare(v.String(), want) != 0 {
+			t.Fatalf("unexpected String, got %v, want %v", v.String(), want)
 		}
 	})
 }

@@ -4,6 +4,8 @@
 
 package math
 
+import "fmt"
+
 var (
 	// Mat3I is an identity Mat3
 	Mat3I = Mat3{
@@ -42,6 +44,14 @@ func NewMat3(
 		X10, X11, X12,
 		X20, X21, X22,
 	}
+}
+
+// String returns a string format of the given Mat3.
+func (m Mat3) String() string {
+	return fmt.Sprintf(`[[%v, %v, %v], [%v, %v, %v], [%v, %v, %v]]`,
+		m.X00, m.X01, m.X02,
+		m.X10, m.X11, m.X12,
+		m.X20, m.X21, m.X22)
 }
 
 // Get gets the Mat3 elements

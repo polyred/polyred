@@ -5,6 +5,7 @@
 package math_test
 
 import (
+	"strings"
 	"testing"
 
 	"poly.red/math"
@@ -50,6 +51,50 @@ func TestMat_Eq(t *testing.T) {
 		m3 := math.Mat4Zero
 		if m1.Eq(m3) {
 			t.Fatalf("unexpected Eq, want false, got true")
+		}
+	})
+}
+
+func TestMat_String(t *testing.T) {
+	t.Run("Mat2", func(t *testing.T) {
+		m := math.NewMat2(
+			1, 2,
+			3, 4,
+		)
+
+		want := "[[1, 2], [3, 4]]"
+		t.Log(m)
+		if strings.Compare(m.String(), want) != 0 {
+			t.Fatalf("string format of Mat2 returns unexpected value, want %v got %v", want, m)
+		}
+	})
+
+	t.Run("Mat3", func(t *testing.T) {
+		m := math.NewMat3(
+			1, 2, 3,
+			4, 5, 6,
+			7, 8, 9,
+		)
+
+		want := "[[1, 2, 3], [4, 5, 6], [7, 8, 9]]"
+		t.Log(m)
+		if strings.Compare(m.String(), want) != 0 {
+			t.Fatalf("string format of Mat3 returns unexpected value, want %v got %v", want, m)
+		}
+	})
+
+	t.Run("Mat4", func(t *testing.T) {
+		m := math.NewMat4(
+			1, 2, 3, 4,
+			5, 6, 7, 8,
+			9, 10, 11, 12,
+			13, 14, 15, 16,
+		)
+
+		want := "[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]"
+		t.Log(m)
+		if strings.Compare(m.String(), want) != 0 {
+			t.Fatalf("string format of Mat3 returns unexpected value, want %v got %v", want, m)
 		}
 	})
 }

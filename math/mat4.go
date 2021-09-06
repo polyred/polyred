@@ -4,6 +4,8 @@
 
 package math
 
+import "fmt"
+
 var (
 	// Mat4I is an identity Mat4
 	Mat4I = Mat4{
@@ -48,6 +50,16 @@ func NewMat4(
 		X20, X21, X22, X23,
 		X30, X31, X32, X33,
 	}
+}
+
+// String returns a string format of the given Mat4.
+func (m Mat4) String() string {
+	return fmt.Sprintf(`[[%v, %v, %v, %v], [%v, %v, %v, %v], [%v, %v, %v, %v], [%v, %v, %v, %v]]`,
+		m.X00, m.X01, m.X02, m.X03,
+		m.X10, m.X11, m.X12, m.X13,
+		m.X20, m.X21, m.X22, m.X23,
+		m.X30, m.X31, m.X32, m.X33,
+	)
 }
 
 // Get gets the Mat4 elements

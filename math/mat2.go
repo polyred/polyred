@@ -4,6 +4,8 @@
 
 package math
 
+import "fmt"
+
 var (
 	// Mat2I is an identity Mat2
 	Mat2I = Mat2{
@@ -37,6 +39,11 @@ func NewMat2(
 		X00, X01,
 		X10, X11,
 	}
+}
+
+// String returns a string format of the given matrix.
+func (m Mat2) String() string {
+	return fmt.Sprintf(`[[%v, %v], [%v, %v]]`, m.X00, m.X01, m.X10, m.X11)
 }
 
 // Get gets the Mat2 elements
