@@ -8,12 +8,10 @@
 package gui
 
 import (
-	"fmt"
 	"image"
-	"unsafe"
 
-	"github.com/go-gl/gl/v2.1/gl"
 	"github.com/go-gl/glfw/v3.3/glfw"
+	"poly.red/internal/driver/gl"
 )
 
 type driverInfo struct {
@@ -33,10 +31,6 @@ func (w *Window) initDriver() {
 
 func (w *Window) initContext() {
 	w.win.MakeContextCurrent()
-	err := gl.Init()
-	if err != nil {
-		panic(fmt.Errorf("failed to initialize gl: %w", err))
-	}
 	gl.DrawBuffer(gl.FRONT)
 	gl.PixelZoom(1, -1)
 }
@@ -53,7 +47,7 @@ func (w *Window) flush(buf *frameBuf) error {
 	dx, dy := int32(buf.img.Bounds().Dx()), int32(buf.img.Bounds().Dy())
 	gl.RasterPos2d(-1, 1)
 	gl.Viewport(0, 0, dx, dy)
-	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, unsafe.Pointer(&buf.img.Pix[0]))
+	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, buf.img.Pix)
 
 	// We need a synchornization here. Similar to commandBuffer.WaitUntilCompleted.
 	// See a general discussion about CPU, GPU and display synchornization here:
