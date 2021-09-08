@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"poly.red/math"
-	"poly.red/texture/buffer"
 )
 
 // Drawer draws text on a destination image.
@@ -15,7 +14,7 @@ import (
 // Face is not.
 type Drawer struct {
 	// Dst is the destination image.
-	Dst *buffer.Buffer
+	Dst draw.Image
 	// Src is the source image.
 	Src image.Image
 	// Face provides the glyph mask images.
@@ -39,7 +38,7 @@ func (d *Drawer) DrawString(s string) {
 			continue
 		}
 
-		draw.DrawMask(d.Dst.Image(), dr, d.Src, image.Point{}, mask, maskp, draw.Over)
+		draw.DrawMask(d.Dst, dr, d.Src, image.Point{}, mask, maskp, draw.Over)
 		d.Dot.X += advance
 		prevC = c
 	}

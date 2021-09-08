@@ -5,15 +5,26 @@
 package main
 
 import (
+	"poly.red/app"
 	"poly.red/camera"
-	"poly.red/gui"
 	"poly.red/light"
 	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
+	"poly.red/texture/buffer"
 )
 
-func main() {
+type App struct {
+	c     camera.Interface
+	s     *scene.Scene
+	r     *render.Renderer
+	w, h  int
+	image *buffer.Image
+}
+
+func New() *App {
+	w, h := 800, 600
+
 	// Create a scene graph
 	s := scene.NewScene()
 
@@ -24,8 +35,20 @@ func main() {
 	c := camera.NewPerspective()
 
 	// Create a renderer and specify scene and camera
-	r := render.NewRenderer(render.Scene(s), render.Camera(c))
+	r := render.NewRenderer(render.Size(w, h), render.Scene(s), render.Camera(c))
 
-	// Render and show the result in a window
-	gui.Show(r.Render())
+	return &App{c: c, s: s, r: r, w: w, h: h}
 }
+
+func (a *App) Size() (int, int) {
+	return a.w, a.h
+}
+
+func (a *App) Draw() (*buffer.Image, bool) {
+	if a.image == nil {
+		a.image = a.r.Render()
+	}
+	return a.image, true
+}
+
+func main() { app.Run(New()) }

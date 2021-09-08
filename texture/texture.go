@@ -69,6 +69,10 @@ func NewTexture(opts ...Opt) *Texture {
 	return t
 }
 
+func NewTextureFromImage(path string, opts ...Opt) *Texture {
+	return NewTexture(Image(imageutil.MustLoadImage(path)))
+}
+
 // Size returns the size of the texture.
 func (t *Texture) Size() int {
 	return t.image.Bounds().Dx()

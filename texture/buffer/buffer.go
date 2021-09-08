@@ -12,6 +12,8 @@ import (
 	"poly.red/internal/spinlock"
 )
 
+type Image = image.RGBA
+
 // Fragment is a collection regarding the relevant geometry information of a fragment.
 type Fragment struct {
 	Ok bool // true if ok for access or false otherwise

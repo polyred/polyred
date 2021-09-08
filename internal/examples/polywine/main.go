@@ -5,94 +5,108 @@
 package main
 
 import (
-	"runtime"
-
+	"poly.red/app"
+	"poly.red/app/controls"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/gui"
+	"poly.red/geometry/primitive"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/shader"
 	"poly.red/texture"
 	"poly.red/texture/buffer"
-	"poly.red/texture/imageutil"
 )
 
-func main() {
-	width, height := 400, 400
+type App struct {
+	w, h int
+
+	ctrl  *controls.OrbitControl
+	r     *render.Renderer
+	prog  *shader.TextureShader
+	m     *mesh.TriangleSoup
+	cam   camera.Interface
+	vi    []uint64
+	vb    []*primitive.Vertex
+	cache *buffer.Image
+}
+
+func newApp() *App {
+	w, h := 800, 600
+
 	// camera and renderer
 	cam := camera.NewPerspective(
 		camera.Position(math.NewVec3(0, 3, 3)),
-		camera.ViewFrustum(45, float32(width)/float32(height), 0.1, 10),
+		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 10),
 	)
 
 	r := render.NewRenderer(
-		render.Size(width, height),
+		render.Size(w, h),
 		render.Camera(cam),
-		render.Blending(render.AlphaBlend),
 		render.Workers(2),
+		render.PixelFormat(buffer.PixelFormatBGRA),
 	)
 
-	// TODO: determine based on the type of driver instead of OS.
-	if runtime.GOOS == "darwin" {
-		r.Options(render.PixelFormat(buffer.PixelFormatBGRA))
-	}
-
-	// Use a different model
-	mod, err := mesh.Load("../../testdata/bunny.obj")
-	if err != nil {
-		panic(err)
-	}
-	m, ok := mod.(*mesh.TriangleSoup)
+	m, ok := model.StanfordBunny().(*mesh.TriangleSoup)
 	if !ok {
 		panic("expect load as an triangle soup")
 	}
 
 	m.Normalize()
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
-
-	tex := texture.NewTexture(
-		texture.Image(imageutil.MustLoadImage("../../testdata/bunny.png")),
-		texture.IsoMipmap(true),
-	)
-
-	// Shader
 	prog := &shader.TextureShader{
 		ModelMatrix: m.ModelMatrix(),
 		ViewMatrix:  cam.ViewMatrix(),
 		ProjMatrix:  cam.ProjMatrix(),
-		Texture:     tex,
+		Texture:     texture.NewTextureFromImage("../../internal/testdata/bunny.png"),
+	}
+	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: vi, vb: vb}
+	a.ctrl = controls.NewOrbitControl(a, cam)
+
+	return a
+}
+
+func (a *App) Size() (int, int) {
+	return a.w, a.h
+}
+
+func (a *App) OnResize(w, h int) {
+	a.w = w
+	a.h = h
+	a.cam.SetAspect(float32(w), float32(h))
+	a.r.Options(render.Size(w, h))
+	a.cache = nil
+}
+
+func (a *App) Draw() (*buffer.Image, bool) {
+	if a.cache != nil {
+		return nil, false
 	}
 
-	w, err := gui.NewWindow(r, gui.WithTitle("polyred"), gui.WithFPS())
-	if err != nil {
-		panic(err)
+	a.prog.ModelMatrix = a.m.ModelMatrix()
+	a.prog.ViewMatrix = a.cam.ViewMatrix()
+	a.prog.ProjMatrix = a.cam.ProjMatrix()
+
+	buf := a.r.NextBuffer()
+	a.r.DrawPrimitives(buf, a.prog.VertexShader, a.vi, a.vb)
+	a.r.DrawFragments(buf, a.prog.FragmentShader)
+	a.cache = buf.Image()
+	return a.cache, true
+}
+
+func (a *App) OnMouse(mo app.MouseEvent) {
+	if !a.ctrl.OnMouse(mo) {
+		return
 	}
 
-	// Handling window resizing
-	w.Subscribe(gui.OnResize, func(name gui.EventName, e gui.Event) {
-		ev := e.(*gui.SizeEvent)
-		cam.SetAspect(float32(ev.Width), float32(ev.Height))
-		prog.ViewMatrix = cam.ViewMatrix()
-		prog.ModelMatrix = cam.ModelMatrix()
-	})
+	a.cache = nil
+}
 
-	// Orbit controls
-	ctrl := gui.NewOrbitControl(w, cam)
-	w.Subscribe(gui.OnMouseUp, ctrl.OnMouse)
-	w.Subscribe(gui.OnMouseDown, ctrl.OnMouse)
-	w.Subscribe(gui.OnCursor, ctrl.OnCursor)
-	w.Subscribe(gui.OnScroll, ctrl.OnScroll)
-
-	// Starts the main rendering loop
-	w.MainLoop(func() *buffer.Buffer {
-		prog.ModelMatrix = m.ModelMatrix()
-		prog.ViewMatrix = cam.ViewMatrix()
-		prog.ProjMatrix = cam.ProjMatrix()
-
-		buf := r.NextBuffer()
-		r.DrawPrimitives(buf, prog.VertexShader, vi, vb)
-		r.DrawFragments(buf, prog.FragmentShader)
-		return buf
-	})
+func main() {
+	app.Run(newApp(),
+		app.Title("polywine"),
+		app.MinSize(80, 60),
+		app.MaxSize(1920*2, 1080*2),
+		app.FPS(true),
+	)
 }

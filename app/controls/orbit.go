@@ -2,9 +2,12 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package gui
+package controls
 
 import (
+	"log"
+
+	"poly.red/app"
 	"poly.red/camera"
 	"poly.red/math"
 )
@@ -58,12 +61,12 @@ type OrbitControl struct {
 	panStart  math.Vec2
 	zoomStart float32
 
-	win *Window
+	win app.Window
 }
 
 // NewOrbitControl creates and returns a pointer to a new orbit control
 // for the specified camera.
-func NewOrbitControl(win *Window, cam camera.Interface) *OrbitControl {
+func NewOrbitControl(win app.Window, cam camera.Interface) *OrbitControl {
 
 	oc := &OrbitControl{
 		cam:     cam,
@@ -102,7 +105,6 @@ func (oc *OrbitControl) SetTarget(v math.Vec3) {
 
 // Enabled returns the current OrbitEnabled bitmask.
 func (oc *OrbitControl) Enabled() OrbitEnabled {
-
 	return oc.enabled
 }
 
@@ -165,8 +167,9 @@ func (oc *OrbitControl) Pan(deltaX, deltaY float32) {
 
 	// Conversion constant between an on-screen cursor delta and its
 	// projection on the target plane
+	w, h := oc.win.Size()
 	c := 2 * vdir.Len() * math.Tan(math.DegToRad(oc.cam.Fov()/2.0)) /
-		math.Max(float32(oc.win.width), float32(oc.win.height))
+		math.Max(float32(w), float32(h))
 
 	// Calculate pan components, scale by the converted offsets and
 	// combine them
@@ -183,68 +186,69 @@ func (oc *OrbitControl) Pan(deltaX, deltaY float32) {
 	oc.target = oc.target.Add(pan)
 }
 
-// OnMouse is called when an OnMouseDown/OnMouseUp event is received.
-func (oc *OrbitControl) OnMouse(name EventName, ev Event) {
+// OnMouse is called when an a MouseEvent is received.
+func (oc *OrbitControl) OnMouse(ev app.MouseEvent) (updated bool) {
+	log.Println(ev)
+	updated = true
+
 	// If nothing enabled ignore event
 	if oc.enabled == OrbitNone {
+		updated = false
 		return
 	}
 
-	switch name {
-	case OnMouseDown:
-		mev := ev.(*MouseEvent)
-		switch mev.Button {
-		case MouseButtonLeft: // Rotate
+	if ev.Action != app.MouseScroll && ev.Button == app.MouseBtnNone {
+		updated = false
+		return
+	}
+
+	switch ev.Action {
+	case app.MouseDown:
+		switch ev.Button {
+		case app.MouseBtnLeft: // Rotate
 			if oc.enabled&OrbitRot != 0 {
 				oc.state = stateRotate
-				oc.rotStart.X = mev.Xpos
-				oc.rotStart.Y = mev.Ypos
+				oc.rotStart.X = ev.Xpos
+				oc.rotStart.Y = ev.Ypos
 			}
-		case MouseButtonMiddle: // Zoom
+		case app.MouseBtnMiddle: // Zoom
 			if oc.enabled&OrbitZoom != 0 {
 				oc.state = stateZoom
-				oc.zoomStart = mev.Ypos
+				oc.zoomStart = ev.Ypos
 			}
-		case MouseButtonRight: // Pan
+		case app.MouseBtnRight: // Pan
 			if oc.enabled&OrbitPan != 0 {
 				oc.state = statePan
-				oc.panStart.X = mev.Xpos
-				oc.panStart.Y = mev.Ypos
+				oc.panStart.X = ev.Xpos
+				oc.panStart.Y = ev.Ypos
 			}
 		}
-	case OnMouseUp:
+	case app.MouseUp:
 		oc.state = stateNone
+	case app.MouseScroll:
+		if oc.enabled&OrbitZoom != 0 {
+			oc.Zoom(-ev.Yoffset)
+		}
 	}
-}
 
-// OnCursor is called when an OnCursor event is received.
-func (oc *OrbitControl) OnCursor(evname EventName, ev Event) {
-	// If nothing enabled ignore event
-	if oc.enabled == OrbitNone || oc.state == stateNone {
+	if oc.state == stateNone {
 		return
 	}
 
-	mev := ev.(*CursorEvent)
 	switch oc.state {
 	case stateRotate:
-		c := -2 * math.Pi * oc.RotSpeed / math.Max(float32(oc.win.width), float32(oc.win.height))
-		oc.Rotate(c*(mev.Xpos-oc.rotStart.X), c*(mev.Ypos-oc.rotStart.Y))
-		oc.rotStart.X = mev.Xpos
-		oc.rotStart.Y = mev.Ypos
+		w, h := oc.win.Size()
+		c := -2 * math.Pi * oc.RotSpeed / math.Max(float32(w), float32(h))
+		oc.Rotate(c*(ev.Xpos-oc.rotStart.X), c*(ev.Ypos-oc.rotStart.Y))
+		oc.rotStart.X = ev.Xpos
+		oc.rotStart.Y = ev.Ypos
 	case stateZoom:
-		oc.Zoom(oc.ZoomSpeed * (mev.Ypos - oc.zoomStart))
-		oc.zoomStart = mev.Ypos
+		oc.Zoom(oc.ZoomSpeed * (ev.Ypos - oc.zoomStart))
+		oc.zoomStart = ev.Ypos
 	case statePan:
-		oc.Pan(mev.Xpos-oc.panStart.X, mev.Ypos-oc.panStart.Y)
-		oc.panStart.X = mev.Xpos
-		oc.panStart.Y = mev.Ypos
+		oc.Pan(ev.Xpos-oc.panStart.X, ev.Ypos-oc.panStart.Y)
+		oc.panStart.X = ev.Xpos
+		oc.panStart.Y = ev.Ypos
 	}
-}
-
-// onScroll is called when an OnScroll event is received.
-func (oc *OrbitControl) OnScroll(evname EventName, ev Event) {
-	if oc.enabled&OrbitZoom != 0 {
-		sev := ev.(*ScrollEvent)
-		oc.Zoom(-sev.Yoffset)
-	}
+	return
 }
