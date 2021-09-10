@@ -11,7 +11,7 @@ import (
 
 	"poly.red/geometry/primitive"
 	"poly.red/render"
-	"poly.red/texture/buffer"
+	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
@@ -20,19 +20,19 @@ func TestBlending(t *testing.T) {
 	img2 := imageutil.MustLoadImage("../testdata/src2.png")
 	want := imageutil.MustLoadImage("../testdata/blend.png")
 
-	buf1 := buffer.NewBuffer(img1.Rect)
+	buf1 := texture.NewBuffer(img1.Rect)
 	for i := 0; i < buf1.Bounds().Dx(); i++ {
 		for j := 0; j < buf1.Bounds().Dy(); j++ {
-			buf1.Set(i, j, buffer.Fragment{Ok: true, Fragment: primitive.Fragment{
+			buf1.Set(i, j, texture.Fragment{Ok: true, Fragment: primitive.Fragment{
 				X: i, Y: j, Col: img1.RGBAAt(i, img1.Bounds().Dy()-j-1),
 			}})
 		}
 	}
 
-	buf2 := buffer.NewBuffer(img2.Rect)
+	buf2 := texture.NewBuffer(img2.Rect)
 	for i := 0; i < buf2.Bounds().Dx(); i++ {
 		for j := 0; j < buf2.Bounds().Dy(); j++ {
-			buf2.Set(i, j, buffer.Fragment{Ok: true, Fragment: primitive.Fragment{
+			buf2.Set(i, j, texture.Fragment{Ok: true, Fragment: primitive.Fragment{
 				X: i, Y: j, Col: img2.RGBAAt(i, img2.Bounds().Dy()-j-1),
 			}})
 		}

@@ -14,7 +14,7 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/render"
-	"poly.red/texture/buffer"
+	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
@@ -48,7 +48,7 @@ func TestDrawPixels(t *testing.T) {
 			render.Size(tt.w, tt.h),
 			render.BatchSize(128), // use 128 to make sure all tests covers all cases
 		)
-		buf := buffer.NewBuffer(image.Rect(0, 0, tt.w, tt.h))
+		buf := texture.NewBuffer(image.Rect(0, 0, tt.w, tt.h))
 
 		counter := uint32(0)
 		r.DrawFragments(buf, func(frag primitive.Fragment) color.RGBA {
@@ -68,7 +68,7 @@ func TestDrawPixels(t *testing.T) {
 
 func BenchmarkDrawFragment(b *testing.B) {
 	r := render.NewRenderer(render.Size(1920, 1080))
-	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
+	buf := texture.NewBuffer(image.Rect(0, 0, 1920, 1080))
 	f := func(f primitive.Fragment) color.RGBA { return f.Col }
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -79,7 +79,7 @@ func BenchmarkDrawFragment(b *testing.B) {
 
 func BenchmarkDrawFragment_NonParallel(b *testing.B) {
 	r := render.NewRenderer(render.Size(1920, 1080))
-	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
+	buf := texture.NewBuffer(image.Rect(0, 0, 1920, 1080))
 	f := func(f primitive.Fragment) color.RGBA { return f.Col }
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -94,7 +94,7 @@ func BenchmarkDrawFragment_NonParallel(b *testing.B) {
 
 func BenchmarkDrawFragment_Parallel(b *testing.B) {
 	r := render.NewRenderer(render.Size(1920, 1080))
-	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
+	buf := texture.NewBuffer(image.Rect(0, 0, 1920, 1080))
 	f := func(f primitive.Fragment) color.RGBA { return f.Col }
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -108,7 +108,7 @@ func BenchmarkDrawFragments_Size(b *testing.B) {
 	for i := 1; i < 128; i *= 2 {
 		ww, hh := w*i, h*i
 		r := render.NewRenderer(render.Size(ww, hh))
-		buf := buffer.NewBuffer(image.Rect(0, 0, ww, hh))
+		buf := texture.NewBuffer(image.Rect(0, 0, ww, hh))
 
 		b.Run(fmt.Sprintf("%d-%d", ww, hh), func(b *testing.B) {
 			b.ReportAllocs()
@@ -131,7 +131,7 @@ func BenchmarkDrawFragments_Block_Parallel(b *testing.B) {
 	// one must optimize the fragment shader down to 14ms.
 	ww, hh := 1920, 1080
 	for i := 8; i < 1024; i *= 2 {
-		buf := buffer.NewBuffer(image.Rect(0, 0, ww, hh))
+		buf := texture.NewBuffer(image.Rect(0, 0, ww, hh))
 		r := render.NewRenderer(
 			render.Size(ww, hh),
 			render.BatchSize(int32(i)),

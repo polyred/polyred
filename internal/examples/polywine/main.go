@@ -5,6 +5,8 @@
 package main
 
 import (
+	"image"
+
 	"poly.red/app"
 	"poly.red/app/controls"
 	"poly.red/camera"
@@ -15,7 +17,6 @@ import (
 	"poly.red/render"
 	"poly.red/shader"
 	"poly.red/texture"
-	"poly.red/texture/buffer"
 )
 
 type App struct {
@@ -28,7 +29,7 @@ type App struct {
 	cam   camera.Interface
 	vi    []uint64
 	vb    []*primitive.Vertex
-	cache *buffer.Image
+	cache *image.RGBA
 }
 
 func newApp() *App {
@@ -44,7 +45,7 @@ func newApp() *App {
 		render.Size(w, h),
 		render.Camera(cam),
 		render.Workers(2),
-		render.PixelFormat(buffer.PixelFormatBGRA),
+		render.PixelFormat(texture.PixelFormatBGRA),
 	)
 
 	m, ok := model.StanfordBunny().(*mesh.TriangleSoup)
@@ -78,7 +79,7 @@ func (a *App) OnResize(w, h int) {
 	a.cache = nil
 }
 
-func (a *App) Draw() (*buffer.Image, bool) {
+func (a *App) Draw() (*image.RGBA, bool) {
 	if a.cache != nil {
 		return nil, false
 	}

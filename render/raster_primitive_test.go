@@ -16,7 +16,6 @@ import (
 	"poly.red/render"
 	"poly.red/shader"
 	"poly.red/texture"
-	"poly.red/texture/buffer"
 	"poly.red/texture/imageutil"
 )
 
@@ -24,7 +23,7 @@ var (
 	rend *render.Renderer
 	m    *mesh.TriangleSoup
 	prog shader.Program
-	buf  *buffer.Buffer
+	buf  *texture.Buffer
 )
 
 func init() {
@@ -61,7 +60,7 @@ func init() {
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     tex,
 	}
-	buf = buffer.NewBuffer(image.Rect(0, 0, width, height))
+	buf = texture.NewBuffer(image.Rect(0, 0, width, height))
 }
 
 func TestDrawPrimitives(t *testing.T) {
@@ -74,7 +73,7 @@ func TestDrawPrimitives(t *testing.T) {
 func BenchmarkDrawPrimitive(b *testing.B) {
 	rand.Seed(42)
 
-	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
+	buf := texture.NewBuffer(image.Rect(0, 0, 1920, 1080))
 	r := render.NewRenderer()
 	p := shader.BasicShader{}
 

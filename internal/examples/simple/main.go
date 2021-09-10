@@ -5,13 +5,14 @@
 package main
 
 import (
+	"image"
+
 	"poly.red/app"
 	"poly.red/camera"
 	"poly.red/light"
 	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture/buffer"
 )
 
 type App struct {
@@ -19,7 +20,7 @@ type App struct {
 	s     *scene.Scene
 	r     *render.Renderer
 	w, h  int
-	image *buffer.Image
+	image *image.RGBA
 }
 
 func New() *App {
@@ -44,7 +45,7 @@ func (a *App) Size() (int, int) {
 	return a.w, a.h
 }
 
-func (a *App) Draw() (*buffer.Image, bool) {
+func (a *App) Draw() (*image.RGBA, bool) {
 	if a.image == nil {
 		a.image = a.r.Render()
 	}

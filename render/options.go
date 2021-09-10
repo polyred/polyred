@@ -12,7 +12,7 @@ import (
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
-	"poly.red/texture/buffer"
+	"poly.red/texture"
 )
 
 // Opt represents a rendering Opt
@@ -25,7 +25,7 @@ func Size(width, height int) Opt {
 	}
 }
 
-func PixelFormat(format buffer.PixelFormat) Opt {
+func PixelFormat(format texture.PixelFormat) Opt {
 	return func(r *Renderer) {
 		r.pixelFormat = format
 	}
@@ -117,7 +117,7 @@ func (r *Renderer) Options(opts ...Opt) {
 		opt(r)
 	}
 
-	r.bufs = make([]*buffer.Buffer, r.buflen)
+	r.bufs = make([]*texture.Buffer, r.buflen)
 	r.resetBufs()
 	r.lightSources = []light.Source{}
 	r.lightEnv = []light.Environment{}

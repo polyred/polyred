@@ -18,7 +18,7 @@ import (
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
-	"poly.red/texture/buffer"
+	"poly.red/texture"
 	"poly.red/texture/imageutil"
 
 	"poly.red/internal/profiling"
@@ -52,10 +52,10 @@ type Renderer struct {
 	batchSize      int32
 	workers        int
 	sched          *sched.Pool
-	pixelFormat    buffer.PixelFormat
+	pixelFormat    texture.PixelFormat
 	bufcur         int
 	buflen         int
-	bufs           []*buffer.Buffer
+	bufs           []*texture.Buffer
 	renderCamera   camera.Interface
 	renderPerspect bool
 	shadowBufs     []shadowInfo
@@ -67,7 +67,7 @@ type Renderer struct {
 // The returned renderer implements a rasterization rendering pipeline.
 func NewRenderer(opts ...Opt) *Renderer {
 	r := &Renderer{ // default settings
-		pixelFormat:  buffer.PixelFormatRGBA,
+		pixelFormat:  texture.PixelFormatRGBA,
 		buflen:       2, // use 2 by default.
 		bufs:         nil,
 		width:        800,
@@ -85,7 +85,7 @@ func NewRenderer(opts ...Opt) *Renderer {
 		opt(r)
 	}
 
-	r.bufs = make([]*buffer.Buffer, r.buflen)
+	r.bufs = make([]*texture.Buffer, r.buflen)
 	r.resetBufs()
 
 	r.sched = sched.New(sched.Workers(r.workers))
@@ -122,8 +122,8 @@ func NewRenderer(opts ...Opt) *Renderer {
 // Note: with Metal, we always use RGBA pixel format.
 func (r *Renderer) resetBufs() {
 	for i := 0; i < r.buflen; i++ {
-		r.bufs[i] = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa),
-			buffer.Format(r.pixelFormat))
+		r.bufs[i] = texture.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa),
+			texture.Format(r.pixelFormat))
 	}
 }
 
@@ -172,20 +172,20 @@ func (r *Renderer) Render() *image.RGBA {
 	return r.outBuf
 }
 
-func (r *Renderer) CurrBuffer() *buffer.Buffer {
+func (r *Renderer) CurrBuffer() *texture.Buffer {
 	return r.bufs[r.bufcur]
 }
 
-func (r *Renderer) NextBuffer() *buffer.Buffer {
+func (r *Renderer) NextBuffer() *texture.Buffer {
 	r.bufcur = (r.bufcur + 1) % r.buflen
 	r.bufs[r.bufcur].Clear()
 	return r.bufs[r.bufcur]
 }
 
-func (r *Renderer) DrawImage(buf *buffer.Buffer, img *image.RGBA) {
+func (r *Renderer) DrawImage(buf *texture.Buffer, img *image.RGBA) {
 	for i := 0; i < buf.Bounds().Dx(); i++ {
 		for j := 0; j < buf.Bounds().Dy(); j++ {
-			buf.Set(i, j, buffer.Fragment{
+			buf.Set(i, j, texture.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
 					X: i, Y: j, Col: img.RGBAAt(i, img.Bounds().Dy()),
@@ -283,7 +283,7 @@ func (r *Renderer) passDeferred() {
 	})
 }
 
-func (r *Renderer) shade(info buffer.Fragment, uniforms map[string]interface{}) color.RGBA {
+func (r *Renderer) shade(info texture.Fragment, uniforms map[string]interface{}) color.RGBA {
 	if !info.Ok {
 		return r.background
 	}
@@ -498,7 +498,7 @@ func (r *Renderer) drawClipped(
 			}
 
 			// update G-buffer
-			r.bufs[0].Set(x, y, buffer.Fragment{
+			r.bufs[0].Set(x, y, texture.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
 					X:     x,

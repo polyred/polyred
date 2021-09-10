@@ -9,10 +9,10 @@ import (
 
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/texture/buffer"
+	"poly.red/texture"
 )
 
-type ambientOcclusionPass struct{ buf *buffer.Buffer }
+type ambientOcclusionPass struct{ buf *texture.Buffer }
 
 func (ao *ambientOcclusionPass) Shade(x, y int, col color.RGBA) color.RGBA {
 	// FIXME: naive and super slow SSAO implementation. Optimize

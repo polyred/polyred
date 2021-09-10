@@ -10,7 +10,7 @@ import (
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/shader"
-	"poly.red/texture/buffer"
+	"poly.red/texture"
 )
 
 // DrawPrimitives is a pass that executes Draw call concurrently on all
@@ -20,7 +20,7 @@ import (
 //
 // See shader.Program for more information regarding shader programming.
 func (r *Renderer) DrawPrimitives(
-	buf *buffer.Buffer, p shader.VertexProgram, idx []uint64, verts []*primitive.Vertex,
+	buf *texture.Buffer, p shader.VertexProgram, idx []uint64, verts []*primitive.Vertex,
 ) {
 	len := len(idx)
 	if len%3 != 0 {
@@ -43,7 +43,7 @@ func (r *Renderer) DrawPrimitives(
 }
 
 // DrawPrimitive implements a triangle draw call of the rasteriation graphics pipeline.
-func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, p shader.VertexProgram,
+func (r *Renderer) DrawPrimitive(buf *texture.Buffer, p shader.VertexProgram,
 	tri *primitive.Triangle) bool {
 	v1 := p(tri.V1)
 	v2 := p(tri.V2)
@@ -88,7 +88,7 @@ func (r *Renderer) DrawPrimitive(buf *buffer.Buffer, p shader.VertexProgram,
 	return true
 }
 
-func (r *Renderer) inViewFrustum(buf *buffer.Buffer, v1, v2, v3 math.Vec4) bool {
+func (r *Renderer) inViewFrustum(buf *texture.Buffer, v1, v2, v3 math.Vec4) bool {
 	// TODO: can be optimize?
 	viewportAABB := primitive.NewAABB(
 		math.NewVec3(float32(buf.Bounds().Dx()*r.msaa), float32(buf.Bounds().Dy()*r.msaa), 1),
@@ -99,7 +99,7 @@ func (r *Renderer) inViewFrustum(buf *buffer.Buffer, v1, v2, v3 math.Vec4) bool 
 	return viewportAABB.Intersect(triangleAABB)
 }
 
-func (r *Renderer) inViewport2(buf *buffer.Buffer, v math.Vec4) bool {
+func (r *Renderer) inViewport2(buf *texture.Buffer, v math.Vec4) bool {
 	w := float32(r.msaa * buf.Bounds().Dx())
 	h := float32(r.msaa * buf.Bounds().Dy())
 	if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
@@ -108,7 +108,7 @@ func (r *Renderer) inViewport2(buf *buffer.Buffer, v math.Vec4) bool {
 	return true
 }
 
-func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float32) {
+func (r *Renderer) drawClip(buf *texture.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float32) {
 	w := float32(buf.Bounds().Dx())
 	h := float32(buf.Bounds().Dy())
 
@@ -242,7 +242,7 @@ func (r *Renderer) drawClip(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, re
 }
 
 // rasterize implements the rasterization process of a given primitive.
-func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float32) {
+func (r *Renderer) rasterize(buf *texture.Buffer, v1, v2, v3 *primitive.Vertex, recipw [3]float32) {
 	// Compute AABB make the AABB a little bigger that align with
 	// pixels to contain the entire triangle
 	aabb := primitive.NewAABB(v1.Pos.ToVec3(), v2.Pos.ToVec3(), v3.Pos.ToVec3())
@@ -326,7 +326,7 @@ func (r *Renderer) rasterize(buf *buffer.Buffer, v1, v2, v3 *primitive.Vertex, r
 				r.interpoVaryings(v1.AttrSmooth, v2.AttrSmooth, v3.AttrSmooth, frag.AttrSmooth, recipw, bc)
 			}
 
-			buf.Set(x, y, buffer.Fragment{
+			buf.Set(x, y, texture.Fragment{
 				Ok:       true,
 				Fragment: frag,
 			})

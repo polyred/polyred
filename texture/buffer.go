@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package buffer
+package texture
 
 import (
 	"image"
@@ -11,8 +11,6 @@ import (
 
 	"poly.red/internal/spinlock"
 )
-
-type Image = image.RGBA
 
 // Fragment is a collection regarding the relevant geometry information of a fragment.
 type Fragment struct {
@@ -43,11 +41,11 @@ const (
 	PixelFormatBGRA
 )
 
-// Opt is a buffer option
-type Opt func(b *Buffer)
+// BufferOpt is a buffer option
+type BufferOpt func(b *Buffer)
 
 // Format returns a pixel format option
-func Format(format PixelFormat) Opt {
+func Format(format PixelFormat) BufferOpt {
 	return func(b *Buffer) {
 		b.format = format
 	}
@@ -55,7 +53,7 @@ func Format(format PixelFormat) Opt {
 
 // NewBuffer returns a rendering buffer. The caller must specify its size.
 // By default, it uses RGBA pixel format.
-func NewBuffer(r image.Rectangle, opts ...Opt) *Buffer {
+func NewBuffer(r image.Rectangle, opts ...BufferOpt) *Buffer {
 	buf := &Buffer{
 		lock:      make([]spinlock.SpinLock, r.Dx()*r.Dy()),
 		depth:     make([]uint8, 4*r.Dx()*r.Dy()),

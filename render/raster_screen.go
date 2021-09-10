@@ -7,7 +7,7 @@ package render
 import (
 	"poly.red/color"
 	"poly.red/shader"
-	"poly.red/texture/buffer"
+	"poly.red/texture"
 )
 
 // DrawFragments is a concurrent executor of the given shader that travel
@@ -15,7 +15,7 @@ import (
 //
 // One should not manipulate the given image buffer in the shader.
 // Instead, return the resulting color in the shader can avoid data race.
-func (r *Renderer) DrawFragments(buf *buffer.Buffer, funcs ...shader.FragmentProgram) {
+func (r *Renderer) DrawFragments(buf *texture.Buffer, funcs ...shader.FragmentProgram) {
 	if funcs == nil {
 		return
 	}
@@ -75,7 +75,7 @@ func (r *Renderer) DrawFragments(buf *buffer.Buffer, funcs ...shader.FragmentPro
 //
 // Note that it is caller's responsibility to protect the safty of fragment
 // coordinates, as well as data race of the given buffer.
-func (r *Renderer) DrawFragment(buf *buffer.Buffer, x, y int, shaders ...shader.FragmentProgram) {
+func (r *Renderer) DrawFragment(buf *texture.Buffer, x, y int, shaders ...shader.FragmentProgram) {
 	info := buf.UnsafeAt(x, y)
 	old := info.Col
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package buffer_test
+package texture_test
 
 import (
 	"image"
@@ -11,38 +11,38 @@ import (
 
 	"poly.red/color"
 	"poly.red/geometry/primitive"
-	"poly.red/texture/buffer"
+	"poly.red/texture"
 )
 
 func TestNewBuffer(t *testing.T) {
 	t.Run("RGBA", func(t *testing.T) {
-		buf := buffer.NewBuffer(
-			image.Rect(0, 0, 10, 10), buffer.Format(buffer.PixelFormatRGBA))
-		if buf.Format() != buffer.PixelFormatRGBA {
-			t.Fatalf("set buffer.Format option failed")
+		buf := texture.NewBuffer(
+			image.Rect(0, 0, 10, 10), texture.Format(texture.PixelFormatRGBA))
+		if buf.Format() != texture.PixelFormatRGBA {
+			t.Fatalf("set texture.Format option failed")
 		}
 	})
 	t.Run("BGRA", func(t *testing.T) {
-		buf := buffer.NewBuffer(
-			image.Rect(0, 0, 10, 10), buffer.Format(buffer.PixelFormatBGRA))
-		if buf.Format() != buffer.PixelFormatBGRA {
-			t.Fatalf("set buffer.Format option failed")
+		buf := texture.NewBuffer(
+			image.Rect(0, 0, 10, 10), texture.Format(texture.PixelFormatBGRA))
+		if buf.Format() != texture.PixelFormatBGRA {
+			t.Fatalf("set texture.Format option failed")
 		}
 	})
 }
 
 func TestBuffer_FragmentOffset(t *testing.T) {
 	t.Run("RGBA", func(t *testing.T) {
-		buf := buffer.NewBuffer(image.Rect(0, 0, 10, 10), buffer.Format(buffer.PixelFormatRGBA))
+		buf := texture.NewBuffer(image.Rect(0, 0, 10, 10), texture.Format(texture.PixelFormatRGBA))
 		testBufferFragmentOffset(t, buf)
 	})
 	t.Run("BGRA", func(t *testing.T) {
-		buf := buffer.NewBuffer(image.Rect(0, 0, 10, 10), buffer.Format(buffer.PixelFormatBGRA))
+		buf := texture.NewBuffer(image.Rect(0, 0, 10, 10), texture.Format(texture.PixelFormatBGRA))
 		testBufferFragmentOffset(t, buf)
 	})
 }
 
-func testBufferFragmentOffset(t *testing.T, buf *buffer.Buffer) {
+func testBufferFragmentOffset(t *testing.T, buf *texture.Buffer) {
 	w, h := 10, 10
 	for i := 0; i < w; i++ {
 		for j := 0; j < h; j++ {
@@ -68,20 +68,20 @@ func testBufferFragmentOffset(t *testing.T, buf *buffer.Buffer) {
 	}
 }
 
-func newBuf(w, h int) []*buffer.Buffer {
-	buf1 := buffer.NewBuffer(image.Rect(0, 0, w, h),
-		buffer.Format(buffer.PixelFormatRGBA))
-	buf2 := buffer.NewBuffer(image.Rect(0, 0, w, h),
-		buffer.Format(buffer.PixelFormatBGRA))
+func newBuf(w, h int) []*texture.Buffer {
+	buf1 := texture.NewBuffer(image.Rect(0, 0, w, h),
+		texture.Format(texture.PixelFormatRGBA))
+	buf2 := texture.NewBuffer(image.Rect(0, 0, w, h),
+		texture.Format(texture.PixelFormatBGRA))
 	for i := 0; i < w; i++ {
 		for j := 0; j < h; j++ {
-			buf1.Set(i, j, buffer.Fragment{
+			buf1.Set(i, j, texture.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
 					X: i, Y: j, Depth: 1, Col: color.White,
 				},
 			})
-			buf2.Set(i, j, buffer.Fragment{
+			buf2.Set(i, j, texture.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
 					X: i, Y: j, Depth: 1, Col: color.White,
@@ -89,7 +89,7 @@ func newBuf(w, h int) []*buffer.Buffer {
 			})
 		}
 	}
-	return []*buffer.Buffer{buf1, buf2}
+	return []*texture.Buffer{buf1, buf2}
 }
 
 func TestBuffer_Clear(t *testing.T) {
@@ -99,7 +99,7 @@ func TestBuffer_Clear(t *testing.T) {
 		buf.Clear()
 		for i := 0; i < 10; i++ {
 			for j := 0; j < 10; j++ {
-				if !reflect.DeepEqual(buf.At(i, j), buffer.Fragment{}) {
+				if !reflect.DeepEqual(buf.At(i, j), texture.Fragment{}) {
 					t.Fatalf("cleared buffer still have non-zero value at (%d,%d), got %+v", i, j, buf.At(i, j))
 				}
 			}
@@ -150,10 +150,10 @@ func TestBuffer_Access(t *testing.T) {
 				if buf.In(i, j) {
 					t.Fatalf("invalid pixel access returned success at (%d,%d)", i, j)
 				}
-				if !reflect.DeepEqual(buf.At(i, j), buffer.Fragment{}) {
+				if !reflect.DeepEqual(buf.At(i, j), texture.Fragment{}) {
 					t.Fatalf("unexpected fragment access at (%d,%d), got %+v, want zero value", i, j, buf.At(i, j))
 				}
-				buf.Set(i, j, buffer.Fragment{})
+				buf.Set(i, j, texture.Fragment{})
 			}
 		}
 
@@ -169,7 +169,7 @@ func TestBuffer_Access(t *testing.T) {
 }
 
 func BenchmarkBuffer_Clear(b *testing.B) {
-	buf := buffer.NewBuffer(image.Rect(0, 0, 800, 800))
+	buf := texture.NewBuffer(image.Rect(0, 0, 800, 800))
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
