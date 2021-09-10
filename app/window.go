@@ -88,5 +88,10 @@ type window struct {
 	fontDrawer *font.Drawer
 }
 
+type frame struct {
+	img  *image.RGBA
+	done chan event
+}
+
 type event struct{}
 type resizeEvent struct{ w, h int }

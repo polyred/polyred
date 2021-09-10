@@ -16,6 +16,7 @@ import (
 
 var (
 	opengl32       = syscall.NewLazyDLL("opengl32.dll")
+	_glMakeCurrent = opengl32.NewProc("wglMakeCurrent")
 	_glDrawBuffer  = opengl32.NewProc("glDrawBuffer")
 	_glPixelZoom   = opengl32.NewProc("glPixelZoom")
 	_glRasterPos2d = opengl32.NewProc("glRasterPos2d")
@@ -23,6 +24,10 @@ var (
 	_glDrawPixels  = opengl32.NewProc("glDrawPixels")
 	_glFinish      = opengl32.NewProc("glFinish")
 )
+
+func MakeCurrent(hdc syscall.Handle) {
+	syscall.Syscall(_glMakeCurrent.Addr(), 2, uintptr(hdc), 0, 0)
+}
 
 func DrawBuffer(buf Enum) {
 	syscall.Syscall(_glDrawBuffer.Addr(), 1, uintptr(buf), 0, 0)

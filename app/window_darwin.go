@@ -93,7 +93,6 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"image"
 	"os"
 	"runtime"
 	"sync"
@@ -272,11 +271,6 @@ func (w *window) main(app Window) {
 	go w.event(app)
 	go w.draw(app)
 	C.polyred_main()
-}
-
-type frame struct {
-	img  *image.RGBA
-	done chan event
 }
 
 // The Event Thread

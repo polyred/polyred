@@ -58,7 +58,7 @@ func newApp() *App {
 		ModelMatrix: m.ModelMatrix(),
 		ViewMatrix:  cam.ViewMatrix(),
 		ProjMatrix:  cam.ProjMatrix(),
-		Texture:     texture.NewTextureFromImage("../../internal/testdata/bunny.png"),
+		Texture:     texture.NewTextureFromImage("../../testdata/bunny.png"),
 	}
 	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: vi, vb: vb}
 	a.ctrl = controls.NewOrbitControl(a, cam)
@@ -104,7 +104,7 @@ func (a *App) OnMouse(mo app.MouseEvent) {
 
 func main() {
 	app.Run(newApp(),
-		app.Title("polywine"),
+		app.Title("polywine today"),
 		app.MinSize(80, 60),
 		app.MaxSize(1920*2, 1080*2),
 		app.FPS(true),
