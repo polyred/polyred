@@ -1,3 +1,7 @@
+// Copyright 2022 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
+
 package render
 
 import (
@@ -57,7 +61,9 @@ func drawLineLow(buf *texture.Buffer, p1 math.Vec4, p2 math.Vec4, color color.RG
 		//     fragmentProcessing(frameBuf, depthBuf, x, y, z, color);
 		//   }
 		if buf.DepthTest(int(x), int(y), z) {
-			buf.Set(int(x), int(y), texture.Fragment{})
+			info := buf.At(int(x), int(y))
+			info.Col = color
+			buf.Set(int(x), int(y), info)
 		}
 		if D > 0 {
 			y += yi
@@ -98,7 +104,9 @@ func drawLineHigh(buf *texture.Buffer, p1 math.Vec4, p2 math.Vec4, color color.R
 		// 	this.fragmentProcessing(frameBuf, depthBuf, x, y, z, color)
 		// }
 		if buf.DepthTest(int(x), int(y), z) {
-			buf.Set(int(x), int(y), texture.Fragment{})
+			info := buf.At(int(x), int(y))
+			info.Col = color
+			buf.Set(int(x), int(y), info)
 		}
 		if D > 0 {
 			x += xi
