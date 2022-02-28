@@ -55,8 +55,16 @@ void Texture_ReplaceRegion(void * texture, struct Region region, uint_t level, v
 	                           bytesPerRow:(NSUInteger)bytesPerRow];
 }
 
+void Texture_Release(void * texture) {
+	[(id<MTLTexture>)texture release];
+}
+
 void * CommandQueue_MakeCommandBuffer(void * commandQueue) {
 	return [(id<MTLCommandQueue>)commandQueue commandBuffer];
+}
+
+void CommandQueue_Release(void *commandQueue) {
+  [(id<MTLCommandQueue>)commandQueue release];
 }
 
 void CommandEncoder_EndEncoding(void * commandEncoder) {
@@ -65,6 +73,10 @@ void CommandEncoder_EndEncoding(void * commandEncoder) {
 
 void * CommandBuffer_MakeBlitCommandEncoder(void * commandBuffer) {
 	return [(id<MTLCommandBuffer>)commandBuffer blitCommandEncoder];
+}
+
+void BlitCommandEncoder_Release(void *blitCommandEncoder) {
+  [(id<MTLBlitCommandEncoder>)blitCommandEncoder release];
 }
 
 void BlitCommandEncoder_CopyFromTexture(void * blitCommandEncoder,
@@ -97,4 +109,8 @@ void CommandBuffer_AddCompletedHandler(void *commandBuffer) {
 	[(id<MTLCommandBuffer>)commandBuffer addCompletedHandler:^(id<MTLCommandBuffer> cb) {
 		commandBufferCompletedCallback(cb);
 	}];
+}
+
+void CommandBuffer_Release(void *commandBuffer) {
+  [(id<MTLCommandBuffer>)commandBuffer release];
 }

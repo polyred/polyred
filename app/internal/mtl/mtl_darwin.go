@@ -181,6 +181,11 @@ func NewTexture(texture unsafe.Pointer) Texture {
 	return Texture{texture: texture}
 }
 
+// Release frees the current texture.
+func (t Texture) Release() {
+	C.Texture_Release(t.texture)
+}
+
 // ReplaceRegion copies a block of pixels into a section of texture slice 0.
 // https://developer.apple.com/documentation/metal/mtltexture/1515464-replaceregion.
 func (t Texture) ReplaceRegion(region Region, level int, pixelBytes *byte, bytesPerRow uintptr) {
@@ -210,6 +215,11 @@ type CommandQueue struct {
 // https://developer.apple.com/documentation/metal/mtlcommandqueue/1508686-makecommandbuffer.
 func (cq CommandQueue) MakeCommandBuffer() CommandBuffer {
 	return CommandBuffer{C.CommandQueue_MakeCommandBuffer(cq.commandQueue)}
+}
+
+// Release frees the command queue.
+func (cq CommandQueue) Release() {
+	C.CommandQueue_Release(cq.commandQueue)
 }
 
 // Drawable is a displayable resource that can be rendered or written to.
@@ -262,6 +272,11 @@ func commandBufferCompletedCallback(commandBuffer unsafe.Pointer) {
 	}
 
 	f.(func())()
+}
+
+// Release frees the command buffer.
+func (cb CommandBuffer) Release() {
+	C.CommandBuffer_Release(cb.commandBuffer)
 }
 
 // MakeBlitCommandEncoder creates an encoder object that can encode
@@ -318,4 +333,9 @@ func (bce BlitCommandEncoder) CopyFromTexture(
 			Z: C.uint_t(dstOrigin.Z),
 		},
 	)
+}
+
+// Release frees the blit command encoder.
+func (bce BlitCommandEncoder) Release() {
+	C.BlitCommandEncoder_Release(bce.commandEncoder)
 }

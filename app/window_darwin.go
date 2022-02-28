@@ -169,6 +169,7 @@ func polyred_onClose(view C.CFTypeRef) {
 	C.CFRelease(w.win.window)
 	w.win.view = 0
 	w.win.window = 0
+	w.win.ctx.Release()
 	os.Exit(0)
 }
 
@@ -415,9 +416,10 @@ func (w *window) flush(f frame) {
 	tex.ReplaceRegion(region, 0, &f.img.Pix[0], uintptr(4*dx))
 	cb := w.win.ctx.queue.MakeCommandBuffer()
 	bce := cb.MakeBlitCommandEncoder()
+	drawTex := drawable.Texture()
 	bce.CopyFromTexture(tex, 0, 0, mtl.Origin{},
 		mtl.Size{Width: dx, Height: dy, Depth: 1},
-		drawable.Texture(), 0, 0, mtl.Origin{})
+		drawTex, 0, 0, mtl.Origin{})
 	bce.EndEncoding()
 	cb.PresentDrawable(drawable)
 
@@ -430,7 +432,13 @@ func (w *window) flush(f frame) {
 	//
 	// We may not need such an wait, if we are doing perfect timing.
 	// See: https://golang.design/research/ultimate-channel/
-	cb.AddCompletedHandler(func() { f.done <- event{} })
+	cb.AddCompletedHandler(func() {
+		f.done <- event{}
+		bce.Release()
+		cb.Release()
+		tex.Release()
+		drawTex.Release()
+	})
 
 	cb.Commit()
 }

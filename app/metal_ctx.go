@@ -44,3 +44,8 @@ func newMtlContext(cfg *config, layer caMetalLayer) (*mtlContext, error) {
 		}),
 	}, nil
 }
+
+func (ctx *mtlContext) Release() {
+	ctx.texture.Release()
+	ctx.queue.Release()
+}

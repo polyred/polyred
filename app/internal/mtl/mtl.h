@@ -43,18 +43,30 @@ struct Region {
 };
 
 struct Device CreateSystemDefaultDevice();
+
+// CommandQueue
+void * Device_MakeCommandQueue(void * device) ;
 void * CommandQueue_MakeCommandBuffer(void * commandQueue);
+void CommandQueue_Release(void *commandQueue);
+
+// CommandEncoder and BlitCommandEncoder
 void CommandEncoder_EndEncoding(void * commandEncoder);
 void * CommandBuffer_MakeBlitCommandEncoder(void * commandBuffer);
 void BlitCommandEncoder_CopyFromTexture(void * blitCommandEncoder,
 	void * srcTexture, uint_t srcSlice, uint_t srcLevel, struct Origin srcOrigin, struct Size srcSize,
 	void * dstTexture, uint_t dstSlice, uint_t dstLevel, struct Origin dstOrigin);
+void BlitCommandEncoder_Release(void *blitCommandEncoder);
+
+// CommandBuffer
 void CommandBuffer_PresentDrawable(void * commandBuffer, void * drawable);
 void CommandBuffer_WaitUntilCompleted(void * commandBuffer);
 void CommandBuffer_Commit(void * commandBuffer);
 void CommandBuffer_AddCompletedHandler(void *commandBuffer);
+void CommandBuffer_Release(void *commandBuffer);
+
+// MTLTexture
 void * Device_MakeTexture(void * device, struct TextureDescriptor descriptor);
 int MTLTexture_GetWidth(void *texture);
 int MTLTexture_GetHeight(void *texture);
 void Texture_ReplaceRegion(void * texture, struct Region region, uint_t level, void * pixelBytes, size_t bytesPerRow);
-void * Device_MakeCommandQueue(void * device) ;
+void Texture_Release(void * texture);
