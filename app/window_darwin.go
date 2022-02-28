@@ -276,9 +276,6 @@ func (w *window) main(app Window) {
 
 // The Event Thread
 //
-// The event thread terminates when the window instance is
-// closed. All events are handled in the ticked loop.
-//
 // The ticker ticks every ~1ms which permits a maximum of 960 fps
 // (should large enough) for input events handling as the key to
 // making sure the window being responsive (especially on macOS).
@@ -308,29 +305,13 @@ func (w *window) event(app Window) {
 
 // The Draw Thread
 //
-// TODO: below outdated, review this later
+// We use tripple-buffering techniques for the drawing.
+// The benefit is that this enables motion vectors between.
 //
-// We use multiple switching buffers for the drawing, which
-// similar to the double- tripple-buffering techniques.
-// The benefit is that this enables motion vectors between
-// frames.
-//
-// While executing the rendering on buf2, the buf1
-// is not cleared yet. It should be safe for accessing
-// as previous frame, in order to compute motion vectors.
-// Figuring out what is a proper API design here.
-//
-// A possible design:
-//
-// func MainLoop(f func(buf, prevBuf *render.Buffer) *image.RGBA
-//
-// Yet there are no enough practice regards the drawbacks
-// of the API, implement a motion vector related algorithm
-// might worthy. e.g. TAA??
-//
-// Maybe we can make framebuf abstraction to be a linked list,
-// in this way, the API remains one buffer parameter, but
-// be able to access previous frames using frame.Prev()?
+// TODO: Think about how to provide API to let people to access
+// previous frame, such as frame.Prev()? But I don't have enough
+// practice here yet. Maybe try something like TAA with the tripple
+// buffering.
 func (w *window) draw(app Window) {
 	<-w.ready
 
@@ -353,7 +334,7 @@ func (w *window) draw(app Window) {
 	for {
 		select {
 		case siz := <-w.resize:
-			w.win.ctx.layer.SetDrawableSize(siz.w, siz.h)
+			w.win.ctx.Resize(siz.w, siz.h)
 			w.win.config.size.X = siz.w
 			w.win.config.size.Y = siz.h
 			if a, ok := app.(ResizeHandler); ok {
@@ -423,15 +404,12 @@ func (w *window) flush(f frame) {
 	bce.EndEncoding()
 	cb.PresentDrawable(drawable)
 
-	// We need a synchornization here. Similar to glFinish (instead of
-	// glFlush). See a general discussion about CPU, GPU
-	// and display synchornization here:
-	//
-	// Working with Metal: Fundamentals, 21:28
-	// https://developer.apple.com/videos/play/wwdc2014/604/
-	//
-	// We may not need such an wait, if we are doing perfect timing.
-	// See: https://golang.design/research/ultimate-channel/
+	// We need a synchornization to understand if the current frame is
+	// completed. Similar to glFinish (instead of glFlush). A general
+	// discussion about CPU, GPU and display synchornization can be
+	// found here:
+	// - Working with Metal: Fundamentals, 21:28
+	// - https://developer.apple.com/videos/play/wwdc2014/604/
 	cb.AddCompletedHandler(func() {
 		f.done <- event{}
 		bce.Release()

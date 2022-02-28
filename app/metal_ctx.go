@@ -45,6 +45,17 @@ func newMtlContext(cfg *config, layer caMetalLayer) (*mtlContext, error) {
 	}, nil
 }
 
+func (m *mtlContext) Resize(w, h int) {
+	m.layer.SetDrawableSize(w, h)
+	m.texture.Release()
+	m.texture = m.device.MakeTexture(mtl.TextureDescriptor{
+		PixelFormat: mtl.PixelFormatBGRA8UNorm,
+		Width:       w,
+		Height:      h,
+		StorageMode: mtl.StorageModeManaged,
+	})
+}
+
 func (ctx *mtlContext) Release() {
 	ctx.texture.Release()
 	ctx.queue.Release()
