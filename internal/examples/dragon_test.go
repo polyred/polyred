@@ -35,7 +35,7 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(
-			texture.NewColorTexture(color.RGBA{0, 128, 255, 255}),
+			texture.NewUniformTexture(color.RGBA{0, 128, 255, 255}),
 		),
 		material.Kdiff(0.6), material.Kspec(1),
 		material.Shininess(100),

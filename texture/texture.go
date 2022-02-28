@@ -19,7 +19,8 @@ var defaultTexture = &image.RGBA{
 	Rect:   image.Rect(0, 0, 1, 1),
 }
 
-func NewColorTexture(c color.RGBA) *Texture {
+// NewUniformTexture returns a uniform colored texture.
+func NewUniformTexture(c color.RGBA) *Texture {
 	data := &image.RGBA{
 		Pix:    []uint8{c.R, c.G, c.B, c.A},
 		Stride: 4,

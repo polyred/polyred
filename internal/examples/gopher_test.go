@@ -35,7 +35,7 @@ func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 	m.RotateY(-math.Pi / 2)
 
 	mat := material.NewBlinnPhong(
-		material.Texture(texture.NewColorTexture(color.RGBA{0, 128, 255, 255})),
+		material.Texture(texture.NewUniformTexture(color.RGBA{0, 128, 255, 255})),
 		material.Kdiff(0.6), material.Kspec(1),
 		material.Shininess(150),
 		material.FlatShading(true),
