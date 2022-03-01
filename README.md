@@ -8,10 +8,6 @@ import "poly.red"
 
 _Caution: under experiment, expect to break at anytime._
 
-`polyred` is a 3D graphics facility written in Go that aims to offer
-state-of-the-art graphics research algorithms, especially geometry processing,
-rendering, animation, and etc. See a full features list [here](https://github.com/changkun/polyred/wiki/features).
-
 ## License
 
-Copyright &copy; 2020-2021 [Changkun Ou](https://changkun.de). All rights reserved.
+Copyright &copy; 2022 [Changkun Ou](https://changkun.de). All rights reserved.
