@@ -5,8 +5,6 @@
 package controls
 
 import (
-	"log"
-
 	"poly.red/app"
 	"poly.red/camera"
 	"poly.red/math"
@@ -188,7 +186,6 @@ func (oc *OrbitControl) Pan(deltaX, deltaY float32) {
 
 // OnMouse is called when an a MouseEvent is received.
 func (oc *OrbitControl) OnMouse(ev app.MouseEvent) (updated bool) {
-	log.Println(ev)
 	updated = true
 
 	// If nothing enabled ignore event
