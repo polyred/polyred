@@ -8,11 +8,14 @@ import "strings"
 
 const (
 	ModNone     = ModifierKey(0)
-	ModCapsLock = ModifierKey(1 << 16)
-	ModShift    = ModifierKey(1 << 17)
-	ModControl  = ModifierKey(1 << 18)
-	ModOption   = ModifierKey(1 << 19)
-	ModCommand  = ModifierKey(1 << 20)
+	ModShift    = ModifierKey(1 << 0)
+	ModCapsLock = ModifierKey(1 << 1)
+	ModControl  = ModifierKey(1 << 2)
+	Mod1        = ModifierKey(1 << 3)
+	Mod2        = ModifierKey(1 << 4)
+	Mod3        = ModifierKey(1 << 5)
+	Mod4        = ModifierKey(1 << 6)
+	Mod5        = ModifierKey(1 << 7)
 )
 
 func (mod ModifierKey) Contain(mod2 ModifierKey) bool {
@@ -31,14 +34,23 @@ func (mod ModifierKey) String() string {
 	if mod.Contain(ModControl) {
 		str = append(str, "ctrl")
 	}
-	if mod.Contain(ModCommand) {
-		str = append(str, "command")
-	}
 	if mod.Contain(ModShift) {
 		str = append(str, "shift")
 	}
-	if mod.Contain(ModOption) {
-		str = append(str, "option")
+	if mod.Contain(Mod1) {
+		str = append(str, "mod1")
+	}
+	if mod.Contain(Mod2) {
+		str = append(str, "mod2")
+	}
+	if mod.Contain(Mod3) {
+		str = append(str, "mod3")
+	}
+	if mod.Contain(Mod4) {
+		str = append(str, "mod4")
+	}
+	if mod.Contain(Mod5) {
+		str = append(str, "mod5")
 	}
 
 	ret := strings.Join(str, "+")

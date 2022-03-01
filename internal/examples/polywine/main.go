@@ -73,6 +73,8 @@ func (a *App) Size() (int, int) {
 }
 
 func (a *App) OnResize(w, h int) {
+	log.Printf("siz:(%vx%v)", w, h)
+
 	a.w = w
 	a.h = h
 	a.cam.SetAspect(float32(w), float32(h))
