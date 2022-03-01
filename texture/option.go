@@ -6,10 +6,10 @@ package texture
 
 import "image"
 
-type Opt func(t interface{})
+type Opt func(t any)
 
 func Image(data *image.RGBA) Opt {
-	return func(t interface{}) {
+	return func(t any) {
 		switch o := t.(type) {
 		case *Texture:
 			if data.Bounds().Dx() < 1 || data.Bounds().Dy() < 1 {
@@ -23,7 +23,7 @@ func Image(data *image.RGBA) Opt {
 }
 
 func Debug(enable bool) Opt {
-	return func(t interface{}) {
+	return func(t any) {
 		switch o := t.(type) {
 		case *Texture:
 			o.debug = enable
@@ -35,7 +35,7 @@ func Debug(enable bool) Opt {
 
 // IsoMipmap is a isotropic mipmap option
 func IsoMipmap(enable bool) Opt {
-	return func(t interface{}) {
+	return func(t any) {
 		switch o := t.(type) {
 		case *Texture:
 			o.useMipmap = enable

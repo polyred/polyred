@@ -18,11 +18,11 @@ import (
 	"poly.red/internal/sched"
 )
 
-type Opt func(t interface{})
+type Opt func(t any)
 
 // GammaCorrect is a gamma correction option
 func GammaCorrect(enable bool) Opt {
-	return func(t interface{}) {
+	return func(t any) {
 		switch o := t.(type) {
 		case *imageOption:
 			o.gammaCorrection = enable

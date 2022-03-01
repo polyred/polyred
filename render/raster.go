@@ -221,7 +221,7 @@ func (r *Renderer) passForward() {
 		}
 
 		mesh := o.(mesh.Mesh)
-		uniforms := map[string]interface{}{
+		uniforms := map[string]any{
 			"matModel":   mesh.ModelMatrix(),
 			"matView":    matView,
 			"matViewInv": matView.Inv(),
@@ -267,7 +267,7 @@ func (r *Renderer) passDeferred() {
 	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
 	matVPInv := matVP.Inv()
 	matScreenToWorld := matViewInv.MulM(matProjInv).MulM(matVPInv)
-	uniforms := map[string]interface{}{
+	uniforms := map[string]any{
 		"matView":          matView,
 		"matViewInv":       matViewInv,
 		"matProj":          matProj,
@@ -283,7 +283,7 @@ func (r *Renderer) passDeferred() {
 	})
 }
 
-func (r *Renderer) shade(info texture.Fragment, uniforms map[string]interface{}) color.RGBA {
+func (r *Renderer) shade(info texture.Fragment, uniforms map[string]any) color.RGBA {
 	if !info.Ok {
 		return r.background
 	}
@@ -341,7 +341,7 @@ func (r *Renderer) passAntialiasing() {
 }
 
 func (r *Renderer) draw(
-	uniforms map[string]interface{},
+	uniforms map[string]any,
 	tri *primitive.Triangle,
 	mat material.Material) {
 	var t1, t2, t3 primitive.Vertex
@@ -402,7 +402,7 @@ func (r *Renderer) draw(
 func (r *Renderer) drawClipped(
 	t1, t2, t3 *primitive.Vertex,
 	recipw math.Vec4,
-	uniforms map[string]interface{},
+	uniforms map[string]any,
 	mat material.Material) {
 
 	matViewInv := uniforms["matViewInv"].(math.Mat4)
@@ -509,7 +509,7 @@ func (r *Renderer) drawClipped(
 					Dv:    dv,
 					Nor:   n,
 					Col:   col,
-					AttrFlat: map[string]interface{}{
+					AttrFlat: map[string]any{
 						"Pos": pos,
 						"Mat": mat,
 						"fN":  fN,

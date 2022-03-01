@@ -43,7 +43,7 @@ func NewBlinnPhong(opts ...Opt) Material {
 	return t
 }
 
-func (m *BlinnPhongMaterial) VertexShader(v primitive.Vertex, uniforms map[string]interface{}) primitive.Vertex {
+func (m *BlinnPhongMaterial) VertexShader(v primitive.Vertex, uniforms map[string]any) primitive.Vertex {
 	matModel := uniforms["matModel"].(math.Mat4)
 	matView := uniforms["matView"].(math.Mat4)
 	matProj := uniforms["matProj"].(math.Mat4)

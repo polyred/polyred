@@ -335,7 +335,7 @@ func (r *Renderer) rasterize(buf *texture.Buffer, v1, v2, v3 *primitive.Vertex, 
 }
 
 // interpoVaryings perspective correct interpolates
-func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]interface{},
+func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[string]any,
 	recipw, bc [3]float32) {
 	l := len(frag)
 	for name := range v1 {

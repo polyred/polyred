@@ -193,7 +193,7 @@ func BenchmarkDraw(b *testing.B) {
 			return true
 		})
 
-		uniforms := map[string]interface{}{
+		uniforms := map[string]any{
 			"matModel":   modelMat,
 			"matView":    matView,
 			"matViewInv": matView.Inv(),

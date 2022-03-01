@@ -39,7 +39,7 @@ func (r *Renderer) shouldStop() bool {
 	return atomic.LoadUint32(&r.stop) == 1
 }
 
-func defaultVertexShader(v primitive.Vertex, uniforms map[string]interface{}) primitive.Vertex {
+func defaultVertexShader(v primitive.Vertex, uniforms map[string]any) primitive.Vertex {
 	matModel := uniforms["matModel"].(math.Mat4)
 	matView := uniforms["matView"].(math.Mat4)
 	matProj := uniforms["matProj"].(math.Mat4)

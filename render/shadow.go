@@ -138,7 +138,7 @@ func (r *Renderer) passShadows(index int) {
 		}
 
 		mesh := o.(mesh.Mesh)
-		uniforms := map[string]interface{}{
+		uniforms := map[string]any{
 			"matModel": mesh.ModelMatrix(),
 			"matView":  matView,
 			"matProj":  matProj,
@@ -169,7 +169,7 @@ func (r *Renderer) passShadows(index int) {
 	r.sched.Wait()
 }
 
-func (r *Renderer) drawDepth(index int, uniforms map[string]interface{}, tri *primitive.Triangle, mat material.Material) {
+func (r *Renderer) drawDepth(index int, uniforms map[string]any, tri *primitive.Triangle, mat material.Material) {
 	var t1, t2, t3 primitive.Vertex
 	if mat != nil {
 		t1 = mat.VertexShader(tri.V1, uniforms)
@@ -241,7 +241,7 @@ func (r *Renderer) shadowDepthTest(index int, x, y int, z float32) bool {
 }
 
 func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
-	info texture.Fragment, uniforms map[string]interface{},
+	info texture.Fragment, uniforms map[string]any,
 ) bool {
 	if !r.lightSources[shadowIdx].CastShadow() {
 		return true

@@ -432,7 +432,7 @@ type funcData struct {
 
 var (
 	funcQ    = make(chan funcData, runtime.GOMAXPROCS(0))
-	donePool = sync.Pool{New: func() interface{} { return make(chan event) }}
+	donePool = sync.Pool{New: func() any { return make(chan event) }}
 )
 
 func runOnMainAsync(f func()) {

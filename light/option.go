@@ -6,10 +6,10 @@ import (
 	"poly.red/math"
 )
 
-type Opt func(l interface{})
+type Opt func(l any)
 
 func Intensity(I float32) Opt {
-	return func(l interface{}) {
+	return func(l any) {
 		switch a := l.(type) {
 		case *Ambient:
 			a.intensity = I
@@ -24,7 +24,7 @@ func Intensity(I float32) Opt {
 }
 
 func Color(c color.RGBA) Opt {
-	return func(l interface{}) {
+	return func(l any) {
 		switch a := l.(type) {
 		case *Ambient:
 			a.color = c
@@ -39,7 +39,7 @@ func Color(c color.RGBA) Opt {
 }
 
 func Direction(dir math.Vec3) Opt {
-	return func(l interface{}) {
+	return func(l any) {
 		switch a := l.(type) {
 		case *Directional:
 			a.dir = dir
@@ -50,7 +50,7 @@ func Direction(dir math.Vec3) Opt {
 }
 
 func Position(pos math.Vec3) Opt {
-	return func(l interface{}) {
+	return func(l any) {
 		switch a := l.(type) {
 		case *Directional:
 			a.pos = pos
@@ -63,7 +63,7 @@ func Position(pos math.Vec3) Opt {
 }
 
 func CastShadow(enable bool) Opt {
-	return func(l interface{}) {
+	return func(l any) {
 		switch a := l.(type) {
 		case *Directional:
 			a.useShadowMap = enable

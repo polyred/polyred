@@ -66,7 +66,7 @@ func BenchmarkSched(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			l.RunWithArgs(func(x interface{}) {
+			l.RunWithArgs(func(x any) {
 				_ = x
 			}, 42)
 		}

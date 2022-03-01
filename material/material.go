@@ -20,7 +20,7 @@ type Material interface {
 	Texture() *texture.Texture
 	VertexShader(
 		v primitive.Vertex,
-		uniforms map[string]interface{},
+		uniforms map[string]any,
 	) primitive.Vertex
 	FragmentShader(col color.RGBA, x, n, fn, camera math.Vec4, ls []light.Source, es []light.Environment) color.RGBA
 }

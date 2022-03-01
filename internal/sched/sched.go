@@ -16,8 +16,8 @@ type Pool struct {
 
 type funcdata struct {
 	fn func()
-	fg func(interface{})
-	ar interface{}
+	fg func(any)
+	ar any
 }
 
 // Opt is a scheduler option.
@@ -83,7 +83,7 @@ func (p *Pool) Run(f ...func()) {
 	}
 }
 
-func (p *Pool) RunWithArgs(f func(args interface{}), args interface{}) {
+func (p *Pool) RunWithArgs(f func(args any), args any) {
 	ii := p.randomizer(0, p.numWorkers)
 	p.workers[ii] <- funcdata{fg: f, ar: args}
 }
