@@ -6,6 +6,7 @@ package main
 
 import (
 	"image"
+	"log"
 
 	"poly.red/app"
 	"poly.red/app/controls"
@@ -96,6 +97,7 @@ func (a *App) Draw() (*image.RGBA, bool) {
 }
 
 func (a *App) OnMouse(mo app.MouseEvent) {
+	log.Println(mo)
 	if !a.ctrl.OnMouse(mo) {
 		return
 	}
@@ -103,11 +105,15 @@ func (a *App) OnMouse(mo app.MouseEvent) {
 	a.cache = nil
 }
 
+func (a *App) OnKey(key app.KeyEvent) {
+	log.Println(key)
+}
+
 func main() {
 	app.Run(newApp(),
 		app.Title("polywine today"),
 		app.MinSize(80, 60),
 		app.MaxSize(1920*2, 1080*2),
-		app.FPS(true),
+		app.FPS(false),
 	)
 }
