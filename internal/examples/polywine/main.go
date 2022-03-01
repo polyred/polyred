@@ -7,6 +7,7 @@ package main
 import (
 	"image"
 	"log"
+	"runtime"
 
 	"poly.red/app"
 	"poly.red/app/controls"
@@ -46,8 +47,10 @@ func newApp() *App {
 		render.Size(w, h),
 		render.Camera(cam),
 		render.Workers(2),
-		render.PixelFormat(texture.PixelFormatBGRA),
 	)
+	if runtime.GOOS != "darwin" {
+		r.Options(render.PixelFormat(texture.PixelFormatRGBA))
+	}
 
 	m, ok := model.StanfordBunny().(*mesh.TriangleSoup)
 	if !ok {

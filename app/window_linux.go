@@ -2,8 +2,6 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-//go:build linux && !android
-
 package app
 
 /*
@@ -17,9 +15,13 @@ import "C"
 import (
 	"time"
 	"unsafe"
+
+	"poly.red/app/internal/gl"
 )
 
 type osWindow struct {
+	config  *config
+	ctx     *x11Context
 	display *C.Display
 	oswin   C.Window
 	atoms   struct {
@@ -43,6 +45,7 @@ func (w *window) atom(name string, onlyIfExists bool) C.Atom {
 }
 func (w *window) run(app Window, cfg config, opts ...Opt) {
 	w.win = &osWindow{
+		config:    &cfg,
 		closed:    make(chan struct{}, 2),
 		terminate: make(chan struct{}, 2),
 	}
@@ -62,7 +65,7 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 	}
 	w.win.oswin = C.XCreateWindow(w.win.display,
 		C.XDefaultRootWindow(w.win.display),
-		0, 0, C.uint(cfg.size.X), C.uint(cfg.size.Y),
+		0, 0, C.uint(w.win.config.size.X), C.uint(w.win.config.size.Y),
 		0, C.CopyFromParent, C.InputOutput, nil,
 		C.CWEventMask|C.CWBackPixmap|C.CWOverrideRedirect, &swa)
 
@@ -74,7 +77,7 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 	// extensions
 	C.XSetWMProtocols(w.win.display, w.win.oswin, &w.win.atoms.evDelWindow, 1)
 
-	ctitle := C.CString(cfg.title)
+	ctitle := C.CString(w.win.config.title)
 	defer C.free(unsafe.Pointer(ctitle))
 	C.XStoreName(w.win.display, w.win.oswin, ctitle)
 	C.XSetTextProperty(w.win.display, w.win.oswin,
@@ -82,11 +85,18 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 			value:    (*C.uchar)(unsafe.Pointer(ctitle)),
 			encoding: w.win.atoms.utf8string,
 			format:   8,
-			nitems:   C.ulong(len(cfg.title)),
+			nitems:   C.ulong(len(w.win.config.title)),
 		}, w.win.atoms.wmName)
 
 	C.XMapWindow(w.win.display, w.win.oswin)
 	C.XClearWindow(w.win.display, w.win.oswin)
+
+	// EGL context must be created after the window is created.
+	var err error
+	w.win.ctx, err = newX11EGLContext(w.win)
+	if err != nil {
+		panic("egl: cannot create EGL context for x11")
+	}
 
 	go w.event(app)
 	go w.draw(app)
@@ -117,35 +127,79 @@ func (w *window) event(app Window) {
 }
 
 func (w *window) draw(app Window) {
+	w.win.ctx.Lock()
+	defer w.win.ctx.Unlock()
+
+	// FIXME: not sure why this is not working.
+	gl.DrawBuffer(gl.FRONT)
+	gl.PixelZoom(1, -1)
+	gl.ClearColor(1, 0.5, 1, 1)
+
+	// Managing 3 drawable frames:
+	// frames contain their own done indicator, make sure
+	// that each frame is indeed drawed from the GPU level.
+	frames := [3]frame{
+		{done: make(chan event, 1)},
+		{done: make(chan event, 1)},
+		{done: make(chan event, 1)},
+	}
+	for i := 0; i < len(frames); i++ {
+		frames[i].done <- event{}
+	}
+	frameIdx := 0
+
+	last := time.Now()
 	tPerFrame := time.Second / 240 // 120 fps
 	tk := time.NewTicker(tPerFrame)
 	for {
 		select {
 		case siz := <-w.resize:
+			// FIXME: notify configs
 			// w.win.ctx.Resize(siz.w, siz.h)
-			// w.win.config.size.X = siz.w
-			// w.win.config.size.Y = siz.h
+			w.win.config.size.X = siz.w
+			w.win.config.size.Y = siz.h
 			if a, ok := app.(ResizeHandler); ok {
 				a.OnResize(siz.w, siz.h)
 				continue
 			}
 		case <-tk.C:
-			_, ok := app.(DrawHandler)
+			appdraw, ok := app.(DrawHandler)
 			if !ok {
 				continue
 			}
 
-			// TODO: drawing.
-			// img, reDraw := appdraw.Draw()
-			// if !reDraw {
-			// 	continue
-			// }
+			img, reDraw := appdraw.Draw()
+			if !reDraw {
+				continue
+			}
 
+			c := time.Now()
+			t := c.Sub(last)
+			last = c
+			if t < tPerFrame {
+				continue
+			}
+
+			f := frames[frameIdx]
+			f.img = img
+			w.flush(f)
+			frameIdx = (frameIdx + 1) % 3
 		case <-w.win.closed:
 			w.win.terminate <- event{}
 			return
 		}
 	}
+}
+
+// flush flushes the containing pixel buffer of the given image to the
+// hardware frame buffer for display prupose. The given image is assumed
+// to be non-nil pointer.
+func (w *window) flush(f frame) {
+	dx, dy := int32(f.img.Bounds().Dx()), int32(f.img.Bounds().Dy())
+	gl.RasterPos2d(-1, 1)
+	gl.Viewport(0, 0, dx, dy)
+	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, f.img.Pix)
+	gl.Finish()
 }
 
 func (w *window) main(app Window) {
@@ -216,7 +270,6 @@ func (w *window) main(app Window) {
 				Xpos:   float32(mevt.x),
 				Ypos:   float32(mevt.y),
 			}
-			// FIXME: cannot receive motion notify when mouse is outside the window?
 			w.mouse <- mev
 		case C.ConfigureNotify:
 			cevt := (*C.XConfigureEvent)(unsafe.Pointer(&ev))

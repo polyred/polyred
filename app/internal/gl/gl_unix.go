@@ -52,6 +52,10 @@ func DrawPixels(width, height int32, format, xtype Enum, data []byte) {
 	C.glDrawPixels(C.GLsizei(width), C.GLsizei(height), C.GLenum(format), C.GLenum(xtype), p)
 }
 
+func ClearColor(red, green, blue, alpha float32) {
+	C.glClearColor(C.GLfloat(red), C.GLfloat(green), C.GLfloat(blue), C.GLfloat(alpha))
+}
+
 func Finish() {
 	C.glFinish()
 }
