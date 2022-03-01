@@ -142,9 +142,13 @@ func polyred_onMouse(view C.CFTypeRef, act C.int, btn C.NSUInteger, x, y, dx, dy
 }
 
 //export polyred_onKeys
-func polyred_onKeys(view C.CFTypeRef, cstr *C.char, ti C.double, mods C.NSUInteger, keyDown C.bool) {
+func polyred_onKeys(view C.CFTypeRef, code uint32, cstr *C.char, ti C.double, mods C.NSUInteger, keyDown C.bool) {
 	w := windows[view]
-	w.keyboard <- KeyEvent{key: C.GoString(cstr)}
+	w.keyboard <- KeyEvent{
+		Keycode: Key{code: code, char: C.GoString(cstr)},
+		Mods:    ModifierKey(mods),
+		Pressed: bool(keyDown),
+	}
 }
 
 //export polyred_onText

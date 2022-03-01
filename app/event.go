@@ -16,21 +16,34 @@ const (
 )
 
 // Key corresponds to a keyboard key.
-type Key int
+type Key struct {
+	code uint32
+	char string
+}
+
+func (key Key) String() string {
+	return key.char
+}
 
 // KeyEvent describes a key event over the window
 type KeyEvent struct {
-	key string
+	Keycode Key
+	Mods    ModifierKey
+	Pressed bool
+}
+
+func (kev KeyEvent) String() string {
+	return fmt.Sprintf(
+		"code:%v(%s);mods:%d(%s);down(%v)",
+		kev.Keycode.code, kev.Keycode.char,
+		kev.Mods, kev.Mods,
+		kev.Pressed,
+	)
 }
 
 // ModifierKey corresponds to a set of modifier keys (bitmask).
+// The provided modifiers are platform dependent.
 type ModifierKey int
-
-const (
-	ModShift = ModifierKey(1 << iota) // Bitmask
-	ModControl
-	ModAlt
-)
 
 // MouseEvent describes a mouse event over the window
 type MouseEvent struct {
@@ -45,7 +58,7 @@ type MouseEvent struct {
 
 func (mev MouseEvent) String() string {
 	return fmt.Sprintf(
-		"act:%v;btn:%v;mods:%v;pos(%v,%v);offset(%v,%v)",
+		"act:%v;btn:%v;mods:%s;pos(%v,%v);offset(%v,%v)",
 		mev.Action,
 		mev.Button,
 		mev.Mods,

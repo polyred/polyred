@@ -150,9 +150,9 @@ static void handleMouse(NSView *view, NSEvent *event, int typ, CGFloat dx, CGFlo
 	}
 	// Origin is in the lower left corner. Convert to upper left.
 	CGFloat height = view.bounds.size.height;
-	polyred_onMouse((__bridge CFTypeRef)view, typ, 
+	polyred_onMouse((__bridge CFTypeRef)view, typ,
 		[NSEvent pressedMouseButtons], p.x, height - p.y, dx, dy,
-		[event timestamp], [event modifierFlags]);
+		[event timestamp], [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask);
 }
 
 @interface PolyredView : NSView <CALayerDelegate>
@@ -206,14 +206,16 @@ static void handleMouse(NSView *view, NSEvent *event, int typ, CGFloat dx, CGFlo
 }
 - (void)keyDown:(NSEvent *)event {
 	NSString *keys = [event charactersIgnoringModifiers];
-	polyred_onKeys((__bridge CFTypeRef)self, (char *)[keys UTF8String], 
-		[event timestamp], [event modifierFlags], true);
+	unsigned short keycode = [event keyCode];
+	polyred_onKeys((__bridge CFTypeRef)self, keycode, (char *)[keys UTF8String],
+		[event timestamp], [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask, true);
 	[self interpretKeyEvents:[NSArray arrayWithObject:event]];
 }
 - (void)keyUp:(NSEvent *)event {
 	NSString *keys = [event charactersIgnoringModifiers];
-	polyred_onKeys((__bridge CFTypeRef)self, (char *)[keys UTF8String],
-		[event timestamp], [event modifierFlags], false);
+	unsigned short keycode = [event keyCode];
+	polyred_onKeys((__bridge CFTypeRef)self, keycode, (char *)[keys UTF8String],
+		[event timestamp], [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask, false);
 }
 - (void)insertText:(id)string {
 	const char *utf8 = [string UTF8String];
