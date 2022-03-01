@@ -34,7 +34,7 @@ type KeyEvent struct {
 
 func (kev KeyEvent) String() string {
 	return fmt.Sprintf(
-		"code:%v(%s);mods:%d(%s);down(%v)",
+		"code:%v(%s);mods:%d(%v);down(%v)",
 		kev.Keycode.code, kev.Keycode.char,
 		kev.Mods, kev.Mods,
 		kev.Pressed,
@@ -58,10 +58,10 @@ type MouseEvent struct {
 
 func (mev MouseEvent) String() string {
 	return fmt.Sprintf(
-		"act:%v;btn:%v;mods:%s;pos(%v,%v);offset(%v,%v)",
+		"act:%v;btn:%v;mods:%d(%v);pos(%v,%v);offset(%v,%v)",
 		mev.Action,
 		mev.Button,
-		mev.Mods,
+		mev.Mods, mev.Mods,
 		mev.Xpos, mev.Ypos,
 		mev.Xoffset, mev.Yoffset,
 	)
