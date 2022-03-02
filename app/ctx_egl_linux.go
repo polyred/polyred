@@ -8,11 +8,13 @@ package app
 
 import (
 	"poly.red/app/internal/egl"
+	"poly.red/app/internal/gles"
 )
 
 type x11Context struct {
 	win *osWindow
 	ctx *egl.Context
+	gl  *gles.Functions
 }
 
 func newX11EGLContext(w *osWindow) (*x11Context, error) {
@@ -20,7 +22,11 @@ func newX11EGLContext(w *osWindow) (*x11Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &x11Context{win: w, ctx: ctx}, nil
+	f, err := gles.NewFunctions()
+	if err != nil {
+		panic(err)
+	}
+	return &x11Context{win: w, ctx: ctx, gl: f}, nil
 }
 
 func (c *x11Context) Release() {

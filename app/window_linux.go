@@ -15,11 +15,12 @@ import "C"
 import (
 	"fmt"
 	"math/rand"
+	"reflect"
 	"runtime"
 	"time"
 	"unsafe"
 
-	"poly.red/app/internal/gl"
+	"poly.red/app/internal/gles"
 )
 
 type osWindow struct {
@@ -137,11 +138,52 @@ func (w *window) event(app Window) {
 	}
 }
 
+const vert = `#version 300 es
+precision mediump float;
+
+uniform vec3 inPos;
+uniform vec2 inUV;
+out vec2 vUV;
+
+void main() {
+    vUV = inUV;
+    gl_Position = vec4(inPos, 1.0);
+}`
+
+const frag = `#version 300 es
+precision mediump float;
+
+uniform sampler2D u_texture;
+in vec2 vUV;
+
+void main() {
+    gl_FragColor = texture2D(u_texture, vUV);
+}`
+
+func slice2byte(s interface{}) []byte {
+	v := reflect.ValueOf(s)
+	first := v.Index(0)
+	sz := int(first.Type().Size())
+	var res []byte
+	h := (*reflect.SliceHeader)(unsafe.Pointer(&res))
+	h.Data = first.UnsafeAddr()
+	h.Cap = v.Cap() * sz
+	h.Len = v.Len() * sz
+	return res
+}
+
 func (w *window) draw(app Window) {
 	// Make sure the drawing calls are always on the same thread.
 	runtime.LockOSThread()
 	w.win.ctx.Lock()
 	defer w.win.ctx.Unlock()
+
+	// TODO: draw image on texture using shader.
+	_, err := gles.CreateProgram(w.win.ctx.gl, vert, frag, nil)
+	if err != nil {
+		panic(err)
+	}
+
 	tk := time.NewTicker(time.Second / 240) // 120 fps
 	for {
 		select {
@@ -162,8 +204,7 @@ func (w *window) draw(app Window) {
 			}
 			img, redraw := appdraw.Draw()
 			if redraw {
-				// TODO: make it not need for redraw.
-				// continue
+				continue
 			}
 			w.flush(frame{img: img})
 		case <-w.win.closed:
@@ -182,8 +223,10 @@ func (w *window) draw(app Window) {
 // hardware frame buffer for display prupose. The given image is assumed
 // to be non-nil pointer.
 func (w *window) flush(f frame) {
-	gl.Clear(gl.GL_COLOR_BUFFER_BIT)
-	gl.ClearColor(rand.Float32(), rand.Float32(), rand.Float32(), 1)
+	w.win.ctx.gl.Clear(gles.COLOR_BUFFER_BIT)
+	w.win.ctx.gl.ClearColor(rand.Float32(), rand.Float32(), rand.Float32(), 1)
+
+	// dx, dy := float32(f.img.Bounds().Dx()), float32(f.img.Bounds().Dy())
 }
 
 func (w *window) main(app Window) {

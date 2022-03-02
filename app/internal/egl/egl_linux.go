@@ -1,8 +1,7 @@
 // Copyright 2022 Changkun Ou <changkun.de>. All rights reserved.
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
-//
-// Modified from https://github.com/gioui/gio/blob/cdb288d1f98a50b377cc6e916edabb297977670d/internal/egl/egl_unix.go
+// Modified from https://github.com/gioui/gio
 
 //go:build linux
 // +build linux
@@ -11,11 +10,6 @@ package egl
 
 /*
 #cgo linux,!android  pkg-config: egl
-#cgo freebsd openbsd android LDFLAGS: -lEGL
-#cgo freebsd CFLAGS: -I/usr/local/include
-#cgo freebsd LDFLAGS: -L/usr/local/lib
-#cgo openbsd CFLAGS: -I/usr/X11R6/include
-#cgo openbsd LDFLAGS: -L/usr/X11R6/lib
 #cgo CFLAGS: -DEGL_NO_X11
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
