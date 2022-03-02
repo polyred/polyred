@@ -13,7 +13,10 @@ package app
 */
 import "C"
 import (
+	"encoding/binary"
 	"fmt"
+	"log"
+	"math"
 	"math/rand"
 	"reflect"
 	"runtime"
@@ -138,51 +141,103 @@ func (w *window) event(app Window) {
 	}
 }
 
-const vert = `#version 300 es
-precision mediump float;
-
-uniform vec3 inPos;
-uniform vec2 inUV;
-out vec2 vUV;
-
+const vertexShader = `#version 100
+uniform vec2 offset;
+attribute vec4 position;
 void main() {
-    vUV = inUV;
-    gl_Position = vec4(inPos, 1.0);
+	// offset comes in with x/y values between 0 and 1.
+	// position bounds are -1 to 1.
+	vec4 offset4 = vec4(2.0*offset.x-1.0, 1.0-2.0*offset.y, 0, 0);
+	gl_Position = position + offset4;
 }`
 
-const frag = `#version 300 es
+const fragmentShader = `#version 100
 precision mediump float;
-
-uniform sampler2D u_texture;
-in vec2 vUV;
-
+uniform vec4 color;
 void main() {
-    gl_FragColor = texture2D(u_texture, vUV);
+	gl_FragColor = color;
 }`
 
-func slice2byte(s interface{}) []byte {
+var triangleData = f32Bytes(binary.LittleEndian,
+	0.0, 0.4, 0.0, // top left
+	0.0, 0.0, 0.0, // bottom left
+	0.4, 0.0, 0.0, // bottom right
+)
+
+func f32Bytes(byteOrder binary.ByteOrder, values ...float32) []byte {
+	le := false
+	switch byteOrder {
+	case binary.BigEndian:
+	case binary.LittleEndian:
+		le = true
+	default:
+		panic(fmt.Sprintf("invalid byte order %v", byteOrder))
+	}
+
+	b := make([]byte, 4*len(values))
+	for i, v := range values {
+		u := math.Float32bits(v)
+		if le {
+			b[4*i+0] = byte(u >> 0)
+			b[4*i+1] = byte(u >> 8)
+			b[4*i+2] = byte(u >> 16)
+			b[4*i+3] = byte(u >> 24)
+		} else {
+			b[4*i+0] = byte(u >> 24)
+			b[4*i+1] = byte(u >> 16)
+			b[4*i+2] = byte(u >> 8)
+			b[4*i+3] = byte(u >> 0)
+		}
+	}
+	return b
+}
+
+const (
+	coordsPerVertex = 3
+	vertexCount     = 3
+)
+
+var (
+	program  gles.Program
+	position gles.Attrib
+	offset   gles.Uniform
+	col      gles.Uniform
+	buf      gles.Buffer
+
+	green  float32
+	touchX float32
+	touchY float32
+)
+
+func slice2bytes(s interface{}) []byte {
 	v := reflect.ValueOf(s)
 	first := v.Index(0)
 	sz := int(first.Type().Size())
-	var res []byte
-	h := (*reflect.SliceHeader)(unsafe.Pointer(&res))
-	h.Data = first.UnsafeAddr()
-	h.Cap = v.Cap() * sz
-	h.Len = v.Len() * sz
-	return res
+	res := unsafe.Slice((*byte)(unsafe.Pointer(v.Pointer())), sz*v.Cap())
+	return res[:sz*v.Len()]
 }
-
 func (w *window) draw(app Window) {
 	// Make sure the drawing calls are always on the same thread.
 	runtime.LockOSThread()
 	w.win.ctx.Lock()
 	defer w.win.ctx.Unlock()
 
-	// TODO: draw image on texture using shader.
-	_, err := gles.CreateProgram(w.win.ctx.gl, vert, frag, nil)
+	var err error
+	program, err = gles.CreateProgram(w.win.ctx.gl, vertexShader, fragmentShader, []string{
+		"position", "color", "offset",
+	})
 	if err != nil {
-		panic(err)
+		log.Printf("error creating GL program: %v", err)
+		return
 	}
+
+	buf = w.win.ctx.gl.CreateBuffer()
+	w.win.ctx.gl.BindBuffer(gles.ARRAY_BUFFER, buf)
+	w.win.ctx.gl.BufferData(gles.ARRAY_BUFFER, len(triangleData), gles.STATIC_DRAW, slice2bytes(triangleData))
+
+	position = w.win.ctx.gl.GetAttribLocation(program, "position")
+	col = w.win.ctx.gl.GetUniformLocation(program, "color")
+	offset = w.win.ctx.gl.GetUniformLocation(program, "offset")
 
 	tk := time.NewTicker(time.Second / 240) // 120 fps
 	for {
@@ -211,6 +266,23 @@ func (w *window) draw(app Window) {
 			w.win.terminate <- event{}
 			return
 		}
+
+		w.win.ctx.gl.ClearColor(1, 0, 0, 1)
+		w.win.ctx.gl.Clear(gles.COLOR_BUFFER_BIT)
+
+		w.win.ctx.gl.UseProgram(program)
+
+		green += 0.01
+		if green > 1 {
+			green = 0
+		}
+		w.win.ctx.gl.Uniform4f(col, 0, green, 0, 1)
+		w.win.ctx.gl.Uniform2f(offset, rand.Float32(), rand.Float32())
+		w.win.ctx.gl.BindBuffer(gles.ARRAY_BUFFER, buf)
+		w.win.ctx.gl.EnableVertexAttribArray(position)
+		w.win.ctx.gl.VertexAttribPointer(position, coordsPerVertex, gles.FLOAT, false, 0, 0)
+		w.win.ctx.gl.DrawArrays(gles.TRIANGLES, 0, vertexCount)
+		w.win.ctx.gl.DisableVertexAttribArray(position)
 
 		if err := w.win.ctx.Present(); err != nil {
 			w.win.terminate <- event{}
