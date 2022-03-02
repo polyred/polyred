@@ -90,6 +90,7 @@ typedef struct {
 	void (*glGetShaderInfoLog)(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
 	const GLubyte *(*glGetString)(GLenum name);
 	GLint (*glGetUniformLocation)(GLuint program, const GLchar *name);
+	GLint (*glGetAttribLocation)(GLuint program, const GLchar *name);
 	void (*glGetVertexAttribiv)(GLuint index, GLenum pname, GLint *params);
 	void (*glGetVertexAttribPointerv)(GLuint index, GLenum pname, void **params);
 	GLboolean (*glIsEnabled)(GLenum cap);
@@ -349,6 +350,10 @@ static const GLubyte *glGetString(glFunctions *f, GLenum name) {
 
 static GLint glGetUniformLocation(glFunctions *f, GLuint program, const GLchar *name) {
 	return f->glGetUniformLocation(program, name);
+}
+
+static GLint glGetAttribLocation(glFunctions *f, GLuint program, const GLchar *name) {
+	return f->glGetAttribLocation(program, name);
 }
 
 static void glGetVertexAttribiv(glFunctions *f, GLuint index, GLenum pname, GLint *data) {
@@ -644,6 +649,7 @@ func (f *Functions) load() error {
 	f.f.glGetShaderInfoLog = must("glGetShaderInfoLog")
 	f.f.glGetString = must("glGetString")
 	f.f.glGetUniformLocation = must("glGetUniformLocation")
+	f.f.glGetAttribLocation = must("glGetAttribLocation")
 	f.f.glGetVertexAttribiv = must("glGetVertexAttribiv")
 	f.f.glGetVertexAttribPointerv = must("glGetVertexAttribPointerv")
 	f.f.glIsEnabled = must("glIsEnabled")
@@ -1086,6 +1092,12 @@ func (f *Functions) GetUniformLocation(p Program, name string) Uniform {
 	cname := C.CString(name)
 	defer C.free(unsafe.Pointer(cname))
 	return Uniform{int(C.glGetUniformLocation(&f.f, C.GLuint(p.V), cname))}
+}
+
+func (f *Functions) GetAttribLocation(p Program, name string) Attrib {
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	return Attrib(C.glGetAttribLocation(&f.f, C.GLuint(p.V), cname))
 }
 
 func (f *Functions) GetVertexAttrib(index int, pname Enum) int {
