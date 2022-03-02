@@ -6,8 +6,6 @@
 
 package gl
 
-import "unsafe"
-
 /*
 #cgo CFLAGS: -Werror
 
@@ -27,6 +25,7 @@ import "unsafe"
 #endif
 */
 import "C"
+import "unsafe"
 
 func DrawBuffer(buf Enum) {
 	C.glDrawBuffer(C.GLenum(buf))
@@ -50,6 +49,10 @@ func DrawPixels(width, height int32, format, xtype Enum, data []byte) {
 		p = unsafe.Pointer(&data[0])
 	}
 	C.glDrawPixels(C.GLsizei(width), C.GLsizei(height), C.GLenum(format), C.GLenum(xtype), p)
+}
+
+func Clear(mask Enum) {
+	C.glClear(C.GLbitfield(mask))
 }
 
 func ClearColor(red, green, blue, alpha float32) {

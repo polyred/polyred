@@ -12,7 +12,7 @@ import (
 
 type x11Context struct {
 	win *osWindow
-	*egl.Context
+	ctx *egl.Context
 }
 
 func newX11EGLContext(w *osWindow) (*x11Context, error) {
@@ -20,34 +20,38 @@ func newX11EGLContext(w *osWindow) (*x11Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &x11Context{win: w, Context: ctx}, nil
+	return &x11Context{win: w, ctx: ctx}, nil
 }
 
 func (c *x11Context) Release() {
-	if c.Context != nil {
-		c.Context.Release()
-		c.Context = nil
+	if c.ctx != nil {
+		c.ctx.Release()
+		c.ctx = nil
 	}
 }
 
 func (c *x11Context) Refresh() error {
-	c.Context.ReleaseSurface()
+	c.ctx.ReleaseSurface()
 	eglSurf := egl.NativeWindowType(uintptr(c.win.oswin))
-	if err := c.Context.CreateSurface(eglSurf, c.win.config.size.X, c.win.config.size.Y); err != nil {
+	if err := c.ctx.CreateSurface(eglSurf, c.win.config.size.X, c.win.config.size.Y); err != nil {
 		return err
 	}
-	if err := c.Context.MakeCurrent(); err != nil {
+	if err := c.ctx.MakeCurrent(); err != nil {
 		return err
 	}
-	c.Context.EnableVSync(true)
-	c.Context.ReleaseCurrent()
+	c.ctx.EnableVSync(true)
+	c.ctx.ReleaseCurrent()
 	return nil
 }
 
 func (c *x11Context) Lock() error {
-	return c.Context.MakeCurrent()
+	return c.ctx.MakeCurrent()
 }
 
 func (c *x11Context) Unlock() {
-	c.Context.ReleaseCurrent()
+	c.ctx.ReleaseCurrent()
+}
+
+func (c *x11Context) Present() error {
+	return c.ctx.Present()
 }

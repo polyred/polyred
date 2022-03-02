@@ -87,7 +87,7 @@ func (a *App) OnResize(w, h int) {
 
 func (a *App) Draw() (*image.RGBA, bool) {
 	if a.cache != nil {
-		return nil, false
+		return a.cache, false
 	}
 
 	a.prog.ModelMatrix = a.m.ModelMatrix()

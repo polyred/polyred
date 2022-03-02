@@ -56,6 +56,8 @@ const (
 	_EGL_RENDERABLE_TYPE        = 0x3040
 	_EGL_SURFACE_TYPE           = 0x3033
 	_EGL_WINDOW_BIT             = 0x4
+	_EGL_SINGLE_BUFFER          = 0x3085
+	_EGL_RENDER_BUFFER          = 0x3086
 )
 
 func (c *Context) Release() {
@@ -129,9 +131,6 @@ func (c *Context) ReleaseCurrent() {
 }
 
 func (c *Context) MakeCurrent() error {
-	// OpenGL contexts are implicit and thread-local. Lock the OS thread.
-	runtime.LockOSThread()
-
 	if c.eglSurf == nilEGLSurface && !c.eglCtx.surfaceless {
 		return errors.New("no surface created yet EGL_KHR_surfaceless_context is not supported")
 	}

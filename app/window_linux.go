@@ -13,6 +13,9 @@ package app
 */
 import "C"
 import (
+	"fmt"
+	"math/rand"
+	"runtime"
 	"time"
 	"unsafe"
 
@@ -44,6 +47,9 @@ func (w *window) atom(name string, onlyIfExists bool) C.Atom {
 	return C.XInternAtom(w.win.display, cname, flag)
 }
 func (w *window) run(app Window, cfg config, opts ...Opt) {
+	// Make sure all X11 and EGL APIs are called from the same thread.
+	runtime.LockOSThread()
+
 	w.win = &osWindow{
 		config:    &cfg,
 		closed:    make(chan struct{}, 2),
@@ -88,6 +94,7 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 			nitems:   C.ulong(len(w.win.config.title)),
 		}, w.win.atoms.wmName)
 
+	// Let the window to appear.
 	C.XMapWindow(w.win.display, w.win.oswin)
 	C.XClearWindow(w.win.display, w.win.oswin)
 
@@ -95,7 +102,11 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 	var err error
 	w.win.ctx, err = newX11EGLContext(w.win)
 	if err != nil {
-		panic("egl: cannot create EGL context for x11")
+		panic(fmt.Sprintf("egl: cannot create EGL context for x11: %v", err))
+	}
+	err = w.win.ctx.Refresh()
+	if err != nil {
+		panic(fmt.Sprintf("egl: cannot create EGL surface: %v", err))
 	}
 
 	go w.event(app)
@@ -127,64 +138,40 @@ func (w *window) event(app Window) {
 }
 
 func (w *window) draw(app Window) {
+	// Make sure the drawing calls are always on the same thread.
+	runtime.LockOSThread()
 	w.win.ctx.Lock()
 	defer w.win.ctx.Unlock()
-
-	// FIXME: not sure why this is not working.
-	gl.DrawBuffer(gl.FRONT)
-	gl.PixelZoom(1, -1)
-	gl.ClearColor(1, 0.5, 1, 1)
-
-	// Managing 3 drawable frames:
-	// frames contain their own done indicator, make sure
-	// that each frame is indeed drawed from the GPU level.
-	frames := [3]frame{
-		{done: make(chan event, 1)},
-		{done: make(chan event, 1)},
-		{done: make(chan event, 1)},
-	}
-	for i := 0; i < len(frames); i++ {
-		frames[i].done <- event{}
-	}
-	frameIdx := 0
-
-	last := time.Now()
-	tPerFrame := time.Second / 240 // 120 fps
-	tk := time.NewTicker(tPerFrame)
+	tk := time.NewTicker(time.Second / 240) // 120 fps
 	for {
 		select {
 		case siz := <-w.resize:
-			// FIXME: notify configs
-			// w.win.ctx.Resize(siz.w, siz.h)
-			w.win.config.size.X = siz.w
-			w.win.config.size.Y = siz.h
-			if a, ok := app.(ResizeHandler); ok {
+			if siz.w != w.win.config.size.X && siz.h != w.win.config.size.Y {
+				w.win.config.size.X = siz.w
+				w.win.config.size.Y = siz.h
+				a, ok := app.(ResizeHandler)
+				if !ok {
+					continue
+				}
 				a.OnResize(siz.w, siz.h)
-				continue
 			}
 		case <-tk.C:
 			appdraw, ok := app.(DrawHandler)
 			if !ok {
 				continue
 			}
-
-			img, reDraw := appdraw.Draw()
-			if !reDraw {
-				continue
+			img, redraw := appdraw.Draw()
+			if redraw {
+				// TODO: make it not need for redraw.
+				// continue
 			}
-
-			c := time.Now()
-			t := c.Sub(last)
-			last = c
-			if t < tPerFrame {
-				continue
-			}
-
-			f := frames[frameIdx]
-			f.img = img
-			w.flush(f)
-			frameIdx = (frameIdx + 1) % 3
+			w.flush(frame{img: img})
 		case <-w.win.closed:
+			w.win.terminate <- event{}
+			return
+		}
+
+		if err := w.win.ctx.Present(); err != nil {
 			w.win.terminate <- event{}
 			return
 		}
@@ -195,20 +182,22 @@ func (w *window) draw(app Window) {
 // hardware frame buffer for display prupose. The given image is assumed
 // to be non-nil pointer.
 func (w *window) flush(f frame) {
-	dx, dy := int32(f.img.Bounds().Dx()), int32(f.img.Bounds().Dy())
-	gl.RasterPos2d(-1, 1)
-	gl.Viewport(0, 0, dx, dy)
-	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, f.img.Pix)
-	gl.Finish()
+	gl.Clear(gl.GL_COLOR_BUFFER_BIT)
+	gl.ClearColor(rand.Float32(), rand.Float32(), rand.Float32(), 1)
 }
 
 func (w *window) main(app Window) {
 	<-w.ready
+	runtime.LockOSThread()
 
 	closed := false
 	ev := C.XEvent{}
 	for !closed {
 		C.XNextEvent(w.win.display, &ev)
+		if C.XFilterEvent(&ev, C.None) == C.True {
+			continue
+		}
+
 		switch _type := (*C.XAnyEvent)(unsafe.Pointer(&ev))._type; _type {
 		case C.KeyPress, C.KeyRelease:
 			ke := KeyEvent{}
@@ -271,11 +260,14 @@ func (w *window) main(app Window) {
 				Ypos:   float32(mevt.y),
 			}
 			w.mouse <- mev
-		case C.ConfigureNotify:
+		case C.ConfigureNotify: // window configuration change
 			cevt := (*C.XConfigureEvent)(unsafe.Pointer(&ev))
-			w.resize <- resizeEvent{
-				int(cevt.width),
-				int(cevt.height),
+			siz := resizeEvent{int(cevt.width), int(cevt.height)}
+			w.resize <- siz
+		case C.Expose: // update
+			// redraw only on the last expose event
+			if (*C.XExposeEvent)(unsafe.Pointer(&ev)).count == 0 {
+				// TODO: redraw?
 			}
 		case C.ClientMessage: // extensions
 			cevt := (*C.XClientMessageEvent)(unsafe.Pointer(&ev))
@@ -293,6 +285,7 @@ func (w *window) main(app Window) {
 	<-w.win.terminate
 
 	// Close the window gracefully.
+	w.win.ctx.Release()
 	C.XDestroyWindow(w.win.display, w.win.oswin)
 	C.XCloseDisplay(w.win.display)
 }
