@@ -15,12 +15,14 @@ import "C"
 import (
 	"fmt"
 	"image"
+	"math/rand"
 	"reflect"
 	"runtime"
 	"time"
 	"unsafe"
 
 	"poly.red/app/internal/gles"
+	"poly.red/math"
 )
 
 type osWindow struct {
@@ -56,6 +58,10 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 		closed:    make(chan struct{}, 2),
 		terminate: make(chan struct{}, 2),
 	}
+	for _, o := range opts {
+		o(w.win.config)
+	}
+
 	w.win.display = C.XOpenDisplay(nil)
 	if w.win.display == nil {
 		panic("x11: cannot connect to the X server")
@@ -184,21 +190,18 @@ func (w *window) draw(app Window) {
 
 	tex := w.win.ctx.gl.CreateTexture()
 	w.win.ctx.gl.BindTexture(gles.TEXTURE_2D, tex)
+	defer w.win.ctx.gl.DeleteTexture(tex)
 
-	tk := time.NewTicker(time.Second / 240) // 120 fps
-
+	last := time.Now()
+	tPerFrame := time.Second / 240 // 120 fps
+	tk := time.NewTicker(tPerFrame)
 	terminate := false
 	for !terminate {
 		select {
 		case siz := <-w.resize:
-			// FIXME: handle window resize.
-			if siz.w != w.win.config.size.X && siz.h != w.win.config.size.Y {
-				w.win.config.size.X = siz.w
-				w.win.config.size.Y = siz.h
-				a, ok := app.(ResizeHandler)
-				if !ok {
-					continue
-				}
+			w.win.config.size.X = siz.w
+			w.win.config.size.Y = siz.h
+			if a, ok := app.(ResizeHandler); ok {
 				a.OnResize(siz.w, siz.h)
 			}
 		case <-tk.C:
@@ -206,29 +209,46 @@ func (w *window) draw(app Window) {
 			if !ok {
 				continue
 			}
+
+			s := time.Now()
 			img, redraw := appdraw.Draw()
 			if !redraw {
 				continue
 			}
+
+			e := time.Now()
+			t := e.Sub(last)
+			last = e
+			if t < tPerFrame {
+				continue
+			}
+
+			if w.win.config.fps {
+				w.fontDrawer.Dot = math.P(5, 15)
+				w.fontDrawer.Dst = img
+				fps := fmt.Sprintf("%d", time.Second/e.Sub(s))
+				w.fontDrawer.DrawString(fps)
+			}
 			w.flush(img)
+			if err := w.win.ctx.Present(); err != nil {
+				panic(fmt.Errorf("egl: swap buffer failed: %v", err))
+			}
 		case <-w.win.closed:
 			terminate = true
-		}
-
-		w.win.ctx.gl.DrawArrays(gles.TRIANGLE_STRIP, 0, 4)
-		if err := w.win.ctx.Present(); err != nil {
-			panic(fmt.Errorf("egl: swap buffer failed: %v", err))
 		}
 	}
 }
 
 func (w *window) flush(img *image.RGBA) {
-	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
-	w.win.ctx.gl.TexImage2D(gles.TEXTURE_2D, 0, gles.RGBA, dx, dy, gles.RGBA, gles.UNSIGNED_BYTE, img.Pix)
+	w.win.ctx.gl.Clear(gles.COLOR_BUFFER_BIT)
+	w.win.ctx.gl.ClearColor(rand.Float32(), rand.Float32(), rand.Float32(), 1)
+	w.win.ctx.gl.Viewport(0, 0, w.win.config.size.X, w.win.config.size.Y)
+	w.win.ctx.gl.TexImage2D(gles.TEXTURE_2D, 0, gles.RGBA, img.Bounds().Dx(), img.Bounds().Dy(), gles.RGBA, gles.UNSIGNED_BYTE, img.Pix)
 	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_WRAP_S, gles.CLAMP_TO_EDGE)
 	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_WRAP_T, gles.CLAMP_TO_EDGE)
 	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_MIN_FILTER, gles.LINEAR)
 	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_MAG_FILTER, gles.LINEAR)
+	w.win.ctx.gl.DrawArrays(gles.TRIANGLE_STRIP, 0, 4)
 	w.win.ctx.gl.Finish()
 }
 
@@ -270,17 +290,24 @@ func (w *window) main(app Window) {
 			}
 			if bevt._type == C.ButtonRelease {
 				mev.Action = MouseUp
+				lastButton = MouseBtnNone
 			}
 
 			switch bevt.button {
 			case C.Button1:
-				lastButton = MouseBtnLeft
 				mev.Button = MouseBtnLeft
+				if bevt._type == C.ButtonPress {
+					lastButton = MouseBtnLeft
+				}
 			case C.Button2:
-				lastButton = MouseBtnMiddle
+				if bevt._type == C.ButtonPress {
+					lastButton = MouseBtnMiddle
+				}
 				mev.Button = MouseBtnMiddle
 			case C.Button3:
-				lastButton = MouseBtnRight
+				if bevt._type == C.ButtonPress {
+					lastButton = MouseBtnRight
+				}
 				mev.Button = MouseBtnRight
 			case C.Button4:
 				// scroll up
@@ -313,7 +340,7 @@ func (w *window) main(app Window) {
 			w.mouse <- mev
 		case C.ConfigureNotify: // window configuration change
 			cevt := (*C.XConfigureEvent)(unsafe.Pointer(&ev))
-			siz := resizeEvent{int(cevt.width), int(cevt.height)}
+			siz := resizeEvent{w: int(cevt.width), h: int(cevt.height)}
 			w.resize <- siz
 		case C.Expose: // update
 			// redraw only on the last expose event

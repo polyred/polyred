@@ -357,8 +357,8 @@ func (w *window) draw(app Window) {
 				continue
 			}
 
-			img, reDraw := appdraw.Draw()
-			if !reDraw {
+			img, redraw := appdraw.Draw()
+			if !redraw {
 				continue
 			}
 
