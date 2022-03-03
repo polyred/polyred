@@ -120,7 +120,7 @@ func (w *window) event(app Window) {
 	for range tk.C {
 		select {
 		case key := <-w.keyboard:
-			a, ok := app.(KeyboardHalder)
+			a, ok := app.(KeyboardHanlder)
 			if !ok {
 				continue
 			}

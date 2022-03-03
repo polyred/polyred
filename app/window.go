@@ -2,8 +2,6 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-// Package app provides the ability to run a window, and handle input
-// events.
 package app
 
 import (
@@ -24,7 +22,7 @@ type Window interface {
 // on top of the window.
 type DrawHandler interface {
 	Window
-	Draw() (screen *image.RGBA, reDraw bool)
+	Draw() (screen *image.RGBA, needRedraw bool)
 }
 
 // ResizeHandler is an extended Interface of a Window
@@ -34,9 +32,9 @@ type ResizeHandler interface {
 	OnResize(w, h int)
 }
 
-// KeyboardHalder is an extended Interface of a Window
+// KeyboardHanlder is an extended Interface of a Window
 // which presents a method to handle keyboard inputs.
-type KeyboardHalder interface {
+type KeyboardHanlder interface {
 	Window
 	OnKey(key KeyEvent)
 }

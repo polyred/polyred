@@ -6,6 +6,7 @@ package app
 
 import (
 	"fmt"
+	"image"
 	"runtime"
 	"sync"
 	"syscall"
@@ -168,19 +169,6 @@ loop:
 }
 
 func (w *window) draw(app Window) {
-	// Managing 3 drawable frames:
-	// frames contain their own done indicator, make sure
-	// that each frame is indeed drawed from the GPU level.
-	frames := [3]frame{
-		{done: make(chan event, 1)},
-		{done: make(chan event, 1)},
-		{done: make(chan event, 1)},
-	}
-	for i := 0; i < len(frames); i++ {
-		frames[i].done <- event{}
-	}
-	frameIdx := 0
-
 	last := time.Now()
 	tPerFrame := time.Second / 240 // 120 fps
 	tk := time.NewTicker(tPerFrame)
@@ -216,10 +204,7 @@ func (w *window) draw(app Window) {
 				w.fontDrawer.DrawString(fmt.Sprintf("%d", time.Second/t))
 			}
 
-			f := frames[frameIdx]
-			f.img = img
-			w.flush(f)
-			frameIdx = (frameIdx + 1) % 3
+			w.flush(img)
 		}
 	}
 }
@@ -227,29 +212,25 @@ func (w *window) draw(app Window) {
 // flush flushes the containing pixel buffer of the given image to the
 // hardware frame buffer for display prupose. The given image is assumed
 // to be non-nil pointer.
-func (w *window) flush(f frame) {
-	<-f.done
-	go func() {
-		dx, dy := int32(f.img.Bounds().Dx()), int32(f.img.Bounds().Dy())
-		gl.RasterPos2d(-1, 1)
-		gl.Viewport(0, 0, dx, dy)
-		gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, f.img.Pix)
+func (w *window) flush(img *image.RGBA) {
+	dx, dy := int32(img.Bounds().Dx()), int32(img.Bounds().Dy())
+	gl.RasterPos2d(-1, 1)
+	gl.Viewport(0, 0, dx, dy)
+	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, img.Pix)
 
-		// We need a synchornization here. Similar to commandBuffer.WaitUntilCompleted.
-		// See a general discussion about CPU, GPU and display synchornization here:
-		//
-		// Working with Metal: Fundamentals, 21:28
-		// https://developer.apple.com/videos/play/wwdc2014/604/
-		//
-		// The difference of gl.Finish and gl.Flush can be found here:
-		// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFlush.xml
-		// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFinish.xml
-		//
-		// We may not need such an wait, if we are doing perfect timing.
-		// See: https://golang.design/research/ultimate-channel/
-		gl.Finish()
-		f.done <- event{}
-	}()
+	// We need a synchornization here. Similar to commandBuffer.WaitUntilCompleted.
+	// See a general discussion about CPU, GPU and display synchornization here:
+	//
+	// Working with Metal: Fundamentals, 21:28
+	// https://developer.apple.com/videos/play/wwdc2014/604/
+	//
+	// The difference of gl.Finish and gl.Flush can be found here:
+	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFlush.xml
+	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFinish.xml
+	//
+	// We may not need such an wait, if we are doing perfect timing.
+	// See: https://golang.design/research/ultimate-channel/
+	gl.Finish()
 }
 
 func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr {
