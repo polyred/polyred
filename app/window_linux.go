@@ -15,7 +15,6 @@ import "C"
 import (
 	"fmt"
 	"image"
-	"math/rand"
 	"reflect"
 	"runtime"
 	"time"
@@ -55,8 +54,8 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 
 	w.win = &osWindow{
 		config:    &cfg,
-		closed:    make(chan struct{}, 2),
-		terminate: make(chan struct{}, 2),
+		closed:    make(chan struct{}, 1),
+		terminate: make(chan struct{}, 1),
 	}
 	for _, o := range opts {
 		o(w.win.config)
@@ -116,32 +115,8 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 		panic(fmt.Sprintf("egl: cannot create EGL surface: %v", err))
 	}
 
-	go w.event(app)
 	go w.draw(app)
 	w.ready <- event{}
-}
-
-func (w *window) event(app Window) {
-	tk := time.NewTicker(time.Second / 960)
-	for range tk.C {
-		select {
-		case key := <-w.keyboard:
-			a, ok := app.(KeyboardHanlder)
-			if !ok {
-				continue
-			}
-			a.OnKey(key)
-		case mo := <-w.mouse:
-			a, ok := app.(MouseHandler)
-			if !ok {
-				continue
-			}
-			a.OnMouse(mo)
-		case <-w.win.closed:
-			w.win.terminate <- event{}
-			return
-		}
-	}
 }
 
 func slice2bytes(s interface{}) []byte {
@@ -199,6 +174,8 @@ func (w *window) draw(app Window) {
 	for !terminate {
 		select {
 		case siz := <-w.resize:
+			// FIXME: known issue: resizing somehow can cause the GL calls
+			// to freeze the entire application.
 			w.win.config.size.X = siz.w
 			w.win.config.size.Y = siz.h
 			if a, ok := app.(ResizeHandler); ok {
@@ -240,8 +217,6 @@ func (w *window) draw(app Window) {
 }
 
 func (w *window) flush(img *image.RGBA) {
-	w.win.ctx.gl.Clear(gles.COLOR_BUFFER_BIT)
-	w.win.ctx.gl.ClearColor(rand.Float32(), rand.Float32(), rand.Float32(), 1)
 	w.win.ctx.gl.Viewport(0, 0, w.win.config.size.X, w.win.config.size.Y)
 	w.win.ctx.gl.TexImage2D(gles.TEXTURE_2D, 0, gles.RGBA, img.Bounds().Dx(), img.Bounds().Dy(), gles.RGBA, gles.UNSIGNED_BYTE, img.Pix)
 	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_WRAP_S, gles.CLAMP_TO_EDGE)
@@ -279,7 +254,11 @@ func (w *window) main(app Window) {
 			}
 			ke.Mods = ModifierKey(kevt.state)
 			// FIXME: convert keycode to char
-			w.keyboard <- ke
+			a, ok := app.(KeyboardHanlder)
+			if !ok {
+				continue
+			}
+			a.OnKey(ke)
 		case C.ButtonPress, C.ButtonRelease:
 			bevt := (*C.XButtonEvent)(unsafe.Pointer(&ev))
 			mev := MouseEvent{
@@ -327,7 +306,11 @@ func (w *window) main(app Window) {
 				mev.Action = MouseScroll
 				mev.Xoffset = +1
 			}
-			w.mouse <- mev
+			a, ok := app.(MouseHandler)
+			if !ok {
+				continue
+			}
+			a.OnMouse(mev)
 		case C.MotionNotify:
 			mevt := (*C.XMotionEvent)(unsafe.Pointer(&ev))
 			mev := MouseEvent{
@@ -337,16 +320,15 @@ func (w *window) main(app Window) {
 				Xpos:   float32(mevt.x),
 				Ypos:   float32(mevt.y),
 			}
-			w.mouse <- mev
+			a, ok := app.(MouseHandler)
+			if !ok {
+				continue
+			}
+			a.OnMouse(mev)
 		case C.ConfigureNotify: // window configuration change
 			cevt := (*C.XConfigureEvent)(unsafe.Pointer(&ev))
 			siz := resizeEvent{w: int(cevt.width), h: int(cevt.height)}
 			w.resize <- siz
-		case C.Expose: // update
-			// redraw only on the last expose event
-			if (*C.XExposeEvent)(unsafe.Pointer(&ev)).count == 0 {
-				// TODO: redraw?
-			}
 		case C.ClientMessage: // extensions
 			cevt := (*C.XClientMessageEvent)(unsafe.Pointer(&ev))
 			switch *(*C.long)(unsafe.Pointer(&cevt.data)) {
@@ -358,8 +340,6 @@ func (w *window) main(app Window) {
 
 	// Notify and close the event and draw loop.
 	w.win.closed <- event{}
-	w.win.closed <- event{}
-	<-w.win.terminate
 	<-w.win.terminate
 
 	// Close the window gracefully.
