@@ -41,13 +41,15 @@ type KeyboardHalder interface {
 	OnKey(key KeyEvent)
 }
 
-// KeyboardHalder is an extended Interface of a Window
+// MouseHandler is an extended Interface of a Window
 // which presents a method to handle mouse inputs.
 type MouseHandler interface {
 	Window
 	OnMouse(mo MouseEvent)
 }
 
+// Run runs a object that implements Window interface.
+// The window can be configured by a list of Opt options.
 func Run(instance Window, opts ...Opt) {
 	w := &window{
 		ready:    make(chan event),
@@ -86,11 +88,6 @@ type window struct {
 	mouse      chan MouseEvent
 	resize     chan resizeEvent
 	fontDrawer *font.Drawer
-}
-
-type frame struct {
-	img  *image.RGBA
-	done chan event
 }
 
 type event struct{}

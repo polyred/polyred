@@ -1165,8 +1165,8 @@ func (f *Functions) ShaderSource(s Shader, src string) {
 	C.glShaderSource(&f.f, C.GLuint(s.V), 1, &csrc, &strlen)
 }
 
-func (f *Functions) TexImage2D(target Enum, level int, internalFormat Enum, width int, height int, format Enum, ty Enum) {
-	C.glTexImage2D(&f.f, C.GLenum(target), C.GLint(level), C.GLint(internalFormat), C.GLsizei(width), C.GLsizei(height), 0, C.GLenum(format), C.GLenum(ty), nil)
+func (f *Functions) TexImage2D(target Enum, level int, internalFormat Enum, width int, height int, format Enum, ty Enum, data []byte) {
+	C.glTexImage2D(&f.f, C.GLenum(target), C.GLint(level), C.GLint(internalFormat), C.GLsizei(width), C.GLsizei(height), 0, C.GLenum(format), C.GLenum(ty), unsafe.Pointer(&data[0]))
 }
 
 func (f *Functions) TexStorage2D(target Enum, levels int, internalFormat Enum, width, height int) {

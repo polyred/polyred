@@ -6,15 +6,6 @@ package app
 
 import "fmt"
 
-type Action int
-
-const (
-	OnCursor Action = iota
-	OnKeyUp
-	OnKeyDown
-	OnKeyRepeat
-)
-
 // Key corresponds to a keyboard key.
 type Key struct {
 	code uint32

@@ -307,6 +307,11 @@ func (w *window) event(app Window) {
 	}
 }
 
+type frame struct {
+	img  *image.RGBA
+	done chan event
+}
+
 // The Draw Thread
 //
 // We use tripple-buffering techniques for the drawing.

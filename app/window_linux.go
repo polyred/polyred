@@ -13,11 +13,8 @@ package app
 */
 import "C"
 import (
-	"encoding/binary"
 	"fmt"
-	"log"
-	"math"
-	"math/rand"
+	"image"
 	"reflect"
 	"runtime"
 	"time"
@@ -141,74 +138,6 @@ func (w *window) event(app Window) {
 	}
 }
 
-const vertexShader = `#version 100
-uniform vec2 offset;
-attribute vec4 position;
-void main() {
-	// offset comes in with x/y values between 0 and 1.
-	// position bounds are -1 to 1.
-	vec4 offset4 = vec4(2.0*offset.x-1.0, 1.0-2.0*offset.y, 0, 0);
-	gl_Position = position + offset4;
-}`
-
-const fragmentShader = `#version 100
-precision mediump float;
-uniform vec4 color;
-void main() {
-	gl_FragColor = color;
-}`
-
-var triangleData = f32Bytes(binary.LittleEndian,
-	0.0, 0.4, 0.0, // top left
-	0.0, 0.0, 0.0, // bottom left
-	0.4, 0.0, 0.0, // bottom right
-)
-
-func f32Bytes(byteOrder binary.ByteOrder, values ...float32) []byte {
-	le := false
-	switch byteOrder {
-	case binary.BigEndian:
-	case binary.LittleEndian:
-		le = true
-	default:
-		panic(fmt.Sprintf("invalid byte order %v", byteOrder))
-	}
-
-	b := make([]byte, 4*len(values))
-	for i, v := range values {
-		u := math.Float32bits(v)
-		if le {
-			b[4*i+0] = byte(u >> 0)
-			b[4*i+1] = byte(u >> 8)
-			b[4*i+2] = byte(u >> 16)
-			b[4*i+3] = byte(u >> 24)
-		} else {
-			b[4*i+0] = byte(u >> 24)
-			b[4*i+1] = byte(u >> 16)
-			b[4*i+2] = byte(u >> 8)
-			b[4*i+3] = byte(u >> 0)
-		}
-	}
-	return b
-}
-
-const (
-	coordsPerVertex = 3
-	vertexCount     = 3
-)
-
-var (
-	program  gles.Program
-	position gles.Attrib
-	offset   gles.Uniform
-	col      gles.Uniform
-	buf      gles.Buffer
-
-	green  float32
-	touchX float32
-	touchY float32
-)
-
 func slice2bytes(s interface{}) []byte {
 	v := reflect.ValueOf(s)
 	first := v.Index(0)
@@ -216,33 +145,53 @@ func slice2bytes(s interface{}) []byte {
 	res := unsafe.Slice((*byte)(unsafe.Pointer(v.Pointer())), sz*v.Cap())
 	return res[:sz*v.Len()]
 }
+
 func (w *window) draw(app Window) {
+	defer func() { w.win.terminate <- event{} }()
+
 	// Make sure the drawing calls are always on the same thread.
 	runtime.LockOSThread()
 	w.win.ctx.Lock()
 	defer w.win.ctx.Unlock()
 
-	var err error
-	program, err = gles.CreateProgram(w.win.ctx.gl, vertexShader, fragmentShader, []string{
-		"position", "color", "offset",
+	vertices := slice2bytes([]float32{
+		-1, +1, 0, 0,
+		+1, +1, 1, 0,
+		-1, -1, 0, 1,
+		+1, -1, 1, 1,
 	})
+	vbo := w.win.ctx.gl.CreateBuffer()
+	w.win.ctx.gl.BindBuffer(gles.ARRAY_BUFFER, vbo)
+	w.win.ctx.gl.BufferData(gles.ARRAY_BUFFER, len(vertices), gles.STATIC_DRAW, vertices)
+	defer w.win.ctx.gl.DeleteBuffer(vbo)
+
+	program, err := gles.CreateProgram(w.win.ctx.gl, vert, frag, []string{"position", "uvcoord"})
 	if err != nil {
-		log.Printf("error creating GL program: %v", err)
-		return
+		panic(fmt.Sprintf("gles: cannot creating shader program: %v", err))
 	}
 
-	buf = w.win.ctx.gl.CreateBuffer()
-	w.win.ctx.gl.BindBuffer(gles.ARRAY_BUFFER, buf)
-	w.win.ctx.gl.BufferData(gles.ARRAY_BUFFER, len(triangleData), gles.STATIC_DRAW, slice2bytes(triangleData))
+	w.win.ctx.gl.UseProgram(program)
+	defer w.win.ctx.gl.DeleteProgram(program)
 
-	position = w.win.ctx.gl.GetAttribLocation(program, "position")
-	col = w.win.ctx.gl.GetUniformLocation(program, "color")
-	offset = w.win.ctx.gl.GetUniformLocation(program, "offset")
+	position := w.win.ctx.gl.GetAttribLocation(program, "position")
+	uvcoord := w.win.ctx.gl.GetAttribLocation(program, "uvcoord")
+
+	w.win.ctx.gl.EnableVertexAttribArray(position)
+	w.win.ctx.gl.EnableVertexAttribArray(uvcoord)
+
+	w.win.ctx.gl.VertexAttribPointer(position, 2, gles.FLOAT, false, 4*4, 0)
+	w.win.ctx.gl.VertexAttribPointer(uvcoord, 2, gles.FLOAT, false, 4*4, 2*4)
+
+	tex := w.win.ctx.gl.CreateTexture()
+	w.win.ctx.gl.BindTexture(gles.TEXTURE_2D, tex)
 
 	tk := time.NewTicker(time.Second / 240) // 120 fps
-	for {
+
+	terminate := false
+	for !terminate {
 		select {
 		case siz := <-w.resize:
+			// FIXME: handle window resize.
 			if siz.w != w.win.config.size.X && siz.h != w.win.config.size.Y {
 				w.win.config.size.X = siz.w
 				w.win.config.size.Y = siz.h
@@ -258,47 +207,29 @@ func (w *window) draw(app Window) {
 				continue
 			}
 			img, redraw := appdraw.Draw()
-			if redraw {
+			if !redraw {
 				continue
 			}
-			w.flush(frame{img: img})
+			w.flush(img)
 		case <-w.win.closed:
-			w.win.terminate <- event{}
-			return
+			terminate = true
 		}
 
-		w.win.ctx.gl.ClearColor(1, 0, 0, 1)
-		w.win.ctx.gl.Clear(gles.COLOR_BUFFER_BIT)
-
-		w.win.ctx.gl.UseProgram(program)
-
-		green += 0.01
-		if green > 1 {
-			green = 0
-		}
-		w.win.ctx.gl.Uniform4f(col, 0, green, 0, 1)
-		w.win.ctx.gl.Uniform2f(offset, rand.Float32(), rand.Float32())
-		w.win.ctx.gl.BindBuffer(gles.ARRAY_BUFFER, buf)
-		w.win.ctx.gl.EnableVertexAttribArray(position)
-		w.win.ctx.gl.VertexAttribPointer(position, coordsPerVertex, gles.FLOAT, false, 0, 0)
-		w.win.ctx.gl.DrawArrays(gles.TRIANGLES, 0, vertexCount)
-		w.win.ctx.gl.DisableVertexAttribArray(position)
-
+		w.win.ctx.gl.DrawArrays(gles.TRIANGLE_STRIP, 0, 4)
 		if err := w.win.ctx.Present(); err != nil {
-			w.win.terminate <- event{}
-			return
+			panic(fmt.Errorf("egl: swap buffer failed: %v", err))
 		}
 	}
 }
 
-// flush flushes the containing pixel buffer of the given image to the
-// hardware frame buffer for display prupose. The given image is assumed
-// to be non-nil pointer.
-func (w *window) flush(f frame) {
-	w.win.ctx.gl.Clear(gles.COLOR_BUFFER_BIT)
-	w.win.ctx.gl.ClearColor(rand.Float32(), rand.Float32(), rand.Float32(), 1)
-
-	// dx, dy := float32(f.img.Bounds().Dx()), float32(f.img.Bounds().Dy())
+func (w *window) flush(img *image.RGBA) {
+	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
+	w.win.ctx.gl.TexImage2D(gles.TEXTURE_2D, 0, gles.RGBA, dx, dy, gles.RGBA, gles.UNSIGNED_BYTE, img.Pix)
+	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_WRAP_S, gles.CLAMP_TO_EDGE)
+	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_WRAP_T, gles.CLAMP_TO_EDGE)
+	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_MIN_FILTER, gles.LINEAR)
+	w.win.ctx.gl.TexParameteri(gles.TEXTURE_2D, gles.TEXTURE_MAG_FILTER, gles.LINEAR)
+	w.win.ctx.gl.Finish()
 }
 
 func (w *window) main(app Window) {
@@ -306,6 +237,7 @@ func (w *window) main(app Window) {
 	runtime.LockOSThread()
 
 	closed := false
+	lastButton := MouseBtnNone
 	ev := C.XEvent{}
 	for !closed {
 		C.XNextEvent(w.win.display, &ev)
@@ -339,36 +271,40 @@ func (w *window) main(app Window) {
 			if bevt._type == C.ButtonRelease {
 				mev.Action = MouseUp
 			}
-			const scrollScale = 10
+
 			switch bevt.button {
 			case C.Button1:
+				lastButton = MouseBtnLeft
 				mev.Button = MouseBtnLeft
 			case C.Button2:
+				lastButton = MouseBtnMiddle
 				mev.Button = MouseBtnMiddle
 			case C.Button3:
+				lastButton = MouseBtnRight
 				mev.Button = MouseBtnRight
 			case C.Button4:
 				// scroll up
 				mev.Action = MouseScroll
-				mev.Yoffset = -scrollScale
+				mev.Yoffset = -1
 			case C.Button5:
 				// scroll down
 				mev.Action = MouseScroll
-				mev.Yoffset = +scrollScale
+				mev.Yoffset = +1
 			case 6:
 				// http://xahlee.info/linux/linux_x11_mouse_button_number.html
 				// scroll left
 				mev.Action = MouseScroll
-				mev.Xoffset = -scrollScale * 2
+				mev.Xoffset = -1
 			case 7:
 				// scroll right
 				mev.Action = MouseScroll
-				mev.Xoffset = +scrollScale * 2
+				mev.Xoffset = +1
 			}
 			w.mouse <- mev
 		case C.MotionNotify:
 			mevt := (*C.XMotionEvent)(unsafe.Pointer(&ev))
 			mev := MouseEvent{
+				Button: lastButton,
 				Action: MouseMove,
 				Mods:   ModifierKey(mevt.state),
 				Xpos:   float32(mevt.x),
@@ -404,3 +340,27 @@ func (w *window) main(app Window) {
 	C.XDestroyWindow(w.win.display, w.win.oswin)
 	C.XCloseDisplay(w.win.display)
 }
+
+const (
+	vert = `#version 100
+precision highp float;
+
+attribute vec2 position;
+attribute vec2 uvcoord;
+
+varying vec2 outUV;
+
+void main() {
+	outUV = uvcoord;
+	gl_Position = vec4(position, 0.0, 1.0);
+}`
+	frag = `#version 100
+precision highp float;
+
+varying vec2 outUV;
+uniform sampler2D tex;
+
+void main() {
+	gl_FragColor = texture2D(tex, outUV);
+}`
+)
