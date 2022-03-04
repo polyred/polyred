@@ -490,3 +490,15 @@ func TestVec_Convert(t *testing.T) {
 		}
 	})
 }
+
+func FuzzVec_Add(f *testing.F) {
+	f.Add(float32(1), float32(1), float32(2), float32(3))
+	f.Fuzz(func(t *testing.T, a1, a2, a3, a4 float32) {
+		v1 := math.NewVec2(a1, a2)
+		v2 := math.NewVec2(a3, a4)
+		want := math.NewVec2(a1+a3, a2+a4)
+		if !v1.Add(v2).Eq(want) {
+			t.Fatalf("unexpected add results: %v+%v=%v, want: %v", v1, v2, v1.Add(v2), want)
+		}
+	})
+}
