@@ -12,4 +12,9 @@
 // To handle resize, keyboard, and mouse events, the window instance must
 // additionally implements OnResize, OnKey and OnMouse methods. See
 // ResizeHandler, KeyboardHandler, and MouseHandler interfaces.
+//
+// Platform Specific Dependencies
+//
+// - Darwin: xcode-install --select
+// - Linux: sudo apt install -y libx11-dev libgles2-mesa-dev libegl1-mesa-dev
 package app

@@ -17,6 +17,7 @@ import (
 	"image"
 	"reflect"
 	"runtime"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -48,6 +49,9 @@ func (w *window) atom(name string, onlyIfExists bool) C.Atom {
 	}
 	return C.XInternAtom(w.win.display, cname, flag)
 }
+
+var x11Threads sync.Once
+
 func (w *window) run(app Window, cfg config, opts ...Opt) {
 	// Make sure all X11 and EGL APIs are called from the same thread.
 	runtime.LockOSThread()
@@ -60,6 +64,12 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 	for _, o := range opts {
 		o(w.win.config)
 	}
+
+	x11Threads.Do(func() {
+		if C.XInitThreads() == 0 {
+			panic("x11: threads init failed")
+		}
+	})
 
 	w.win.display = C.XOpenDisplay(nil)
 	if w.win.display == nil {
@@ -175,7 +185,8 @@ func (w *window) draw(app Window) {
 		select {
 		case siz := <-w.resize:
 			// FIXME: known issue: resizing somehow can cause the GL calls
-			// to freeze the entire application.
+			// to freeze the entire application. This may only happen on
+			// some of drivers.
 			w.win.config.size.X = siz.w
 			w.win.config.size.Y = siz.h
 			if a, ok := app.(ResizeHandler); ok {
