@@ -109,24 +109,16 @@ func init() {
 }
 
 //export polyred_onHide
-func polyred_onHide(view C.CFTypeRef) {
-	println("on hide") // TODO: figure out what to do about this
-}
+func polyred_onHide(view C.CFTypeRef) {}
 
 //export polyred_onShow
-func polyred_onShow(view C.CFTypeRef) {
-	println("on show") // TODO: figure out what to do about this
-}
+func polyred_onShow(view C.CFTypeRef) {}
 
 //export polyred_onChangeScreen
-func polyred_onChangeScreen(view C.CFTypeRef, did uint64) {
-	println("on change screen") // TODO: figure out what to do about this
-}
+func polyred_onChangeScreen(view C.CFTypeRef, did uint64) {}
 
 //export polyred_onFocus
-func polyred_onFocus(view C.CFTypeRef, focus C.int) {
-	println("on focus: ", focus) // TODO: figure out what to do about this
-}
+func polyred_onFocus(view C.CFTypeRef, focus C.int) {}
 
 //export polyred_onMouse
 func polyred_onMouse(view C.CFTypeRef, act C.int, btn C.NSUInteger, x, y, dx, dy C.CGFloat, ti C.double, mods C.NSUInteger) {
@@ -153,9 +145,7 @@ func polyred_onKeys(view C.CFTypeRef, code uint32, cstr *C.char, ti C.double, mo
 }
 
 //export polyred_onText
-func polyred_onText(view C.CFTypeRef, cstr *C.char) {
-	println("on text") // TODO: figure out what to do about this
-}
+func polyred_onText(view C.CFTypeRef, cstr *C.char) {}
 
 //export polyred_onDraw
 func polyred_onDraw(view C.CFTypeRef) {
@@ -179,14 +169,10 @@ func polyred_onClose(view C.CFTypeRef) {
 }
 
 //export polyred_onAppHide
-func polyred_onAppHide() {
-	println("app hide") // TODO: figure out what to do about this
-}
+func polyred_onAppHide() {}
 
 //export polyred_onAppShow
-func polyred_onAppShow() {
-	println("on app show") // TODO: figure out what to do about this
-}
+func polyred_onAppShow() {}
 
 var launched = make(chan struct{})
 
