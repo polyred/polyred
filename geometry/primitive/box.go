@@ -30,23 +30,14 @@ func NewAABB(vs ...math.Vec3) AABB {
 // If the two AABBs only share a single vertex or a 2D plane, then
 // it is also considered as an intersection and returns true.
 func (aabb *AABB) Intersect(aabb2 AABB) bool {
-	min := math.NewVec4(
-		math.Max(aabb.Min.X, aabb2.Min.X),
-		math.Max(aabb.Min.Y, aabb2.Min.Y),
-		math.Max(aabb.Min.Z, aabb2.Min.Z),
-		1,
-	)
-	max := math.NewVec4(
-		math.Min(aabb.Max.X, aabb2.Max.X),
-		math.Min(aabb.Max.Y, aabb2.Max.Y),
-		math.Min(aabb.Max.Y, aabb2.Max.Z),
-		1,
-	)
+	minX := math.Max(aabb.Min.X, aabb2.Min.X)
+	minY := math.Max(aabb.Min.Y, aabb2.Min.Y)
+	minZ := math.Max(aabb.Min.Z, aabb2.Min.Z)
+	maxX := math.Min(aabb.Max.X, aabb2.Max.X)
+	maxY := math.Min(aabb.Max.Y, aabb2.Max.Y)
+	maxZ := math.Min(aabb.Max.Y, aabb2.Max.Z)
 
-	if min.X <= max.X && min.Y <= max.Y && min.Z <= max.Z {
-		return true
-	}
-	return false
+	return minX <= maxX && minY <= maxY && minZ <= maxZ
 }
 
 // Add adds a given aabb to the current aabb
@@ -61,9 +52,6 @@ func (aabb *AABB) Add(aabb2 AABB) {
 }
 
 // Eq checks if two aabbs are equal
-func (aabb AABB) Eq(aabb2 AABB) bool {
-	if aabb.Min.Eq(aabb2.Min) && aabb.Max.Eq(aabb2.Max) {
-		return true
-	}
-	return false
+func (aabb *AABB) Eq(aabb2 AABB) bool {
+	return aabb.Min.Eq(aabb2.Min) && aabb.Max.Eq(aabb2.Max)
 }

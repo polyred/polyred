@@ -2,15 +2,53 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package texture
+package buffer
 
 import (
 	"image"
 
 	"poly.red/geometry/primitive"
-
 	"poly.red/internal/spinlock"
 )
+
+// Buffer is a
+type Buffer[T any] interface {
+	Len() int
+	At(idx int) T
+}
+
+var (
+	_ Buffer[int]      = &IndexBuffer{}
+	_ Buffer[float32]  = &Float32Buffer{}
+	_ Buffer[Fragment] = &FragmentBuffer{}
+)
+
+// IndexBuffer is a slice of indices.
+type IndexBuffer []int
+
+// Len returns the length of the index buffer.
+func (ibo IndexBuffer) Len() int { return len(ibo) }
+
+// At returns the corresponding index at given position.
+func (ibo IndexBuffer) At(idx int) int { return ibo[idx] }
+
+// Float32Buffer is a slice of float32 numbers.
+type Float32Buffer []float32
+
+// Len returns the length of the index buffer.
+func (fbo Float32Buffer) Len() int { return len(fbo) }
+
+// At returns the corresponding index at given position.
+func (fbo Float32Buffer) At(idx int) float32 { return fbo[idx] }
+
+// VertexBuffer is a slice of vertices.
+type VertexBuffer []*primitive.Vertex
+
+// Len returns the length of the vertex buffer.
+func (vbo VertexBuffer) Len() int { return len(vbo) }
+
+// At returns the corresponding vertex at given position.
+func (vbo VertexBuffer) At(idx int) *primitive.Vertex { return vbo[idx] }
 
 // Fragment is a collection regarding the relevant geometry information of a fragment.
 type Fragment struct {
@@ -18,9 +56,9 @@ type Fragment struct {
 	primitive.Fragment
 }
 
-// Buffer is a rendering buffer that supports concurrent-safe
+// FragmentBuffer is a rendering buffer that supports concurrent-safe
 // depth testing and pixel operation.
-type Buffer struct {
+type FragmentBuffer struct {
 	lock      []spinlock.SpinLock
 	fragments []Fragment
 	stride    int
@@ -42,19 +80,19 @@ const (
 )
 
 // BufferOpt is a buffer option
-type BufferOpt func(b *Buffer)
+type BufferOpt func(b *FragmentBuffer)
 
 // Format returns a pixel format option
 func Format(format PixelFormat) BufferOpt {
-	return func(b *Buffer) {
+	return func(b *FragmentBuffer) {
 		b.format = format
 	}
 }
 
 // NewBuffer returns a rendering buffer. The caller must specify its size.
 // By default, it uses RGBA pixel format.
-func NewBuffer(r image.Rectangle, opts ...BufferOpt) *Buffer {
-	buf := &Buffer{
+func NewBuffer(r image.Rectangle, opts ...BufferOpt) *FragmentBuffer {
+	buf := &FragmentBuffer{
 		lock:      make([]spinlock.SpinLock, r.Dx()*r.Dy()),
 		depth:     make([]uint8, 4*r.Dx()*r.Dy()),
 		color:     make([]uint8, 4*r.Dx()*r.Dy()),
@@ -73,17 +111,17 @@ func NewBuffer(r image.Rectangle, opts ...BufferOpt) *Buffer {
 //
 // Note that the function is not thread-safe, it is caller's
 // responsibility to guarantee that the buffer can be cleared.
-func (b *Buffer) Clear() {
-	b.ClearFragments()
+func (b *FragmentBuffer) Clear() {
+	b.ClearFragment()
 	b.ClearDepth()
-	b.ClearFrameBuf()
+	b.ClearColor()
 }
 
-// ClearFragments clears the buffer's fragments.
+// ClearFragment clears the buffer's fragments.
 //
 // Note that the function is not thread-safe, it is caller's
 // responsibility to guarantee that the buffer can be cleared.
-func (b *Buffer) ClearFragments() {
+func (b *FragmentBuffer) ClearFragment() {
 	// Clear using zero value looping, which involves compiler optimization.
 	// See: https://golang.org/issue/5373
 	for i := range b.fragments {
@@ -95,7 +133,7 @@ func (b *Buffer) ClearFragments() {
 //
 // Note that the function is not thread-safe, it is caller's
 // responsibility to guarantee that the buffer can be cleared.
-func (b *Buffer) ClearDepth() {
+func (b *FragmentBuffer) ClearDepth() {
 	// Clear using zero value looping, which involves compiler optimization.
 	// See: https://golang.org/issue/5373
 	for i := range b.depth {
@@ -103,11 +141,11 @@ func (b *Buffer) ClearDepth() {
 	}
 }
 
-// ClearFrameBuf clears the buffer's frame buffer.
+// ClearColor clears the internal color buffer.
 //
 // Note that the function is not thread-safe, it is caller's
 // responsibility to guarantee that the buffer can be cleared.
-func (b *Buffer) ClearFrameBuf() {
+func (b *FragmentBuffer) ClearColor() {
 	// Clear using zero value looping, which involves compiler optimization.
 	// See: https://golang.org/issue/5373
 	for i := range b.color {
@@ -115,11 +153,11 @@ func (b *Buffer) ClearFrameBuf() {
 	}
 }
 
-func (b *Buffer) Format() PixelFormat {
+func (b *FragmentBuffer) Format() PixelFormat {
 	return b.format
 }
 
-func (b *Buffer) Image() *image.RGBA {
+func (b *FragmentBuffer) Image() *image.RGBA {
 	return &image.RGBA{
 		Stride: 4 * b.stride,
 		Rect:   b.rect,
@@ -127,7 +165,7 @@ func (b *Buffer) Image() *image.RGBA {
 	}
 }
 
-func (b *Buffer) Depth() *image.RGBA {
+func (b *FragmentBuffer) Depth() *image.RGBA {
 	return &image.RGBA{
 		Stride: 4 * b.stride,
 		Rect:   b.rect,
@@ -135,25 +173,40 @@ func (b *Buffer) Depth() *image.RGBA {
 	}
 }
 
-func (b *Buffer) Bounds() image.Rectangle { return b.rect }
+func (b *FragmentBuffer) Bounds() image.Rectangle { return b.rect }
 
-func (b *Buffer) FragmentOffset(x, y int) int {
+func (b *FragmentBuffer) FragmentOffset(x, y int) int {
 	return (y-b.rect.Min.Y)*b.stride + (x - b.rect.Min.X)
 }
 
-func (b *Buffer) PixelOffset(x, y int) int {
+func (b *FragmentBuffer) PixelOffset(x, y int) int {
 	return (y-b.rect.Min.Y)*b.stride*4 + (x-b.rect.Min.X)*4
 }
 
-func (b *Buffer) In(x, y int) bool {
+func (b *FragmentBuffer) In(x, y int) bool {
 	return image.Point{x, y}.In(b.rect)
+}
+
+func (b *FragmentBuffer) At(offset int) Fragment {
+	if offset > b.Len()-1 || offset < 0 {
+		return Fragment{}
+	}
+
+	b.lock[offset].Lock()
+	info := b.fragments[offset]
+	b.lock[offset].Unlock()
+	return info
+}
+
+func (b *FragmentBuffer) Len() int {
+	return len(b.fragments)
 }
 
 // TODO: we should be consistent with image package.
 // If image.At(a, b) result in color c1, then buffer.At(a, b) will result
 // in color image.At(a, h-b-1).
 
-func (b *Buffer) At(x, y int) Fragment {
+func (b *FragmentBuffer) Get(x, y int) Fragment {
 	if !(image.Point{x, b.rect.Max.Y - y - 1}.In(b.rect)) {
 		return Fragment{}
 	}
@@ -165,7 +218,7 @@ func (b *Buffer) At(x, y int) Fragment {
 	return info
 }
 
-func (b *Buffer) Set(x, y int, info Fragment) {
+func (b *FragmentBuffer) Set(x, y int, info Fragment) {
 	if !(image.Point{x, b.rect.Max.Y - y - 1}.In(b.rect)) {
 		return
 	}
@@ -213,7 +266,7 @@ func (b *Buffer) Set(x, y int, info Fragment) {
 }
 
 // DepthTest conducts the depth test.
-func (b *Buffer) DepthTest(x, y int, depth float32) bool {
+func (b *FragmentBuffer) DepthTest(x, y int, depth float32) bool {
 	if !(image.Point{x, b.rect.Max.Y - y - 1}.In(b.rect)) {
 		return false
 	}
@@ -226,10 +279,10 @@ func (b *Buffer) DepthTest(x, y int, depth float32) bool {
 	return (!b.fragments[i].Ok) || depth > b.fragments[i].Depth
 }
 
-// UnsafeAt returns a pointer the the underlying fragment without
+// UnsafeGet returns a pointer the the underlying fragment without
 // bound checks. If the provided pixel coords are invalid, this
 // function will result in a panic.
-func (b *Buffer) UnsafeAt(x, y int) Fragment {
+func (b *FragmentBuffer) UnsafeGet(x, y int) Fragment {
 	i := b.FragmentOffset(x, b.rect.Max.Y-y-1)
 	return b.fragments[i]
 }
@@ -237,7 +290,7 @@ func (b *Buffer) UnsafeAt(x, y int) Fragment {
 // UnsafeSet sets the given fragment to the underlying frame and
 // depth buffer without bound checks. If the provided pixel coords
 // are invalid, this function will result in a panic.
-func (b *Buffer) UnsafeSet(x, y int, info Fragment) {
+func (b *FragmentBuffer) UnsafeSet(x, y int, info Fragment) {
 	i := b.FragmentOffset(x, b.rect.Max.Y-y-1)
 	j := b.PixelOffset(x, b.rect.Max.Y-y-1)
 

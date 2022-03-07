@@ -14,23 +14,23 @@ var _ Face = &Polygon{}
 
 // Polygon is a polygon that contains multiple vertices.
 type Polygon struct {
-	vs     []Vertex
+	vs     []*Vertex
 	normal math.Vec4
 	aabb   *AABB
 }
 
 func NewPolygon(vs ...*Vertex) (*Polygon, error) {
 	if len(vs) < 5 {
-		return nil, errors.New("too few vertex for a polygon")
+		return nil, errors.New("too few vertex for a polygon, use Triangle or Quad instead")
 	}
 
 	p := &Polygon{
-		vs: make([]Vertex, len(vs)),
+		vs: make([]*Vertex, len(vs)),
 	}
 
-	p.vs[0] = *vs[0]
-	p.vs[1] = *vs[1]
-	p.vs[2] = *vs[2]
+	p.vs[0] = vs[0]
+	p.vs[1] = vs[1]
+	p.vs[2] = vs[2]
 
 	xmax := math.Max(vs[0].Pos.X, vs[1].Pos.X, vs[2].Pos.X)
 	xmin := math.Min(vs[0].Pos.X, vs[1].Pos.X, vs[2].Pos.X)
@@ -46,7 +46,7 @@ func NewPolygon(vs ...*Vertex) (*Polygon, error) {
 		ymin = math.Min(ymin, vs[i].Pos.Y)
 		zmax = math.Max(zmax, vs[i].Pos.Z)
 		zmin = math.Min(zmin, vs[i].Pos.Z)
-		p.vs[i] = *vs[i]
+		p.vs[i] = vs[i]
 	}
 	min := math.NewVec3(xmin, ymin, zmin)
 	max := math.NewVec3(xmax, ymax, zmax)
@@ -87,7 +87,7 @@ func (p *Polygon) Triangles(iter func(t *Triangle) bool) {
 
 func (p *Polygon) Vertices(iter func(v *Vertex) bool) {
 	for i := 0; i < len(p.vs); i++ {
-		if !iter(&p.vs[i]) {
+		if !iter(p.vs[i]) {
 			return
 		}
 	}

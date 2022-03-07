@@ -10,9 +10,10 @@ var _ Face = &Quad{}
 
 // Quad is a quadrilateral that contains four vertices
 type Quad struct {
-	v1, v2, v3, v4 Vertex
-	normal         math.Vec4
-	aabb           *AABB
+	V1, V2, V3, V4 *Vertex
+
+	normal math.Vec4
+	aabb   *AABB
 }
 
 func NewQuad(v1, v2, v3, v4 *Vertex) *Quad {
@@ -25,19 +26,17 @@ func NewQuad(v1, v2, v3, v4 *Vertex) *Quad {
 	min := math.NewVec3(xmin, ymin, zmin)
 	max := math.NewVec3(xmax, ymax, zmax)
 
-	return &Quad{
-		v1: *v1, v2: *v2, v3: *v3, v4: *v4, aabb: &AABB{min, max},
-	}
+	return &Quad{V1: v1, V2: v2, V3: v3, V4: v4, aabb: &AABB{min, max}}
 }
 
 func (q *Quad) AABB() AABB {
 	if q.aabb == nil {
-		xmax := math.Max(q.v1.Pos.X, q.v2.Pos.X, q.v3.Pos.X, q.v4.Pos.X)
-		xmin := math.Min(q.v1.Pos.X, q.v2.Pos.X, q.v3.Pos.X, q.v4.Pos.X)
-		ymax := math.Max(q.v1.Pos.Y, q.v2.Pos.Y, q.v3.Pos.Y, q.v4.Pos.Y)
-		ymin := math.Min(q.v1.Pos.Y, q.v2.Pos.Y, q.v3.Pos.Y, q.v4.Pos.Y)
-		zmax := math.Max(q.v1.Pos.Z, q.v2.Pos.Z, q.v3.Pos.Z, q.v4.Pos.Z)
-		zmin := math.Min(q.v1.Pos.Z, q.v2.Pos.Z, q.v3.Pos.Z, q.v4.Pos.Z)
+		xmax := math.Max(q.V1.Pos.X, q.V2.Pos.X, q.V3.Pos.X, q.V4.Pos.X)
+		xmin := math.Min(q.V1.Pos.X, q.V2.Pos.X, q.V3.Pos.X, q.V4.Pos.X)
+		ymax := math.Max(q.V1.Pos.Y, q.V2.Pos.Y, q.V3.Pos.Y, q.V4.Pos.Y)
+		ymin := math.Min(q.V1.Pos.Y, q.V2.Pos.Y, q.V3.Pos.Y, q.V4.Pos.Y)
+		zmax := math.Max(q.V1.Pos.Z, q.V2.Pos.Z, q.V3.Pos.Z, q.V4.Pos.Z)
+		zmin := math.Min(q.V1.Pos.Z, q.V2.Pos.Z, q.V3.Pos.Z, q.V4.Pos.Z)
 		min := math.NewVec3(xmin, ymin, zmin)
 		max := math.NewVec3(xmax, ymax, zmax)
 		q.aabb = &AABB{min, max}
@@ -46,14 +45,14 @@ func (q *Quad) AABB() AABB {
 }
 
 func (q *Quad) Vertices(f func(v *Vertex) bool) {
-	if !f(&q.v1) || !f(&q.v2) || !f(&q.v3) || !f(&q.v4) {
+	if !f(q.V1) || !f(q.V2) || !f(q.V3) || !f(q.V4) {
 		return
 	}
 }
 
 func (q *Quad) Triangles(f func(*Triangle) bool) {
-	f(NewTriangle(&q.v1, &q.v2, &q.v3))
-	f(NewTriangle(&q.v1, &q.v3, &q.v4))
+	f(NewTriangle(q.V1, q.V2, q.V3))
+	f(NewTriangle(q.V1, q.V3, q.V4))
 }
 
 func (q *Quad) Normal() math.Vec4 {

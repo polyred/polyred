@@ -5,9 +5,8 @@
 package render
 
 import (
-	"poly.red/color"
+	"poly.red/buffer"
 	"poly.red/shader"
-	"poly.red/texture"
 )
 
 // DrawFragments is a concurrent executor of the given shader that travel
@@ -15,8 +14,8 @@ import (
 //
 // One should not manipulate the given image buffer in the shader.
 // Instead, return the resulting color in the shader can avoid data race.
-func (r *Renderer) DrawFragments(buf *texture.Buffer, funcs ...shader.FragmentProgram) {
-	if funcs == nil {
+func (r *Renderer) DrawFragments(buf *buffer.FragmentBuffer, shaders ...shader.Fragment) {
+	if shaders == nil {
 		return
 	}
 
@@ -40,7 +39,7 @@ func (r *Renderer) DrawFragments(buf *texture.Buffer, funcs ...shader.FragmentPr
 		// heap which increases the memory allocation. No workaround.
 		r.sched.Run(func() {
 			for i := 0; i < n; i++ {
-				r.DrawFragment(buf, i%w, i/w, funcs...)
+				r.DrawFragment(buf, i%w, i/w, shaders...)
 			}
 		})
 		return
@@ -55,7 +54,7 @@ func (r *Renderer) DrawFragments(buf *texture.Buffer, funcs ...shader.FragmentPr
 			x1 := x0 + batchSize
 			for j := x0; j < x1; j++ {
 				x, y := j%w, j/w
-				r.DrawFragment(buf, x, y, funcs...)
+				r.DrawFragment(buf, x, y, shaders...)
 			}
 		})
 	}
@@ -65,25 +64,24 @@ func (r *Renderer) DrawFragments(buf *texture.Buffer, funcs ...shader.FragmentPr
 		r.sched.Run(func() {
 			for j := numTasks * batchSize; j < n; j++ {
 				x, y := j%w, j/w
-				r.DrawFragment(buf, x, y, funcs...)
+				r.DrawFragment(buf, x, y, shaders...)
 			}
 		})
 	}
 }
 
-// DrawFragment executes the given shaders on a specific fragment.
+// DrawFragment executes the given shaders on a specific fragment sequentially.
+// The last returned color of the fragment shader will be written into the
+// given texture buffer.
 //
 // Note that it is caller's responsibility to protect the safty of fragment
 // coordinates, as well as data race of the given buffer.
-func (r *Renderer) DrawFragment(buf *texture.Buffer, x, y int, shaders ...shader.FragmentProgram) {
-	info := buf.UnsafeAt(x, y)
+func (r *Renderer) DrawFragment(buf *buffer.FragmentBuffer, x, y int, shaders ...shader.Fragment) {
+	info := buf.UnsafeGet(x, y)
 	old := info.Col
 
 	for i := 0; i < len(shaders); i++ {
-		info.Col = shaders[i](info.Fragment)
-		if info.Col == color.Discard {
-			return
-		}
+		info.Col = shaders[i](&info.Fragment)
 	}
 
 	if r.blendFunc != nil {

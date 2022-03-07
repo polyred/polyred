@@ -13,6 +13,7 @@ import (
 	"runtime/pprof"
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
@@ -21,7 +22,6 @@ import (
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
@@ -53,16 +53,12 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.5),
 	))
 
-	m, err := mesh.Load("../internal/testdata/bunny.obj")
-	if err != nil {
-		panic(err)
-	}
-
+	m := mesh.MustLoadAs[*mesh.TriangleSoup]("../internal/testdata/bunny.obj")
 	data := imageutil.MustLoadImage("../internal/testdata/bunny.png")
 	mat := material.NewBlinnPhong(
-		material.Texture(texture.NewTexture(
-			texture.Image(data),
-			texture.IsoMipmap(true),
+		material.Texture(buffer.NewTexture(
+			buffer.TextureImage(data),
+			buffer.TextureIsoMipmap(true),
 		)),
 		material.Kdiff(0.8), material.Kspec(1),
 		material.Shininess(100),

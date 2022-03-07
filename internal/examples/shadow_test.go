@@ -7,6 +7,7 @@ package example_test
 import (
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
@@ -14,7 +15,6 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
@@ -37,15 +37,15 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 		),
 	)
 
-	m, err := mesh.Load("../testdata/bunny.obj")
+	m, err := mesh.LoadAs[*mesh.TriangleSoup]("../testdata/bunny.obj")
 	if err != nil {
 		panic(err)
 	}
 
 	data := imageutil.MustLoadImage("../testdata/bunny.png")
-	tex := texture.NewTexture(
-		texture.Image(data),
-		texture.IsoMipmap(true),
+	tex := buffer.NewTexture(
+		buffer.TextureImage(data),
+		buffer.TextureIsoMipmap(true),
 	)
 	mat := material.NewBlinnPhong(
 		material.Texture(tex),
@@ -56,14 +56,14 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m, err = mesh.Load("../testdata/ground.obj")
+	m, err = mesh.LoadAs[*mesh.TriangleSoup]("../testdata/ground.obj")
 	if err != nil {
 		panic(err)
 	}
 	data = imageutil.MustLoadImage("../testdata/ground.png")
-	tex = texture.NewTexture(
-		texture.Image(data),
-		texture.IsoMipmap(true),
+	tex = buffer.NewTexture(
+		buffer.TextureImage(data),
+		buffer.TextureIsoMipmap(true),
 	)
 	mat = material.NewBlinnPhong(
 		material.Texture(tex),

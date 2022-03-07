@@ -11,21 +11,17 @@ import (
 )
 
 type (
-	// VertexProgram is a shader that executes on each vertex.
-	VertexProgram func(primitive.Vertex) primitive.Vertex
+	// Vertex is a shader that executes on each vertex.
+	Vertex func(*primitive.Vertex) *primitive.Vertex
 
 	// FragmentShader is a shader that executes on each pixel.
-	FragmentProgram func(primitive.Fragment) color.RGBA
+	Fragment func(*primitive.Fragment) color.RGBA
 )
-
-// FIXME: returning a copy may be problematic for primitive.Vertex.
-// It has a map[K]V field which is actually a pointer. Need figure out
-// a better way of returning a resulting vertex.
 
 // Program is a interface that describes a pair of shader programs.
 type Program interface {
-	VertexShader(primitive.Vertex) primitive.Vertex
-	FragmentShader(primitive.Fragment) color.RGBA
+	Vertex(*primitive.Vertex) *primitive.Vertex
+	Fragment(*primitive.Fragment) color.RGBA
 }
 
 var _ Program = &BasicShader{}
@@ -37,11 +33,9 @@ type BasicShader struct {
 	ProjectionMatrix math.Mat4
 }
 
-func (s *BasicShader) VertexShader(v primitive.Vertex) primitive.Vertex {
+func (s *BasicShader) Vertex(v *primitive.Vertex) *primitive.Vertex {
 	v.Pos = s.ProjectionMatrix.MulM(s.ViewMatrix).MulM(s.ModelMatrix).MulV(v.Pos)
 	return v
 }
 
-func (s *BasicShader) FragmentShader(frag primitive.Fragment) color.RGBA {
-	return frag.Col
-}
+func (s *BasicShader) Fragment(frag *primitive.Fragment) color.RGBA { return frag.Col }

@@ -18,9 +18,9 @@ func BenchmarkNewTriangleMesh(b *testing.B) {
 		ts := make([]*primitive.Triangle, n)
 		for i := 0; i < n; i++ {
 			t := &primitive.Triangle{
-				V1: *primitive.NewRandomVertex(),
-				V2: *primitive.NewRandomVertex(),
-				V3: *primitive.NewRandomVertex(),
+				V1: primitive.NewRandomVertex(),
+				V2: primitive.NewRandomVertex(),
+				V3: primitive.NewRandomVertex(),
 			}
 			ts[i] = t
 		}

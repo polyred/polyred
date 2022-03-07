@@ -9,10 +9,10 @@ import (
 	"math/rand"
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/texture"
 )
 
 func BenchmarkBlinnPhongShader(b *testing.B) {
@@ -37,7 +37,7 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	}
 
 	mat := material.NewBlinnPhong(
-		material.Texture(texture.NewTexture()),
+		material.Texture(buffer.NewTexture()),
 		material.Kdiff(0.6), material.Kspec(200),
 		material.Shininess(25),
 	)

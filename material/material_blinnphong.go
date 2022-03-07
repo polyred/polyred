@@ -7,14 +7,14 @@ package material
 import (
 	"image/color"
 
+	"poly.red/buffer"
 	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/math"
-	"poly.red/texture"
 )
 
 type BlinnPhongMaterial struct {
-	tex              *texture.Texture
+	tex              *buffer.Texture
 	kDiff            float32
 	kSpec            float32
 	shininess        float32
@@ -23,7 +23,7 @@ type BlinnPhongMaterial struct {
 	ambientOcclusion bool
 }
 
-func (m *BlinnPhongMaterial) Texture() *texture.Texture {
+func (m *BlinnPhongMaterial) Texture() *buffer.Texture {
 	return m.tex
 }
 
@@ -43,7 +43,7 @@ func NewBlinnPhong(opts ...Opt) Material {
 	return t
 }
 
-func (m *BlinnPhongMaterial) VertexShader(v primitive.Vertex, uniforms map[string]any) primitive.Vertex {
+func (m *BlinnPhongMaterial) VertexShader(v *primitive.Vertex, uniforms map[string]any) primitive.Vertex {
 	matModel := uniforms["matModel"].(math.Mat4)
 	matView := uniforms["matView"].(math.Mat4)
 	matProj := uniforms["matProj"].(math.Mat4)

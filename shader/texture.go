@@ -7,24 +7,26 @@ package shader
 import (
 	"image/color"
 
+	"poly.red/buffer"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
-	"poly.red/texture"
 )
+
+var _ Program = &TextureShader{}
 
 type TextureShader struct {
 	ModelMatrix math.Mat4
 	ViewMatrix  math.Mat4
 	ProjMatrix  math.Mat4
-	Texture     *texture.Texture
+	Texture     *buffer.Texture
 }
 
-func (s *TextureShader) VertexShader(v primitive.Vertex) primitive.Vertex {
+func (s *TextureShader) Vertex(v *primitive.Vertex) *primitive.Vertex {
 	v.Pos = s.ProjMatrix.MulM(s.ViewMatrix).MulM(s.ModelMatrix).MulV(v.Pos)
 	return v
 }
 
-func (s *TextureShader) FragmentShader(frag primitive.Fragment) color.RGBA {
+func (s *TextureShader) Fragment(frag *primitive.Fragment) color.RGBA {
 	col := s.Texture.Query(0, frag.UV.X, 1-frag.UV.Y)
 	return col
 }

@@ -2,23 +2,23 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package texture_test
+package buffer_test
 
 import (
 	"fmt"
 	"image"
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/color"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
-func mustLoadTexture(path string) *texture.Texture {
+func mustLoadTexture(path string) *buffer.Texture {
 	data := imageutil.MustLoadImage(path)
-	return texture.NewTexture(
-		texture.Image(data),
-		texture.IsoMipmap(true),
+	return buffer.NewTexture(
+		buffer.TextureImage(data),
+		buffer.TextureIsoMipmap(true),
 	)
 }
 
@@ -33,61 +33,61 @@ var (
 	}
 	tests = []struct {
 		name string
-		tex  *texture.Texture
+		tex  *buffer.Texture
 		u    float32
 		v    float32
 		lod  float32
 		want color.RGBA
 	}{
-		{"1x1", texture.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", texture.NewTexture(), 1, 1, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", texture.NewTexture(), 0.5, 0.5, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", texture.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", buffer.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", buffer.NewTexture(), 1, 1, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", buffer.NewTexture(), 0.5, 0.5, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", buffer.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
 		{
 			"2x2",
-			texture.NewTexture(
-				texture.Image(data),
-				texture.IsoMipmap(true),
+			buffer.NewTexture(
+				buffer.TextureImage(data),
+				buffer.TextureIsoMipmap(true),
 			),
 			0, 0, 0, color.RGBA{255, 255, 255, 255},
 		},
 		{
 			"2x2",
-			texture.NewTexture(
-				texture.Image(data),
-				texture.IsoMipmap(true),
+			buffer.NewTexture(
+				buffer.TextureImage(data),
+				buffer.TextureIsoMipmap(true),
 			),
 			0, 1, 0, color.RGBA{0, 0, 0, 0},
 		},
 		{
 			"2x2",
-			texture.NewTexture(
-				texture.Image(data),
-				texture.IsoMipmap(true),
+			buffer.NewTexture(
+				buffer.TextureImage(data),
+				buffer.TextureIsoMipmap(true),
 			),
 			1, 0, 0, color.RGBA{0, 0, 0, 0},
 		},
 		{
 			"2x2",
-			texture.NewTexture(
-				texture.Image(data),
-				texture.IsoMipmap(true),
+			buffer.NewTexture(
+				buffer.TextureImage(data),
+				buffer.TextureIsoMipmap(true),
 			),
 			1, 1, 0, color.RGBA{255, 255, 255, 255},
 		},
 		{
 			"2x2",
-			texture.NewTexture(
-				texture.Image(data),
-				texture.IsoMipmap(true),
+			buffer.NewTexture(
+				buffer.TextureImage(data),
+				buffer.TextureIsoMipmap(true),
 			),
 			1, 1, 1.5, color.RGBA{191, 191, 191, 191},
 		},
 		{
 			"2x2",
-			texture.NewTexture(
-				texture.Image(data),
-				texture.IsoMipmap(true),
+			buffer.NewTexture(
+				buffer.TextureImage(data),
+				buffer.TextureIsoMipmap(true),
 			),
 			0.5, 0.5, 0, color.RGBA{127, 127, 127, 127},
 		},

@@ -7,6 +7,7 @@ package mesh
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -16,21 +17,31 @@ import (
 	"poly.red/math"
 )
 
-// LoadOBJ loads a .obj file to a TriangleMesh object
-func LoadOBJ(path string) (Mesh, error) {
+// LoadObjAs loads a .obj file to a Mesh object.
+func LoadObjAs[T Mesh](path string) (x T, err error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("mesh: failed to open file %s: %w", path, err)
+		return x, fmt.Errorf("mesh: failed to open file %s: %w", path, err)
 	}
 	defer f.Close()
 
+	var m T
+	switch (interface{})(m).(type) {
+	case *TriangleSoup:
+		v, err := loadObjToTriangleSoup(f)
+		return interface{}(v).(T), err
+	default:
+		panic("unsupported")
+	}
+}
+
+func loadObjToTriangleSoup(r io.Reader) (*TriangleSoup, error) {
 	vs := make([]math.Vec4, 1)
-	vts := make([]math.Vec4, 1, 1024)
+	vts := make([]math.Vec2, 1, 1024)
 	vns := make([]math.Vec4, 1, 1024)
 
 	var tris []*primitive.Triangle
-
-	s := bufio.NewScanner(f)
+	s := bufio.NewScanner(r)
 	for s.Scan() {
 		l := s.Text()
 		fields := strings.Fields(l)
@@ -45,7 +56,7 @@ func LoadOBJ(path string) (Mesh, error) {
 			vs = append(vs, math.NewVec4(coord[0], coord[1], coord[2], 1))
 		case "vt":
 			coord := parseFloats(args)
-			vts = append(vts, math.NewVec4(coord[0], coord[1], 0, 1))
+			vts = append(vts, math.NewVec2(coord[0], coord[1]))
 		case "vn":
 			coord := parseFloats(args)
 			vns = append(vns, math.NewVec4(coord[0], coord[1], coord[2], 0))
@@ -61,7 +72,11 @@ func LoadOBJ(path string) (Mesh, error) {
 			}
 			for i := 1; i < len(fvs)-1; i++ {
 				i1, i2, i3 := 0, i, i+1
-				t := primitive.Triangle{}
+				t := primitive.Triangle{
+					V1: &primitive.Vertex{},
+					V2: &primitive.Vertex{},
+					V3: &primitive.Vertex{},
+				}
 				t.V1.Pos = vs[fvs[i1]]
 				t.V2.Pos = vs[fvs[i2]]
 				t.V3.Pos = vs[fvs[i3]]

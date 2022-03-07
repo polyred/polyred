@@ -9,6 +9,7 @@ import (
 	"image"
 	"image/color"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
@@ -16,7 +17,6 @@ import (
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/object"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 	"poly.red/texture/shadow"
 
@@ -241,7 +241,7 @@ func (r *Renderer) shadowDepthTest(index int, x, y int, z float32) bool {
 }
 
 func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
-	info texture.Fragment, uniforms map[string]any,
+	info buffer.Fragment, uniforms map[string]any,
 ) bool {
 	if !r.lightSources[shadowIdx].CastShadow() {
 		return true

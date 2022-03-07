@@ -24,7 +24,7 @@ func TestBufferedMesh(t *testing.T) {
 			0.951827, -0.215059, -0.050857, // 3
 		},
 	})
-	bm.SetVertexIndex([]uint64{
+	bm.SetVertexIndex([]int{
 		2, 3, 1,
 		2, 0, 3,
 		3, 0, 1,

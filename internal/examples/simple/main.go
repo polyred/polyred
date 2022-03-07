@@ -9,6 +9,7 @@ import (
 
 	"poly.red/app"
 	"poly.red/camera"
+	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/model"
 	"poly.red/render"
@@ -30,7 +31,7 @@ func New() *App {
 	s := scene.NewScene()
 
 	// Create and add a point light and a bunny to the scene graph
-	s.Add(light.NewPoint(), model.StanfordBunny())
+	s.Add(light.NewPoint(), model.StanfordBunnyAs[*mesh.TriangleSoup]())
 
 	// Create a camera for the rendering
 	c := camera.NewPerspective()

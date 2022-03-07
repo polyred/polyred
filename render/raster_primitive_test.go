@@ -9,13 +9,13 @@ import (
 	"math/rand"
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/shader"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
@@ -23,7 +23,7 @@ var (
 	rend *render.Renderer
 	m    *mesh.TriangleSoup
 	prog shader.Program
-	buf  *texture.Buffer
+	buf  *buffer.FragmentBuffer
 )
 
 func init() {
@@ -39,20 +39,16 @@ func init() {
 	)
 
 	// Use a different model
-	mod, err := mesh.Load("../internal/testdata/bunny.obj")
+	var err error
+	m, err = mesh.LoadAs[*mesh.TriangleSoup]("../internal/testdata/bunny.obj")
 	if err != nil {
 		panic(err)
 	}
-	var ok bool
-	m, ok = mod.(*mesh.TriangleSoup)
-	if !ok {
-		panic("expect load as an triangle soup")
-	}
 	m.Normalize()
 
-	tex := texture.NewTexture(
-		texture.Image(imageutil.MustLoadImage("../internal/testdata/bunny.png")),
-		texture.IsoMipmap(true),
+	tex := buffer.NewTexture(
+		buffer.TextureImage(imageutil.MustLoadImage("../internal/testdata/bunny.png")),
+		buffer.TextureIsoMipmap(true),
 	)
 	prog = &shader.TextureShader{
 		ModelMatrix: m.ModelMatrix(),
@@ -60,26 +56,26 @@ func init() {
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     tex,
 	}
-	buf = texture.NewBuffer(image.Rect(0, 0, width, height))
+	buf = buffer.NewBuffer(image.Rect(0, 0, width, height))
 }
 
 func TestDrawPrimitives(t *testing.T) {
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
-	rend.DrawPrimitives(buf, prog.VertexShader, vi, vb)
-	rend.DrawFragments(buf, prog.FragmentShader)
+	rend.DrawPrimitives(buf, vi, vb, prog.Vertex)
+	rend.DrawFragments(buf, prog.Fragment)
 	imageutil.Save(buf.Image(), "../internal/examples/out/draw-primitives.png")
 }
 
 func BenchmarkDrawPrimitive(b *testing.B) {
 	rand.Seed(42)
 
-	buf := texture.NewBuffer(image.Rect(0, 0, 1920, 1080))
+	buf := buffer.NewBuffer(image.Rect(0, 0, 1920, 1080))
 	r := render.NewRenderer()
 	p := shader.BasicShader{}
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r.DrawPrimitive(buf, p.VertexShader, &primitive.Triangle{})
+		r.DrawPrimitive(buf, &primitive.Triangle{}, p.Vertex)
 	}
 }

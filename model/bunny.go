@@ -13,8 +13,8 @@ import (
 // files less than 2GB. See https://golang.org/issue/47627
 
 // StanfordBunny returns the path to locate stanford bunny.
-func StanfordBunny() mesh.Mesh {
-	return mesh.MustLoad(fix("../internal/testdata/bunny.obj"))
+func StanfordBunnyAs[T mesh.Mesh]() T {
+	return mesh.MustLoadAs[T](fix("../internal/testdata/bunny.obj"))
 }
 
 // fix returns the absolute path of a given relative path

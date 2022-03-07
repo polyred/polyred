@@ -86,11 +86,9 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 				Z: b1bc[0]*v1.Pos.Z + b1bc[1]*v2.Pos.Z + b1bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec4{
+			UV: math.Vec2{
 				X: b1bc[0]*v1.UV.X + b1bc[1]*v2.UV.X + b1bc[2]*v3.UV.X,
 				Y: b1bc[0]*v1.UV.Y + b1bc[1]*v2.UV.Y + b1bc[2]*v3.UV.Y,
-				Z: 0,
-				W: 1,
 			},
 			Nor: math.Vec4{
 				X: b1bc[0]*v1.Nor.X + b1bc[1]*v2.Nor.X + b1bc[2]*v3.Nor.X,
@@ -112,11 +110,9 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 				Z: b2bc[0]*v1.Pos.Z + b2bc[1]*v2.Pos.Z + b2bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec4{
+			UV: math.Vec2{
 				X: b2bc[0]*v1.UV.X + b2bc[1]*v2.UV.X + b2bc[2]*v3.UV.X,
 				Y: b2bc[0]*v1.UV.Y + b2bc[1]*v2.UV.Y + b2bc[2]*v3.UV.Y,
-				Z: 0,
-				W: 1,
 			},
 			Nor: math.Vec4{
 				X: b2bc[0]*v1.Nor.X + b2bc[1]*v2.Nor.X + b2bc[2]*v3.Nor.X,
@@ -138,11 +134,9 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 				Z: b3bc[0]*v1.Pos.Z + b3bc[1]*v2.Pos.Z + b3bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec4{
+			UV: math.Vec2{
 				X: b3bc[0]*v1.UV.X + b3bc[1]*v2.UV.X + b3bc[2]*v3.UV.X,
 				Y: b3bc[0]*v1.UV.Y + b3bc[1]*v2.UV.Y + b3bc[2]*v3.UV.Y,
-				Z: 0,
-				W: 1,
 			},
 			Nor: math.Vec4{
 				X: b3bc[0]*v1.Nor.X + b3bc[1]*v2.Nor.X + b3bc[2]*v3.Nor.X,

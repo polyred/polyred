@@ -5,6 +5,7 @@
 package mesh
 
 import (
+	"poly.red/buffer"
 	"poly.red/geometry/primitive"
 	"poly.red/material"
 	"poly.red/math"
@@ -18,7 +19,7 @@ var (
 // TriangleSoup implements a triangular mesh.
 type TriangleSoup struct {
 	// all faces of the triangle mesh.
-	faces []*primitive.Triangle
+	triangles []*primitive.Triangle
 	// the corresponding material of the triangle mesh.
 	material material.Material
 	// aabb must be transformed when applying the context.
@@ -32,12 +33,12 @@ func (f *TriangleSoup) Type() object.Type {
 }
 
 func (f *TriangleSoup) NumTriangles() uint64 {
-	return uint64(len(f.faces))
+	return uint64(len(f.triangles))
 }
 
 func (f *TriangleSoup) Faces(iter func(primitive.Face, material.Material) bool) {
-	for i := range f.faces {
-		if !iter(f.faces[i], f.material) {
+	for i := range f.triangles {
+		if !iter(f.triangles[i], f.material) {
 			return
 		}
 	}
@@ -60,8 +61,8 @@ func NewTriangleSoup(ts []*primitive.Triangle) *TriangleSoup {
 	}
 
 	ret := &TriangleSoup{
-		faces: ts,
-		aabb:  &aabb,
+		triangles: ts,
+		aabb:      &aabb,
 	}
 	ret.ResetContext()
 	return ret
@@ -70,10 +71,10 @@ func NewTriangleSoup(ts []*primitive.Triangle) *TriangleSoup {
 func (m *TriangleSoup) AABB() primitive.AABB {
 	if m.aabb == nil {
 		// Compute AABB if not computed
-		aabb := m.faces[0].AABB()
-		lenth := len(m.faces)
+		aabb := m.triangles[0].AABB()
+		lenth := len(m.triangles)
 		for i := 1; i < lenth; i++ {
-			aabb.Add(m.faces[i].AABB())
+			aabb.Add(m.triangles[i].AABB())
 		}
 		m.aabb = &aabb
 	}
@@ -101,8 +102,8 @@ func (m *TriangleSoup) Normalize() {
 	fac := 1 / radius
 
 	// scale all vertices
-	for i := 0; i < len(m.faces); i++ {
-		f := m.faces[i]
+	for i := 0; i < len(m.triangles); i++ {
+		f := m.triangles[i]
 		f.V1.Pos = f.V1.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
 		f.V2.Pos = f.V2.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
 		f.V3.Pos = f.V3.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
@@ -115,17 +116,16 @@ func (m *TriangleSoup) Normalize() {
 	m.ResetContext()
 }
 
-func (m *TriangleSoup) GetVertexIndex() []uint64 {
-	index := make([]uint64, len(m.faces)*3)
-
+func (m *TriangleSoup) GetVertexIndex() buffer.IndexBuffer {
+	index := make([]int, len(m.triangles)*3)
 	for i := range index {
-		index[i] = uint64(i)
+		index[i] = i
 	}
 	return index
 }
 
-func (m *TriangleSoup) GetVertexBuffer() []*primitive.Vertex {
-	vs := make([]*primitive.Vertex, len(m.faces)*3)
+func (m *TriangleSoup) GetVertexBuffer() buffer.VertexBuffer {
+	vs := make([]*primitive.Vertex, len(m.triangles)*3)
 	i := 0
 	m.Faces(func(f primitive.Face, m material.Material) bool {
 		f.Vertices(func(v *primitive.Vertex) bool {

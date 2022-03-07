@@ -9,18 +9,18 @@ import (
 	"path/filepath"
 )
 
-func MustLoad(path string) Mesh {
-	m, err := Load(path)
+func MustLoadAs[T Mesh](path string) T {
+	m, err := LoadAs[T](path)
 	if err != nil {
 		panic(fmt.Errorf("mesh: cannot load a given mesh: %w", err))
 	}
 	return m
 }
 
-func Load(path string) (Mesh, error) {
+func LoadAs[T Mesh](path string) (T, error) {
 	switch filepath.Ext(path) {
 	case ".obj":
-		return LoadOBJ(path)
+		return LoadObjAs[T](path)
 	default:
 		panic("mesh: unsupported format")
 	}

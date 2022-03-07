@@ -11,6 +11,7 @@ import (
 	"os"
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
@@ -18,7 +19,6 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture"
 )
 
 type Scene struct {
@@ -195,14 +195,14 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 			light.Intensity(0.5),
 		))
 
-		m, err := mesh.Load(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
+		m, err := mesh.LoadAs[*mesh.TriangleSoup](fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
 		if err != nil {
 			panic(err)
 		}
 
 		m.Normalize()
 		m.SetMaterial(material.NewBlinnPhong(
-			material.Texture(texture.NewUniformTexture(color.RGBA{0, 128, 255, 255})),
+			material.Texture(buffer.NewUniformTexture(color.RGBA{0, 128, 255, 255})),
 			material.Kdiff(0.6), material.Kspec(1),
 			material.Shininess(100),
 			material.FlatShading(false),

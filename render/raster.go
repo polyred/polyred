@@ -9,6 +9,7 @@ import (
 	"image"
 	"runtime"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/color"
 	"poly.red/geometry/mesh"
@@ -18,7 +19,7 @@ import (
 	"poly.red/math"
 	"poly.red/object"
 	"poly.red/scene"
-	"poly.red/texture"
+	"poly.red/shader"
 	"poly.red/texture/imageutil"
 
 	"poly.red/internal/profiling"
@@ -52,10 +53,10 @@ type Renderer struct {
 	batchSize      int32
 	workers        int
 	sched          *sched.Pool
-	pixelFormat    texture.PixelFormat
+	pixelFormat    buffer.PixelFormat
 	bufcur         int
 	buflen         int
-	bufs           []*texture.Buffer
+	bufs           []*buffer.FragmentBuffer
 	renderCamera   camera.Interface
 	renderPerspect bool
 	shadowBufs     []shadowInfo
@@ -67,7 +68,7 @@ type Renderer struct {
 // The returned renderer implements a rasterization rendering pipeline.
 func NewRenderer(opts ...Opt) *Renderer {
 	r := &Renderer{ // default settings
-		pixelFormat:  texture.PixelFormatRGBA,
+		pixelFormat:  buffer.PixelFormatRGBA,
 		buflen:       2, // use 2 by default.
 		bufs:         nil,
 		width:        800,
@@ -85,7 +86,7 @@ func NewRenderer(opts ...Opt) *Renderer {
 		opt(r)
 	}
 
-	r.bufs = make([]*texture.Buffer, r.buflen)
+	r.bufs = make([]*buffer.FragmentBuffer, r.buflen)
 	r.resetBufs()
 
 	r.sched = sched.New(sched.Workers(r.workers))
@@ -111,8 +112,8 @@ func NewRenderer(opts ...Opt) *Renderer {
 	// initialize shadow maps
 	if r.scene != nil && r.useShadowMap {
 		r.initShadowMaps()
-		r.bufs[0].ClearFragments()
-		r.bufs[0].ClearFrameBuf()
+		r.bufs[0].ClearFragment()
+		r.bufs[0].ClearColor()
 	}
 
 	return r
@@ -122,8 +123,8 @@ func NewRenderer(opts ...Opt) *Renderer {
 // Note: with Metal, we always use RGBA pixel format.
 func (r *Renderer) resetBufs() {
 	for i := 0; i < r.buflen; i++ {
-		r.bufs[i] = texture.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa),
-			texture.Format(r.pixelFormat))
+		r.bufs[i] = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa),
+			buffer.Format(r.pixelFormat))
 	}
 }
 
@@ -141,7 +142,7 @@ func (r *Renderer) Render() *image.RGBA {
 	defer r.stopRunning()
 
 	// reset buffers
-	r.bufs[0].ClearFragments()
+	r.bufs[0].ClearColor()
 	if r.shouldStop() {
 		return r.outBuf
 	}
@@ -154,7 +155,7 @@ func (r *Renderer) Render() *image.RGBA {
 				return r.outBuf
 			}
 		}
-		r.bufs[0].ClearFragments()
+		r.bufs[0].ClearColor()
 	}
 
 	r.passForward()
@@ -162,7 +163,7 @@ func (r *Renderer) Render() *image.RGBA {
 		return r.outBuf
 	}
 
-	r.bufs[0].ClearFrameBuf()
+	r.bufs[0].ClearColor()
 	r.passDeferred()
 	if r.shouldStop() {
 		return r.outBuf
@@ -172,20 +173,20 @@ func (r *Renderer) Render() *image.RGBA {
 	return r.outBuf
 }
 
-func (r *Renderer) CurrBuffer() *texture.Buffer {
+func (r *Renderer) CurrBuffer() *buffer.FragmentBuffer {
 	return r.bufs[r.bufcur]
 }
 
-func (r *Renderer) NextBuffer() *texture.Buffer {
+func (r *Renderer) NextBuffer() *buffer.FragmentBuffer {
 	r.bufcur = (r.bufcur + 1) % r.buflen
 	r.bufs[r.bufcur].Clear()
 	return r.bufs[r.bufcur]
 }
 
-func (r *Renderer) DrawImage(buf *texture.Buffer, img *image.RGBA) {
+func (r *Renderer) DrawImage(buf *buffer.FragmentBuffer, img *image.RGBA) {
 	for i := 0; i < buf.Bounds().Dx(); i++ {
 		for j := 0; j < buf.Bounds().Dy(); j++ {
-			buf.Set(i, j, texture.Fragment{
+			buf.Set(i, j, buffer.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
 					X: i, Y: j, Col: img.RGBAAt(i, img.Bounds().Dy()),
@@ -277,13 +278,13 @@ func (r *Renderer) passDeferred() {
 	}
 
 	ao := ambientOcclusionPass{buf: r.bufs[0]}
-	r.DrawFragments(r.bufs[0], func(frag primitive.Fragment) color.RGBA {
-		frag.Col = r.shade(r.bufs[0].UnsafeAt(frag.X, frag.Y), uniforms)
+	r.DrawFragments(r.bufs[0], func(frag *primitive.Fragment) color.RGBA {
+		frag.Col = r.shade(r.bufs[0].UnsafeGet(frag.X, frag.Y), uniforms)
 		return ao.Shade(frag.X, frag.Y, frag.Col)
 	})
 }
 
-func (r *Renderer) shade(info texture.Fragment, uniforms map[string]any) color.RGBA {
+func (r *Renderer) shade(info buffer.Fragment, uniforms map[string]any) color.RGBA {
 	if !info.Ok {
 		return r.background
 	}
@@ -391,7 +392,7 @@ func (r *Renderer) draw(
 	if outside(&t1.Pos, w, h) || outside(&t2.Pos, w, h) || outside(&t3.Pos, w, h) {
 		tris := r.clipTriangle(&t1, &t2, &t3, w, h, recipw)
 		for _, tri := range tris {
-			r.drawClipped(&tri.V1, &tri.V2, &tri.V3, recipw, uniforms, mat)
+			r.drawClipped(tri.V1, tri.V2, tri.V3, recipw, uniforms, mat)
 		}
 		return
 	}
@@ -498,7 +499,7 @@ func (r *Renderer) drawClipped(
 			}
 
 			// update G-buffer
-			r.bufs[0].Set(x, y, texture.Fragment{
+			r.bufs[0].Set(x, y, buffer.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
 					X:     x,
@@ -509,7 +510,7 @@ func (r *Renderer) drawClipped(
 					Dv:    dv,
 					Nor:   n,
 					Col:   col,
-					AttrFlat: map[string]any{
+					AttrFlat: map[primitive.Attribute]any{
 						"Pos": pos,
 						"Mat": mat,
 						"fN":  fN,
@@ -526,12 +527,7 @@ func (r *Renderer) passGammaCorrect() {
 		return
 	}
 
-	r.DrawFragments(r.bufs[0], func(frag primitive.Fragment) color.RGBA {
-		r := uint8(color.FromLinear2sRGB(float32(frag.Col.R)/0xff)*0xff + 0.5)
-		g := uint8(color.FromLinear2sRGB(float32(frag.Col.G)/0xff)*0xff + 0.5)
-		b := uint8(color.FromLinear2sRGB(float32(frag.Col.B)/0xff)*0xff + 0.5)
-		return color.RGBA{r, g, b, frag.Col.A}
-	})
+	r.DrawFragments(r.bufs[0], shader.GammaCorrection)
 }
 
 func (r *Renderer) inViewport(v1, v2, v3 math.Vec4) bool {

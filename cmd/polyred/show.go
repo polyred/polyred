@@ -9,13 +9,13 @@ import (
 
 	"poly.red/app"
 	"poly.red/app/controls"
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/shader"
-	"poly.red/texture"
+	"poly.red/texture/imageutil"
 )
 
 type App struct {
@@ -26,8 +26,8 @@ type App struct {
 	prog  *shader.TextureShader
 	m     *mesh.TriangleSoup
 	cam   camera.Interface
-	vi    []uint64
-	vb    []*primitive.Vertex
+	vi    buffer.IndexBuffer
+	vb    buffer.VertexBuffer
 	cache *image.RGBA
 }
 
@@ -44,22 +44,17 @@ func newApp(meshPath, texPath string) *App {
 		render.Size(w, h),
 		render.Camera(cam),
 		render.Workers(2),
-		render.PixelFormat(texture.PixelFormatBGRA),
+		render.PixelFormat(buffer.PixelFormatBGRA),
 	)
 
-	ms, _ := mesh.LoadOBJ(meshPath)
-	m, ok := ms.(*mesh.TriangleSoup)
-	if !ok {
-		panic("expect load as an triangle soup")
-	}
-
+	m := mesh.MustLoadAs[*mesh.TriangleSoup](meshPath)
 	m.Normalize()
 	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 	prog := &shader.TextureShader{
 		ModelMatrix: m.ModelMatrix(),
 		ViewMatrix:  cam.ViewMatrix(),
 		ProjMatrix:  cam.ProjMatrix(),
-		Texture:     texture.NewTextureFromImage(texPath),
+		Texture:     buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage(texPath))),
 	}
 	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: vi, vb: vb}
 	a.ctrl = controls.NewOrbitControl(a, cam)
@@ -89,8 +84,8 @@ func (a *App) Draw() (*image.RGBA, bool) {
 	a.prog.ProjMatrix = a.cam.ProjMatrix()
 
 	buf := a.r.NextBuffer()
-	a.r.DrawPrimitives(buf, a.prog.VertexShader, a.vi, a.vb)
-	a.r.DrawFragments(buf, a.prog.FragmentShader)
+	a.r.DrawPrimitives(buf, a.vi, a.vb, a.prog.Vertex)
+	a.r.DrawFragments(buf, a.prog.Fragment)
 	a.cache = buf.Image()
 	return a.cache, true
 }

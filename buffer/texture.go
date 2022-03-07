@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package texture
+package buffer
 
 import (
 	"fmt"
@@ -13,12 +13,6 @@ import (
 	"poly.red/texture/imageutil"
 )
 
-var defaultTexture = &image.RGBA{
-	Pix:    []uint8{255, 255, 255, 255},
-	Stride: 4,
-	Rect:   image.Rect(0, 0, 1, 1),
-}
-
 // NewUniformTexture returns a uniform colored texture.
 func NewUniformTexture(c color.RGBA) *Texture {
 	data := &image.RGBA{
@@ -26,7 +20,7 @@ func NewUniformTexture(c color.RGBA) *Texture {
 		Stride: 4,
 		Rect:   image.Rect(0, 0, 1, 1),
 	}
-	return NewTexture(Image(data))
+	return NewTexture(TextureImage(data))
 }
 
 // Texture represents a power-of-two 2D texture. The power-of-two means
@@ -38,11 +32,15 @@ type Texture struct {
 	debug     bool
 }
 
-func NewTexture(opts ...Opt) *Texture {
+func NewTexture(opts ...TextureOpt) *Texture {
 	t := &Texture{
 		useMipmap: true,
-		image:     defaultTexture,
-		mipmap:    []*image.RGBA{},
+		image: &image.RGBA{
+			Pix:    []uint8{255, 255, 255, 255},
+			Stride: 4,
+			Rect:   image.Rect(0, 0, 1, 1),
+		},
+		mipmap: []*image.RGBA{},
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -68,10 +66,6 @@ func NewTexture(opts ...Opt) *Texture {
 		}
 	}
 	return t
-}
-
-func NewTextureFromImage(path string, opts ...Opt) *Texture {
-	return NewTexture(Image(imageutil.MustLoadImage(path)))
 }
 
 // Size returns the size of the texture.
@@ -190,4 +184,43 @@ func (t *Texture) queryBilinear(lod int, u, v float32) color.RGBA {
 	}
 	interpo2 := math.LerpC(p3, p4, x-x0)
 	return math.LerpC(interpo1, interpo2, y-y0)
+}
+
+type TextureOpt func(t any)
+
+func TextureImage(data *image.RGBA) TextureOpt {
+	return func(t any) {
+		switch o := t.(type) {
+		case *Texture:
+			if data.Bounds().Dx() < 1 || data.Bounds().Dy() < 1 {
+				panic("buffer: image width or height is less than 1!")
+			}
+			o.image = data
+		default:
+			panic("buffer: misuse of Image option")
+		}
+	}
+}
+
+func TextureDebug(enable bool) TextureOpt {
+	return func(t any) {
+		switch o := t.(type) {
+		case *Texture:
+			o.debug = enable
+		default:
+			panic("buffer: misuse of Debug option")
+		}
+	}
+}
+
+// TextureIsoMipmap is a isotropic mipmap option
+func TextureIsoMipmap(enable bool) TextureOpt {
+	return func(t any) {
+		switch o := t.(type) {
+		case *Texture:
+			o.useMipmap = enable
+		default:
+			panic("texture: misuse of IsoMipmap option")
+		}
+	}
 }

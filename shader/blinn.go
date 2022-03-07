@@ -7,10 +7,10 @@ package shader
 import (
 	"image/color"
 
+	"poly.red/buffer"
 	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/math"
-	"poly.red/texture"
 )
 
 var _ Program = &BlinnShader{}
@@ -26,15 +26,15 @@ type BlinnShader struct {
 	Kdiff            float32
 	Kspec            float32
 	Shininess        float32
-	Texture          *texture.Texture
+	Texture          *buffer.Texture
 }
 
-func (s *BlinnShader) VertexShader(v primitive.Vertex) primitive.Vertex {
+func (s *BlinnShader) Vertex(v *primitive.Vertex) *primitive.Vertex {
 	v.Pos = s.ProjectionMatrix.MulM(s.ViewMatrix).MulM(s.ModelMatrix).MulV(v.Pos)
 	return v
 }
 
-func (s *BlinnShader) FragmentShader(frag primitive.Fragment) color.RGBA {
+func (s *BlinnShader) Fragment(frag *primitive.Fragment) color.RGBA {
 	x := frag.AttrSmooth["PosModel"].(math.Vec4)
 	c := frag.AttrSmooth["PosCam"].(math.Vec4)
 	col := frag.Col

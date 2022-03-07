@@ -9,14 +9,14 @@ import (
 	"image/color"
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/math"
 	"poly.red/render"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
 func TestDrawLine(t *testing.T) {
-	buf := texture.NewBuffer(image.Rect(0, 0, 100, 100))
+	buf := buffer.NewBuffer(image.Rect(0, 0, 100, 100))
 
 	render.DrawLine(buf, math.NewVec4(0, 0, 0, 1), math.NewVec4(100, 100, 0, 1), color.RGBA{255, 0, 0, 255})
 	render.DrawLine(buf, math.NewVec4(0, 100, 0, 1), math.NewVec4(100, 0, 0, 1), color.RGBA{255, 0, 0, 255})

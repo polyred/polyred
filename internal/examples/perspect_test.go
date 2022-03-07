@@ -3,6 +3,7 @@ package example_test
 import (
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
@@ -10,7 +11,6 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
@@ -19,9 +19,9 @@ func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	s.Add(light.NewAmbient(light.Intensity(1)))
 	m := mesh.NewPlane(1, 1)
 	m.SetMaterial(material.NewBlinnPhong(
-		material.Texture(texture.NewTexture(
-			texture.Image(imageutil.MustLoadImage("../testdata/uvgrid2.png")),
-			texture.IsoMipmap(true),
+		material.Texture(buffer.NewTexture(
+			buffer.TextureImage(imageutil.MustLoadImage("../testdata/uvgrid2.png")),
+			buffer.TextureIsoMipmap(true),
 		)),
 		material.Kdiff(0.6), material.Kspec(0.5),
 		material.Shininess(150),

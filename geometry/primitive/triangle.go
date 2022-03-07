@@ -12,16 +12,19 @@ var _ Face = &Triangle{}
 
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
-	V1, V2, V3 Vertex
+	Idx        uint64
+	V1, V2, V3 *Vertex
 
-	faceNormal math.Vec4
 	aabb       *AABB
+	faceNormal math.Vec4
 }
 
 // NewTriangle creates a new triangle using the given three vertices.
 // This method does not check the validity of the three vertices.
-// Instead, one can check if the three vertices can construct a triangle
+// Instead, one can check if the three vertices can verify a triangle
 // using IsValid method.
+//
+// The returned Triangle has an unset index.
 func NewTriangle(v1, v2, v3 *Vertex) *Triangle {
 	xmax := math.Max(v1.Pos.X, v2.Pos.X, v3.Pos.X)
 	xmin := math.Min(v1.Pos.X, v2.Pos.X, v3.Pos.X)
@@ -35,9 +38,9 @@ func NewTriangle(v1, v2, v3 *Vertex) *Triangle {
 	v2v3 := v3.Pos.Sub(v2.Pos)
 
 	return &Triangle{
-		V1:         *v1,
-		V2:         *v2,
-		V3:         *v3,
+		V1:         v1,
+		V2:         v2,
+		V3:         v3,
 		faceNormal: v2v3.Cross(v2v1).Unit(),
 		aabb:       &AABB{min, max},
 	}
@@ -59,11 +62,8 @@ func (t *Triangle) IsValid() bool {
 	}
 
 	d := p1p2.Dot(p1p3) / (p1p2.Len() * p1p3.Len())
-	if math.ApproxEq(d, 1, math.Epsilon) ||
-		math.ApproxEq(d, -1, math.Epsilon) {
-		return false
-	}
-	return true
+	return !math.ApproxEq(d, 1, math.Epsilon) &&
+		!math.ApproxEq(d, -1, math.Epsilon)
 }
 
 // Area returns the surface area of the given triangle.
@@ -104,7 +104,7 @@ func (t *Triangle) AABB() AABB {
 
 // Vertices traserval all vertices of the given triangle.
 func (t *Triangle) Vertices(f func(v *Vertex) bool) {
-	if !f(&t.V1) || !f(&t.V2) || !f(&t.V3) {
+	if !f(t.V1) || !f(t.V2) || !f(t.V3) {
 		return
 	}
 }

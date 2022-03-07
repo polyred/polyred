@@ -4,11 +4,11 @@
 
 package material
 
-import "poly.red/texture"
+import "poly.red/buffer"
 
 type Opt func(m Material)
 
-func Texture(tex *texture.Texture) Opt {
+func Texture(tex *buffer.Texture) Opt {
 	return func(m Material) {
 		switch mat := m.(type) {
 		case *BlinnPhongMaterial:

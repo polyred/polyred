@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
@@ -15,7 +16,6 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 
 	"poly.red/internal/profiling"
@@ -35,7 +35,7 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 
 	// load a mesh
 	done = profiling.Timed("loading mesh")
-	m, err := mesh.Load("../testdata/bunny-smooth.obj")
+	m, err := mesh.LoadAs[*mesh.TriangleSoup]("../testdata/bunny-smooth.obj")
 	if err != nil {
 		panic(err)
 	}
@@ -43,9 +43,9 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 
 	done = profiling.Timed("loading texture")
 	data := imageutil.MustLoadImage("../testdata/bunny.png")
-	tex := texture.NewTexture(
-		texture.Image(data),
-		texture.IsoMipmap(true),
+	tex := buffer.NewTexture(
+		buffer.TextureImage(data),
+		buffer.TextureIsoMipmap(true),
 	)
 	done()
 

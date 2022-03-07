@@ -6,6 +6,11 @@ package primitive
 
 import "poly.red/math"
 
+// Ray is a ray from Ori position towards Dir direction.
 type Ray struct {
-	Ori, Dir math.Vec4
+	Ori, Dir math.Vec3
+}
+
+func (r *Ray) Pos(t float32) math.Vec3 {
+	return r.Ori.Add(r.Dir.Scale(t, t, t))
 }

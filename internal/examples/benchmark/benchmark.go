@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
@@ -18,7 +19,6 @@ import (
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture"
 	"poly.red/texture/imageutil"
 )
 
@@ -81,7 +81,7 @@ func bench(opt *benchOpts) {
 			light.Color(color.RGBA{255, 255, 255, 255}),
 		))
 
-		m, err := mesh.Load("../../testdata/bunny.obj")
+		m, err := mesh.LoadAs[*mesh.TriangleSoup]("../../testdata/bunny.obj")
 		if err != nil {
 			panic(err)
 		}
@@ -90,9 +90,9 @@ func bench(opt *benchOpts) {
 			imageutil.GammaCorrect(opt.gammaCorrection),
 		)
 		m.SetMaterial(material.NewBlinnPhong(
-			material.Texture(texture.NewTexture(
-				texture.Image(data),
-				texture.IsoMipmap(true),
+			material.Texture(buffer.NewTexture(
+				buffer.TextureImage(data),
+				buffer.TextureIsoMipmap(true),
 			)),
 			material.Kdiff(0.6), material.Kspec(0.5),
 			material.Shininess(150),
@@ -102,7 +102,7 @@ func bench(opt *benchOpts) {
 		m.Scale(2, 2, 2)
 		s.Add(m)
 
-		m, err = mesh.Load("../../testdata/ground.obj")
+		m, err = mesh.LoadAs[*mesh.TriangleSoup]("../../testdata/ground.obj")
 		if err != nil {
 			panic(err)
 		}
@@ -110,9 +110,9 @@ func bench(opt *benchOpts) {
 		data = imageutil.MustLoadImage("../../testdata/ground.png",
 			imageutil.GammaCorrect(opt.gammaCorrection))
 		m.SetMaterial(material.NewBlinnPhong(
-			material.Texture(texture.NewTexture(
-				texture.Image(data),
-				texture.IsoMipmap(true),
+			material.Texture(buffer.NewTexture(
+				buffer.TextureImage(data),
+				buffer.TextureIsoMipmap(true),
 			)),
 			material.Kdiff(0.6), material.Kspec(0.5),
 			material.Shininess(150),
