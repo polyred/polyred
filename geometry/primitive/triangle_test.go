@@ -34,17 +34,17 @@ func TestTriangle_IsValid(t *testing.T) {
 		primitive.NewRandomVertex(),
 	)
 
-	tri.V1.Pos = math.NewVec4(1, 0, 0, 1)
-	tri.V2.Pos = math.NewVec4(2, 0, 0, 1)
-	tri.V3.Pos = math.NewVec4(3, 0, 0, 1)
+	tri.V1.Pos = math.NewVec4[float32](1, 0, 0, 1)
+	tri.V2.Pos = math.NewVec4[float32](2, 0, 0, 1)
+	tri.V3.Pos = math.NewVec4[float32](3, 0, 0, 1)
 
 	if tri.IsValid() {
 		t.Errorf("invalid triangle returns valid assertion")
 	}
 
-	tri.V1.Pos = math.NewVec4(1, 0, 0, 1)
-	tri.V2.Pos = math.NewVec4(2, 0, 0, 1)
-	tri.V3.Pos = math.NewVec4(0, 1, 0, 1)
+	tri.V1.Pos = math.NewVec4[float32](1, 0, 0, 1)
+	tri.V2.Pos = math.NewVec4[float32](2, 0, 0, 1)
+	tri.V3.Pos = math.NewVec4[float32](0, 1, 0, 1)
 
 	if !tri.IsValid() {
 		t.Errorf("valid triangle returns invalid assertion")
@@ -57,9 +57,9 @@ func TestTriangle_Area(t *testing.T) {
 		primitive.NewRandomVertex(),
 		primitive.NewRandomVertex(),
 	)
-	tri.V1.Pos = math.NewVec4(1, 0, 0, 1)
-	tri.V2.Pos = math.NewVec4(2, 0, 0, 1)
-	tri.V3.Pos = math.NewVec4(0, 1, 0, 1)
+	tri.V1.Pos = math.NewVec4[float32](1, 0, 0, 1)
+	tri.V2.Pos = math.NewVec4[float32](2, 0, 0, 1)
+	tri.V3.Pos = math.NewVec4[float32](0, 1, 0, 1)
 
 	if tri.Area() != 0.5 {
 		t.Error("incorrect triangle area: ", tri.Area())
@@ -135,9 +135,9 @@ func BenchmarkTriangle_IsValid(b *testing.B) {
 		primitive.NewRandomVertex(),
 		primitive.NewRandomVertex(),
 	)
-	tri.V1.Pos = math.NewVec4(1, 0, 0, 1)
-	tri.V2.Pos = math.NewVec4(2, 0, 0, 1)
-	tri.V3.Pos = math.NewVec4(0, 1, 0, 1)
+	tri.V1.Pos = math.NewVec4[float32](1, 0, 0, 1)
+	tri.V2.Pos = math.NewVec4[float32](2, 0, 0, 1)
+	tri.V3.Pos = math.NewVec4[float32](0, 1, 0, 1)
 
 	b.ReportAllocs()
 	b.ResetTimer()

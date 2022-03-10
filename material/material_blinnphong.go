@@ -44,10 +44,10 @@ func NewBlinnPhong(opts ...Opt) Material {
 }
 
 func (m *BlinnPhongMaterial) VertexShader(v *primitive.Vertex, uniforms map[string]any) primitive.Vertex {
-	matModel := uniforms["matModel"].(math.Mat4)
-	matView := uniforms["matView"].(math.Mat4)
-	matProj := uniforms["matProj"].(math.Mat4)
-	matNormal := uniforms["matNormal"].(math.Mat4)
+	matModel := uniforms["matModel"].(math.Mat4[float32])
+	matView := uniforms["matView"].(math.Mat4[float32])
+	matProj := uniforms["matProj"].(math.Mat4[float32])
+	matNormal := uniforms["matNormal"].(math.Mat4[float32])
 
 	pos := matProj.MulM(matView).MulM(matModel).MulV(v.Pos)
 	return primitive.Vertex{
@@ -58,7 +58,7 @@ func (m *BlinnPhongMaterial) VertexShader(v *primitive.Vertex, uniforms map[stri
 	}
 }
 
-func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec4, ls []light.Source, es []light.Environment) color.RGBA {
+func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec4[float32], ls []light.Source, es []light.Environment) color.RGBA {
 	LaR := float32(0.0)
 	LaG := float32(0.0)
 	LaB := float32(0.0)
@@ -83,7 +83,7 @@ func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec
 
 	for _, l := range ls {
 		var (
-			L math.Vec4
+			L math.Vec4[float32]
 			I float32
 		)
 		switch ll := l.(type) {

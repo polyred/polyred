@@ -8,15 +8,15 @@ import (
 	"poly.red/math"
 )
 
-var _ Face = &Triangle{}
+var _ Face[float32] = &Triangle{}
 
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
-	Idx        uint64
+	Idx        int
 	V1, V2, V3 *Vertex
 
 	aabb       *AABB
-	faceNormal math.Vec4
+	faceNormal math.Vec4[float32]
 }
 
 // NewTriangle creates a new triangle using the given three vertices.
@@ -115,7 +115,7 @@ func (t *Triangle) Triangles(f func(*Triangle) bool) {
 }
 
 // Normal returns the face normal of the given triangle.
-func (t *Triangle) Normal() math.Vec4 {
+func (t *Triangle) Normal() math.Vec4[float32] {
 	if t.faceNormal.IsZero() {
 		v2v1 := t.V1.Pos.Sub(t.V2.Pos)
 		v2v3 := t.V3.Pos.Sub(t.V2.Pos)

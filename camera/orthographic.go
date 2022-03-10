@@ -11,11 +11,11 @@ import (
 
 // Orthographic represents an orthographic camera.
 type Orthographic struct {
-	math.TransformContext
+	math.TransformContext[float32]
 
-	position math.Vec3
-	target   math.Vec3
-	up       math.Vec3
+	position math.Vec3[float32]
+	target   math.Vec3[float32]
+	up       math.Vec3[float32]
 	left     float32
 	right    float32
 	bottom   float32
@@ -28,9 +28,9 @@ type Orthographic struct {
 // camera parameters.
 func NewOrthographic(opts ...Opt) Interface {
 	c := &Orthographic{
-		position: math.NewVec3(0, 0, 1),
-		target:   math.NewVec3(0, 0, 0),
-		up:       math.NewVec3(0, 1, 0),
+		position: math.NewVec3[float32](0, 0, 1),
+		target:   math.NewVec3[float32](0, 0, 0),
+		up:       math.NewVec3[float32](0, 1, 0),
 		left:     -1,
 		right:    1,
 		bottom:   -1,
@@ -70,24 +70,24 @@ func (c *Orthographic) SetAspect(width, height float32) {
 }
 
 // Position returns the position of the given camera.
-func (c *Orthographic) Position() math.Vec3 {
+func (c *Orthographic) Position() math.Vec3[float32] {
 	return c.position
 }
 
 // SetPosition sets the position of the given camera.
-func (c *Orthographic) SetPosition(p math.Vec3) {
+func (c *Orthographic) SetPosition(p math.Vec3[float32]) {
 	c.position = p
 }
 
 // LookAt returns the look at target and up direction of the given camera.
-func (c *Orthographic) LookAt() (target, up math.Vec3) {
+func (c *Orthographic) LookAt() (target, up math.Vec3[float32]) {
 	target = c.target
 	up = c.up
 	return
 }
 
 // SetLookAt sets the position of the given camera.
-func (c *Orthographic) SetLookAt(target, up math.Vec3) {
+func (c *Orthographic) SetLookAt(target, up math.Vec3[float32]) {
 	c.target = target
 	c.up = up
 }
@@ -95,7 +95,7 @@ func (c *Orthographic) SetLookAt(target, up math.Vec3) {
 // ViewMatrix returns the view matrix of the given camera. The view
 // matrix transforms and places the camera up to +Y and towards -Z axis
 // at origin.
-func (c *Orthographic) ViewMatrix() math.Mat4 {
+func (c *Orthographic) ViewMatrix() math.Mat4[float32] {
 	l := c.target.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
 	u := lxu.Cross(l).Unit()
@@ -112,7 +112,7 @@ func (c *Orthographic) ViewMatrix() math.Mat4 {
 }
 
 // ProjMatrix returns the projection matrix of the given camera.
-func (c *Orthographic) ProjMatrix() math.Mat4 {
+func (c *Orthographic) ProjMatrix() math.Mat4[float32] {
 	l := c.left
 	r := c.right
 	t := c.top

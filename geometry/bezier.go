@@ -13,7 +13,7 @@ type BezierCurve struct {
 	controlPoints []primitive.Vertex
 }
 
-func NewBezierCurve(cp ...*primitive.Vertex) *BezierCurve {
+func NewBezierCurve[T math.Float](cp ...*primitive.Vertex) *BezierCurve {
 	bc := &BezierCurve{
 		controlPoints: make([]primitive.Vertex, len(cp)),
 	}
@@ -23,10 +23,10 @@ func NewBezierCurve(cp ...*primitive.Vertex) *BezierCurve {
 	return bc
 }
 
-func (bc *BezierCurve) At(t float32) math.Vec4 {
+func (bc *BezierCurve) At(t float32) math.Vec4[float32] {
 	n := len(bc.controlPoints)
 
-	tc := make([]math.Vec4, n)
+	tc := make([]math.Vec4[float32], n)
 	for i := range bc.controlPoints {
 		tc[i] = bc.controlPoints[i].Pos
 	}

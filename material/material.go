@@ -24,7 +24,7 @@ type Material interface {
 	) primitive.Vertex
 	FragmentShader(
 		col color.RGBA,
-		x, n, fn, camera math.Vec4,
+		x, n, fn, camera math.Vec4[float32],
 		ls []light.Source,
 		es []light.Environment,
 	) color.RGBA

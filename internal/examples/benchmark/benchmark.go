@@ -74,7 +74,7 @@ func bench(opt *benchOpts) {
 		s.Add(light.NewPoint(
 			light.Intensity(7),
 			light.Color(color.RGBA{0, 0, 0, 255}),
-			light.Position(math.NewVec3(4, 4, 2)),
+			light.Position(math.NewVec3[float32](4, 4, 2)),
 			light.CastShadow(opt.shadowmap),
 		), light.NewAmbient(
 			light.Intensity(0.5),
@@ -123,7 +123,7 @@ func bench(opt *benchOpts) {
 
 		r := render.NewRenderer(
 			render.Camera(camera.NewPerspective(
-				camera.Position(math.NewVec3(0, 0.6, 0.9)),
+				camera.Position(math.NewVec3[float32](0, 0.6, 0.9)),
 				camera.ViewFrustum(45, float32(opt.width)/float32(opt.height), 0.1, 2),
 			)),
 			render.Size(opt.width, opt.height),

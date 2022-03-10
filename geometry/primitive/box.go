@@ -8,13 +8,13 @@ import "poly.red/math"
 
 // AABB an axis aligned bounding box
 type AABB struct {
-	Min, Max math.Vec3
+	Min, Max math.Vec3[float32]
 }
 
 // NewAABB computes a new axis aligned bounding box of given vertices
-func NewAABB(vs ...math.Vec3) AABB {
-	min := math.NewVec3(math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
-	max := math.NewVec3(-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
+func NewAABB(vs ...math.Vec3[float32]) AABB {
+	min := math.NewVec3[float32](math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
+	max := math.NewVec3[float32](-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
 	for i := range vs {
 		min.X = math.Min(min.X, vs[i].X)
 		min.Y = math.Min(min.Y, vs[i].Y)

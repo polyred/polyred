@@ -12,17 +12,17 @@ import (
 )
 
 var (
-	_ Source        = &Directional{}
-	_ object.Object = &Directional{}
+	_ Source                 = &Directional{}
+	_ object.Object[float32] = &Directional{}
 )
 
 // Directional is a directional light source with constant intensity
 // at every shading point, and can only cast shadows at a given direction.
 type Directional struct {
-	math.TransformContext
+	math.TransformContext[float32]
 
-	pos          math.Vec3
-	dir          math.Vec3
+	pos          math.Vec3[float32]
+	dir          math.Vec3[float32]
 	intensity    float32
 	color        color.RGBA
 	useShadowMap bool
@@ -33,8 +33,8 @@ func NewDirectional(opts ...Opt) Source {
 	d := &Directional{
 		intensity:    1,
 		color:        color.RGBA{255, 255, 255, 255},
-		pos:          math.Vec3{},
-		dir:          math.NewVec3(0, -1, 0),
+		pos:          math.Vec3[float32]{},
+		dir:          math.NewVec3[float32](0, -1, 0),
 		useShadowMap: false,
 	}
 	for _, opt := range opts {
@@ -53,11 +53,11 @@ func (d *Directional) Intensity() float32 {
 	return d.intensity
 }
 
-func (d *Directional) Position() math.Vec3 {
+func (d *Directional) Position() math.Vec3[float32] {
 	return d.pos
 }
 
-func (d *Directional) Dir() math.Vec3 {
+func (d *Directional) Dir() math.Vec3[float32] {
 	return d.dir
 }
 

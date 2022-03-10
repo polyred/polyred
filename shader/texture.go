@@ -15,9 +15,9 @@ import (
 var _ Program = &TextureShader{}
 
 type TextureShader struct {
-	ModelMatrix math.Mat4
-	ViewMatrix  math.Mat4
-	ProjMatrix  math.Mat4
+	ModelMatrix math.Mat4[float32]
+	ViewMatrix  math.Mat4[float32]
+	ProjMatrix  math.Mat4[float32]
 	Texture     *buffer.Texture
 }
 

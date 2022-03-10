@@ -95,7 +95,7 @@ func NewRenderer(opts ...Opt) *Renderer {
 	})
 
 	if r.scene != nil {
-		r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
+		r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 			if o.Type() != object.TypeLight {
 				return true
 			}
@@ -206,22 +206,22 @@ func (r *Renderer) passForward() {
 	matProj := r.renderCamera.ProjMatrix()
 	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
 
-	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
+	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
 
-		mesh := o.(mesh.Mesh)
+		mesh := o.(mesh.Mesh[float32])
 		r.sched.Add(mesh.NumTriangles())
 		return true
 	})
 
-	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
+	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
 
-		mesh := o.(mesh.Mesh)
+		mesh := o.(mesh.Mesh[float32])
 		uniforms := map[string]any{
 			"matModel":   mesh.ModelMatrix(),
 			"matView":    matView,
@@ -240,7 +240,7 @@ func (r *Renderer) passForward() {
 			"matNormal": mesh.ModelMatrix().Inv().T(),
 		}
 
-		mesh.Faces(func(f primitive.Face, m material.Material) bool {
+		mesh.Faces(func(f primitive.Face[float32], m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
 				r.sched.Run(func() {
 					if t.IsValid() {
@@ -295,8 +295,8 @@ func (r *Renderer) shade(info buffer.Fragment, uniforms map[string]any) color.RG
 		mat = nil
 	}
 
-	pos := info.AttrFlat["Pos"].(math.Vec4)
-	fN := info.AttrFlat["fN"].(math.Vec4)
+	pos := info.AttrFlat["Pos"].(math.Vec4[float32])
+	fN := info.AttrFlat["fN"].(math.Vec4[float32])
 	if mat != nil {
 		lod := float32(0.0)
 		if mat.Texture().UseMipmap() {
@@ -356,10 +356,10 @@ func (r *Renderer) draw(
 		t3 = defaultVertexShader(tri.V3, uniforms)
 	}
 
-	matVP := uniforms["matVP"].(math.Mat4)
+	matVP := uniforms["matVP"].(math.Mat4[float32])
 
 	// For perspective corrected interpolation, see below.
-	recipw := math.NewVec4(1, 1, 1, 0)
+	recipw := math.NewVec4[float32](1, 1, 1, 0)
 	if _, ok := r.renderCamera.(*camera.Perspective); ok {
 		recipw = math.NewVec4(-1/t1.Pos.W, -1/t2.Pos.W, -1/t3.Pos.W, 0)
 	}
@@ -382,7 +382,7 @@ func (r *Renderer) draw(
 	h := float32(r.bufs[0].Bounds().Dy())
 
 	// t1 is outside the viewfrustum
-	outside := func(v *math.Vec4, w, h float32) bool {
+	outside := func(v *math.Vec4[float32], w, h float32) bool {
 		if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
 			return true
 		}
@@ -402,13 +402,13 @@ func (r *Renderer) draw(
 
 func (r *Renderer) drawClipped(
 	t1, t2, t3 *primitive.Vertex,
-	recipw math.Vec4,
+	recipw math.Vec4[float32],
 	uniforms map[string]any,
 	mat material.Material) {
 
-	matViewInv := uniforms["matViewInv"].(math.Mat4)
-	matProjInv := uniforms["matProjInv"].(math.Mat4)
-	matVPInv := uniforms["matVPInv"].(math.Mat4)
+	matViewInv := uniforms["matViewInv"].(math.Mat4[float32])
+	matProjInv := uniforms["matProjInv"].(math.Mat4[float32])
+	matVPInv := uniforms["matVPInv"].(math.Mat4[float32])
 	m1 := t1.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
 	m2 := t2.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
 	m3 := t3.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
@@ -479,13 +479,13 @@ func (r *Renderer) drawClipped(
 			}
 
 			// normal interpolation (normals are in model space, no need for perspective correction)
-			n := (math.Vec4{
+			n := (math.Vec4[float32]{
 				X: (bc[0]*t1.Nor.X + bc[1]*t2.Nor.X + bc[2]*t3.Nor.X),
 				Y: (bc[0]*t1.Nor.Y + bc[1]*t2.Nor.Y + bc[2]*t3.Nor.Y),
 				Z: (bc[0]*t1.Nor.Z + bc[1]*t2.Nor.Z + bc[2]*t3.Nor.Z),
 				W: 0,
 			}).Unit()
-			pos := math.Vec4{
+			pos := math.Vec4[float32]{
 				X: (bc[0]*m1.X + bc[1]*m1.X + bc[2]*m1.X),
 				Y: (bc[0]*m2.Y + bc[1]*m2.Y + bc[2]*m2.Y),
 				Z: (bc[0]*m3.Z + bc[1]*m3.Z + bc[2]*m3.Z),
@@ -530,11 +530,11 @@ func (r *Renderer) passGammaCorrect() {
 	r.DrawFragments(r.bufs[0], shader.GammaCorrection)
 }
 
-func (r *Renderer) inViewport(v1, v2, v3 math.Vec4) bool {
+func (r *Renderer) inViewport(v1, v2, v3 math.Vec4[float32]) bool {
 	viewportAABB := primitive.NewAABB(
 		math.NewVec3(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()), 1),
-		math.NewVec3(0, 0, 0),
-		math.NewVec3(0, 0, -1),
+		math.NewVec3[float32](0, 0, 0),
+		math.NewVec3[float32](0, 0, -1),
 	)
 	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
 	return viewportAABB.Intersect(triangleAABB)

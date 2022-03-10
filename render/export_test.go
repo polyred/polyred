@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	Draw = func(r *Renderer, uniforms map[string]any, tri *primitive.Triangle, modelMatrix math.Mat4, m material.Material) {
+	Draw = func(r *Renderer, uniforms map[string]any, tri *primitive.Triangle, modelMatrix math.Mat4[float32], m material.Material) {
 		r.draw(uniforms, tri, m)
 	}
 	PassForward = func(r *Renderer) {

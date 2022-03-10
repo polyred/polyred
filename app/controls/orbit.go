@@ -39,11 +39,11 @@ const (
 // point while looking at it. It allows the user to rotate, zoom, and
 // pan a 3D scene using the mouse.
 type OrbitControl struct {
-	cam     camera.Interface // Controlled camera
-	target  math.Vec3        // Camera target, around which the camera orbits
-	up      math.Vec3        // The orbit axis (Y+)
-	enabled OrbitEnabled     // Which controls are enabled
-	state   orbitState       // Current control state
+	cam     camera.Interface   // Controlled camera
+	target  math.Vec3[float32] // Camera target, around which the camera orbits
+	up      math.Vec3[float32] // The orbit axis (Y+)
+	enabled OrbitEnabled       // Which controls are enabled
+	state   orbitState         // Current control state
 
 	MinDistance     float32 // Minimum distance from target (default is 1)
 	MaxDistance     float32 // Maximum distance from target (default is infinity)
@@ -55,8 +55,8 @@ type OrbitControl struct {
 	ZoomSpeed       float32 // Zoom speed factor (default is 0.1)
 
 	// Internal
-	rotStart  math.Vec2
-	panStart  math.Vec2
+	rotStart  math.Vec2[float32]
+	panStart  math.Vec2[float32]
 	zoomStart float32
 
 	win app.Window
@@ -68,8 +68,8 @@ func NewOrbitControl(win app.Window, cam camera.Interface) *OrbitControl {
 
 	oc := &OrbitControl{
 		cam:     cam,
-		target:  math.NewVec3(0, 0, 0),
-		up:      math.NewVec3(0, 1, 0),
+		target:  math.NewVec3[float32](0, 0, 0),
+		up:      math.NewVec3[float32](0, 1, 0),
 		enabled: OrbitAll,
 
 		MinDistance:     1.0,
@@ -88,16 +88,16 @@ func NewOrbitControl(win app.Window, cam camera.Interface) *OrbitControl {
 
 // Reset resets the orbit control.
 func (oc *OrbitControl) Reset() {
-	oc.target = math.NewVec3(0, 0, 0)
+	oc.target = math.NewVec3[float32](0, 0, 0)
 }
 
 // Target returns the current orbit target.
-func (oc *OrbitControl) Target() math.Vec3 {
+func (oc *OrbitControl) Target() math.Vec3[float32] {
 	return oc.target
 }
 
 // Set camera orbit target Vec4
-func (oc *OrbitControl) SetTarget(v math.Vec3) {
+func (oc *OrbitControl) SetTarget(v math.Vec3[float32]) {
 	oc.target = v
 }
 
@@ -171,7 +171,7 @@ func (oc *OrbitControl) Pan(deltaX, deltaY float32) {
 
 	// Calculate pan components, scale by the converted offsets and
 	// combine them
-	var pan, panX, panY math.Vec3
+	var pan, panX, panY math.Vec3[float32]
 	panX = oc.up.Cross(vdir).Unit()
 	panY = vdir.Cross(panX).Unit()
 	panX = panX.Scale(c*deltaX, c*deltaX, c*deltaX)

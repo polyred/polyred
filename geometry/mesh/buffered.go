@@ -14,7 +14,7 @@ import (
 	"poly.red/object"
 )
 
-var _ Mesh = &BufferedMesh{}
+var _ Mesh[float32] = &BufferedMesh{}
 
 type AttributeName string
 
@@ -37,12 +37,12 @@ func NewBufferAttribute(stride int, values []float32) *BufferAttribute {
 // BufferedMesh is a dense representation of a surface geometry and
 // implements the Mesh interface.
 type BufferedMesh struct {
-	vertIdx  []int
+	vertIdx  buffer.IndexBuffer
 	attrs    map[AttributeName]*BufferAttribute
 	aabb     *primitive.AABB
 	material material.Material
 
-	math.TransformContext
+	math.TransformContext[float32]
 }
 
 func NewBufferedMesh() *BufferedMesh {
@@ -76,8 +76,8 @@ func (bm *BufferedMesh) Type() object.Type {
 
 func (bm *BufferedMesh) AABB() primitive.AABB {
 	if bm.aabb == nil {
-		min := math.NewVec3(math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
-		max := math.NewVec3(-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
+		min := math.NewVec3[float32](math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
+		max := math.NewVec3[float32](-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
 		attr := bm.GetAttribute(AttributePos)
 		for _, vIndex := range bm.vertIdx {
 			x := attr.Values[attr.Stride*int(vIndex)+0]
@@ -134,7 +134,7 @@ func (bm *BufferedMesh) NumTriangles() uint64 {
 	return uint64(len(bm.vertIdx) / 3)
 }
 
-func (bm *BufferedMesh) Faces(iter func(primitive.Face, material.Material) bool) {
+func (bm *BufferedMesh) Faces(iter func(primitive.Face[float32], material.Material) bool) {
 	attrPos := bm.GetAttribute(AttributePos)
 	attrNor := bm.GetAttribute(AttributeNor)
 	attrColor := bm.GetAttribute(AttributeCol)

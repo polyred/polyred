@@ -122,7 +122,7 @@ func (r *Renderer) Options(opts ...Opt) {
 	r.lightSources = []light.Source{}
 	r.lightEnv = []light.Environment{}
 	if r.scene != nil {
-		r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
+		r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 			if o.Type() != object.TypeLight {
 				return true
 			}

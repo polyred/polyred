@@ -42,19 +42,19 @@ func TestCoverConversion(t *testing.T) {
 		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), orig)
 	}
 
-	if color.FromLinear2sRGB(0) != 0 {
+	if color.FromLinear2sRGB[float32](0) != 0 {
 		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromLinear2sRGB(v), 0)
 	}
 
-	if color.FromLinear2sRGB(1) != 1 {
+	if color.FromLinear2sRGB[float32](1) != 1 {
 		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromLinear2sRGB(v), 1)
 	}
 
-	if color.FromsRGB2Linear(0) != 0 {
+	if color.FromsRGB2Linear[float32](0) != 0 {
 		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), 0)
 	}
 
-	if color.FromsRGB2Linear(1) != 1 {
+	if color.FromsRGB2Linear[float32](1) != 1 {
 		t.Fatalf("unexpected color conversion, got %v, want %v", color.FromsRGB2Linear(v), 1)
 	}
 

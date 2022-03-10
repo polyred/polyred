@@ -27,7 +27,7 @@ func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Inter
 	s.Add(light.NewPoint(
 		light.Intensity(lightI),
 		light.Color(color.RGBA{255, 255, 255, 255}),
-		light.Position(math.NewVec3(4, 4, 2)),
+		light.Position(math.NewVec3[float32](4, 4, 2)),
 		light.CastShadow(true)),
 		light.NewAmbient(light.Intensity(0.5)))
 
@@ -74,7 +74,7 @@ func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Inter
 	s.Add(m)
 
 	return s, camera.NewPerspective(
-		camera.Position(math.NewVec3(0, 0.6, 0.9)),
+		camera.Position(math.NewVec3[float32](0, 0.6, 0.9)),
 		camera.ViewFrustum(45, float32(width)/float32(height), 0.1, 2),
 	)
 }

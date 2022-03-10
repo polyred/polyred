@@ -48,7 +48,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	s.Add(light.NewPoint(
 		light.Intensity(5),
 		light.Color(color.RGBA{0, 0, 0, 255}),
-		light.Position(math.NewVec3(-2, 2.5, 6)),
+		light.Position(math.NewVec3[float32](-2, 2.5, 6)),
 	), light.NewAmbient(
 		light.Intensity(0.5),
 	))
@@ -65,15 +65,15 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 		material.AmbientOcclusion(false),
 	)
 	m.SetMaterial(mat)
-	m.Rotate(math.NewVec3(0, 1, 0), -math.Pi/6)
+	m.Rotate(math.NewVec3[float32](0, 1, 0), -math.Pi/6)
 	m.Scale(4, 4, 4)
 	m.Translate(0.1, 0, -0.2)
 	s.Add(m)
 	return s, camera.NewPerspective(
-		camera.Position(math.NewVec3(0, 1.5, 1)),
+		camera.Position(math.NewVec3[float32](0, 1.5, 1)),
 		camera.LookAt(
-			math.NewVec3(0, 0, -0.5),
-			math.NewVec3(0, 1, 0),
+			math.NewVec3[float32](0, 0, -0.5),
+			math.NewVec3[float32](0, 1, 0),
 		),
 		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 3),
 	)
@@ -174,15 +174,15 @@ func BenchmarkDraw(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
 		matView := c.ViewMatrix()
 		matProj := c.ProjMatrix()
-		matVP := math.ViewportMatrix(1920, 1080)
+		matVP := math.ViewportMatrix[float32](1920, 1080)
 
 		var (
-			m        mesh.Mesh
-			modelMat math.Mat4
+			m        mesh.Mesh[float32]
+			modelMat math.Mat4[float32]
 		)
-		s.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
+		s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 			if o.Type() == object.TypeMesh {
-				m = o.(mesh.Mesh)
+				m = o.(mesh.Mesh[float32])
 				modelMat = modelMatrix
 				return false
 			}
@@ -207,7 +207,7 @@ func BenchmarkDraw(b *testing.B) {
 				nt  = m.NumTriangles()
 			)
 
-			m.Faces(func(f primitive.Face, m material.Material) bool {
+			m.Faces(func(f primitive.Face[float32], m material.Material) bool {
 				mat = m
 				f.Triangles(func(t *primitive.Triangle) bool {
 					ts = append(ts, t)
@@ -227,14 +227,14 @@ func BenchmarkDraw(b *testing.B) {
 }
 
 func BenchmarkInViewport(b *testing.B) {
-	v1, v2, v3 := math.NewRandVec4(), math.NewRandVec4(), math.NewRandVec4()
+	v1, v2, v3 := math.NewRandVec4[float32](), math.NewRandVec4[float32](), math.NewRandVec4[float32]()
 	for i := 0; i < b.N; i++ {
 		r.inViewport(v1, v2, v3)
 	}
 }
 
 func BenchmarkInViewport2(b *testing.B) {
-	v1, v2, v3 := math.NewRandVec4(), math.NewRandVec4(), math.NewRandVec4()
+	v1, v2, v3 := math.NewRandVec4[float32](), math.NewRandVec4[float32](), math.NewRandVec4[float32]()
 	for i := 0; i < b.N; i++ {
 		r.inViewFrustum(r.CurrBuffer(), v1, v2, v3)
 	}

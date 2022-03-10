@@ -40,10 +40,10 @@ func (r *Renderer) shouldStop() bool {
 }
 
 func defaultVertexShader(v *primitive.Vertex, uniforms map[string]any) primitive.Vertex {
-	matModel := uniforms["matModel"].(math.Mat4)
-	matView := uniforms["matView"].(math.Mat4)
-	matProj := uniforms["matProj"].(math.Mat4)
-	matNormal := uniforms["matNormal"].(math.Mat4)
+	matModel := uniforms["matModel"].(math.Mat4[float32])
+	matView := uniforms["matView"].(math.Mat4[float32])
+	matProj := uniforms["matProj"].(math.Mat4[float32])
+	matNormal := uniforms["matNormal"].(math.Mat4[float32])
 	return primitive.Vertex{
 		Pos: matProj.MulM(matView).MulM(matModel).MulV(v.Pos),
 		Col: v.Col,

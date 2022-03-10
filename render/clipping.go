@@ -12,14 +12,14 @@ import (
 )
 
 type plane struct {
-	pos, nor math.Vec4
+	pos, nor math.Vec4[float32]
 }
 
-func (p plane) pointInFront(v math.Vec4) bool {
+func (p *plane) pointInFront(v math.Vec4[float32]) bool {
 	return v.Sub(p.pos).Dot(p.nor) > 0
 }
 
-func (p plane) intersectSegment(v0, v1 math.Vec4) math.Vec4 {
+func (p *plane) intersectSegment(v0, v1 math.Vec4[float32]) math.Vec4[float32] {
 	u := v1.Sub(v0)
 	w := v0.Sub(p.pos)
 	d := p.nor.Dot(u)
@@ -28,14 +28,14 @@ func (p plane) intersectSegment(v0, v1 math.Vec4) math.Vec4 {
 	return v0.Add(u.Scale(s, s, s, s))
 }
 
-func sutherlandHodgman(points []math.Vec4, w, h float32) []math.Vec4 {
+func sutherlandHodgman(points []math.Vec4[float32], w, h float32) []math.Vec4[float32] {
 	planes := []plane{
-		{math.NewVec4(w, 0, 0, 1), math.NewVec4(-1, 0, 0, 1)},
-		{math.NewVec4(0, 0, 0, 1), math.NewVec4(1, 0, 0, 1)},
-		{math.NewVec4(0, h, 0, 1), math.NewVec4(0, -1, 0, 1)},
-		{math.NewVec4(0, 0, 0, 1), math.NewVec4(0, 1, 0, 1)},
-		{math.NewVec4(0, 0, 1, 1), math.NewVec4(0, 0, -1, 1)},
-		{math.NewVec4(0, 0, -1, 1), math.NewVec4(0, 0, 1, 1)},
+		{math.NewVec4[float32](w, 0, 0, 1), math.NewVec4[float32](-1, 0, 0, 1)},
+		{math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](1, 0, 0, 1)},
+		{math.NewVec4[float32](0, h, 0, 1), math.NewVec4[float32](0, -1, 0, 1)},
+		{math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](0, 1, 0, 1)},
+		{math.NewVec4[float32](0, 0, 1, 1), math.NewVec4[float32](0, 0, -1, 1)},
+		{math.NewVec4[float32](0, 0, -1, 1), math.NewVec4[float32](0, 0, 1, 1)},
 	}
 
 	output := points
@@ -64,11 +64,11 @@ func sutherlandHodgman(points []math.Vec4, w, h float32) []math.Vec4 {
 	return output
 }
 
-func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, recipw math.Vec4) []*primitive.Triangle {
+func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, recipw math.Vec4[float32]) []*primitive.Triangle {
 	p1 := v1.Pos
 	p2 := v2.Pos
 	p3 := v3.Pos
-	clips := sutherlandHodgman([]math.Vec4{p1, p2, p3}, w, h)
+	clips := sutherlandHodgman([]math.Vec4[float32]{p1, p2, p3}, w, h)
 	var result []*primitive.Triangle
 	for i := 2; i < len(clips); i++ {
 		// FIXME: clipping should be perspective correct
@@ -80,17 +80,17 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 			p1.ToVec2(), p2.ToVec2(), p3.ToVec2())
 
 		t1 := primitive.Vertex{
-			Pos: math.Vec4{
+			Pos: math.Vec4[float32]{
 				X: b1bc[0]*v1.Pos.X + b1bc[1]*v2.Pos.X + b1bc[2]*v3.Pos.X,
 				Y: b1bc[0]*v1.Pos.Y + b1bc[1]*v2.Pos.Y + b1bc[2]*v3.Pos.Y,
 				Z: b1bc[0]*v1.Pos.Z + b1bc[1]*v2.Pos.Z + b1bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec2{
+			UV: math.Vec2[float32]{
 				X: b1bc[0]*v1.UV.X + b1bc[1]*v2.UV.X + b1bc[2]*v3.UV.X,
 				Y: b1bc[0]*v1.UV.Y + b1bc[1]*v2.UV.Y + b1bc[2]*v3.UV.Y,
 			},
-			Nor: math.Vec4{
+			Nor: math.Vec4[float32]{
 				X: b1bc[0]*v1.Nor.X + b1bc[1]*v2.Nor.X + b1bc[2]*v3.Nor.X,
 				Y: b1bc[0]*v1.Nor.Y + b1bc[1]*v2.Nor.Y + b1bc[2]*v3.Nor.Y,
 				Z: b1bc[0]*v1.Nor.Z + b1bc[1]*v2.Nor.Z + b1bc[2]*v3.Nor.Z,
@@ -104,17 +104,17 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 			},
 		}
 		t2 := primitive.Vertex{
-			Pos: math.Vec4{
+			Pos: math.Vec4[float32]{
 				X: b2bc[0]*v1.Pos.X + b2bc[1]*v2.Pos.X + b2bc[2]*v3.Pos.X,
 				Y: b2bc[0]*v1.Pos.Y + b2bc[1]*v2.Pos.Y + b2bc[2]*v3.Pos.Y,
 				Z: b2bc[0]*v1.Pos.Z + b2bc[1]*v2.Pos.Z + b2bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec2{
+			UV: math.Vec2[float32]{
 				X: b2bc[0]*v1.UV.X + b2bc[1]*v2.UV.X + b2bc[2]*v3.UV.X,
 				Y: b2bc[0]*v1.UV.Y + b2bc[1]*v2.UV.Y + b2bc[2]*v3.UV.Y,
 			},
-			Nor: math.Vec4{
+			Nor: math.Vec4[float32]{
 				X: b2bc[0]*v1.Nor.X + b2bc[1]*v2.Nor.X + b2bc[2]*v3.Nor.X,
 				Y: b2bc[0]*v1.Nor.Y + b2bc[1]*v2.Nor.Y + b2bc[2]*v3.Nor.Y,
 				Z: b2bc[0]*v1.Nor.Z + b2bc[1]*v2.Nor.Z + b2bc[2]*v3.Nor.Z,
@@ -128,17 +128,17 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 			},
 		}
 		t3 := primitive.Vertex{
-			Pos: math.Vec4{
+			Pos: math.Vec4[float32]{
 				X: b3bc[0]*v1.Pos.X + b3bc[1]*v2.Pos.X + b3bc[2]*v3.Pos.X,
 				Y: b3bc[0]*v1.Pos.Y + b3bc[1]*v2.Pos.Y + b3bc[2]*v3.Pos.Y,
 				Z: b3bc[0]*v1.Pos.Z + b3bc[1]*v2.Pos.Z + b3bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec2{
+			UV: math.Vec2[float32]{
 				X: b3bc[0]*v1.UV.X + b3bc[1]*v2.UV.X + b3bc[2]*v3.UV.X,
 				Y: b3bc[0]*v1.UV.Y + b3bc[1]*v2.UV.Y + b3bc[2]*v3.UV.Y,
 			},
-			Nor: math.Vec4{
+			Nor: math.Vec4[float32]{
 				X: b3bc[0]*v1.Nor.X + b3bc[1]*v2.Nor.X + b3bc[2]*v3.Nor.X,
 				Y: b3bc[0]*v1.Nor.Y + b3bc[1]*v2.Nor.Y + b3bc[2]*v3.Nor.Y,
 				Z: b3bc[0]*v1.Nor.Z + b3bc[1]*v2.Nor.Z + b3bc[2]*v3.Nor.Z,

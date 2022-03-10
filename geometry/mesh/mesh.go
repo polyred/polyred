@@ -9,16 +9,17 @@ import (
 
 	"poly.red/geometry/primitive"
 	"poly.red/material"
+	"poly.red/math"
 	"poly.red/object"
 )
 
-type Mesh interface {
-	object.Object
+type Mesh[T math.Float] interface {
+	object.Object[T]
 
 	AABB() primitive.AABB
 	Normalize()
 	SetMaterial(m material.Material)
 	GetMaterial() material.Material
 	NumTriangles() uint64
-	Faces(func(f primitive.Face, m material.Material) bool)
+	Faces(func(f primitive.Face[T], m material.Material) bool)
 }

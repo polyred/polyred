@@ -38,7 +38,7 @@ func Color(c color.RGBA) Opt {
 	}
 }
 
-func Direction(dir math.Vec3) Opt {
+func Direction(dir math.Vec3[float32]) Opt {
 	return func(l any) {
 		switch a := l.(type) {
 		case *Directional:
@@ -49,7 +49,7 @@ func Direction(dir math.Vec3) Opt {
 	}
 }
 
-func Position(pos math.Vec3) Opt {
+func Position(pos math.Vec3[float32]) Opt {
 	return func(l any) {
 		switch a := l.(type) {
 		case *Directional:

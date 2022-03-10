@@ -24,12 +24,12 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	s.Add(
 		light.NewPoint(
 			light.Intensity(3),
-			light.Position(math.NewVec3(4, 4, 2)),
+			light.Position(math.NewVec3[float32](4, 4, 2)),
 			light.CastShadow(true),
 		),
 		light.NewPoint(
 			light.Intensity(3),
-			light.Position(math.NewVec3(-6, 4, 2)),
+			light.Position(math.NewVec3[float32](-6, 4, 2)),
 			light.CastShadow(true),
 		),
 		light.NewAmbient(
@@ -76,7 +76,7 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	s.Add(m)
 
 	return s, camera.NewPerspective(
-		camera.Position(math.NewVec3(0, 0.6, 0.9)),
+		camera.Position(math.NewVec3[float32](0, 0.6, 0.9)),
 		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 2),
 	)
 }

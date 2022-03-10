@@ -15,13 +15,13 @@ const (
 	TypeLight
 )
 
-type Object interface {
+type Object[T math.Float] interface {
 	Type() Type
-	Rotate(dir math.Vec3, angle float32)
-	RotateX(a float32)
-	RotateY(a float32)
-	RotateZ(a float32)
-	Translate(x, y, z float32)
-	Scale(x, y, z float32)
-	ModelMatrix() math.Mat4
+	Rotate(dir math.Vec3[T], angle T)
+	RotateX(a T)
+	RotateY(a T)
+	RotateZ(a T)
+	Translate(x, y, z T)
+	Scale(x, y, z T)
+	ModelMatrix() math.Mat4[T]
 }

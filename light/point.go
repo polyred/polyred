@@ -12,15 +12,15 @@ import (
 )
 
 var (
-	_ Source        = &Point{}
-	_ object.Object = &Point{}
+	_ Source                 = &Point{}
+	_ object.Object[float32] = &Point{}
 )
 
 // Point is a point light
 type Point struct {
-	math.TransformContext
+	math.TransformContext[float32]
 
-	pos          math.Vec3
+	pos          math.Vec3[float32]
 	intensity    float32
 	color        color.RGBA
 	useShadowMap bool
@@ -31,7 +31,7 @@ func NewPoint(opts ...Opt) Source {
 	l := &Point{
 		intensity:    1,
 		color:        color.RGBA{255, 255, 255, 255},
-		pos:          math.Vec3{X: 1, Y: 1, Z: 1},
+		pos:          math.Vec3[float32]{X: 1, Y: 1, Z: 1},
 		useShadowMap: false,
 	}
 
@@ -51,7 +51,7 @@ func (l *Point) Intensity() float32 {
 	return l.intensity
 }
 
-func (l *Point) Position() math.Vec3 {
+func (l *Point) Position() math.Vec3[float32] {
 	return l.pos
 }
 

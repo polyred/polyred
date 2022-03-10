@@ -10,14 +10,14 @@ import "poly.red/math"
 type Opt func(Interface)
 
 // Position sets the camera position.
-func Position(pos math.Vec3) Opt {
+func Position(pos math.Vec3[float32]) Opt {
 	return func(i Interface) {
 		i.SetPosition(pos)
 	}
 }
 
 // LookAt sets the camera look at target and up direction.
-func LookAt(target, up math.Vec3) Opt {
+func LookAt(target, up math.Vec3[float32]) Opt {
 	return func(i Interface) {
 		i.SetLookAt(target, up)
 	}

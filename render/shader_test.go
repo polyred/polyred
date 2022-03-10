@@ -28,7 +28,7 @@ func prepare(num int) (*render.Renderer, *buffer.FragmentBuffer, shader.Program,
 	r := render.NewRenderer(render.Size(500, 500), render.Camera(c))
 	buf := buffer.NewBuffer(image.Rect(0, 0, 500, 500))
 	prog := &shader.BasicShader{
-		ModelMatrix:      math.Mat4I,
+		ModelMatrix:      math.Mat4I[float32](),
 		ViewMatrix:       c.ViewMatrix(),
 		ProjectionMatrix: c.ProjMatrix(),
 	}

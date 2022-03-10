@@ -13,7 +13,7 @@ import (
 // files less than 2GB. See https://golang.org/issue/47627
 
 // StanfordBunny returns the path to locate stanford bunny.
-func StanfordBunnyAs[T mesh.Mesh]() T {
+func StanfordBunnyAs[T mesh.Mesh[float32]]() T {
 	return mesh.MustLoadAs[T](fix("../internal/testdata/bunny.obj"))
 }
 

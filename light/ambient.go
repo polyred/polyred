@@ -12,12 +12,12 @@ import (
 )
 
 var (
-	_ Environment   = &Ambient{}
-	_ object.Object = &Ambient{}
+	_ Environment            = &Ambient{}
+	_ object.Object[float32] = &Ambient{}
 )
 
 type Ambient struct {
-	math.TransformContext // not used
+	math.TransformContext[float32] // not used
 
 	color     color.RGBA
 	intensity float32

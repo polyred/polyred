@@ -6,7 +6,7 @@ package primitive
 
 import "poly.red/math"
 
-var _ Edge = &Halfedge{}
+var _ Edge[float32] = &Halfedge{}
 
 // Halfedge holds a halfedge representation.
 type Halfedge struct {
@@ -14,7 +14,7 @@ type Halfedge struct {
 	Next *Halfedge
 	Prev *Halfedge
 	Twin *Halfedge
-	Face Face
+	Face Face[float32]
 
 	v          *Vertex
 	onBoundary bool
@@ -25,7 +25,7 @@ func (he *Halfedge) Verts() (v1, v2 *Vertex) {
 	return he.v, he.Next.v
 }
 
-func (he *Halfedge) Vec() math.Vec4 {
+func (he *Halfedge) Vec() math.Vec4[float32] {
 	return he.Next.v.Pos.Sub(he.v.Pos)
 }
 

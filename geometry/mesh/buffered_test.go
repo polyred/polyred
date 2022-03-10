@@ -35,7 +35,7 @@ func TestBufferedMesh(t *testing.T) {
 	bm.Normalize()
 
 	counter := 0
-	bm.Faces(func(f primitive.Face, m material.Material) bool {
+	bm.Faces(func(f primitive.Face[float32], m material.Material) bool {
 		counter++
 		return true
 	})

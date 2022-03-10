@@ -14,7 +14,7 @@ import (
 // drawLine implements the Bresenham algorithm that draws a line
 // segment starting from p1 and ends at p2. The drawn pixels are
 // stored in a given buffer.
-func DrawLine(buf *buffer.FragmentBuffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
+func DrawLine(buf *buffer.FragmentBuffer, p1, p2 math.Vec4[float32], color color.RGBA) {
 	if math.Abs(p2.Y-p1.Y) < math.Abs(p2.X-p1.X) {
 		if p1.X > p2.X {
 			p1, p2 = p2, p1
@@ -28,7 +28,7 @@ func DrawLine(buf *buffer.FragmentBuffer, p1 math.Vec4, p2 math.Vec4, color colo
 	}
 }
 
-func drawLineLow(buf *buffer.FragmentBuffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
+func drawLineLow(buf *buffer.FragmentBuffer, p1, p2 math.Vec4[float32], color color.RGBA) {
 	x0 := math.Round(p1.X)
 	y0 := math.Round(p1.Y)
 	z0 := p1.Z
@@ -71,7 +71,7 @@ func drawLineLow(buf *buffer.FragmentBuffer, p1 math.Vec4, p2 math.Vec4, color c
 		D += 2 * dy
 	}
 }
-func drawLineHigh(buf *buffer.FragmentBuffer, p1 math.Vec4, p2 math.Vec4, color color.RGBA) {
+func drawLineHigh(buf *buffer.FragmentBuffer, p1, p2 math.Vec4[float32], color color.RGBA) {
 	x0 := math.Round(p1.X)
 	y0 := math.Round(p1.Y)
 	z0 := p1.Z

@@ -14,29 +14,29 @@ import (
 
 // NewPlane returns a triangle soup that represents a plane with the
 // given width and height.
-func NewPlane(width, height float32) Mesh {
+func NewPlane(width, height float32) Mesh[float32] {
 	v1 := primitive.Vertex{
-		Pos: math.NewVec4(-0.5*width, 0, -0.5*height, 1),
-		UV:  math.NewVec2(0, 1),
-		Nor: math.NewVec4(0, 1, 0, 0),
+		Pos: math.NewVec4[float32](-0.5*width, 0, -0.5*height, 1),
+		UV:  math.NewVec2[float32](0, 1),
+		Nor: math.NewVec4[float32](0, 1, 0, 0),
 		Col: color.RGBA{255, 0, 0, 255},
 	}
 	v2 := primitive.Vertex{
-		Pos: math.NewVec4(-0.5*width, 0, 0.5*height, 1),
-		UV:  math.NewVec2(0, 0),
-		Nor: math.NewVec4(0, 1, 0, 0),
+		Pos: math.NewVec4[float32](-0.5*width, 0, 0.5*height, 1),
+		UV:  math.NewVec2[float32](0, 0),
+		Nor: math.NewVec4[float32](0, 1, 0, 0),
 		Col: color.RGBA{0, 255, 0, 255},
 	}
 	v3 := primitive.Vertex{
-		Pos: math.NewVec4(0.5*width, 0, 0.5*height, 1),
-		UV:  math.NewVec2(1, 0),
-		Nor: math.NewVec4(0, 1, 0, 0),
+		Pos: math.NewVec4[float32](0.5*width, 0, 0.5*height, 1),
+		UV:  math.NewVec2[float32](1, 0),
+		Nor: math.NewVec4[float32](0, 1, 0, 0),
 		Col: color.RGBA{0, 0, 255, 255},
 	}
 	v4 := primitive.Vertex{
-		Pos: math.NewVec4(0.5*width, 0, -0.5*height, 1),
-		UV:  math.NewVec2(1, 1),
-		Nor: math.NewVec4(0, 1, 0, 0),
+		Pos: math.NewVec4[float32](0.5*width, 0, -0.5*height, 1),
+		UV:  math.NewVec2[float32](1, 1),
+		Nor: math.NewVec4[float32](0, 1, 0, 0),
 		Col: color.RGBA{0, 0, 0, 255},
 	}
 	return NewTriangleSoup([]*primitive.Triangle{
@@ -47,7 +47,7 @@ func NewPlane(width, height float32) Mesh {
 
 // NewRandomTriangleSoup returns a mesh with given number of
 // random triangles.
-func NewRandomTriangleSoup(numTri int) Mesh {
+func NewRandomTriangleSoup(numTri int) Mesh[float32] {
 	vertIdx := make([]int, numTri*3)
 	vertPos := make([]float32, numTri*3*3)
 	vertNor := make([]float32, numTri*3*3)

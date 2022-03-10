@@ -19,10 +19,10 @@ type Attribute string
 // Vertex represents a vertex that conveys attributes.
 type Vertex struct {
 	Idx uint64
-	Pos math.Vec4  // Position is the vertex position
-	Nor math.Vec4  // Nor is the vertex normal
-	Col color.RGBA // Col is the vertex color
-	UV  math.Vec2  // UV is the vertex UV coordinates
+	Pos math.Vec4[float32] // Position is the vertex position
+	Nor math.Vec4[float32] // Nor is the vertex normal
+	Col color.RGBA         // Col is the vertex color
+	UV  math.Vec2[float32] // UV is the vertex UV coordinates
 
 	// AttrSmooth is interpolated between vertex and fragment shaders.
 	AttrSmooth map[Attribute]any
@@ -31,7 +31,7 @@ type Vertex struct {
 }
 
 // NewVertex creates a new Vertex and have an unset index.
-func NewVertex(pos math.Vec4) *Vertex {
+func NewVertex(pos math.Vec4[float32]) *Vertex {
 	return &Vertex{Pos: pos}
 }
 

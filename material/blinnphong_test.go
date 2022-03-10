@@ -17,16 +17,16 @@ import (
 
 func BenchmarkBlinnPhongShader(b *testing.B) {
 	col := color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int())}
-	x := math.NewRandVec3().ToVec4(1)
-	n := math.NewRandVec3().ToVec4(0).Unit()
-	fn := math.NewRandVec3().ToVec4(0).Unit()
-	c := math.NewRandVec3().ToVec4(1)
+	x := math.NewRandVec3[float32]().ToVec4(1)
+	n := math.NewRandVec3[float32]().ToVec4(0).Unit()
+	fn := math.NewRandVec3[float32]().ToVec4(0).Unit()
+	c := math.NewRandVec3[float32]().ToVec4(1)
 	l := []light.Source{
 		light.NewPoint(
 			light.Intensity(20),
 			light.Color(color.RGBA{
 				uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), 255}),
-			light.Position(math.NewRandVec3()),
+			light.Position(math.NewRandVec3[float32]()),
 		),
 	}
 	a := []light.Environment{

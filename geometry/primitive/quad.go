@@ -6,17 +6,17 @@ package primitive
 
 import "poly.red/math"
 
-var _ Face = &Quad{}
+var _ Face[float32] = &Quad{}
 
 // Quad is a quadrilateral that contains four vertices
 type Quad struct {
 	V1, V2, V3, V4 *Vertex
 
-	normal math.Vec4
+	normal math.Vec4[float32]
 	aabb   *AABB
 }
 
-func NewQuad(v1, v2, v3, v4 *Vertex) *Quad {
+func NewQuad[T math.Float](v1, v2, v3, v4 *Vertex) *Quad {
 	xmax := math.Max(v1.Pos.X, v2.Pos.X, v3.Pos.X, v4.Pos.X)
 	xmin := math.Min(v1.Pos.X, v2.Pos.X, v3.Pos.X, v4.Pos.X)
 	ymax := math.Max(v1.Pos.Y, v2.Pos.Y, v3.Pos.Y, v4.Pos.Y)
@@ -55,6 +55,6 @@ func (q *Quad) Triangles(f func(*Triangle) bool) {
 	f(NewTriangle(q.V1, q.V3, q.V4))
 }
 
-func (q *Quad) Normal() math.Vec4 {
+func (q *Quad) Normal() math.Vec4[float32] {
 	return q.normal
 }

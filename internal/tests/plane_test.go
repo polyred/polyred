@@ -22,7 +22,7 @@ func TestPlane(t *testing.T) {
 	s.Add(light.NewPoint(
 		light.Intensity(1),
 		light.Color(color.RGBA{0, 128, 255, 255}),
-		light.Position(math.NewVec3(2, 2, 2)),
+		light.Position(math.NewVec3[float32](2, 2, 2)),
 	))
 
 	m := mesh.NewPlane(1, 1)
@@ -30,7 +30,7 @@ func TestPlane(t *testing.T) {
 
 	r := render.NewRenderer(
 		render.Camera(camera.NewPerspective(
-			camera.Position(math.NewVec3(2, 2, 2)),
+			camera.Position(math.NewVec3[float32](2, 2, 2)),
 			camera.ViewFrustum(45, 1, 0.1, 10),
 		)),
 		render.Size(500, 500),

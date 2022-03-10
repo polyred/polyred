@@ -190,7 +190,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 		s.Scene.Add(light.NewPoint(
 			light.Intensity(5),
 			light.Color(color.RGBA{255, 255, 255, 255}),
-			light.Position(math.NewVec3(2, 2, 2)),
+			light.Position(math.NewVec3[float32](2, 2, 2)),
 		), light.NewAmbient(
 			light.Intensity(0.5),
 		))
@@ -213,7 +213,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 	}
 
 	return scenes, camera.NewPerspective(
-		camera.Position(math.NewVec3(1, 1, 2)),
+		camera.Position(math.NewVec3[float32](1, 1, 2)),
 		camera.ViewFrustum(50, float32(w)/float32(h), 0.1, 100),
 	)
 }

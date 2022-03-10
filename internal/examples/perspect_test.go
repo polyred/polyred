@@ -29,7 +29,7 @@ func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 	return s, camera.NewPerspective(
-		camera.Position(math.NewVec3(0, 3, 3)),
+		camera.Position(math.NewVec3[float32](0, 3, 3)),
 		camera.ViewFrustum(45, 1, 0.1, 10),
 	)
 }

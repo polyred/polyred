@@ -10,16 +10,16 @@ import (
 	"poly.red/math"
 )
 
-var _ Face = &Polygon{}
+var _ Face[float32] = &Polygon{}
 
 // Polygon is a polygon that contains multiple vertices.
 type Polygon struct {
 	vs     []*Vertex
-	normal math.Vec4
+	normal math.Vec4[float32]
 	aabb   *AABB
 }
 
-func NewPolygon(vs ...*Vertex) (*Polygon, error) {
+func NewPolygon[T math.Float](vs ...*Vertex) (*Polygon, error) {
 	if len(vs) < 5 {
 		return nil, errors.New("too few vertex for a polygon, use Triangle or Quad instead")
 	}
@@ -56,8 +56,8 @@ func NewPolygon(vs ...*Vertex) (*Polygon, error) {
 
 func (p *Polygon) AABB() AABB {
 	if p.aabb == nil {
-		min := math.NewVec3(math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
-		max := math.NewVec3(-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
+		min := math.NewVec3[float32](math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
+		max := math.NewVec3[float32](-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
 
 		for i := 0; i < len(p.vs); i++ {
 			min.X = math.Min(min.X, p.vs[i].Pos.X)
@@ -72,7 +72,7 @@ func (p *Polygon) AABB() AABB {
 	return *p.aabb
 }
 
-func (p *Polygon) Normal() math.Vec4 {
+func (p *Polygon) Normal() math.Vec4[float32] {
 	return p.normal
 }
 

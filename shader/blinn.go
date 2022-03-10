@@ -18,9 +18,9 @@ var _ Program = &BlinnShader{}
 // BlinnShader implements a pair of shader programs that does the
 // Blinn-Phong reflectance shading model.
 type BlinnShader struct {
-	ModelMatrix      math.Mat4
-	ViewMatrix       math.Mat4
-	ProjectionMatrix math.Mat4
+	ModelMatrix      math.Mat4[float32]
+	ViewMatrix       math.Mat4[float32]
+	ProjectionMatrix math.Mat4[float32]
 	LightSources     []light.Source
 	LightEnviron     []light.Environment
 	Kdiff            float32
@@ -35,8 +35,8 @@ func (s *BlinnShader) Vertex(v *primitive.Vertex) *primitive.Vertex {
 }
 
 func (s *BlinnShader) Fragment(frag *primitive.Fragment) color.RGBA {
-	x := frag.AttrSmooth["PosModel"].(math.Vec4)
-	c := frag.AttrSmooth["PosCam"].(math.Vec4)
+	x := frag.AttrSmooth["PosModel"].(math.Vec4[float32])
+	c := frag.AttrSmooth["PosCam"].(math.Vec4[float32])
 	col := frag.Col
 	if s.Texture != nil {
 		col = s.Texture.Query(0, frag.UV.X, frag.UV.Y)
@@ -62,7 +62,7 @@ func (s *BlinnShader) Fragment(frag *primitive.Fragment) color.RGBA {
 
 	for _, l := range s.LightSources {
 		var (
-			L math.Vec4
+			L math.Vec4[float32]
 			I float32
 		)
 		switch ll := l.(type) {

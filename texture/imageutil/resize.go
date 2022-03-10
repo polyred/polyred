@@ -106,10 +106,10 @@ func resizeRGBA(in *image.RGBA, out *image.RGBA, scale float32, coeffs []int16, 
 			}
 
 			xo := (y-newBounds.Min.Y)*out.Stride + (x-newBounds.Min.X)*4
-			out.Pix[xo+0] = uint8(math.ClampInt(int(rgba[0]/sum), 0, 255))
-			out.Pix[xo+1] = uint8(math.ClampInt(int(rgba[1]/sum), 0, 255))
-			out.Pix[xo+2] = uint8(math.ClampInt(int(rgba[2]/sum), 0, 255))
-			out.Pix[xo+3] = uint8(math.ClampInt(int(rgba[3]/sum), 0, 255))
+			out.Pix[xo+0] = uint8(math.Clamp(int(rgba[0]/sum), 0, 255))
+			out.Pix[xo+1] = uint8(math.Clamp(int(rgba[1]/sum), 0, 255))
+			out.Pix[xo+2] = uint8(math.Clamp(int(rgba[2]/sum), 0, 255))
+			out.Pix[xo+3] = uint8(math.Clamp(int(rgba[3]/sum), 0, 255))
 		}
 	}
 }

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 )
 
-func MustLoadAs[T Mesh](path string) T {
+func MustLoadAs[T Mesh[float32]](path string) T {
 	m, err := LoadAs[T](path)
 	if err != nil {
 		panic(fmt.Errorf("mesh: cannot load a given mesh: %w", err))
@@ -17,7 +17,7 @@ func MustLoadAs[T Mesh](path string) T {
 	return m
 }
 
-func LoadAs[T Mesh](path string) (T, error) {
+func LoadAs[T Mesh[float32]](path string) (T, error) {
 	switch filepath.Ext(path) {
 	case ".obj":
 		return LoadObjAs[T](path)

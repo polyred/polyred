@@ -23,7 +23,7 @@ func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 	s.Add(light.NewPoint(
 		light.Intensity(5),
 		light.Color(color.RGBA{255, 255, 255, 255}),
-		light.Position(math.NewVec3(0, 0, 5)),
+		light.Position(math.NewVec3[float32](0, 0, 5)),
 	), light.NewAmbient(
 		light.Intensity(0.7),
 	))
@@ -46,7 +46,7 @@ func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 	s.Add(m)
 
 	return s, camera.NewPerspective(
-		camera.Position(math.NewVec3(1, 1, 2)),
+		camera.Position(math.NewVec3[float32](1, 1, 2)),
 		camera.ViewFrustum(45, float32(width)/float32(height), 0.01, 600),
 	)
 }

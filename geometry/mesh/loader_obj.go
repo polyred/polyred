@@ -18,7 +18,7 @@ import (
 )
 
 // LoadObjAs loads a .obj file to a Mesh object.
-func LoadObjAs[T Mesh](path string) (x T, err error) {
+func LoadObjAs[T Mesh[float32]](path string) (x T, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return x, fmt.Errorf("mesh: failed to open file %s: %w", path, err)
@@ -36,9 +36,9 @@ func LoadObjAs[T Mesh](path string) (x T, err error) {
 }
 
 func loadObjToTriangleSoup(r io.Reader) (*TriangleSoup, error) {
-	vs := make([]math.Vec4, 1)
-	vts := make([]math.Vec2, 1, 1024)
-	vns := make([]math.Vec4, 1, 1024)
+	vs := make([]math.Vec4[float32], 1)
+	vts := make([]math.Vec2[float32], 1, 1024)
+	vns := make([]math.Vec4[float32], 1, 1024)
 
 	var tris []*primitive.Triangle
 	s := bufio.NewScanner(r)

@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	_ Mesh = &TriangleSoup{}
+	_ Mesh[float32] = &TriangleSoup{}
 )
 
 // TriangleSoup implements a triangular mesh.
@@ -25,7 +25,7 @@ type TriangleSoup struct {
 	// aabb must be transformed when applying the context.
 	aabb *primitive.AABB
 
-	math.TransformContext
+	math.TransformContext[float32]
 }
 
 func (f *TriangleSoup) Type() object.Type {
@@ -36,7 +36,7 @@ func (f *TriangleSoup) NumTriangles() uint64 {
 	return uint64(len(f.triangles))
 }
 
-func (f *TriangleSoup) Faces(iter func(primitive.Face, material.Material) bool) {
+func (f *TriangleSoup) Faces(iter func(primitive.Face[float32], material.Material) bool) {
 	for i := range f.triangles {
 		if !iter(f.triangles[i], f.material) {
 			return
@@ -84,7 +84,7 @@ func (m *TriangleSoup) AABB() primitive.AABB {
 	return primitive.AABB{Min: min, Max: max}
 }
 
-func (m *TriangleSoup) Center() math.Vec3 {
+func (m *TriangleSoup) Center() math.Vec3[float32] {
 	aabb := m.AABB()
 	return aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 }
@@ -127,7 +127,7 @@ func (m *TriangleSoup) GetVertexIndex() buffer.IndexBuffer {
 func (m *TriangleSoup) GetVertexBuffer() buffer.VertexBuffer {
 	vs := make([]*primitive.Vertex, len(m.triangles)*3)
 	i := 0
-	m.Faces(func(f primitive.Face, m material.Material) bool {
+	m.Faces(func(f primitive.Face[float32], m material.Material) bool {
 		f.Vertices(func(v *primitive.Vertex) bool {
 			vs[i] = v
 			i++

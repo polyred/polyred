@@ -14,7 +14,7 @@ import (
 // Environment represents the abstraction of environment lighting.
 // Such as ambient light, etc.
 type Environment interface {
-	object.Object
+	object.Object[float32]
 
 	Color() color.RGBA
 	Intensity() float32
@@ -22,10 +22,10 @@ type Environment interface {
 
 // Source represents the abstraction of a light source.
 type Source interface {
-	object.Object
+	object.Object[float32]
 
 	Color() color.RGBA
 	Intensity() float32
-	Position() math.Vec3
+	Position() math.Vec3[float32]
 	CastShadow() bool
 }

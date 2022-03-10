@@ -42,18 +42,18 @@ func (r *Renderer) initShadowMaps() {
 		tm := camera.ViewMatrix(
 			r.lightSources[i].Position(),
 			r.scene.Center(),
-			math.NewVec3(0, 1, 0),
+			math.NewVec3[float32](0, 1, 0),
 		).
 			MulM(r.renderCamera.ViewMatrix().Inv()).
 			MulM(r.renderCamera.ProjMatrix().Inv())
-		v1 := math.NewVec4(1, 1, 1, 1).Apply(tm).Pos().ToVec3()
-		v2 := math.NewVec4(1, 1, -1, 1).Apply(tm).Pos().ToVec3()
-		v3 := math.NewVec4(1, -1, 1, 1).Apply(tm).Pos().ToVec3()
-		v4 := math.NewVec4(-1, 1, 1, 1).Apply(tm).Pos().ToVec3()
-		v5 := math.NewVec4(-1, -1, 1, 1).Apply(tm).Pos().ToVec3()
-		v6 := math.NewVec4(1, -1, -1, 1).Apply(tm).Pos().ToVec3()
-		v7 := math.NewVec4(-1, 1, -1, 1).Apply(tm).Pos().ToVec3()
-		v8 := math.NewVec4(-1, -1, -1, 1).Apply(tm).Pos().ToVec3()
+		v1 := math.NewVec4[float32](1, 1, 1, 1).Apply(tm).Pos().ToVec3()
+		v2 := math.NewVec4[float32](1, 1, -1, 1).Apply(tm).Pos().ToVec3()
+		v3 := math.NewVec4[float32](1, -1, 1, 1).Apply(tm).Pos().ToVec3()
+		v4 := math.NewVec4[float32](-1, 1, 1, 1).Apply(tm).Pos().ToVec3()
+		v5 := math.NewVec4[float32](-1, -1, 1, 1).Apply(tm).Pos().ToVec3()
+		v6 := math.NewVec4[float32](1, -1, -1, 1).Apply(tm).Pos().ToVec3()
+		v7 := math.NewVec4[float32](-1, 1, -1, 1).Apply(tm).Pos().ToVec3()
+		v8 := math.NewVec4[float32](-1, -1, -1, 1).Apply(tm).Pos().ToVec3()
 		aabb := primitive.NewAABB(v1, v2, v3, v4, v5, v6, v7, v8)
 		le := aabb.Min.X
 		ri := aabb.Max.X
@@ -79,7 +79,7 @@ func (r *Renderer) initShadowMaps() {
 			c = camera.NewOrthographic(
 				camera.Position(l.Position()),
 				camera.LookAt(r.scene.Center(),
-					math.NewVec3(0, 1, 0)),
+					math.NewVec3[float32](0, 1, 0)),
 				camera.ViewFrustum(le, ri, bo, to, ne, fa),
 			)
 		default:
@@ -122,22 +122,22 @@ func (r *Renderer) passShadows(index int) {
 	matView := c.ViewMatrix()
 	matProj := c.ProjMatrix()
 	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
-	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
+	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
 
-		mesh := o.(mesh.Mesh)
+		mesh := o.(mesh.Mesh[float32])
 		r.sched.Add(mesh.NumTriangles())
 		return true
 	})
 
-	r.scene.IterObjects(func(o object.Object, modelMatrix math.Mat4) bool {
+	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
 
-		mesh := o.(mesh.Mesh)
+		mesh := o.(mesh.Mesh[float32])
 		uniforms := map[string]any{
 			"matModel": mesh.ModelMatrix(),
 			"matView":  matView,
@@ -153,7 +153,7 @@ func (r *Renderer) passShadows(index int) {
 			"matNormal": mesh.ModelMatrix().Inv().T(),
 		}
 
-		mesh.Faces(func(f primitive.Face, m material.Material) bool {
+		mesh.Faces(func(f primitive.Face[float32], m material.Material) bool {
 			f.Triangles(func(t *primitive.Triangle) bool {
 				r.sched.Run(func() {
 					if t.IsValid() {
@@ -180,7 +180,7 @@ func (r *Renderer) drawDepth(index int, uniforms map[string]any, tri *primitive.
 		t2 = defaultVertexShader(tri.V2, uniforms)
 		t3 = defaultVertexShader(tri.V3, uniforms)
 	}
-	matVP := uniforms["matVP"].(math.Mat4)
+	matVP := uniforms["matVP"].(math.Mat4[float32])
 
 	t1.Pos = t1.Pos.Apply(matVP).Pos()
 	t2.Pos = t2.Pos.Apply(matVP).Pos()
@@ -247,8 +247,8 @@ func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
 		return true
 	}
 
-	matVP := uniforms["matVP"].(math.Mat4)
-	matScreenToWorld := uniforms["matScreenToWorld"].(math.Mat4)
+	matVP := uniforms["matVP"].(math.Mat4[float32])
+	matScreenToWorld := uniforms["matScreenToWorld"].(math.Mat4[float32])
 	shadowMap := &r.shadowBufs[shadowIdx]
 
 	// transform scrren coordinate to light viewport

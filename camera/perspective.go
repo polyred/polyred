@@ -11,11 +11,11 @@ import (
 
 // Perspective prepresents a perspective camera.
 type Perspective struct {
-	math.TransformContext
+	math.TransformContext[float32]
 
-	position math.Vec3
-	target   math.Vec3
-	up       math.Vec3
+	position math.Vec3[float32]
+	target   math.Vec3[float32]
+	up       math.Vec3[float32]
 	aspect   float32
 	fov      float32
 	near     float32 // 0 < near < far
@@ -26,9 +26,9 @@ type Perspective struct {
 // camera parameters.
 func NewPerspective(opts ...Opt) Interface {
 	c := &Perspective{
-		position: math.NewVec3(0, 0, 1),
-		target:   math.NewVec3(0, 0, 0),
-		up:       math.NewVec3(0, 1, 0),
+		position: math.NewVec3[float32](0, 0, 1),
+		target:   math.NewVec3[float32](0, 0, 0),
+		up:       math.NewVec3[float32](0, 1, 0),
 		aspect:   16.0 / 9,
 		fov:      60,
 		near:     0.01, far: 1000,
@@ -62,24 +62,24 @@ func (c *Perspective) SetAspect(width, height float32) {
 }
 
 // Position returns the position of the given camera.
-func (c *Perspective) Position() math.Vec3 {
+func (c *Perspective) Position() math.Vec3[float32] {
 	return c.position
 }
 
 // SetPosition sets the position of the given camera.
-func (c *Perspective) SetPosition(p math.Vec3) {
+func (c *Perspective) SetPosition(p math.Vec3[float32]) {
 	c.position = p
 }
 
 // LookAt returns the look at target and up direction of the given camera.
-func (c *Perspective) LookAt() (target, up math.Vec3) {
+func (c *Perspective) LookAt() (target, up math.Vec3[float32]) {
 	target = c.target
 	up = c.up
 	return
 }
 
 // SetLookAt sets the position of the given camera.
-func (c *Perspective) SetLookAt(target, up math.Vec3) {
+func (c *Perspective) SetLookAt(target, up math.Vec3[float32]) {
 	c.target = target
 	c.up = up
 }
@@ -87,7 +87,7 @@ func (c *Perspective) SetLookAt(target, up math.Vec3) {
 // ViewMatrix returns the view matrix of the given camera. The view
 // matrix transforms and places the camera up to +Y and towards -Z axis
 // at origin.
-func (c *Perspective) ViewMatrix() math.Mat4 {
+func (c *Perspective) ViewMatrix() math.Mat4[float32] {
 	l := c.target.Sub(c.position).Unit()
 	lxu := l.Cross(c.up).Unit()
 	u := lxu.Cross(l).Unit()
@@ -106,7 +106,7 @@ func (c *Perspective) ViewMatrix() math.Mat4 {
 // ProjMatrix returns the projection matrix of the given camera.
 // After applying projection matrix, the z values are sitting in range
 // of [-1, 1] where 1 is the near plane and -1 is the far plane.
-func (c *Perspective) ProjMatrix() math.Mat4 {
+func (c *Perspective) ProjMatrix() math.Mat4[float32] {
 	aspect := c.aspect
 	fov := (c.fov * math.Pi) / 180
 	n := c.near

@@ -36,7 +36,7 @@ func newApp(meshPath, texPath string) *App {
 
 	// camera and renderer
 	cam := camera.NewPerspective(
-		camera.Position(math.NewVec3(0, 3, 3)),
+		camera.Position(math.NewVec3[float32](0, 3, 3)),
 		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 10),
 	)
 

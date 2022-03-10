@@ -97,18 +97,18 @@ func (r *Renderer) DrawPrimitive(buf *buffer.FragmentBuffer, tri *primitive.Tria
 	return true
 }
 
-func (r *Renderer) inViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4) bool {
+func (r *Renderer) inViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {
 	// TODO: can be optimize?
 	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float32(buf.Bounds().Dx()*r.msaa), float32(buf.Bounds().Dy()*r.msaa), 1),
-		math.NewVec3(0, 0, 0),
-		math.NewVec3(0, 0, -1),
+		math.NewVec3[float32](float32(buf.Bounds().Dx()*r.msaa), float32(buf.Bounds().Dy()*r.msaa), 1),
+		math.NewVec3[float32](0, 0, 0),
+		math.NewVec3[float32](0, 0, -1),
 	)
 	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
 	return viewportAABB.Intersect(triangleAABB)
 }
 
-func (r *Renderer) inViewport2(buf *buffer.FragmentBuffer, v math.Vec4) bool {
+func (r *Renderer) inViewport2(buf *buffer.FragmentBuffer, v math.Vec4[float32]) bool {
 	w := float32(r.msaa * buf.Bounds().Dx())
 	h := float32(r.msaa * buf.Bounds().Dy())
 	if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
@@ -123,16 +123,16 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 
 	// Sutherland Hodgman clipping algorithm
 	planes := [6]plane{
-		{math.NewVec4(w, 0, 0, 1), math.NewVec4(-1, 0, 0, 1)},
-		{math.NewVec4(0, 0, 0, 1), math.NewVec4(1, 0, 0, 1)},
-		{math.NewVec4(0, h, 0, 1), math.NewVec4(0, -1, 0, 1)},
-		{math.NewVec4(0, 0, 0, 1), math.NewVec4(0, 1, 0, 1)},
-		{math.NewVec4(0, 0, 1, 1), math.NewVec4(0, 0, -1, 1)},
-		{math.NewVec4(0, 0, -1, 1), math.NewVec4(0, 0, 1, 1)},
+		{math.NewVec4[float32](w, 0, 0, 1), math.NewVec4[float32](-1, 0, 0, 1)},
+		{math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](1, 0, 0, 1)},
+		{math.NewVec4[float32](0, h, 0, 1), math.NewVec4[float32](0, -1, 0, 1)},
+		{math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](0, 1, 0, 1)},
+		{math.NewVec4[float32](0, 0, 1, 1), math.NewVec4[float32](0, 0, -1, 1)},
+		{math.NewVec4[float32](0, 0, -1, 1), math.NewVec4[float32](0, 0, 1, 1)},
 	}
 
 	// TODO: need optimize
-	input := []math.Vec4{v1.Pos, v2.Pos, v3.Pos}
+	input := []math.Vec4[float32]{v1.Pos, v2.Pos, v3.Pos}
 	clips := input
 	for _, plane := range planes {
 		input := clips
@@ -168,17 +168,17 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 			v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 
 		t1 := primitive.Vertex{
-			Pos: math.Vec4{
+			Pos: math.Vec4[float32]{
 				X: b1bc[0]*v1.Pos.X + b1bc[1]*v2.Pos.X + b1bc[2]*v3.Pos.X,
 				Y: b1bc[0]*v1.Pos.Y + b1bc[1]*v2.Pos.Y + b1bc[2]*v3.Pos.Y,
 				Z: b1bc[0]*v1.Pos.Z + b1bc[1]*v2.Pos.Z + b1bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec2{
+			UV: math.Vec2[float32]{
 				X: b1bc[0]*v1.UV.X + b1bc[1]*v2.UV.X + b1bc[2]*v3.UV.X,
 				Y: b1bc[0]*v1.UV.Y + b1bc[1]*v2.UV.Y + b1bc[2]*v3.UV.Y,
 			},
-			Nor: math.Vec4{
+			Nor: math.Vec4[float32]{
 				X: b1bc[0]*v1.Nor.X + b1bc[1]*v2.Nor.X + b1bc[2]*v3.Nor.X,
 				Y: b1bc[0]*v1.Nor.Y + b1bc[1]*v2.Nor.Y + b1bc[2]*v3.Nor.Y,
 				Z: b1bc[0]*v1.Nor.Z + b1bc[1]*v2.Nor.Z + b1bc[2]*v3.Nor.Z,
@@ -192,17 +192,17 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 			},
 		}
 		t2 := primitive.Vertex{
-			Pos: math.Vec4{
+			Pos: math.Vec4[float32]{
 				X: b2bc[0]*v1.Pos.X + b2bc[1]*v2.Pos.X + b2bc[2]*v3.Pos.X,
 				Y: b2bc[0]*v1.Pos.Y + b2bc[1]*v2.Pos.Y + b2bc[2]*v3.Pos.Y,
 				Z: b2bc[0]*v1.Pos.Z + b2bc[1]*v2.Pos.Z + b2bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec2{
+			UV: math.Vec2[float32]{
 				X: b2bc[0]*v1.UV.X + b2bc[1]*v2.UV.X + b2bc[2]*v3.UV.X,
 				Y: b2bc[0]*v1.UV.Y + b2bc[1]*v2.UV.Y + b2bc[2]*v3.UV.Y,
 			},
-			Nor: math.Vec4{
+			Nor: math.Vec4[float32]{
 				X: b2bc[0]*v1.Nor.X + b2bc[1]*v2.Nor.X + b2bc[2]*v3.Nor.X,
 				Y: b2bc[0]*v1.Nor.Y + b2bc[1]*v2.Nor.Y + b2bc[2]*v3.Nor.Y,
 				Z: b2bc[0]*v1.Nor.Z + b2bc[1]*v2.Nor.Z + b2bc[2]*v3.Nor.Z,
@@ -216,17 +216,17 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 			},
 		}
 		t3 := primitive.Vertex{
-			Pos: math.Vec4{
+			Pos: math.Vec4[float32]{
 				X: b3bc[0]*v1.Pos.X + b3bc[1]*v2.Pos.X + b3bc[2]*v3.Pos.X,
 				Y: b3bc[0]*v1.Pos.Y + b3bc[1]*v2.Pos.Y + b3bc[2]*v3.Pos.Y,
 				Z: b3bc[0]*v1.Pos.Z + b3bc[1]*v2.Pos.Z + b3bc[2]*v3.Pos.Z,
 				W: 1,
 			},
-			UV: math.Vec2{
+			UV: math.Vec2[float32]{
 				X: b3bc[0]*v1.UV.X + b3bc[1]*v2.UV.X + b3bc[2]*v3.UV.X,
 				Y: b3bc[0]*v1.UV.Y + b3bc[1]*v2.UV.Y + b3bc[2]*v3.UV.Y,
 			},
-			Nor: math.Vec4{
+			Nor: math.Vec4[float32]{
 				X: b3bc[0]*v1.Nor.X + b3bc[1]*v2.Nor.X + b3bc[2]*v3.Nor.X,
 				Y: b3bc[0]*v1.Nor.Y + b3bc[1]*v2.Nor.Y + b3bc[2]*v3.Nor.Y,
 				Z: b3bc[0]*v1.Nor.Z + b3bc[1]*v2.Nor.Z + b3bc[2]*v3.Nor.Z,
@@ -349,59 +349,59 @@ func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[primitive.Attribute]any,
 					val1, v2[name].(float32), v3[name].(float32),
 				}, recipw, bc)
 			}
-		case math.Vec2:
+		case math.Vec2[float32]:
 			x := r.interpolate([3]float32{
 				val1.X,
-				v2[name].(math.Vec4).X,
-				v3[name].(math.Vec4).X,
+				v2[name].(math.Vec4[float32]).X,
+				v3[name].(math.Vec4[float32]).X,
 			}, recipw, bc)
 			y := r.interpolate([3]float32{
 				val1.Y,
-				v2[name].(math.Vec4).Y,
-				v3[name].(math.Vec4).Y,
+				v2[name].(math.Vec4[float32]).Y,
+				v3[name].(math.Vec4[float32]).Y,
 			}, recipw, bc)
 			if l > 0 {
 				frag[name] = math.NewVec2(x, y)
 			}
-		case math.Vec3:
+		case math.Vec3[float32]:
 			x := r.interpolate([3]float32{
 				val1.X,
-				v2[name].(math.Vec4).X,
-				v3[name].(math.Vec4).X,
+				v2[name].(math.Vec4[float32]).X,
+				v3[name].(math.Vec4[float32]).X,
 			}, recipw, bc)
 			y := r.interpolate([3]float32{
 				val1.Y,
-				v2[name].(math.Vec4).Y,
-				v3[name].(math.Vec4).Y,
+				v2[name].(math.Vec4[float32]).Y,
+				v3[name].(math.Vec4[float32]).Y,
 			}, recipw, bc)
 			z := r.interpolate([3]float32{
 				val1.Z,
-				v2[name].(math.Vec4).Z,
-				v3[name].(math.Vec4).Z,
+				v2[name].(math.Vec4[float32]).Z,
+				v3[name].(math.Vec4[float32]).Z,
 			}, recipw, bc)
 			if l > 0 {
 				frag[name] = math.NewVec3(x, y, z)
 			}
-		case math.Vec4:
+		case math.Vec4[float32]:
 			x := r.interpolate([3]float32{
 				val1.X,
-				v2[name].(math.Vec4).X,
-				v3[name].(math.Vec4).X,
+				v2[name].(math.Vec4[float32]).X,
+				v3[name].(math.Vec4[float32]).X,
 			}, recipw, bc)
 			y := r.interpolate([3]float32{
 				val1.Y,
-				v2[name].(math.Vec4).Y,
-				v3[name].(math.Vec4).Y,
+				v2[name].(math.Vec4[float32]).Y,
+				v3[name].(math.Vec4[float32]).Y,
 			}, recipw, bc)
 			z := r.interpolate([3]float32{
 				val1.Z,
-				v2[name].(math.Vec4).Z,
-				v3[name].(math.Vec4).Z,
+				v2[name].(math.Vec4[float32]).Z,
+				v3[name].(math.Vec4[float32]).Z,
 			}, recipw, bc)
 			w := r.interpolate([3]float32{
 				val1.W,
-				v2[name].(math.Vec4).W,
-				v3[name].(math.Vec4).W,
+				v2[name].(math.Vec4[float32]).W,
+				v3[name].(math.Vec4[float32]).W,
 			}, recipw, bc)
 			if l > 0 {
 				frag[name] = math.NewVec4(x, y, z, w)

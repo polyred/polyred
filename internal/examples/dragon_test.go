@@ -23,7 +23,7 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 	s.Add(light.NewPoint(
 		light.Intensity(2),
 		light.Color(color.RGBA{255, 255, 255, 255}),
-		light.Position(math.NewVec3(-1.5, -1, 1)),
+		light.Position(math.NewVec3[float32](-1.5, -1, 1)),
 	), light.NewAmbient(
 		light.Intensity(0.5),
 	))
@@ -47,8 +47,8 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 	s.Add(m)
 
 	return s, camera.NewPerspective(
-		camera.Position(math.NewVec3(-3, 1.25, -2)),
-		camera.LookAt(math.NewVec3(0, -0.1, -0.1), math.NewVec3(0, 1, 0)),
+		camera.Position(math.NewVec3[float32](-3, 1.25, -2)),
+		camera.LookAt(math.NewVec3[float32](0, -0.1, -0.1), math.NewVec3[float32](0, 1, 0)),
 		camera.ViewFrustum(30, float32(w)/float32(h), 0.01, 1000),
 	)
 }

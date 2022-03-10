@@ -28,9 +28,9 @@ var _ Program = &BasicShader{}
 
 // BasicShader is a shader that does the minimum shading.
 type BasicShader struct {
-	ModelMatrix      math.Mat4
-	ViewMatrix       math.Mat4
-	ProjectionMatrix math.Mat4
+	ModelMatrix      math.Mat4[float32]
+	ViewMatrix       math.Mat4[float32]
+	ProjectionMatrix math.Mat4[float32]
 }
 
 func (s *BasicShader) Vertex(v *primitive.Vertex) *primitive.Vertex {
