@@ -13,13 +13,13 @@ import (
 
 var (
 	global  float32
-	globalV math.Vec4
+	globalV math.Vec4[float32]
 	globalC color.RGBA
 )
 
 func TestLerp(t *testing.T) {
 	t.Run("float64", func(t *testing.T) {
-		if v := math.Lerp(0, 1, 0.5); v != 0.5 {
+		if v := math.Lerp[float32](0, 1, 0.5); v != 0.5 {
 			t.Fatalf("Lerp want %v, got %v", 0.5, v)
 		}
 	})
@@ -42,27 +42,27 @@ func BenchmarkLerp(b *testing.B) {
 func TestLerpVec(t *testing.T) {
 	t.Run("Vec4", func(t *testing.T) {
 		tt := float32(0.5)
-		v1 := math.Vec4{0, 0, 0, 1}
-		v2 := math.Vec4{1, 1, 1, 1}
-		want := math.Vec4{0.5, 0.5, 0.5, 1}
+		v1 := math.Vec4[float32]{0, 0, 0, 1}
+		v2 := math.Vec4[float32]{1, 1, 1, 1}
+		want := math.Vec4[float32]{0.5, 0.5, 0.5, 1}
 		if vv := math.LerpVec4(v1, v2, tt); !vv.Eq(want) {
 			t.Fatalf("LerpVec4 want %v, got %v", want, vv)
 		}
 	})
 	t.Run("Vec3", func(t *testing.T) {
 		tt := float32(0.5)
-		v1 := math.Vec3{0, 0, 0}
-		v2 := math.Vec3{1, 1, 1}
-		want := math.Vec3{0.5, 0.5, 0.5}
+		v1 := math.Vec3[float32]{0, 0, 0}
+		v2 := math.Vec3[float32]{1, 1, 1}
+		want := math.Vec3[float32]{0.5, 0.5, 0.5}
 		if vv := math.LerpVec3(v1, v2, tt); !vv.Eq(want) {
 			t.Fatalf("LerpVec3 want %v, got %v", want, vv)
 		}
 	})
 	t.Run("Vec2", func(t *testing.T) {
 		tt := float32(0.5)
-		v1 := math.Vec2{0, 0}
-		v2 := math.Vec2{1, 1}
-		want := math.Vec2{0.5, 0.5}
+		v1 := math.Vec2[float32]{0, 0}
+		v2 := math.Vec2[float32]{1, 1}
+		want := math.Vec2[float32]{0.5, 0.5}
 		if vv := math.LerpVec2(v1, v2, tt); !vv.Eq(want) {
 			t.Fatalf("LerpVec2 want %v, got %v", want, vv)
 		}
@@ -71,9 +71,9 @@ func TestLerpVec(t *testing.T) {
 
 func BenchmarkLerpV(b *testing.B) {
 	t := float32(0.5)
-	v1 := math.Vec4{0, 0, 0, 1}
-	v2 := math.Vec4{1, 1, 1, 1}
-	var r math.Vec4
+	v1 := math.Vec4[float32]{0, 0, 0, 1}
+	v2 := math.Vec4[float32]{1, 1, 1, 1}
+	var r math.Vec4[float32]
 	for i := 0; i < b.N; i++ {
 		r = math.LerpVec4(v1, v2, t)
 	}
@@ -102,10 +102,10 @@ func BenchmarkLerpC(b *testing.B) {
 }
 
 func TestBarycoord(t *testing.T) {
-	p := math.Vec2{5., 5.}
-	v1 := math.NewVec2(0, 0)
-	v2 := math.NewVec2(20, 0)
-	v3 := math.NewVec2(0, 20)
+	p := math.Vec2[float32]{5., 5.}
+	v1 := math.NewVec2[float32](0, 0)
+	v2 := math.NewVec2[float32](20, 0)
+	v3 := math.NewVec2[float32](0, 20)
 
 	barycoords := math.Barycoord(p, v1, v2, v3)
 
@@ -115,11 +115,11 @@ func TestBarycoord(t *testing.T) {
 }
 
 func BenchmarkBarycoord(b *testing.B) {
-	v1 := math.NewVec2(0, 0)
-	v2 := math.NewVec2(20, 0)
-	v3 := math.NewVec2(0, 20)
+	v1 := math.NewVec2[float32](0, 0)
+	v2 := math.NewVec2[float32](20, 0)
+	v3 := math.NewVec2[float32](0, 20)
 	b.Run("inside", func(b *testing.B) {
-		p := math.Vec2{10, 10}
+		p := math.Vec2[float32]{10, 10}
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -128,7 +128,7 @@ func BenchmarkBarycoord(b *testing.B) {
 		b.StopTimer()
 	})
 	b.Run("outside", func(b *testing.B) {
-		p := math.Vec2{20, 20}
+		p := math.Vec2[float32]{20, 20}
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -139,22 +139,22 @@ func BenchmarkBarycoord(b *testing.B) {
 }
 
 func TestIsInsideTriangle(t *testing.T) {
-	v1 := math.NewVec2(0, 0)
-	v2 := math.NewVec2(20, 0)
-	v3 := math.NewVec2(0, 20)
+	v1 := math.NewVec2[float32](0, 0)
+	v2 := math.NewVec2[float32](20, 0)
+	v3 := math.NewVec2[float32](0, 20)
 	t.Run("inside", func(t *testing.T) {
-		p := math.Vec2{10, 10}
+		p := math.Vec2[float32]{10, 10}
 		if !math.IsInsideTriangle(p, v1, v2, v3) {
 			t.Fatalf("unexpected inside triangle test, want true, got false")
 		}
 	})
 	t.Run("outside", func(t *testing.T) {
-		p := math.Vec2{20, 20}
+		p := math.Vec2[float32]{20, 20}
 		if math.IsInsideTriangle(p, v1, v2, v3) {
 			t.Fatalf("unexpected inside triangle test, want false, got true")
 		}
 
-		p = math.Vec2{-20, -20}
+		p = math.Vec2[float32]{-20, -20}
 		if math.IsInsideTriangle(p, v1, v2, v3) {
 			t.Fatalf("unexpected inside triangle test, want false, got true")
 		}
@@ -162,11 +162,11 @@ func TestIsInsideTriangle(t *testing.T) {
 }
 
 func BenchmarkIsInsideTriangle(b *testing.B) {
-	v1 := math.NewVec2(0, 0)
-	v2 := math.NewVec2(20, 0)
-	v3 := math.NewVec2(0, 20)
+	v1 := math.NewVec2[float32](0, 0)
+	v2 := math.NewVec2[float32](20, 0)
+	v3 := math.NewVec2[float32](0, 20)
 	b.Run("inside", func(b *testing.B) {
-		p := math.Vec2{10, 10}
+		p := math.Vec2[float32]{10, 10}
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -175,7 +175,7 @@ func BenchmarkIsInsideTriangle(b *testing.B) {
 		b.StopTimer()
 	})
 	b.Run("outside", func(b *testing.B) {
-		p := math.Vec2{20, 20}
+		p := math.Vec2[float32]{20, 20}
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

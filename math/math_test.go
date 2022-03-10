@@ -32,14 +32,14 @@ func TestRadDeg(t *testing.T) {
 	if math.RadToDeg(float32(math.Pi)) != 180 {
 		t.Fatalf("unexpected RadToDeg, got %v, want 180.0", math.RadToDeg(float32(math.Pi)))
 	}
-	if math.DegToRad(180) != float32(math.Pi) {
+	if math.DegToRad[float32](180) != float32(math.Pi) {
 		t.Fatalf("unexpected DegToRad, got %v, want Pi", math.RadToDeg(float32(math.Pi)))
 	}
 }
 
 func TestViewportMatrix(t *testing.T) {
-	vpMat := math.ViewportMatrix(800, 400)
-	want := math.NewMat4(
+	vpMat := math.ViewportMatrix[float32](800, 400)
+	want := math.NewMat4[float32](
 		400, 0, 0, 400,
 		0, 200, 0, 200,
 		0, 0, 1, 0,
@@ -100,7 +100,7 @@ func BenchmarkMax(b *testing.B) {
 func BenchmarkViewportMatrix(b *testing.B) {
 	w, h := float32(1920.0), float32(1080.0)
 
-	var m math.Mat4
+	var m math.Mat4[float32]
 	for i := 0; i < b.N; i++ {
 		m = math.ViewportMatrix(w, h)
 	}

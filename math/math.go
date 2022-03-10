@@ -11,15 +11,18 @@ package math
 import "math"
 
 // Equivalents to the standard math package.
-var (
-	Pi         = float32(3.14159265358979323846264338327950288419716939937510582097494459)
+const (
+	Pi         = 3.14159265358979323846264338327950288419716939937510582097494459
 	HalfPi     = Pi * 0.5
 	TwoPi      = Pi * 2
 	MaxInt32   = math.MaxInt32
 	MaxInt64   = math.MaxInt64
-	MaxFloat32 = float32(math.MaxFloat32)
-	MaxFloat64 = float64(math.MaxFloat64)
-	IsNaN      = math.IsNaN
+	MaxFloat32 = math.MaxFloat32
+	MaxFloat64 = math.MaxFloat64
+)
+
+var (
+	IsNaN = math.IsNaN
 )
 
 const (
@@ -29,8 +32,13 @@ const (
 	radToDegFac = 180.0 / math.Pi
 )
 
+// Float is a constraint that permits any floating-point type.
+type Float interface {
+	~float32 | ~float64
+}
+
 // ApproxEq approximately compares v1 and v2.
-func ApproxEq(v1, v2, epsilon float32) bool {
+func ApproxEq[T Float](v1, v2, epsilon T) bool {
 	return Abs(v1-v2) <= epsilon
 }
 
@@ -40,8 +48,8 @@ func ApproxEq(v1, v2, epsilon float32) bool {
 //	Round(±0) = ±0
 //	Round(±Inf) = ±Inf
 //	Round(NaN) = NaN
-func Round(x float32) float32 {
-	return float32(math.Round(float64(x)))
+func Round[T Float](x T) T {
+	return T(math.Round(float64(x)))
 }
 
 // Inf returns positive infinity if sign >= 0, negative infinity if sign < 0.
@@ -72,8 +80,8 @@ func Inf(sign int) float32 {
 //	Pow(+Inf, y) = +0 for y < 0
 //	Pow(-Inf, y) = Pow(-0, -y)
 //	Pow(x, y) = NaN for finite x < 0 and finite non-integer y
-func Pow(x, y float32) float32 {
-	return float32(math.Pow(float64(x), float64(y)))
+func Pow[T Float](x, y T) T {
+	return T(math.Pow(float64(x), float64(y)))
 }
 
 // Floor returns the greatest integer value less than or equal to x.
@@ -82,8 +90,8 @@ func Pow(x, y float32) float32 {
 //	Floor(±0) = ±0
 //	Floor(±Inf) = ±Inf
 //	Floor(NaN) = NaN
-func Floor(x float32) float32 {
-	return float32(math.Floor(float64(x)))
+func Floor[T Float](x T) T {
+	return T(math.Floor(float64(x)))
 }
 
 // Modf returns integer and fractional floating-point numbers
@@ -92,15 +100,15 @@ func Floor(x float32) float32 {
 // Special cases are:
 //	Modf(±Inf) = ±Inf, NaN
 //	Modf(NaN) = NaN, NaN
-func Modf(f float32) (float32, float32) {
+func Modf[T Float](f T) (T, T) {
 	in, fl := math.Modf(float64(f))
-	return float32(in), float32(fl)
+	return T(in), T(fl)
 }
 
 // Log2 returns the binary logarithm of x.
 // The special cases are the same as for Log.
-func Log2(x float32) float32 {
-	return float32(math.Log2(float64(x)))
+func Log2[T Float](x T) T {
+	return T(math.Log2(float64(x)))
 }
 
 // Abs returns the absolute value of x.
@@ -108,8 +116,8 @@ func Log2(x float32) float32 {
 // Special cases are:
 //	Abs(±Inf) = +Inf
 //	Abs(NaN) = NaN
-func Abs(x float32) float32 {
-	return float32(math.Abs(float64(x)))
+func Abs[T Float](x T) T {
+	return T(math.Abs(float64(x)))
 }
 
 // Ceil returns the least integer value greater than or equal to x.
@@ -118,8 +126,8 @@ func Abs(x float32) float32 {
 //	Ceil(±0) = ±0
 //	Ceil(±Inf) = ±Inf
 //	Ceil(NaN) = NaN
-func Ceil(x float32) float32 {
-	return float32(math.Ceil(float64(x)))
+func Ceil[T Float](x T) T {
+	return T(math.Ceil(float64(x)))
 }
 
 // Cos returns the cosine of the radian argument x.
@@ -127,16 +135,16 @@ func Ceil(x float32) float32 {
 // Special cases are:
 //	Cos(±Inf) = NaN
 //	Cos(NaN) = NaN
-func Cos(x float32) float32 {
-	return float32(math.Cos(float64(x)))
+func Cos[T Float](x T) T {
+	return T(math.Cos(float64(x)))
 }
 
 // Acos returns the arccosine, in radians, of x.
 //
 // Special case is:
 //	Acos(x) = NaN if x < -1 or x > 1
-func Acos(x float32) float32 {
-	return float32(math.Acos(float64(x)))
+func Acos[T Float](x T) T {
+	return T(math.Acos(float64(x)))
 }
 
 // Sin returns the sine of the radian argument x.
@@ -145,8 +153,8 @@ func Acos(x float32) float32 {
 //	Sin(±0) = ±0
 //	Sin(±Inf) = NaN
 //	Sin(NaN) = NaN
-func Sin(x float32) float32 {
-	return float32(math.Sin(float64(x)))
+func Sin[T Float](x T) T {
+	return T(math.Sin(float64(x)))
 }
 
 // Tan returns the tangent of the radian argument x.
@@ -155,8 +163,8 @@ func Sin(x float32) float32 {
 //	Tan(±0) = ±0
 //	Tan(±Inf) = NaN
 //	Tan(NaN) = NaN
-func Tan(x float32) float32 {
-	return float32(math.Tan(float64(x)))
+func Tan[T Float](x T) T {
+	return T(math.Tan(float64(x)))
 }
 
 // Atan returns the arctangent, in radians, of x.
@@ -164,8 +172,8 @@ func Tan(x float32) float32 {
 // Special cases are:
 //      Atan(±0) = ±0
 //      Atan(±Inf) = ±Pi/2
-func Atan(x float32) float32 {
-	return float32(math.Atan(float64(x)))
+func Atan[T Float](x T) T {
+	return T(math.Atan(float64(x)))
 }
 
 // Atan2 returns the arc tangent of y/x, using
@@ -190,8 +198,8 @@ func Atan(x float32) float32 {
 //	Atan2(y<0, -Inf) = -Pi
 //	Atan2(+Inf, x) = +Pi/2
 //	Atan2(-Inf, x) = -Pi/2
-func Atan2(y, x float32) float32 {
-	return float32(math.Atan2(float64(y), float64(x)))
+func Atan2[T Float](y, x T) T {
+	return T(math.Atan2(float64(y), float64(x)))
 }
 
 // Sqrt returns the square root of x.
@@ -201,41 +209,41 @@ func Atan2(y, x float32) float32 {
 //	Sqrt(±0) = ±0
 //	Sqrt(x < 0) = NaN
 //	Sqrt(NaN) = NaN
-func Sqrt(x float32) float32 {
-	return float32(math.Sqrt(float64(x)))
+func Sqrt[T Float](x T) T {
+	return T(math.Sqrt(float64(x)))
 }
 
 // DegToRad converts a number from degrees to radians
-func DegToRad(deg float32) float32 {
+func DegToRad[T Float](deg T) T {
 	return deg * degToRadFac
 }
 
 // RadToDeg converts a number from radians to degrees
-func RadToDeg(rad float32) float32 {
+func RadToDeg[T Float](rad T) T {
 	return rad * radToDegFac
 }
 
 // Min compares n values and returns the minimum
-func Min(xs ...float32) float32 {
-	min := math.MaxFloat32
+func Min[T Float](xs ...T) T {
+	min := math.MaxFloat64
 	for _, x := range xs {
 		min = math.Min(float64(min), float64(x))
 	}
-	return float32(min)
+	return T(min)
 }
 
 // Max compares n values and returns the maximum
-func Max(xs ...float32) float32 {
-	max := -math.MaxFloat32
+func Max[T Float](xs ...T) T {
+	max := -math.MaxFloat64
 	for _, x := range xs {
 		max = math.Max(float64(max), float64(x))
 	}
-	return float32(max)
+	return T(max)
 }
 
 // ViewportMatrix returns the viewport matrix.
-func ViewportMatrix(w, h float32) Mat4 {
-	return Mat4{
+func ViewportMatrix[T Float](w, h T) Mat4[T] {
+	return Mat4[T]{
 		w / 2, 0, 0, w / 2,
 		0, h / 2, 0, h / 2,
 		0, 0, 1, 0,

@@ -6,22 +6,25 @@ package math
 
 import "fmt"
 
-var (
-	// Mat4I is an identity Mat4
-	Mat4I = Mat4{
+// Mat4I is an identity Mat4
+func Mat4I[T Float]() Mat4[T] {
+	return Mat4[T]{
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
 	}
-	// Mat4Zero is a zero Mat4
-	Mat4Zero = Mat4{
+}
+
+// Mat4Zero is a zero Mat4
+func Mat4Zero[T Float]() Mat4[T] {
+	return Mat4[T]{
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 		0, 0, 0, 0,
 	}
-)
+}
 
 // Mat4 represents a 4x4 Mat4
 //
@@ -29,22 +32,22 @@ var (
 // | X10, X11, X12, X13 |
 // | X20, X21, X22, X23 |
 // \ X30, X31, X32, X33 /
-type Mat4 struct {
+type Mat4[T Float] struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 4x4 Mat4.
 	// See benchmarks at https://golang.design/research/pointer-params/.
-	X00, X01, X02, X03 float32
-	X10, X11, X12, X13 float32
-	X20, X21, X22, X23 float32
-	X30, X31, X32, X33 float32
+	X00, X01, X02, X03 T
+	X10, X11, X12, X13 T
+	X20, X21, X22, X23 T
+	X30, X31, X32, X33 T
 }
 
-func NewMat4(
+func NewMat4[T Float](
 	X00, X01, X02, X03,
 	X10, X11, X12, X13,
 	X20, X21, X22, X23,
-	X30, X31, X32, X33 float32) Mat4 {
-	return Mat4{
+	X30, X31, X32, X33 T) Mat4[T] {
+	return Mat4[T]{
 		X00, X01, X02, X03,
 		X10, X11, X12, X13,
 		X20, X21, X22, X23,
@@ -53,7 +56,7 @@ func NewMat4(
 }
 
 // String returns a string format of the given Mat4.
-func (m Mat4) String() string {
+func (m Mat4[T]) String() string {
 	return fmt.Sprintf(`[[%v, %v, %v, %v], [%v, %v, %v, %v], [%v, %v, %v, %v], [%v, %v, %v, %v]]`,
 		m.X00, m.X01, m.X02, m.X03,
 		m.X10, m.X11, m.X12, m.X13,
@@ -63,7 +66,7 @@ func (m Mat4) String() string {
 }
 
 // Get gets the Mat4 elements
-func (m Mat4) Get(i, j int) float32 {
+func (m Mat4[T]) Get(i, j int) T {
 	if i < 0 || i > 3 || j < 0 || j > 3 {
 		panic("invalid index")
 	}
@@ -107,7 +110,7 @@ func (m Mat4) Get(i, j int) float32 {
 }
 
 // Set set the Mat4 elements at row i and column j
-func (m *Mat4) Set(i, j int, v float32) {
+func (m *Mat4[T]) Set(i, j int, v T) {
 	if i < 0 || i > 3 || j < 0 || j > 3 {
 		panic("invalid index")
 	}
@@ -151,7 +154,7 @@ func (m *Mat4) Set(i, j int, v float32) {
 }
 
 // Eq checks whether the given two matrices are equal or not.
-func (m Mat4) Eq(n Mat4) bool {
+func (m Mat4[T]) Eq(n Mat4[T]) bool {
 	if ApproxEq(m.X00, n.X00, Epsilon) &&
 		ApproxEq(m.X10, n.X10, Epsilon) &&
 		ApproxEq(m.X20, n.X20, Epsilon) &&
@@ -173,8 +176,8 @@ func (m Mat4) Eq(n Mat4) bool {
 	return false
 }
 
-func (m Mat4) Add(n Mat4) Mat4 {
-	return Mat4{
+func (m Mat4[T]) Add(n Mat4[T]) Mat4[T] {
+	return Mat4[T]{
 		m.X00 + n.X00, m.X01 + n.X01, m.X02 + n.X02, m.X03 + n.X03,
 		m.X10 + n.X10, m.X11 + n.X11, m.X12 + n.X12, m.X13 + n.X13,
 		m.X20 + n.X20, m.X21 + n.X21, m.X22 + n.X22, m.X23 + n.X23,
@@ -182,8 +185,8 @@ func (m Mat4) Add(n Mat4) Mat4 {
 	}
 }
 
-func (m Mat4) Sub(n Mat4) Mat4 {
-	return Mat4{
+func (m Mat4[T]) Sub(n Mat4[T]) Mat4[T] {
+	return Mat4[T]{
 		m.X00 - n.X00, m.X01 - n.X01, m.X02 - n.X02, m.X03 - n.X03,
 		m.X10 - n.X10, m.X11 - n.X11, m.X12 - n.X12, m.X13 - n.X13,
 		m.X20 - n.X20, m.X21 - n.X21, m.X22 - n.X22, m.X23 - n.X23,
@@ -193,8 +196,8 @@ func (m Mat4) Sub(n Mat4) Mat4 {
 
 // Mul implements Mat4 multiplication for two
 // 4x4 matrices and assigns the result to this.
-func (m Mat4) MulM(n Mat4) Mat4 {
-	mm := Mat4{}
+func (m Mat4[T]) MulM(n Mat4[T]) Mat4[T] {
+	mm := Mat4[T]{}
 	mm.X00 = m.X00*n.X00 + m.X01*n.X10 + m.X02*n.X20 + m.X03*n.X30
 	mm.X10 = m.X10*n.X00 + m.X11*n.X10 + m.X12*n.X20 + m.X13*n.X30
 	mm.X20 = m.X20*n.X00 + m.X21*n.X10 + m.X22*n.X20 + m.X23*n.X30
@@ -216,16 +219,16 @@ func (m Mat4) MulM(n Mat4) Mat4 {
 
 // MulVec implements Mat4 vector multiplication
 // and returns the resulting vector.
-func (m Mat4) MulV(v Vec4) Vec4 {
+func (m Mat4[T]) MulV(v Vec4[T]) Vec4[T] {
 	x := m.X00*v.X + m.X01*v.Y + m.X02*v.Z + m.X03*v.W
 	y := m.X10*v.X + m.X11*v.Y + m.X12*v.Z + m.X13*v.W
 	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z + m.X23*v.W
 	w := m.X30*v.X + m.X31*v.Y + m.X32*v.Z + m.X33*v.W
-	return Vec4{x, y, z, w}
+	return Vec4[T]{x, y, z, w}
 }
 
 // Det computes the determinant of the Mat4
-func (m Mat4) Det() float32 {
+func (m Mat4[T]) Det() T {
 	return m.X00*m.X11*m.X22*m.X33 - m.X00*m.X11*m.X23*m.X32 +
 		m.X00*m.X12*m.X23*m.X31 - m.X00*m.X12*m.X21*m.X33 +
 		m.X00*m.X13*m.X21*m.X32 - m.X00*m.X13*m.X22*m.X31 -
@@ -241,8 +244,8 @@ func (m Mat4) Det() float32 {
 }
 
 // T computes the transpose Mat4 of a given Mat4
-func (m Mat4) T() Mat4 {
-	return Mat4{
+func (m Mat4[T]) T() Mat4[T] {
+	return Mat4[T]{
 		m.X00, m.X10, m.X20, m.X30,
 		m.X01, m.X11, m.X21, m.X31,
 		m.X02, m.X12, m.X22, m.X32,
@@ -251,13 +254,13 @@ func (m Mat4) T() Mat4 {
 }
 
 // Inv computes the inverse Mat4 of a given Mat4
-func (m Mat4) Inv() Mat4 {
+func (m Mat4[T]) Inv() Mat4[T] {
 	d := m.Det()
 	if d == 0 {
 		panic("zero determinant")
 	}
 	dinv := 1 / d
-	n := Mat4{}
+	n := Mat4[T]{}
 	n.X00 = dinv * (m.X12*m.X23*m.X31 - m.X13*m.X22*m.X31 + m.X13*m.X21*m.X32 - m.X11*m.X23*m.X32 - m.X12*m.X21*m.X33 + m.X11*m.X22*m.X33)
 	n.X01 = dinv * (m.X03*m.X22*m.X31 - m.X02*m.X23*m.X31 - m.X03*m.X21*m.X32 + m.X01*m.X23*m.X32 + m.X02*m.X21*m.X33 - m.X01*m.X22*m.X33)
 	n.X02 = dinv * (m.X02*m.X13*m.X31 - m.X03*m.X12*m.X31 + m.X03*m.X11*m.X32 - m.X01*m.X13*m.X32 - m.X02*m.X11*m.X33 + m.X01*m.X12*m.X33)

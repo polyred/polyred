@@ -15,21 +15,21 @@ package math
 // ResetContext() method.
 //
 // A transformation context must be reset before use.
-type TransformContext struct {
-	context    Mat4
+type TransformContext[T Float] struct {
+	context    Mat4[T]
 	needUpdate bool
 
 	// We use a quaternion to persist the rotation context, so that we
 	// don't have the Gimbal Lock issue.
 	//
 	// See https://en.wikipedia.org/wiki/Gimbal_lock.
-	rotation  Quaternion
-	scale     Mat4
-	translate Mat4
+	rotation  Quaternion[T]
+	scale     Mat4[T]
+	translate Mat4[T]
 }
 
 // ModelMatrix returns the most recent transformation context.
-func (ctx *TransformContext) ModelMatrix() Mat4 {
+func (ctx *TransformContext[T]) ModelMatrix() Mat4[T] {
 	if ctx.needUpdate {
 		ctx.context = ctx.translate.MulM(ctx.scale).MulM(ctx.rotation.ToRoMat())
 		ctx.needUpdate = false
@@ -38,16 +38,16 @@ func (ctx *TransformContext) ModelMatrix() Mat4 {
 }
 
 // ResetContext resets the transformation context.
-func (ctx *TransformContext) ResetContext() {
-	ctx.context = Mat4I
-	ctx.rotation = NewQuaternion(1, 0, 0, 0)
-	ctx.scale = Mat4I
-	ctx.translate = Mat4I
+func (ctx *TransformContext[T]) ResetContext() {
+	ctx.context = Mat4I[T]()
+	ctx.rotation = NewQuaternion[T](1, 0, 0, 0)
+	ctx.scale = Mat4I[T]()
+	ctx.translate = Mat4I[T]()
 	ctx.needUpdate = false
 }
 
 // Scale sets the scale matrix.
-func (ctx *TransformContext) Scale(sx, sy, sz float32) {
+func (ctx *TransformContext[T]) Scale(sx, sy, sz T) {
 	ctx.scale = NewMat4(
 		sx, 0, 0, 0,
 		0, sy, 0, 0,
@@ -58,7 +58,7 @@ func (ctx *TransformContext) Scale(sx, sy, sz float32) {
 }
 
 // ScaleX sets the scale matrix on X-axis.
-func (ctx *TransformContext) ScaleX(sx float32) {
+func (ctx *TransformContext[T]) ScaleX(sx T) {
 	ctx.scale = NewMat4(
 		sx, 0, 0, 0,
 		0, 1, 0, 0,
@@ -69,7 +69,7 @@ func (ctx *TransformContext) ScaleX(sx float32) {
 }
 
 // ScaleY sets the scale matrix on Y-axis.
-func (ctx *TransformContext) ScaleY(sy float32) {
+func (ctx *TransformContext[T]) ScaleY(sy T) {
 	ctx.scale = NewMat4(
 		1, 0, 0, 0,
 		0, sy, 0, 0,
@@ -80,7 +80,7 @@ func (ctx *TransformContext) ScaleY(sy float32) {
 }
 
 // ScaleZ sets the scale matrix on Z-axis.
-func (ctx *TransformContext) ScaleZ(sz float32) {
+func (ctx *TransformContext[T]) ScaleZ(sz T) {
 	ctx.scale = NewMat4(
 		1, 0, 0, 0,
 		0, 1, 0, 0,
@@ -91,7 +91,7 @@ func (ctx *TransformContext) ScaleZ(sz float32) {
 }
 
 // Translate sets the translate matrix.
-func (ctx *TransformContext) Translate(tx, ty, tz float32) {
+func (ctx *TransformContext[T]) Translate(tx, ty, tz T) {
 	ctx.translate = NewMat4(
 		1, 0, 0, tx,
 		0, 1, 0, ty,
@@ -102,7 +102,7 @@ func (ctx *TransformContext) Translate(tx, ty, tz float32) {
 }
 
 // TranslateX sets the translate matrix on X-axis.
-func (ctx *TransformContext) TranslateX(tx float32) {
+func (ctx *TransformContext[T]) TranslateX(tx T) {
 	ctx.translate = NewMat4(
 		1, 0, 0, tx,
 		0, 1, 0, 0,
@@ -113,7 +113,7 @@ func (ctx *TransformContext) TranslateX(tx float32) {
 }
 
 // TranslateY sets the translate matrix on Y-axis.
-func (ctx *TransformContext) TranslateY(ty float32) {
+func (ctx *TransformContext[T]) TranslateY(ty T) {
 	ctx.translate = NewMat4(
 		1, 0, 0, 0,
 		0, 1, 0, ty,
@@ -124,7 +124,7 @@ func (ctx *TransformContext) TranslateY(ty float32) {
 }
 
 // TranslateZ sets the translate matrix on Z-axis.
-func (ctx *TransformContext) TranslateZ(tz float32) {
+func (ctx *TransformContext[T]) TranslateZ(tz T) {
 	ctx.translate = NewMat4(
 		1, 0, 0, 0,
 		0, 1, 0, 0,
@@ -136,7 +136,7 @@ func (ctx *TransformContext) TranslateZ(tz float32) {
 
 // Rotate applies rotation on an arbitrary direction with an specified
 // angle counterclockwise.
-func (ctx *TransformContext) Rotate(dir Vec3, angle float32) {
+func (ctx *TransformContext[T]) Rotate(dir Vec3[T], angle T) {
 	u := dir.Unit()
 	cosa := Cos(angle * 0.5)
 	sina := Sin(angle * 0.5)
@@ -147,8 +147,8 @@ func (ctx *TransformContext) Rotate(dir Vec3, angle float32) {
 
 // RotateX applies rotation on X-axis direction with an specified
 // angle counterclockwise.
-func (ctx *TransformContext) RotateX(angle float32) {
-	u := NewVec3(1, 0, 0)
+func (ctx *TransformContext[T]) RotateX(angle T) {
+	u := NewVec3[T](1, 0, 0)
 	cosa := Cos(angle * 0.5)
 	sina := Sin(angle * 0.5)
 	q := NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
@@ -158,8 +158,8 @@ func (ctx *TransformContext) RotateX(angle float32) {
 
 // RotateY applies rotation on Y-axis direction with an specified
 // angle counterclockwise.
-func (ctx *TransformContext) RotateY(angle float32) {
-	u := NewVec3(0, 1, 0)
+func (ctx *TransformContext[T]) RotateY(angle T) {
+	u := NewVec3[T](0, 1, 0)
 	cosa := Cos(angle * 0.5)
 	sina := Sin(angle * 0.5)
 	q := NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
@@ -169,8 +169,8 @@ func (ctx *TransformContext) RotateY(angle float32) {
 
 // RotateZ applies rotation on Z-axis direction with an specified
 // angle counterclockwise.
-func (ctx *TransformContext) RotateZ(angle float32) {
-	u := NewVec3(0, 0, 1)
+func (ctx *TransformContext[T]) RotateZ(angle T) {
+	u := NewVec3[T](0, 0, 1)
 	cosa := Cos(angle * 0.5)
 	sina := Sin(angle * 0.5)
 	q := NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)

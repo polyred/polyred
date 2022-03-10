@@ -6,40 +6,43 @@ package math
 
 import "fmt"
 
-var (
-	// Mat3I is an identity Mat3
-	Mat3I = Mat3{
+// Mat3I is an identity Mat3
+func Mat3I[T Float]() Mat3[T] {
+	return Mat3[T]{
 		1, 0, 0,
 		0, 1, 0,
 		0, 0, 1,
 	}
-	// Mat3Zero is a zero Mat3
-	Mat3Zero = Mat3{
+}
+
+// Mat3Zero is a zero Mat3
+func Mat3Zero[T Float]() Mat3[T] {
+	return Mat3[T]{
 		0, 0, 0,
 		0, 0, 0,
 		0, 0, 0,
 	}
-)
+}
 
 // Mat3 represents a 3x3 Mat3
 //
 // / X00, X01, X02 \
 // | X10, X11, X12 |
 // \ X20, X21, X22 /
-type Mat3 struct {
+type Mat3[T Float] struct {
 	// This is the best implementation that benefits from compiler
 	// optimization, which exports all elements of a 3x4 Mat3.
 	// See benchmarks at https://golang.design/research/pointer-params/.
-	X00, X01, X02 float32
-	X10, X11, X12 float32
-	X20, X21, X22 float32
+	X00, X01, X02 T
+	X10, X11, X12 T
+	X20, X21, X22 T
 }
 
-func NewMat3(
+func NewMat3[T Float](
 	X00, X01, X02,
 	X10, X11, X12,
-	X20, X21, X22 float32) Mat3 {
-	return Mat3{
+	X20, X21, X22 T) Mat3[T] {
+	return Mat3[T]{
 		X00, X01, X02,
 		X10, X11, X12,
 		X20, X21, X22,
@@ -47,7 +50,7 @@ func NewMat3(
 }
 
 // String returns a string format of the given Mat3.
-func (m Mat3) String() string {
+func (m Mat3[T]) String() string {
 	return fmt.Sprintf(`[[%v, %v, %v], [%v, %v, %v], [%v, %v, %v]]`,
 		m.X00, m.X01, m.X02,
 		m.X10, m.X11, m.X12,
@@ -55,7 +58,7 @@ func (m Mat3) String() string {
 }
 
 // Get gets the Mat3 elements
-func (m Mat3) Get(i, j int) float32 {
+func (m Mat3[T]) Get(i, j int) T {
 	if i < 0 || i > 2 || j < 0 || j > 2 {
 		panic("invalid index")
 	}
@@ -85,7 +88,7 @@ func (m Mat3) Get(i, j int) float32 {
 }
 
 // Set set the Mat3 elements at row i and column j
-func (m *Mat3) Set(i, j int, v float32) {
+func (m *Mat3[T]) Set(i, j int, v T) {
 	if i < 0 || i > 2 || j < 0 || j > 2 {
 		panic("invalid index")
 	}
@@ -115,7 +118,7 @@ func (m *Mat3) Set(i, j int, v float32) {
 }
 
 // Eq checks whether the given two matrices are equal or not.
-func (m Mat3) Eq(n Mat3) bool {
+func (m Mat3[T]) Eq(n Mat3[T]) bool {
 	if ApproxEq(m.X00, n.X00, Epsilon) &&
 		ApproxEq(m.X10, n.X10, Epsilon) &&
 		ApproxEq(m.X20, n.X20, Epsilon) &&
@@ -130,8 +133,8 @@ func (m Mat3) Eq(n Mat3) bool {
 	return false
 }
 
-func (m Mat3) Add(n Mat3) Mat3 {
-	return Mat3{
+func (m Mat3[T]) Add(n Mat3[T]) Mat3[T] {
+	return Mat3[T]{
 		m.X00 + n.X00,
 		m.X01 + n.X01,
 		m.X02 + n.X02,
@@ -144,8 +147,8 @@ func (m Mat3) Add(n Mat3) Mat3 {
 	}
 }
 
-func (m Mat3) Sub(n Mat3) Mat3 {
-	return Mat3{
+func (m Mat3[T]) Sub(n Mat3[T]) Mat3[T] {
+	return Mat3[T]{
 		m.X00 - n.X00, m.X01 - n.X01, m.X02 - n.X02,
 		m.X10 - n.X10, m.X11 - n.X11, m.X12 - n.X12,
 		m.X20 - n.X20, m.X21 - n.X21, m.X22 - n.X22,
@@ -154,8 +157,8 @@ func (m Mat3) Sub(n Mat3) Mat3 {
 
 // Mul implements Mat3 multiplication for two
 // 3x3 matrices and assigns the result to this.
-func (m Mat3) MulM(n Mat3) Mat3 {
-	mm := Mat3{}
+func (m Mat3[T]) MulM(n Mat3[T]) Mat3[T] {
+	mm := Mat3[T]{}
 	mm.X00 = m.X00*n.X00 + m.X01*n.X10 + m.X02*n.X20
 	mm.X10 = m.X10*n.X00 + m.X11*n.X10 + m.X12*n.X20
 	mm.X20 = m.X20*n.X00 + m.X21*n.X10 + m.X22*n.X20
@@ -168,25 +171,25 @@ func (m Mat3) MulM(n Mat3) Mat3 {
 	return mm
 }
 
-// MulVec implements Mat3 vector multiplication
+// MulVec implements Mat3[T] vector multiplication
 // and returns the resulting vector.
-func (m Mat3) MulV(v Vec3) Vec3 {
+func (m Mat3[T]) MulV(v Vec3[T]) Vec3[T] {
 	x := m.X00*v.X + m.X01*v.Y + m.X02*v.Z
 	y := m.X10*v.X + m.X11*v.Y + m.X12*v.Z
 	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z
-	return Vec3{x, y, z}
+	return Vec3[T]{x, y, z}
 }
 
 // Det computes the determinant of the given matrix.
-func (m Mat3) Det() float32 {
+func (m Mat3[T]) Det() T {
 	return (m.X00*m.X11*m.X22 - m.X21*m.X12) -
 		m.X10*(m.X01*m.X22-m.X21*m.X02) +
 		m.X20*(m.X01*m.X12-m.X11*m.X02)
 }
 
-// T computes the transpose Mat3 of a given Mat3
-func (m Mat3) T() Mat3 {
-	return Mat3{
+// T computes the transpose Mat3[T] of a given Mat3[T]
+func (m Mat3[T]) T() Mat3[T] {
+	return Mat3[T]{
 		m.X00, m.X10, m.X20,
 		m.X01, m.X11, m.X21,
 		m.X02, m.X12, m.X22,

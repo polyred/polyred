@@ -11,15 +11,15 @@ import (
 )
 
 func TestQuaternionToRotationMatrix(t *testing.T) {
-	dirX := math.Vec4{1, 0, 0, 0}
-	angle := math.Pi / 3
+	dirX := math.Vec4[float32]{1, 0, 0, 0}
+	angle := float32(math.Pi) / 3
 
 	u := dirX.Unit()
 	cosa := math.Cos(angle * 0.5)
 	sina := math.Sin(angle * 0.5)
 	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
 
-	want := math.Mat4{
+	want := math.Mat4[float32]{
 		1, 0, 0, 0,
 		0, 0.5, -0.8660254, 0,
 		0, 0.8660254, 0.5, 0,
@@ -30,12 +30,12 @@ func TestQuaternionToRotationMatrix(t *testing.T) {
 		t.Fatalf("ToRoMat is wrong, want: %v, got: %v", want, got)
 	}
 
-	dirY := math.Vec4{0, 1, 0, 0}
+	dirY := math.Vec4[float32]{0, 1, 0, 0}
 	u = dirY.Unit()
 	cosa = math.Cos(angle / 2)
 	sina = math.Sin(angle / 2)
-	q = math.Quaternion{cosa, math.Vec3{sina * u.X, sina * u.Y, sina * u.Z}}
-	want = math.Mat4{
+	q = math.Quaternion[float32]{cosa, math.Vec3[float32]{sina * u.X, sina * u.Y, sina * u.Z}}
+	want = math.Mat4[float32]{
 		0.5, 0, 0.8660254, 0,
 		0, 1, 0, 0,
 		-0.8660254, 0, 0.5, 0,
@@ -46,12 +46,12 @@ func TestQuaternionToRotationMatrix(t *testing.T) {
 		t.Fatalf("ToRoMat is wrong, want: %v, got: %v", want, got)
 	}
 
-	dirZ := math.Vec4{0, 0, 1, 0}
+	dirZ := math.Vec4[float32]{0, 0, 1, 0}
 	u = dirZ.Unit()
 	cosa = math.Cos(angle / 2)
 	sina = math.Sin(angle / 2)
-	q = math.Quaternion{cosa, math.Vec3{sina * u.X, sina * u.Y, sina * u.Z}}
-	want = math.Mat4{
+	q = math.Quaternion[float32]{cosa, math.Vec3[float32]{sina * u.X, sina * u.Y, sina * u.Z}}
+	want = math.Mat4[float32]{
 		0.5, -0.8660254, 0, 0,
 		0.8660254, 0.5, 0, 0,
 		0, 0, 1, 0,
@@ -64,15 +64,15 @@ func TestQuaternionToRotationMatrix(t *testing.T) {
 }
 
 func BenchmarkQuaternion_ToRoMat(b *testing.B) {
-	dirX := math.Vec4{1, 0, 0, 0}
-	angle := math.Pi / 3
+	dirX := math.Vec4[float32]{1, 0, 0, 0}
+	angle := float32(math.Pi / 3)
 
 	u := dirX.Unit()
 	cosa := math.Cos(angle / 2)
 	sina := math.Sin(angle / 2)
 	q := math.NewQuaternion(cosa, sina*u.X, sina*u.Y, sina*u.Z)
 
-	var m math.Mat4
+	var m math.Mat4[float32]
 	for i := 0; i < b.N; i++ {
 		m = q.ToRoMat()
 	}

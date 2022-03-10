@@ -13,42 +13,42 @@ import (
 
 func TestMat_Eq(t *testing.T) {
 	t.Run("Mat2", func(t *testing.T) {
-		m1 := math.Mat2I
-		m2 := math.Mat2I
+		m1 := math.Mat2I[float32]()
+		m2 := math.Mat2I[float32]()
 
 		if !m1.Eq(m2) {
 			t.Fatalf("unexpected Eq, want true, got false")
 		}
 
-		m3 := math.Mat2Zero
+		m3 := math.Mat2Zero[float32]()
 		if m1.Eq(m3) {
 			t.Fatalf("unexpected Eq, want false, got true")
 		}
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		m1 := math.Mat3I
-		m2 := math.Mat3I
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		m1 := math.Mat3I[float32]()
+		m2 := math.Mat3I[float32]()
 
 		if !m1.Eq(m2) {
 			t.Fatalf("unexpected Eq, want true, got false")
 		}
 
-		m3 := math.Mat3Zero
+		m3 := math.Mat3Zero[float32]()
 		if m1.Eq(m3) {
 			t.Fatalf("unexpected Eq, want false, got true")
 		}
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		m1 := math.Mat4I
-		m2 := math.Mat4I
+		m1 := math.Mat4I[float32]()
+		m2 := math.Mat4I[float32]()
 
 		if !m1.Eq(m2) {
 			t.Fatalf("unexpected Eq, want true, got false")
 		}
 
-		m3 := math.Mat4Zero
+		m3 := math.Mat4Zero[float32]()
 		if m1.Eq(m3) {
 			t.Fatalf("unexpected Eq, want false, got true")
 		}
@@ -57,7 +57,7 @@ func TestMat_Eq(t *testing.T) {
 
 func TestMat_String(t *testing.T) {
 	t.Run("Mat2", func(t *testing.T) {
-		m := math.NewMat2(
+		m := math.NewMat2[float32](
 			1, 2,
 			3, 4,
 		)
@@ -69,8 +69,8 @@ func TestMat_String(t *testing.T) {
 		}
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		m := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		m := math.NewMat3[float32](
 			1, 2, 3,
 			4, 5, 6,
 			7, 8, 9,
@@ -84,7 +84,7 @@ func TestMat_String(t *testing.T) {
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		m := math.NewMat4(
+		m := math.NewMat4[float32](
 			1, 2, 3, 4,
 			5, 6, 7, 8,
 			9, 10, 11, 12,
@@ -101,7 +101,7 @@ func TestMat_String(t *testing.T) {
 
 func TestMat_Get(t *testing.T) {
 	t.Run("Mat2", func(t *testing.T) {
-		m := math.NewMat2(
+		m := math.NewMat2[float32](
 			1, 2,
 			3, 4,
 		)
@@ -118,8 +118,8 @@ func TestMat_Get(t *testing.T) {
 		}
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		m := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		m := math.NewMat3[float32](
 			1, 2, 3,
 			4, 5, 6,
 			7, 8, 9,
@@ -138,7 +138,7 @@ func TestMat_Get(t *testing.T) {
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		m := math.NewMat4(
+		m := math.NewMat4[float32](
 			1, 2, 3, 4,
 			5, 6, 7, 8,
 			9, 10, 11, 12,
@@ -158,7 +158,7 @@ func TestMat_Get(t *testing.T) {
 	})
 
 	t.Run("Mat2_Invalid1", func(t *testing.T) {
-		m := math.Mat2I
+		m := math.Mat2I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -167,7 +167,7 @@ func TestMat_Get(t *testing.T) {
 		m.Get(-1, -1)
 	})
 	t.Run("Mat2_Invalid2", func(t *testing.T) {
-		m := math.Mat2I
+		m := math.Mat2I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -177,7 +177,7 @@ func TestMat_Get(t *testing.T) {
 	})
 
 	t.Run("Mat3_Invalid1", func(t *testing.T) {
-		m := math.Mat3I
+		m := math.Mat3I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -186,7 +186,7 @@ func TestMat_Get(t *testing.T) {
 		m.Get(-1, -1)
 	})
 	t.Run("Mat3_Invalid2", func(t *testing.T) {
-		m := math.Mat3I
+		m := math.Mat3I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -196,7 +196,7 @@ func TestMat_Get(t *testing.T) {
 	})
 
 	t.Run("Mat4_Invalid1", func(t *testing.T) {
-		m := math.Mat4I
+		m := math.Mat4I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -205,7 +205,7 @@ func TestMat_Get(t *testing.T) {
 		m.Get(-1, -1)
 	})
 	t.Run("Mat4_Invalid2", func(t *testing.T) {
-		m := math.Mat4I
+		m := math.Mat4I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -217,11 +217,11 @@ func TestMat_Get(t *testing.T) {
 
 func TestMat_Set(t *testing.T) {
 	t.Run("Mat2", func(t *testing.T) {
-		want := math.NewMat2(
+		want := math.NewMat2[float32](
 			1, 2,
 			3, 4,
 		)
-		got := math.Mat2Zero
+		got := math.Mat2Zero[float32]()
 
 		counter := float32(1)
 		for i := 0; i < 2; i++ {
@@ -236,13 +236,13 @@ func TestMat_Set(t *testing.T) {
 		}
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		want := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		want := math.NewMat3[float32](
 			1, 2, 3,
 			4, 5, 6,
 			7, 8, 9,
 		)
-		got := math.Mat3Zero
+		got := math.Mat3Zero[float32]()
 
 		counter := float32(1)
 		for i := 0; i < 3; i++ {
@@ -258,13 +258,13 @@ func TestMat_Set(t *testing.T) {
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		want := math.NewMat4(
+		want := math.NewMat4[float32](
 			1, 2, 3, 4,
 			5, 6, 7, 8,
 			9, 10, 11, 12,
 			13, 14, 15, 16,
 		)
-		got := math.Mat4Zero
+		got := math.Mat4Zero[float32]()
 
 		counter := float32(1)
 		for i := 0; i < 4; i++ {
@@ -280,7 +280,7 @@ func TestMat_Set(t *testing.T) {
 	})
 
 	t.Run("Mat2_Invalid1", func(t *testing.T) {
-		m := math.Mat2I
+		m := math.Mat2I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -289,7 +289,7 @@ func TestMat_Set(t *testing.T) {
 		m.Set(-1, -1, 1)
 	})
 	t.Run("Mat2_Invalid2", func(t *testing.T) {
-		m := math.Mat2I
+		m := math.Mat2I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -299,7 +299,7 @@ func TestMat_Set(t *testing.T) {
 	})
 
 	t.Run("Mat3_Invalid1", func(t *testing.T) {
-		m := math.Mat3I
+		m := math.Mat3I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -308,7 +308,7 @@ func TestMat_Set(t *testing.T) {
 		m.Set(-1, -1, 1)
 	})
 	t.Run("Mat3_Invalid2", func(t *testing.T) {
-		m := math.Mat3I
+		m := math.Mat3I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -318,7 +318,7 @@ func TestMat_Set(t *testing.T) {
 	})
 
 	t.Run("Mat4_Invalid1", func(t *testing.T) {
-		m := math.Mat4I
+		m := math.Mat4I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -327,7 +327,7 @@ func TestMat_Set(t *testing.T) {
 		m.Set(-1, -1, 1)
 	})
 	t.Run("Mat4_Invalid2", func(t *testing.T) {
-		m := math.Mat4I
+		m := math.Mat4I[float32]()
 		defer func() {
 			if r := recover(); r == nil {
 				t.Fatalf("invalid Get does not panic")
@@ -339,13 +339,13 @@ func TestMat_Set(t *testing.T) {
 
 func TestMat_Add(t *testing.T) {
 	t.Run("Mat2", func(t *testing.T) {
-		m1 := math.NewMat2(
+		m1 := math.NewMat2[float32](
 			1, 2, 3, 4,
 		)
-		m2 := math.NewMat2(
+		m2 := math.NewMat2[float32](
 			5, 6, 7, 8,
 		)
-		want := math.NewMat2(
+		want := math.NewMat2[float32](
 			6, 8, 10, 12,
 		)
 		if !m1.Add(m2).Eq(want) {
@@ -353,18 +353,18 @@ func TestMat_Add(t *testing.T) {
 		}
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		m1 := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		m1 := math.NewMat3[float32](
 			1, 2, 3,
 			4, 1, 2,
 			3, 4, 1,
 		)
-		m2 := math.NewMat3(
+		m2 := math.NewMat3[float32](
 			5, 6, 7,
 			8, 5, 6,
 			7, 8, 5,
 		)
-		want := math.NewMat3(
+		want := math.NewMat3[float32](
 			6, 8, 10,
 			12, 6, 8,
 			10, 12, 6,
@@ -375,19 +375,19 @@ func TestMat_Add(t *testing.T) {
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		m1 := math.NewMat4(
+		m1 := math.NewMat4[float32](
 			1, 2, 3, 4,
 			1, 2, 3, 4,
 			1, 2, 3, 4,
 			1, 2, 3, 4,
 		)
-		m2 := math.NewMat4(
+		m2 := math.NewMat4[float32](
 			5, 6, 7, 8,
 			5, 6, 7, 8,
 			5, 6, 7, 8,
 			5, 6, 7, 8,
 		)
-		want := math.NewMat4(
+		want := math.NewMat4[float32](
 			6, 8, 10, 12,
 			6, 8, 10, 12,
 			6, 8, 10, 12,
@@ -401,13 +401,13 @@ func TestMat_Add(t *testing.T) {
 
 func TestMat_Sub(t *testing.T) {
 	t.Run("Mat2", func(t *testing.T) {
-		m1 := math.NewMat2(
+		m1 := math.NewMat2[float32](
 			1, 2, 3, 4,
 		)
-		m2 := math.NewMat2(
+		m2 := math.NewMat2[float32](
 			5, 6, 7, 8,
 		)
-		want := math.NewMat2(
+		want := math.NewMat2[float32](
 			-4, -4, -4, -4,
 		)
 		if !m1.Sub(m2).Eq(want) {
@@ -415,18 +415,18 @@ func TestMat_Sub(t *testing.T) {
 		}
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		m1 := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		m1 := math.NewMat3[float32](
 			1, 2, 3,
 			4, 1, 2,
 			3, 4, 1,
 		)
-		m2 := math.NewMat3(
+		m2 := math.NewMat3[float32](
 			5, 6, 7,
 			8, 5, 6,
 			7, 8, 5,
 		)
-		want := math.NewMat3(
+		want := math.NewMat3[float32](
 			-4, -4, -4,
 			-4, -4, -4,
 			-4, -4, -4,
@@ -437,19 +437,19 @@ func TestMat_Sub(t *testing.T) {
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		m1 := math.NewMat4(
+		m1 := math.NewMat4[float32](
 			1, 2, 3, 4,
 			1, 2, 3, 4,
 			1, 2, 3, 4,
 			1, 2, 3, 4,
 		)
-		m2 := math.NewMat4(
+		m2 := math.NewMat4[float32](
 			5, 6, 7, 8,
 			5, 6, 7, 8,
 			5, 6, 7, 8,
 			5, 6, 7, 8,
 		)
-		want := math.NewMat4(
+		want := math.NewMat4[float32](
 			-4, -4, -4, -4,
 			-4, -4, -4, -4,
 			-4, -4, -4, -4,
@@ -462,17 +462,17 @@ func TestMat_Sub(t *testing.T) {
 }
 
 func TestMat_MulM(t *testing.T) {
-	t.Run("Mat2", func(t *testing.T) {
-		m1 := math.Mat2{
+	t.Run("Mat2[float32]", func(t *testing.T) {
+		m1 := math.Mat2[float32]{
 			1, 2, 3, 4,
 		}
-		m2 := math.Mat2{
+		m2 := math.Mat2[float32]{
 			16, 15, 14, 13,
 		}
 
 		got := m1.MulM(m2)
 
-		want := math.Mat2{
+		want := math.Mat2[float32]{
 			44, 41, 104, 97,
 		}
 
@@ -486,13 +486,13 @@ func TestMat_MulM(t *testing.T) {
 		}
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		m1 := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		m1 := math.NewMat3[float32](
 			1, 2, 3,
 			4, 1, 2,
 			3, 4, 1,
 		)
-		m2 := math.NewMat3(
+		m2 := math.NewMat3[float32](
 			16, 15, 14,
 			13, 12, 14,
 			12, 43, 23,
@@ -500,7 +500,7 @@ func TestMat_MulM(t *testing.T) {
 
 		got := m1.MulM(m2)
 
-		want := math.Mat3{
+		want := math.Mat3[float32]{
 			78, 168, 111, 101, 158, 116, 112, 136, 121,
 		}
 
@@ -515,13 +515,13 @@ func TestMat_MulM(t *testing.T) {
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		m1 := math.Mat4{
+		m1 := math.Mat4[float32]{
 			1, 2, 3, 4,
 			5, 6, 7, 8,
 			9, 10, 11, 12,
 			13, 14, 15, 16,
 		}
-		m2 := math.Mat4{
+		m2 := math.Mat4[float32]{
 			16, 15, 14, 13,
 			12, 11, 10, 9,
 			8, 7, 6, 5,
@@ -530,7 +530,7 @@ func TestMat_MulM(t *testing.T) {
 
 		got := m1.MulM(m2)
 
-		want := math.Mat4{
+		want := math.Mat4[float32]{
 			80, 70, 60, 50,
 			240, 214, 188, 162,
 			400, 358, 316, 274,
@@ -550,42 +550,42 @@ func TestMat_MulM(t *testing.T) {
 
 func TestMat_MulV(t *testing.T) {
 	t.Run("Mat2", func(t *testing.T) {
-		v1 := math.NewVec2(1, 1)
-		mat := math.NewMat2(
+		v1 := math.NewVec2[float32](1, 1)
+		mat := math.NewMat2[float32](
 			1, 2,
 			3, 4,
 		)
 		got := mat.MulV(v1)
-		want := math.NewVec2(3, 7)
+		want := math.NewVec2[float32](3, 7)
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Apply, want %v, got %v", want, got)
 		}
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		v1 := math.NewVec3(1, 1, 1)
-		mat := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		v1 := math.NewVec3[float32](1, 1, 1)
+		mat := math.NewMat3[float32](
 			1, 2, 3,
 			4, 5, 6,
 			7, 8, 9,
 		)
 		got := mat.MulV(v1)
-		want := math.NewVec3(6, 15, 24)
+		want := math.NewVec3[float32](6, 15, 24)
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Apply, want %v, got %v", want, got)
 		}
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		v1 := math.NewVec4(1, 1, 1, 1)
-		mat := math.NewMat4(
+		v1 := math.NewVec4[float32](1, 1, 1, 1)
+		mat := math.NewMat4[float32](
 			1, 2, 3, 4,
 			5, 6, 7, 8,
 			9, 10, 11, 12,
 			13, 14, 15, 16,
 		)
 		got := mat.MulV(v1)
-		want := math.NewVec4(10, 26, 42, 58)
+		want := math.NewVec4[float32](10, 26, 42, 58)
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Apply, want %v, got %v", want, got)
 		}
@@ -595,7 +595,7 @@ func TestMat_MulV(t *testing.T) {
 func TestMat_Det(t *testing.T) {
 
 	t.Run("Mat2", func(t *testing.T) {
-		m := math.NewMat2(
+		m := math.NewMat2[float32](
 			1, 2,
 			3, 4,
 		)
@@ -608,8 +608,8 @@ func TestMat_Det(t *testing.T) {
 
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		m := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		m := math.NewMat3[float32](
 			1, 2, 3,
 			4, 3, 4,
 			3, 4, 4,
@@ -624,7 +624,7 @@ func TestMat_Det(t *testing.T) {
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		m := math.Mat4{
+		m := math.Mat4[float32]{
 			5, 1, 5, 6,
 			8, 2, 2, 3,
 			5, 1, 1, 4,
@@ -641,12 +641,12 @@ func TestMat_Det(t *testing.T) {
 func TestMat_T(t *testing.T) {
 
 	t.Run("Mat2", func(t *testing.T) {
-		m := math.NewMat2(
+		m := math.NewMat2[float32](
 			1, 2,
 			3, 4,
 		)
 
-		want := math.NewMat2(
+		want := math.NewMat2[float32](
 			1, 3,
 			2, 4,
 		)
@@ -657,14 +657,14 @@ func TestMat_T(t *testing.T) {
 
 	})
 
-	t.Run("Mat3", func(t *testing.T) {
-		m := math.NewMat3(
+	t.Run("Mat3[float32]", func(t *testing.T) {
+		m := math.NewMat3[float32](
 			1, 2, 3,
 			4, 3, 4,
 			3, 4, 4,
 		)
 
-		want := math.NewMat3(
+		want := math.NewMat3[float32](
 			1, 4, 3,
 			2, 3, 4,
 			3, 4, 4,
@@ -677,13 +677,13 @@ func TestMat_T(t *testing.T) {
 	})
 
 	t.Run("Mat4", func(t *testing.T) {
-		m := math.Mat4{
+		m := math.Mat4[float32]{
 			5, 1, 5, 6,
 			8, 2, 2, 3,
 			5, 1, 1, 4,
 			2, 1, 7, 5,
 		}
-		want := math.Mat4{
+		want := math.Mat4[float32]{
 			5, 8, 5, 2,
 			1, 2, 1, 1,
 			5, 2, 1, 7,
@@ -698,7 +698,7 @@ func TestMat_T(t *testing.T) {
 
 func TestMat_Inv(t *testing.T) {
 	t.Run("Mat4", func(t *testing.T) {
-		m := math.Mat4{
+		m := math.Mat4[float32]{
 			5, 1, 5, 6,
 			8, 71, 2, 47,
 			5, 1, 582, 4,
@@ -706,7 +706,7 @@ func TestMat_Inv(t *testing.T) {
 		}
 		m = m.Inv()
 
-		want := math.Mat4{
+		want := math.Mat4[float32]{
 			1003995.0 / 4463716, -10967.0 / 4463716, -5949.0 / 4463716, -219389.0 / 4463716,
 			-62879.0 / 4463716, 65251.0 / 4463716, 1613.0 / 4463716, -107839.0 / 4463716,
 			-3999.0 / 2231858, -3.0 / 2231858, 3865.0 / 2231858, 347.0 / 2231858,
@@ -726,7 +726,7 @@ func TestMat_Inv(t *testing.T) {
 				t.Fatalf("zero matrix inverse should panic")
 			}
 		}()
-		m := math.Mat4Zero
+		m := math.Mat4Zero[float32]()
 		m = m.Inv()
 	})
 }
