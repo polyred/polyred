@@ -230,7 +230,7 @@ func TestMcguire(t *testing.T) {
 			CPUProf:    false,
 			MemProf:    false,
 			ExecTracer: false,
-			RenderOpts: []render.Opt{
+			RenderOpts: []render.Option{
 				render.Debug(true),
 				render.MSAA(2),
 				render.ShadowMap(false),
@@ -241,7 +241,7 @@ func TestMcguire(t *testing.T) {
 	for _, test := range tests {
 		t.Logf("%s under settings: %#v", test.Name, test)
 		ss, cam := NewMcGuireScene(test.Width, test.Height)
-		rendopts := []render.Opt{render.Camera(cam)}
+		rendopts := []render.Option{render.Camera(cam)}
 		rendopts = append(rendopts, test.RenderOpts...)
 
 		rootName := test.Name

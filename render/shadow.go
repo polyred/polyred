@@ -42,11 +42,11 @@ func (r *Renderer) initShadowMaps() {
 		// initialize scene camera
 		tm := camera.ViewMatrix(
 			r.lightSources[i].Position(),
-			r.scene.Center(),
+			r.cfg.Scene.Center(),
 			math.NewVec3[float32](0, 1, 0),
 		).
-			MulM(r.renderCamera.ViewMatrix().Inv()).
-			MulM(r.renderCamera.ProjMatrix().Inv())
+			MulM(r.cfg.Camera.ViewMatrix().Inv()).
+			MulM(r.cfg.Camera.ProjMatrix().Inv())
 		v1 := math.NewVec4[float32](1, 1, 1, 1).Apply(tm).Pos().ToVec3()
 		v2 := math.NewVec4[float32](1, 1, -1, 1).Apply(tm).Pos().ToVec3()
 		v3 := math.NewVec4[float32](1, -1, 1, 1).Apply(tm).Pos().ToVec3()
@@ -79,7 +79,7 @@ func (r *Renderer) initShadowMaps() {
 			// TODO: use cube shadow map for point light
 			c = camera.NewOrthographic(
 				camera.Position(l.Position()),
-				camera.LookAt(r.scene.Center(),
+				camera.LookAt(r.cfg.Scene.Center(),
 					math.NewVec3[float32](0, 1, 0)),
 				camera.ViewFrustum(le, ri, bo, to, ne, fa),
 			)
@@ -97,7 +97,7 @@ func (r *Renderer) passShadows(index int) {
 		return
 	}
 
-	if r.debug {
+	if r.cfg.Debug {
 		done := profiling.Timed("forward pass (shadow)")
 		defer done()
 		defer func() {
@@ -118,7 +118,7 @@ func (r *Renderer) passShadows(index int) {
 			imageutil.Save(img, file)
 		}()
 	}
-	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+	r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
@@ -128,7 +128,7 @@ func (r *Renderer) passShadows(index int) {
 		return true
 	})
 
-	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+	r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}

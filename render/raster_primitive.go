@@ -6,7 +6,6 @@ package render
 
 import (
 	"poly.red/buffer"
-	"poly.red/camera"
 	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
@@ -62,7 +61,7 @@ func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, t1, t2, t3 *primiti
 
 	// For perspective corrected interpolation
 	recipw := [3]float32{1, 1, 1}
-	if _, ok := r.renderCamera.(*camera.Perspective); ok {
+	if r.cfg.Perspect {
 		recipw[0] = -1 / v1.Pos.W
 		recipw[1] = -1 / v2.Pos.W
 		recipw[2] = -1 / v3.Pos.W
@@ -98,7 +97,7 @@ func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, t1, t2, t3 *primiti
 func (r *Renderer) cullViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {
 	// TODO: can be optimize?
 	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float32(buf.Bounds().Dx()*r.msaa), float32(buf.Bounds().Dy()*r.msaa), 1),
+		math.NewVec3(float32(buf.Bounds().Dx()*r.cfg.MSAA), float32(buf.Bounds().Dy()*r.cfg.MSAA), 1),
 		math.NewVec3[float32](0, 0, 0),
 		math.NewVec3[float32](0, 0, -1),
 	)
@@ -112,8 +111,8 @@ func (r *Renderer) cullBackFace(v1, v2, v3 math.Vec4[float32]) bool {
 
 func (r *Renderer) inViewport(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {
 	// TODO: reiview logic here.
-	w := float32(r.msaa * buf.Bounds().Dx())
-	h := float32(r.msaa * buf.Bounds().Dy())
+	w := float32(r.cfg.MSAA * buf.Bounds().Dx())
+	h := float32(r.cfg.MSAA * buf.Bounds().Dy())
 
 	v1out := v1.X < 0 || v1.X > w || v1.Y < 0 || v1.Y > h || v1.Z > 1 || v1.Z < -1
 	if v1out {
@@ -432,7 +431,7 @@ func (r *Renderer) interpolate(varying, recipw, barycoord [3]float32) float32 {
 	recipw[1] *= barycoord[1]
 	recipw[2] *= barycoord[2]
 	norm := recipw[0]*varying[0] + recipw[1]*varying[1] + recipw[2]*varying[2]
-	if r.renderPerspect {
+	if r.cfg.Perspect {
 		norm *= 1 / (recipw[0] + recipw[1] + recipw[2])
 	}
 	return norm

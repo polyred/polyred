@@ -26,7 +26,7 @@ func (r *Renderer) DrawFragments(buf *buffer.FragmentBuffer, shaders ...shader.F
 	h := buf.Bounds().Dy()
 	n := w * h
 
-	batchSize := int(r.batchSize)
+	batchSize := int(r.cfg.BatchSize)
 	wsteps := w / batchSize
 	hsteps := h / batchSize
 
@@ -84,8 +84,8 @@ func (r *Renderer) DrawFragment(buf *buffer.FragmentBuffer, x, y int, shaders ..
 		info.Col = shaders[i](&info.Fragment)
 	}
 
-	if r.blendFunc != nil {
-		info.Col = r.blendFunc(old, info.Col)
+	if r.cfg.BlendFunc != nil {
+		info.Col = r.cfg.BlendFunc(old, info.Col)
 	}
 	buf.UnsafeSet(x, y, info)
 }

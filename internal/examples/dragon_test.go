@@ -59,7 +59,7 @@ func TestDragonScene(t *testing.T) {
 			CPUProf:    false,
 			MemProf:    false,
 			ExecTracer: false,
-			RenderOpts: []render.Opt{
+			RenderOpts: []render.Option{
 				render.MSAA(2),
 				render.ShadowMap(false),
 				render.Debug(true),
@@ -70,7 +70,7 @@ func TestDragonScene(t *testing.T) {
 	for _, test := range tests {
 		t.Logf("%s under settings: %#v", test.Name, test)
 		s, cam := NewDragonScene(test.Width, test.Height)
-		rendopts := []render.Opt{render.Camera(cam)}
+		rendopts := []render.Option{render.Camera(cam)}
 		rendopts = append(rendopts, test.RenderOpts...)
 		Render(t, s, test, rendopts...)
 	}

@@ -135,7 +135,7 @@ func BenchmarkDrawFragments_Block_Parallel(b *testing.B) {
 		buf := buffer.NewBuffer(image.Rect(0, 0, ww, hh))
 		r := render.NewRenderer(
 			render.Size(ww, hh),
-			render.BatchSize(int32(i)),
+			render.BatchSize(i),
 		)
 		b.Run(fmt.Sprintf("%d-%d-%d", ww, hh, i), func(b *testing.B) {
 			b.ReportAllocs()

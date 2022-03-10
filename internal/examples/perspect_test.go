@@ -43,7 +43,7 @@ func TestPerspectiveCorrection(t *testing.T) {
 			CPUProf:    false,
 			MemProf:    false,
 			ExecTracer: false,
-			RenderOpts: []render.Opt{
+			RenderOpts: []render.Option{
 				render.Debug(false),
 				render.MSAA(1),
 				render.ShadowMap(false),
@@ -54,7 +54,7 @@ func TestPerspectiveCorrection(t *testing.T) {
 	for _, test := range tests {
 		t.Logf("%s under settings: %#v", test.Name, test)
 		s, cam := NewCorrectScene(test.Width, test.Height)
-		rendopts := []render.Opt{render.Camera(cam)}
+		rendopts := []render.Option{render.Camera(cam)}
 		rendopts = append(rendopts, test.RenderOpts...)
 		Render(t, s, test, rendopts...)
 	}

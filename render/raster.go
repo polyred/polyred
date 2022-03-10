@@ -11,14 +11,12 @@ import (
 	"runtime"
 
 	"poly.red/buffer"
-	"poly.red/camera"
 	"poly.red/color"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/scene"
 	"poly.red/scene/object"
 	"poly.red/shader"
 	"poly.red/texture/imageutil"
@@ -34,69 +32,59 @@ import (
 // rasterization and ray tracing.
 type Renderer struct {
 	// rendering options
-	width        int
-	height       int
-	msaa         int
-	correctGamma bool
-	useShadowMap bool
-	debug        bool
-	scene        *scene.Scene
-	background   color.RGBA
-	blendFunc    BlendFunc
+	cfg *option
 
 	// scheduling, use for hard interruption.
 	running uint32 // atomic
 	stop    uint32 // atomic
 
 	// rendering caches
-	lightSources   []light.Source
-	lightEnv       []light.Environment
-	batchSize      int32
-	workers        int
-	sched          *sched.Pool
-	pixelFormat    buffer.PixelFormat
-	bufcur         int
-	buflen         int
-	bufs           []*buffer.FragmentBuffer
-	renderCamera   camera.Interface
-	renderPerspect bool
-	shadowBufs     []shadowInfo
-	outBuf         *image.RGBA
+	lightSources []light.Source
+	lightEnv     []light.Environment
+	sched        *sched.Pool
+	bufcur       int
+	buflen       int
+	bufs         []*buffer.FragmentBuffer
+	shadowBufs   []shadowInfo
+	outBuf       *image.RGBA
 }
 
 // NewRenderer creates a new renderer.
 //
 // The returned renderer implements a rasterization rendering pipeline.
-func NewRenderer(opts ...Opt) *Renderer {
+func NewRenderer(opts ...Option) *Renderer {
 	r := &Renderer{ // default settings
-		pixelFormat:  buffer.PixelFormatRGBA,
 		buflen:       2, // use 2 by default.
 		bufs:         nil,
-		width:        800,
-		height:       500,
-		msaa:         1,
-		useShadowMap: false,
-		debug:        false,
-		scene:        nil,
-		workers:      runtime.NumCPU(),
-		batchSize:    32, // heuristic
 		lightSources: []light.Source{},
 		lightEnv:     []light.Environment{},
+
+		cfg: &option{
+			Width:     800,
+			Height:    500,
+			MSAA:      1,
+			ShadowMap: false,
+			Debug:     false,
+			Scene:     nil,
+			Workers:   runtime.NumCPU(),
+			BatchSize: 32, // heuristic
+			Format:    buffer.PixelFormatRGBA,
+		},
 	}
 	for _, opt := range opts {
-		opt(r)
+		opt(r.cfg)
 	}
 
 	r.bufs = make([]*buffer.FragmentBuffer, r.buflen)
 	r.resetBufs()
 
-	r.sched = sched.New(sched.Workers(r.workers))
+	r.sched = sched.New(sched.Workers(r.cfg.Workers))
 	runtime.SetFinalizer(r, func(r *Renderer) {
 		r.sched.Release()
 	})
 
-	if r.scene != nil {
-		r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+	if r.cfg.Scene != nil {
+		r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 			if o.Type() != object.TypeLight {
 				return true
 			}
@@ -111,7 +99,7 @@ func NewRenderer(opts ...Opt) *Renderer {
 		})
 	}
 	// initialize shadow maps
-	if r.scene != nil && r.useShadowMap {
+	if r.cfg.Scene != nil && r.cfg.ShadowMap {
 		r.initShadowMaps()
 		r.bufs[0].ClearFragment()
 		r.bufs[0].ClearColor()
@@ -124,16 +112,16 @@ func NewRenderer(opts ...Opt) *Renderer {
 // Note: with Metal, we always use RGBA pixel format.
 func (r *Renderer) resetBufs() {
 	for i := 0; i < r.buflen; i++ {
-		r.bufs[i] = buffer.NewBuffer(image.Rect(0, 0, r.width*r.msaa, r.height*r.msaa),
-			buffer.Format(r.pixelFormat))
+		r.bufs[i] = buffer.NewBuffer(image.Rect(0, 0, r.cfg.Width*r.cfg.MSAA, r.cfg.Height*r.cfg.MSAA),
+			buffer.Format(r.cfg.Format))
 	}
 }
 
 // Render renders a scene.
 func (r *Renderer) Render() *image.RGBA {
-	if r.debug {
-		runtime.GOMAXPROCS(r.workers)
-		fmt.Printf("rendering under GOMAXPROCS=%v\n", r.workers)
+	if r.cfg.Debug {
+		runtime.GOMAXPROCS(r.cfg.Workers)
+		fmt.Printf("rendering under GOMAXPROCS=%v\n", r.cfg.Workers)
 		total := profiling.Timed("entire rendering")
 		defer total()
 	}
@@ -149,7 +137,7 @@ func (r *Renderer) Render() *image.RGBA {
 	}
 
 	// decide if need shadow passes
-	if r.useShadowMap {
+	if r.cfg.ShadowMap {
 		for i := 0; i < len(r.shadowBufs); i++ {
 			r.passShadows(i)
 			if r.shouldStop() {
@@ -185,13 +173,13 @@ func (r *Renderer) NextBuffer() *buffer.FragmentBuffer {
 }
 
 func (r *Renderer) passForward() {
-	if r.debug {
+	if r.cfg.Debug {
 		done := profiling.Timed("forward pass (world)")
 		defer done()
 	}
 
 	sum := 0
-	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+	r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
@@ -203,15 +191,15 @@ func (r *Renderer) passForward() {
 	})
 	log.Println(sum)
 
-	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+	r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
 		mesh := o.(*mesh.TriangleMesh)
 		mvp := &shader.MVP{
 			Model: mesh.ModelMatrix(),
-			View:  r.renderCamera.ViewMatrix(),
-			Proj:  r.renderCamera.ProjMatrix(),
+			View:  r.cfg.Camera.ViewMatrix(),
+			Proj:  r.cfg.Camera.ProjMatrix(),
 			Viewport: math.ViewportMatrix(
 				float32(r.bufs[0].Bounds().Dx()),
 				float32(r.bufs[0].Bounds().Dy()),
@@ -239,13 +227,13 @@ func (r *Renderer) passForward() {
 }
 
 func (r *Renderer) passDeferred() {
-	if r.debug {
+	if r.cfg.Debug {
 		done := profiling.Timed("deferred pass (shading)")
 		defer done()
 	}
-	matView := r.renderCamera.ViewMatrix()
+	matView := r.cfg.Camera.ViewMatrix()
 	matViewInv := matView.Inv()
-	matProj := r.renderCamera.ProjMatrix()
+	matProj := r.cfg.Camera.ProjMatrix()
 	matProjInv := matProj.Inv()
 	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
 	matVPInv := matVP.Inv()
@@ -268,7 +256,7 @@ func (r *Renderer) passDeferred() {
 
 func (r *Renderer) shade(info buffer.Fragment, uniforms *shader.MVP) color.RGBA {
 	if !info.Ok {
-		return r.background
+		return r.cfg.Background
 	}
 
 	col := info.Col
@@ -292,10 +280,10 @@ func (r *Renderer) shade(info buffer.Fragment, uniforms *shader.MVP) color.RGBA 
 		col = mat.Texture().Query(lod, info.U, 1-info.V)
 		col = mat.FragmentShader(
 			col, pos, info.Nor, fN,
-			r.renderCamera.Position().ToVec4(1), r.lightSources, r.lightEnv)
+			r.cfg.Camera.Position().ToVec4(1), r.lightSources, r.lightEnv)
 	}
 
-	if r.useShadowMap && mat != nil && mat.ReceiveShadow() {
+	if r.cfg.ShadowMap && mat != nil && mat.ReceiveShadow() {
 		visibles := float32(0.0)
 		ns := len(r.shadowBufs)
 		for i := 0; i < ns; i++ {
@@ -314,16 +302,16 @@ func (r *Renderer) shade(info buffer.Fragment, uniforms *shader.MVP) color.RGBA 
 }
 
 func (r *Renderer) passAntialiasing() {
-	if r.debug {
+	if r.cfg.Debug {
 		done := profiling.Timed("antialiasing")
 		defer done()
 	}
 
 	// converts color from linear to sRGB space.
-	if r.correctGamma {
+	if r.cfg.GammaCorrect {
 		r.DrawFragments(r.bufs[0], shader.GammaCorrection)
 	}
-	r.outBuf = imageutil.Resize(r.width, r.height, r.bufs[0].Image())
+	r.outBuf = imageutil.Resize(r.cfg.Width, r.cfg.Height, r.bufs[0].Image())
 }
 
 func (r *Renderer) draw(
@@ -352,7 +340,7 @@ func (r *Renderer) draw(
 
 	// For perspective corrected interpolation, see below.
 	recipw := [3]float32{1, 1, 1}
-	if _, ok := r.renderCamera.(*camera.Perspective); ok {
+	if r.cfg.Perspect {
 		recipw = [3]float32{-1 / t1.Pos.W, -1 / t2.Pos.W, -1 / t3.Pos.W}
 	}
 
@@ -371,8 +359,8 @@ func (r *Renderer) draw(
 		return
 	}
 
-	w := float32(r.msaa * r.bufs[0].Bounds().Dx())
-	h := float32(r.msaa * r.bufs[0].Bounds().Dy())
+	w := float32(r.cfg.MSAA * r.bufs[0].Bounds().Dx())
+	h := float32(r.cfg.MSAA * r.bufs[0].Bounds().Dy())
 	tris := r.clipTriangle(t1, t2, t3, w, h, recipw)
 	for _, tri := range tris {
 		r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, mat)
@@ -423,7 +411,7 @@ func (r *Renderer) drawClipped(
 			// Department of Computer Science, University of North Carolina at Chapel Hill (2002).
 			wc1, wc2, wc3 := recipw[0]*bc[0], recipw[1]*bc[1], recipw[2]*bc[2]
 			norm := float32(1.0)
-			if _, ok := r.renderCamera.(*camera.Perspective); ok {
+			if r.cfg.Perspect {
 				norm = 1 / (wc1 + wc2 + wc3)
 			}
 

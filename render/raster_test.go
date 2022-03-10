@@ -117,7 +117,7 @@ func TestRender(t *testing.T) {
 
 func BenchmarkRasterizer(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(BatchSize(int32(block)), Camera(c))
+		r.Options(BatchSize(block), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -130,7 +130,7 @@ func BenchmarkRasterizer(b *testing.B) {
 
 func BenchmarkForwardPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(BatchSize(int32(block)), Camera(c))
+		r.Options(BatchSize(block), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
@@ -143,7 +143,7 @@ func BenchmarkForwardPass(b *testing.B) {
 
 func BenchmarkDeferredPass(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
-		r.Options(BatchSize(int32(block)), Camera(c))
+		r.Options(BatchSize(block), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()

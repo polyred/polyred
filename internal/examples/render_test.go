@@ -24,10 +24,10 @@ type BasicOpt struct {
 	CPUProf       bool
 	MemProf       bool
 	ExecTracer    bool
-	RenderOpts    []render.Opt
+	RenderOpts    []render.Option
 }
 
-func Render(t *testing.T, s *scene.Scene, opt *BasicOpt, opts ...render.Opt) {
+func Render(t *testing.T, s *scene.Scene, opt *BasicOpt, opts ...render.Option) {
 	if opt.CPUProf {
 		f, err := os.Create(fmt.Sprintf("%s-cpu-%v.pprof", opt.Name, time.Now().Format(time.RFC3339)))
 		if err != nil {
@@ -59,7 +59,7 @@ func Render(t *testing.T, s *scene.Scene, opt *BasicOpt, opts ...render.Opt) {
 		defer trace.Stop()
 	}
 
-	allopts := []render.Opt{
+	allopts := []render.Option{
 		render.Scene(s),
 		render.Size(int(opt.Width), int(opt.Height)),
 	}
