@@ -27,6 +27,6 @@ func (s *TextureShader) Vertex(v *primitive.Vertex) *primitive.Vertex {
 }
 
 func (s *TextureShader) Fragment(frag *primitive.Fragment) color.RGBA {
-	col := s.Texture.Query(0, frag.UV.X, 1-frag.UV.Y)
+	col := s.Texture.Query(0, frag.U, 1-frag.V)
 	return col
 }

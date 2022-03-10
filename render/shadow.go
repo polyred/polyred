@@ -195,7 +195,7 @@ func (r *Renderer) drawDepth(index int, t *primitive.Triangle, mat material.Mate
 	}
 
 	// Viewfrustum culling
-	if !r.inViewport(t1.Pos, t2.Pos, t3.Pos) {
+	if r.cullViewFrustum(r.bufs[0], t1.Pos, t2.Pos, t3.Pos) {
 		return
 	}
 

@@ -289,7 +289,7 @@ func (r *Renderer) shade(info buffer.Fragment, uniforms *shader.MVP) color.RGBA 
 			lod = math.Log2(siz)
 		}
 
-		col = mat.Texture().Query(lod, info.UV.X, 1-info.UV.Y)
+		col = mat.Texture().Query(lod, info.U, 1-info.V)
 		col = mat.FragmentShader(
 			col, pos, info.Nor, fN,
 			r.renderCamera.Position().ToVec4(1), r.lightSources, r.lightEnv)
@@ -351,46 +351,38 @@ func (r *Renderer) draw(
 	}
 
 	// For perspective corrected interpolation, see below.
-	recipw := math.NewVec3[float32](1, 1, 1)
+	recipw := [3]float32{1, 1, 1}
 	if _, ok := r.renderCamera.(*camera.Perspective); ok {
-		recipw = math.NewVec3(-1/t1.Pos.W, -1/t2.Pos.W, -1/t3.Pos.W)
+		recipw = [3]float32{-1 / t1.Pos.W, -1 / t2.Pos.W, -1 / t3.Pos.W}
 	}
 
 	t1.Pos = t1.Pos.Apply(mvp.Viewport).Pos()
 	t2.Pos = t2.Pos.Apply(mvp.Viewport).Pos()
 	t3.Pos = t3.Pos.Apply(mvp.Viewport).Pos()
-
-	// Backface culling
-	if t2.Pos.Sub(t1.Pos).Cross(t3.Pos.Sub(t1.Pos)).Z < 0 {
+	if r.cullBackFace(t1.Pos, t2.Pos, t3.Pos) {
+		return
+	}
+	if r.cullViewFrustum(r.bufs[0], t1.Pos, t2.Pos, t3.Pos) {
 		return
 	}
 
-	// Viewfrustum culling
-	if !r.inViewport(t1.Pos, t2.Pos, t3.Pos) {
+	if r.inViewport(r.bufs[0], t1.Pos, t2.Pos, t3.Pos) {
+		r.drawClipped(mvp, t1, t2, t3, recipw, mat)
 		return
 	}
 
-	w := float32(r.bufs[0].Bounds().Dx())
-	h := float32(r.bufs[0].Bounds().Dy())
-	outside := func(v *math.Vec4[float32], w, h float32) bool {
-		return v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1
+	w := float32(r.msaa * r.bufs[0].Bounds().Dx())
+	h := float32(r.msaa * r.bufs[0].Bounds().Dy())
+	tris := r.clipTriangle(t1, t2, t3, w, h, recipw)
+	for _, tri := range tris {
+		r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, mat)
 	}
-
-	if outside(&t1.Pos, w, h) || outside(&t2.Pos, w, h) || outside(&t3.Pos, w, h) {
-		tris := r.clipTriangle(t1, t2, t3, w, h, recipw)
-		for _, tri := range tris {
-			r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, mat)
-		}
-		return
-	}
-
-	r.drawClipped(mvp, t1, t2, t3, recipw, mat)
 }
 
 func (r *Renderer) drawClipped(
 	mvp *shader.MVP,
 	t1, t2, t3 *primitive.Vertex,
-	recipw math.Vec3[float32],
+	recipw [3]float32,
 	mat material.Material) {
 	m1 := t1.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
 	m2 := t2.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
@@ -429,7 +421,7 @@ func (r *Renderer) drawClipped(
 			// Perspective corrected interpolation. See:
 			// Low, Kok-Lim. "Perspective-correct interpolation." Technical writing,
 			// Department of Computer Science, University of North Carolina at Chapel Hill (2002).
-			wc1, wc2, wc3 := recipw.X*bc[0], recipw.Y*bc[1], recipw.Z*bc[2]
+			wc1, wc2, wc3 := recipw[0]*bc[0], recipw[1]*bc[1], recipw[2]*bc[2]
 			norm := float32(1.0)
 			if _, ok := r.renderCamera.(*camera.Perspective); ok {
 				norm = 1 / (wc1 + wc2 + wc3)
@@ -445,11 +437,11 @@ func (r *Renderer) drawClipped(
 				p1 := math.NewVec2(p.X+1, p.Y)
 				p2 := math.NewVec2(p.X, p.Y+1)
 				bcx := math.Barycoord(p1, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
-				wc1x, wc2x, wc3x := recipw.X*bcx[0], recipw.Y*bcx[1], recipw.Z*bcx[2]
+				wc1x, wc2x, wc3x := recipw[0]*bcx[0], recipw[1]*bcx[1], recipw[2]*bcx[2]
 				normx := 1 / (wc1x + wc2x + wc3x)
 
 				bcy := math.Barycoord(p2, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
-				wc1y, wc2y, wc3y := recipw.X*bcy[0], recipw.Y*bcy[1], recipw.Z*bcy[2]
+				wc1y, wc2y, wc3y := recipw[0]*bcy[0], recipw[1]*bcy[1], recipw[2]*bcy[2]
 				normy := 1 / (wc1y + wc2y + wc3y)
 
 				uvdU := (wc1x*t1.UV.X + wc2x*t2.UV.X + wc3x*t3.UV.X) * normx
@@ -488,7 +480,8 @@ func (r *Renderer) drawClipped(
 					X:     x,
 					Y:     y,
 					Depth: z,
-					UV:    math.NewVec2(uvX, uvY),
+					U:     uvX,
+					V:     uvY,
 					Du:    du,
 					Dv:    dv,
 					Nor:   n,

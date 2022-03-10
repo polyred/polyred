@@ -9,12 +9,14 @@ import (
 	"poly.red/geometry/mesh"
 )
 
-// TODO: use embed? But there is a limitation that the embed can only embed
-// files less than 2GB. See https://golang.org/issue/47627
-
-// StanfordBunny returns the path to locate stanford bunny.
+// StanfordBunny returns a mesh of stanford bunny.
 func StanfordBunnyAs[T mesh.Mesh[float32]]() T {
 	return mesh.MustLoadAs[T](fix("../internal/testdata/bunny.obj"))
+}
+
+// ChineseDragon returns a mesh of chinese dragon.
+func ChineseDragonAs[T mesh.Mesh[float32]]() T {
+	return mesh.MustLoadAs[T](fix("../internal/testdata/dragon.obj"))
 }
 
 // fix returns the absolute path of a given relative path

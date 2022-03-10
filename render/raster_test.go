@@ -216,6 +216,6 @@ func BenchmarkDrawCall(b *testing.B) {
 func BenchmarkInViewport(b *testing.B) {
 	v1, v2, v3 := math.NewRandVec4[float32](), math.NewRandVec4[float32](), math.NewRandVec4[float32]()
 	for i := 0; i < b.N; i++ {
-		r.inViewFrustum(r.CurrBuffer(), v1, v2, v3)
+		r.cullViewFrustum(r.CurrBuffer(), v1, v2, v3)
 	}
 }

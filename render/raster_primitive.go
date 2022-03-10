@@ -36,11 +36,13 @@ func (r *Renderer) DrawPrimitives(
 		v1 := vs[0]
 		v2 := vs[1]
 		v3 := vs[2]
-		if !(&primitive.Triangle{V1: v1, V2: v2, V3: v3}).IsValid() {
-			return
-		}
 
-		r.sched.Run(func() { r.drawPrimitive(buf, v1, v2, v3, prog...) })
+		r.sched.Run(func() {
+			if !(&primitive.Triangle{V1: v1, V2: v2, V3: v3}).IsValid() {
+				return
+			}
+			r.drawPrimitive(buf, v1, v2, v3, prog...)
+		})
 	}
 	r.sched.Wait()
 }
@@ -74,20 +76,16 @@ func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, t1, t2, t3 *primiti
 	v1.Pos = v1.Pos.Apply(viewportMatrix).Pos()
 	v2.Pos = v2.Pos.Apply(viewportMatrix).Pos()
 	v3.Pos = v3.Pos.Apply(viewportMatrix).Pos()
-
-	// Back-face culling
-	if v2.Pos.Sub(v1.Pos).Cross(v3.Pos.Sub(v1.Pos)).Z < 0 {
+	if r.cullBackFace(v1.Pos, v2.Pos, v3.Pos) {
 		return
 	}
-
-	// View frustum culling
 	// TODO: deal with window resizing
-	if !r.inViewFrustum(buf, v1.Pos, v2.Pos, v3.Pos) {
+	if r.cullViewFrustum(buf, v1.Pos, v2.Pos, v3.Pos) {
 		return
 	}
 
 	// All vertices are inside the viewport, let's rasterize directly
-	if r.inViewport2(buf, v1.Pos) && r.inViewport2(buf, v2.Pos) && r.inViewport2(buf, v3.Pos) {
+	if r.inViewport(buf, v1.Pos, v2.Pos, v3.Pos) {
 		r.rasterize(buf, v1, v2, v3, recipw)
 		return
 	}
@@ -97,7 +95,7 @@ func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, t1, t2, t3 *primiti
 	return
 }
 
-func (r *Renderer) inViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {
+func (r *Renderer) cullViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {
 	// TODO: can be optimize?
 	viewportAABB := primitive.NewAABB(
 		math.NewVec3(float32(buf.Bounds().Dx()*r.msaa), float32(buf.Bounds().Dy()*r.msaa), 1),
@@ -105,21 +103,28 @@ func (r *Renderer) inViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec
 		math.NewVec3[float32](0, 0, -1),
 	)
 	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
-	return viewportAABB.Intersect(triangleAABB)
+	return !viewportAABB.Intersect(triangleAABB)
 }
-func (r *Renderer) inViewport(v1, v2, v3 math.Vec4[float32]) bool {
-	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()), 1),
-		math.NewVec3[float32](0, 0, 0),
-		math.NewVec3[float32](0, 0, -1),
-	)
-	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
-	return viewportAABB.Intersect(triangleAABB)
+
+func (r *Renderer) cullBackFace(v1, v2, v3 math.Vec4[float32]) bool {
+	return v2.Sub(v1).Cross(v3.Sub(v1)).Z < 0
 }
-func (r *Renderer) inViewport2(buf *buffer.FragmentBuffer, v math.Vec4[float32]) bool {
+
+func (r *Renderer) inViewport(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {
+	// TODO: reiview logic here.
 	w := float32(r.msaa * buf.Bounds().Dx())
 	h := float32(r.msaa * buf.Bounds().Dy())
-	if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
+
+	v1out := v1.X < 0 || v1.X > w || v1.Y < 0 || v1.Y > h || v1.Z > 1 || v1.Z < -1
+	if v1out {
+		return false
+	}
+	v2out := v2.X < 0 || v2.X > w || v2.Y < 0 || v2.Y > h || v2.Z > 1 || v2.Z < -1
+	if v2out {
+		return false
+	}
+	v3out := v3.X < 0 || v3.X > w || v3.Y < 0 || v3.Y > h || v3.Z > 1 || v3.Z < -1
+	if v3out {
 		return false
 	}
 	return true
@@ -294,9 +299,8 @@ func (r *Renderer) rasterize(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.V
 			}
 
 			// Interpolating UV
-			uvX := r.interpolate([3]float32{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bc)
-			uvY := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bc)
-			frag.UV = math.NewVec2(uvX, uvY)
+			frag.U = r.interpolate([3]float32{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bc)
+			frag.V = r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bc)
 
 			p1 := math.NewVec2(p.X+1, p.Y)
 			p2 := math.NewVec2(p.X, p.Y+1)
@@ -307,8 +311,8 @@ func (r *Renderer) rasterize(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.V
 			uvdX := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcx)
 			uvdV := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
 			uvdY := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)
-			frag.Du = math.Sqrt((uvdU-uvX)*(uvdU-uvX) + (uvdX-uvY)*(uvdX-uvY))
-			frag.Dv = math.Sqrt((uvdV-uvX)*(uvdV-uvX) + (uvdY-uvY)*(uvdY-uvY))
+			frag.Du = math.Sqrt((uvdU-frag.U)*(uvdU-frag.U) + (uvdX-frag.V)*(uvdX-frag.V))
+			frag.Dv = math.Sqrt((uvdV-frag.U)*(uvdV-frag.U) + (uvdY-frag.V)*(uvdY-frag.V))
 
 			// Interpolate normal
 			if !v1.Nor.IsZero() && !v2.Nor.IsZero() && !v3.Nor.IsZero() {

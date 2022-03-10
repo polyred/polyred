@@ -14,6 +14,7 @@ import (
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 )
@@ -28,11 +29,7 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.5),
 	))
 
-	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/dragon.obj")
-	if err != nil {
-		panic(err)
-	}
-
+	m := model.ChineseDragonAs[*mesh.TriangleMesh]()
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(
 			buffer.NewUniformTexture(color.RGBA{0, 128, 255, 255}),

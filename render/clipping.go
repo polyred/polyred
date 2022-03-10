@@ -64,7 +64,7 @@ func sutherlandHodgman(points []math.Vec4[float32], w, h float32) []math.Vec4[fl
 	return output
 }
 
-func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, recipw math.Vec3[float32]) []*primitive.Triangle {
+func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, recipw [3]float32) []*primitive.Triangle {
 	p1 := v1.Pos
 	p2 := v2.Pos
 	p3 := v3.Pos

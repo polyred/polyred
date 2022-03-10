@@ -14,9 +14,8 @@ import (
 type Fragment struct {
 	X, Y       int
 	Depth      float32
-	UV         math.Vec2[float32]
-	Du         float32
-	Dv         float32
+	U, V       float32
+	Du, Dv     float32
 	Nor        math.Vec4[float32]
 	Col        color.RGBA
 	AttrSmooth map[AttrName]any

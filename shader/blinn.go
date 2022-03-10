@@ -39,7 +39,7 @@ func (s *BlinnShader) Fragment(frag *primitive.Fragment) color.RGBA {
 	c := frag.AttrSmooth["PosCam"].(math.Vec4[float32])
 	col := frag.Col
 	if s.Texture != nil {
-		col = s.Texture.Query(0, frag.UV.X, frag.UV.Y)
+		col = s.Texture.Query(0, frag.U, frag.V)
 	}
 
 	LaR := float32(0.0)
