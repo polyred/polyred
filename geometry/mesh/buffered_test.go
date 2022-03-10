@@ -8,12 +8,9 @@ import (
 	"testing"
 
 	"poly.red/geometry/mesh"
-	"poly.red/geometry/primitive"
-	"poly.red/material"
 )
 
 func TestBufferedMesh(t *testing.T) {
-
 	bm := mesh.NewBufferedMesh()
 	bm.SetAttribute(mesh.AttributePos, &mesh.BufferAttribute{
 		Stride: 3,
@@ -24,7 +21,7 @@ func TestBufferedMesh(t *testing.T) {
 			0.951827, -0.215059, -0.050857, // 3
 		},
 	})
-	bm.SetVertexIndex([]int{
+	bm.SetIndexBuffer([]int{
 		2, 3, 1,
 		2, 0, 3,
 		3, 0, 1,
@@ -33,14 +30,7 @@ func TestBufferedMesh(t *testing.T) {
 
 	bm.AABB()
 	bm.Normalize()
-
-	counter := 0
-	bm.Faces(func(f primitive.Face[float32], m material.Material) bool {
-		counter++
-		return true
-	})
-
-	if counter != 4 {
-		t.Fatalf("expect 4 faces, but only got %v", counter)
+	if len(bm.Triangles()) != 4 {
+		t.Fatalf("expect 4 faces, but only got %v", len(bm.Triangles()))
 	}
 }

@@ -195,7 +195,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 			light.Intensity(0.5),
 		))
 
-		m, err := mesh.LoadAs[*mesh.TriangleSoup](fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
+		m, err := mesh.LoadAs[*mesh.TriangleMesh](fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
 		if err != nil {
 			panic(err)
 		}

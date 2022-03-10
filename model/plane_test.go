@@ -2,16 +2,16 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package tests
+package model_test
 
 import (
 	"testing"
 
 	"poly.red/camera"
 	"poly.red/color"
-	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture/imageutil"
@@ -24,10 +24,7 @@ func TestPlane(t *testing.T) {
 		light.Color(color.RGBA{0, 128, 255, 255}),
 		light.Position(math.NewVec3[float32](2, 2, 2)),
 	))
-
-	m := mesh.NewPlane(1, 1)
-	s.Add(m)
-
+	s.Add(model.NewPlane(1, 1))
 	r := render.NewRenderer(
 		render.Camera(camera.NewPerspective(
 			camera.Position(math.NewVec3[float32](2, 2, 2)),

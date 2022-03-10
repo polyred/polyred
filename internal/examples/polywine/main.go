@@ -27,7 +27,7 @@ type App struct {
 	ctrl  *controls.OrbitControl
 	r     *render.Renderer
 	prog  *shader.TextureShader
-	m     *mesh.TriangleSoup
+	m     *mesh.TriangleMesh
 	cam   camera.Interface
 	vi    buffer.IndexBuffer
 	vb    buffer.VertexBuffer
@@ -53,16 +53,15 @@ func newApp() *App {
 		r.Options(render.PixelFormat(buffer.PixelFormatRGBA))
 	}
 
-	m := model.StanfordBunnyAs[*mesh.TriangleSoup]()
+	m := model.StanfordBunnyAs[*mesh.TriangleMesh]()
 	m.Normalize()
-	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 	prog := &shader.TextureShader{
 		ModelMatrix: m.ModelMatrix(),
 		ViewMatrix:  cam.ViewMatrix(),
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage("../../testdata/bunny.png"))),
 	}
-	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: vi, vb: vb}
+	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: m.IndexBuffer(), vb: m.VertexBuffer()}
 	a.ctrl = controls.NewOrbitControl(a, cam)
 
 	return a

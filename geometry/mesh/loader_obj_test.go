@@ -14,7 +14,7 @@ import (
 
 func TestLoadOBJ(t *testing.T) {
 	path := "../../internal/testdata/bunny.obj"
-	_, err := mesh.LoadObjAs[*mesh.TriangleSoup](path)
+	_, err := mesh.LoadObjAs[*mesh.TriangleMesh](path)
 	if err != nil {
 		t.Fatalf("cannot load obj model, path: %s, err: %v", path, err)
 	}
@@ -25,7 +25,7 @@ func BenchmarkLoadOBJ(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mesh.LoadObjAs[*mesh.TriangleSoup](path)
+		mesh.LoadObjAs[*mesh.TriangleMesh](path)
 	}
 }
 

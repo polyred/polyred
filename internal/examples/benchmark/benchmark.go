@@ -81,7 +81,7 @@ func bench(opt *benchOpts) {
 			light.Color(color.RGBA{255, 255, 255, 255}),
 		))
 
-		m, err := mesh.LoadAs[*mesh.TriangleSoup]("../../testdata/bunny.obj")
+		m, err := mesh.LoadAs[*mesh.TriangleMesh]("../../testdata/bunny.obj")
 		if err != nil {
 			panic(err)
 		}
@@ -102,7 +102,7 @@ func bench(opt *benchOpts) {
 		m.Scale(2, 2, 2)
 		s.Add(m)
 
-		m, err = mesh.LoadAs[*mesh.TriangleSoup]("../../testdata/ground.obj")
+		m, err = mesh.LoadAs[*mesh.TriangleMesh]("../../testdata/ground.obj")
 		if err != nil {
 			panic(err)
 		}

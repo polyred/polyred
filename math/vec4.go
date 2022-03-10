@@ -37,13 +37,10 @@ func (m Vec4[T]) String() string {
 
 // Eq checks whether two vectors are equal.
 func (v Vec4[T]) Eq(u Vec4[T]) bool {
-	if ApproxEq(v.X, u.X, Epsilon) &&
+	return ApproxEq(v.X, u.X, Epsilon) &&
 		ApproxEq(v.Y, u.Y, Epsilon) &&
 		ApproxEq(v.Z, u.Z, Epsilon) &&
-		ApproxEq(v.W, u.W, Epsilon) {
-		return true
-	}
-	return false
+		ApproxEq(v.W, u.W, Epsilon)
 }
 
 // Add adds the given two vectors, or point and vector, or two points
@@ -59,12 +56,9 @@ func (v Vec4[T]) Sub(u Vec4[T]) Vec4[T] {
 // IsZero asserts the x, y, z components of the given vector, and returns
 // true if it is a zero vector or point.
 func (v Vec4[T]) IsZero() bool {
-	if ApproxEq(v.X, 0, Epsilon) &&
+	return ApproxEq(v.X, 0, Epsilon) &&
 		ApproxEq(v.Y, 0, Epsilon) &&
-		ApproxEq(v.Z, 0, Epsilon) {
-		return true
-	}
-	return false
+		ApproxEq(v.Z, 0, Epsilon)
 }
 
 // Scale scales the given vector using given scalars

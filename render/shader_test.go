@@ -27,29 +27,21 @@ func prepare(num int) (*render.Renderer, *buffer.FragmentBuffer, shader.Program,
 	c := camera.NewPerspective(camera.ViewFrustum(50, 1, 0.1, 100))
 	r := render.NewRenderer(render.Size(500, 500), render.Camera(c))
 	buf := buffer.NewBuffer(image.Rect(0, 0, 500, 500))
-	prog := &shader.BasicShader{
+
+	m := mesh.NewRandomAs[*mesh.BufferedMesh](num)
+	m.Normalize()
+	m.TranslateZ(-1)
+	return r, buf, &shader.BasicShader{
 		ModelMatrix:      math.Mat4I[float32](),
 		ViewMatrix:       c.ViewMatrix(),
 		ProjectionMatrix: c.ProjMatrix(),
-	}
-
-	m := mesh.NewRandomTriangleSoup(num).(*mesh.BufferedMesh)
-	m.Normalize()
-	m.TranslateZ(-1)
-	idx := m.GetVertexIndex()
-	tri := m.GetVertexBuffer()
-	return r, buf, prog, idx, tri
+	}, m.IndexBuffer(), m.VertexBuffer()
 }
 
 func TestShader(t *testing.T) {
 	r, buf, prog, idx, tri := prepare(100)
-
-	// 1. Render Primitives
 	r.DrawPrimitives(buf, idx, tri, prog.Vertex)
-
-	// 2. Render Screen-space Effects
 	r.DrawFragments(buf, prog.Fragment, shader.Background(color.White))
-
 	imageutil.Save(buf.Image(), "../internal/examples/out/shader.png")
 }
 

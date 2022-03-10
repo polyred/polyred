@@ -11,8 +11,8 @@ import (
 	"poly.red/camera"
 	"poly.red/light"
 	"poly.red/math"
-	"poly.red/object"
 	"poly.red/scene"
+	"poly.red/scene/object"
 )
 
 // Opt represents a rendering Opt

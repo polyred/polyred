@@ -7,12 +7,8 @@ package render
 import (
 	"runtime"
 	"sync/atomic"
-
-	"poly.red/geometry/primitive"
-	"poly.red/math"
 )
 
-// wait waits the current rendering terminates
 func (r *Renderer) wait() {
 	backoff := 1
 	atomic.StoreUint32(&r.stop, 1)
@@ -37,17 +33,4 @@ func (r *Renderer) stopRunning() {
 
 func (r *Renderer) shouldStop() bool {
 	return atomic.LoadUint32(&r.stop) == 1
-}
-
-func defaultVertexShader(v *primitive.Vertex, uniforms map[string]any) primitive.Vertex {
-	matModel := uniforms["matModel"].(math.Mat4[float32])
-	matView := uniforms["matView"].(math.Mat4[float32])
-	matProj := uniforms["matProj"].(math.Mat4[float32])
-	matNormal := uniforms["matNormal"].(math.Mat4[float32])
-	return primitive.Vertex{
-		Pos: matProj.MulM(matView).MulM(matModel).MulV(v.Pos),
-		Col: v.Col,
-		UV:  v.UV,
-		Nor: v.Nor.Apply(matNormal),
-	}
 }

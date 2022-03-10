@@ -24,6 +24,7 @@ var (
 	Discard = color.RGBA{0, 0, 0, 0}
 )
 
+// FromHex converts a given '#' prefixed hex string to RGBA color.
 func FromHex(x string) color.RGBA {
 	x = strings.Trim(x, "#")
 	var r, g, b, a uint8
@@ -49,8 +50,5 @@ func FromHex(x string) color.RGBA {
 }
 
 func Equal(c1, c2 color.RGBA) bool {
-	if c1.R == c2.R && c1.G == c2.G && c1.B == c2.B && c1.A == c2.A {
-		return true
-	}
-	return false
+	return c1.R == c2.R && c1.G == c2.G && c1.B == c2.B && c1.A == c2.A
 }

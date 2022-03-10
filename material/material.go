@@ -18,10 +18,7 @@ type Material interface {
 	ReceiveShadow() bool
 	AmbientOcclusion() bool
 	Texture() *buffer.Texture
-	VertexShader(
-		v *primitive.Vertex,
-		uniforms map[string]any,
-	) primitive.Vertex
+	VertexShader(v *primitive.Vertex) *primitive.Vertex
 	FragmentShader(
 		col color.RGBA,
 		x, n, fn, camera math.Vec4[float32],

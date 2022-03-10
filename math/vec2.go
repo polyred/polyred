@@ -35,11 +35,8 @@ func (m Vec2[T]) String() string {
 
 // Eq compares the two given vectors, and returns true if they are equal.
 func (v Vec2[T]) Eq(u Vec2[T]) bool {
-	if ApproxEq(v.X, u.X, Epsilon) &&
-		ApproxEq(v.Y, u.Y, Epsilon) {
-		return true
-	}
-	return false
+	return ApproxEq(v.X, u.X, Epsilon) &&
+		ApproxEq(v.Y, u.Y, Epsilon)
 }
 
 // Add add the two given vectors, and returns the resulting vector.
@@ -54,11 +51,8 @@ func (v Vec2[T]) Sub(u Vec2[T]) Vec2[T] {
 
 // IsZero checks if the given vector is a zero vector.
 func (v Vec2[T]) IsZero() bool {
-	if ApproxEq(v.X, 0, Epsilon) &&
-		ApproxEq(v.Y, 0, Epsilon) {
-		return true
-	}
-	return false
+	return ApproxEq(v.X, 0, Epsilon) &&
+		ApproxEq(v.Y, 0, Epsilon)
 }
 
 // Scale scales the given 2D vector and returns the resulting vector.

@@ -155,7 +155,7 @@ func (m *Mat4[T]) Set(i, j int, v T) {
 
 // Eq checks whether the given two matrices are equal or not.
 func (m Mat4[T]) Eq(n Mat4[T]) bool {
-	if ApproxEq(m.X00, n.X00, Epsilon) &&
+	return ApproxEq(m.X00, n.X00, Epsilon) &&
 		ApproxEq(m.X10, n.X10, Epsilon) &&
 		ApproxEq(m.X20, n.X20, Epsilon) &&
 		ApproxEq(m.X30, n.X30, Epsilon) &&
@@ -170,10 +170,7 @@ func (m Mat4[T]) Eq(n Mat4[T]) bool {
 		ApproxEq(m.X03, n.X03, Epsilon) &&
 		ApproxEq(m.X13, n.X13, Epsilon) &&
 		ApproxEq(m.X23, n.X23, Epsilon) &&
-		ApproxEq(m.X33, n.X33, Epsilon) {
-		return true
-	}
-	return false
+		ApproxEq(m.X33, n.X33, Epsilon)
 }
 
 func (m Mat4[T]) Add(n Mat4[T]) Mat4[T] {

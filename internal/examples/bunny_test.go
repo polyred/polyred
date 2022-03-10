@@ -31,11 +31,9 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.7),
 	))
 
-	var done func()
-
 	// load a mesh
-	done = profiling.Timed("loading mesh")
-	m, err := mesh.LoadAs[*mesh.TriangleSoup]("../testdata/bunny-smooth.obj")
+	done := profiling.Timed("loading mesh")
+	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/bunny-smooth.obj")
 	if err != nil {
 		panic(err)
 	}
@@ -49,23 +47,21 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 	)
 	done()
 
-	mat := material.NewBlinnPhong(
+	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(tex),
 		material.Kdiff(0.6), material.Kspec(1),
 		material.Shininess(150),
 		material.FlatShading(true),
-	)
-	m.SetMaterial(mat)
+	))
 	m.Scale(1500, 1500, 1500)
 	m.Translate(-700, -5, 350)
 	s.Add(m)
 
-	cam := camera.NewPerspective(
+	return s, camera.NewPerspective(
 		camera.Position(math.NewVec3[float32](-550, 194, 734)),
 		camera.LookAt(math.NewVec3[float32](-1000, 0, 0), math.NewVec3[float32](0, 1, 1)),
 		camera.ViewFrustum(45, float32(width)/float32(height), 100, 600),
 	)
-	return s, cam
 }
 
 func TestBunny(t *testing.T) {

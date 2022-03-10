@@ -8,7 +8,7 @@ import (
 	"image/color"
 
 	"poly.red/math"
-	"poly.red/object"
+	"poly.red/scene/object"
 )
 
 // Environment represents the abstraction of environment lighting.

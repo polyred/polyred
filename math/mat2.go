@@ -91,13 +91,10 @@ func (m *Mat2[T]) Set(i, j int, v T) {
 
 // Eq checks whether the given two matrices are equal or not.
 func (m Mat2[T]) Eq(n Mat2[T]) bool {
-	if ApproxEq(m.X00, n.X00, Epsilon) &&
+	return ApproxEq(m.X00, n.X00, Epsilon) &&
 		ApproxEq(m.X10, n.X10, Epsilon) &&
 		ApproxEq(m.X01, n.X01, Epsilon) &&
-		ApproxEq(m.X11, n.X11, Epsilon) {
-		return true
-	}
-	return false
+		ApproxEq(m.X11, n.X11, Epsilon)
 }
 
 func (m Mat2[T]) Add(n Mat2[T]) Mat2[T] {

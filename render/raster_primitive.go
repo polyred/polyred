@@ -30,27 +30,27 @@ func (r *Renderer) DrawPrimitives(
 		panic("index buffer must be a 3 multiple")
 	}
 
-	r.sched.Add(uint64(len / 3))
+	r.sched.Add(len / 3)
 	for i := 0; i < len; i += 3 {
 		vs := vbo[i : i+3 : i+3]
-		tri := primitive.NewTriangle(vs[0], vs[1], vs[2])
-		if !tri.IsValid() {
+		v1 := vs[0]
+		v2 := vs[1]
+		v3 := vs[2]
+		if !(&primitive.Triangle{V1: v1, V2: v2, V3: v3}).IsValid() {
 			return
 		}
 
-		r.sched.Run(func() {
-			r.DrawPrimitive(buf, tri, prog...)
-		})
+		r.sched.Run(func() { r.drawPrimitive(buf, v1, v2, v3, prog...) })
 	}
 	r.sched.Wait()
 }
 
-// DrawPrimitive implements a triangle draw call of the rasteriation graphics pipeline.
-func (r *Renderer) DrawPrimitive(buf *buffer.FragmentBuffer, tri *primitive.Triangle, p ...shader.Vertex) bool {
+// drawPrimitive implements a triangle draw call of the rasteriation graphics pipeline.
+func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, t1, t2, t3 *primitive.Vertex, p ...shader.Vertex) {
 	var (
-		v1 = tri.V1.Copy()
-		v2 = tri.V2.Copy()
-		v3 = tri.V3.Copy()
+		v1 = t1.Copy()
+		v2 = t2.Copy()
+		v3 = t3.Copy()
 	)
 	for _, prog := range p {
 		v1 = prog(v1)
@@ -77,37 +77,45 @@ func (r *Renderer) DrawPrimitive(buf *buffer.FragmentBuffer, tri *primitive.Tria
 
 	// Back-face culling
 	if v2.Pos.Sub(v1.Pos).Cross(v3.Pos.Sub(v1.Pos)).Z < 0 {
-		return false
+		return
 	}
 
 	// View frustum culling
 	// TODO: deal with window resizing
 	if !r.inViewFrustum(buf, v1.Pos, v2.Pos, v3.Pos) {
-		return false
+		return
 	}
 
 	// All vertices are inside the viewport, let's rasterize directly
 	if r.inViewport2(buf, v1.Pos) && r.inViewport2(buf, v2.Pos) && r.inViewport2(buf, v3.Pos) {
 		r.rasterize(buf, v1, v2, v3, recipw)
-		return true
+		return
 	}
 
 	// Clipping into smaller triangles
 	r.drawClip(buf, v1, v2, v3, recipw)
-	return true
+	return
 }
 
 func (r *Renderer) inViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {
 	// TODO: can be optimize?
 	viewportAABB := primitive.NewAABB(
-		math.NewVec3[float32](float32(buf.Bounds().Dx()*r.msaa), float32(buf.Bounds().Dy()*r.msaa), 1),
+		math.NewVec3(float32(buf.Bounds().Dx()*r.msaa), float32(buf.Bounds().Dy()*r.msaa), 1),
 		math.NewVec3[float32](0, 0, 0),
 		math.NewVec3[float32](0, 0, -1),
 	)
 	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
 	return viewportAABB.Intersect(triangleAABB)
 }
-
+func (r *Renderer) inViewport(v1, v2, v3 math.Vec4[float32]) bool {
+	viewportAABB := primitive.NewAABB(
+		math.NewVec3(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()), 1),
+		math.NewVec3[float32](0, 0, 0),
+		math.NewVec3[float32](0, 0, -1),
+	)
+	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
+	return viewportAABB.Intersect(triangleAABB)
+}
 func (r *Renderer) inViewport2(buf *buffer.FragmentBuffer, v math.Vec4[float32]) bool {
 	w := float32(r.msaa * buf.Bounds().Dx())
 	h := float32(r.msaa * buf.Bounds().Dy())
@@ -123,9 +131,9 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 
 	// Sutherland Hodgman clipping algorithm
 	planes := [6]plane{
-		{math.NewVec4[float32](w, 0, 0, 1), math.NewVec4[float32](-1, 0, 0, 1)},
+		{math.NewVec4(w, 0, 0, 1), math.NewVec4[float32](-1, 0, 0, 1)},
 		{math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](1, 0, 0, 1)},
-		{math.NewVec4[float32](0, h, 0, 1), math.NewVec4[float32](0, -1, 0, 1)},
+		{math.NewVec4(0, h, 0, 1), math.NewVec4[float32](0, -1, 0, 1)},
 		{math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](0, 1, 0, 1)},
 		{math.NewVec4[float32](0, 0, 1, 1), math.NewVec4[float32](0, 0, -1, 1)},
 		{math.NewVec4[float32](0, 0, -1, 1), math.NewVec4[float32](0, 0, 1, 1)},
@@ -167,7 +175,7 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 		b3bc := math.Barycoord(math.NewVec2(clips[i].X, clips[i].Y),
 			v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 
-		t1 := primitive.Vertex{
+		t1 := &primitive.Vertex{
 			Pos: math.Vec4[float32]{
 				X: b1bc[0]*v1.Pos.X + b1bc[1]*v2.Pos.X + b1bc[2]*v3.Pos.X,
 				Y: b1bc[0]*v1.Pos.Y + b1bc[1]*v2.Pos.Y + b1bc[2]*v3.Pos.Y,
@@ -191,7 +199,7 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 				A: uint8(math.Clamp(b1bc[0]*float32(v1.Col.A)+b1bc[1]*float32(v2.Col.A)+b1bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
-		t2 := primitive.Vertex{
+		t2 := &primitive.Vertex{
 			Pos: math.Vec4[float32]{
 				X: b2bc[0]*v1.Pos.X + b2bc[1]*v2.Pos.X + b2bc[2]*v3.Pos.X,
 				Y: b2bc[0]*v1.Pos.Y + b2bc[1]*v2.Pos.Y + b2bc[2]*v3.Pos.Y,
@@ -215,7 +223,7 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 				A: uint8(math.Clamp(b2bc[0]*float32(v1.Col.A)+b2bc[1]*float32(v2.Col.A)+b2bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
-		t3 := primitive.Vertex{
+		t3 := &primitive.Vertex{
 			Pos: math.Vec4[float32]{
 				X: b3bc[0]*v1.Pos.X + b3bc[1]*v2.Pos.X + b3bc[2]*v3.Pos.X,
 				Y: b3bc[0]*v1.Pos.Y + b3bc[1]*v2.Pos.Y + b3bc[2]*v3.Pos.Y,
@@ -240,7 +248,7 @@ func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Ve
 			},
 		}
 
-		r.rasterize(buf, &t1, &t2, &t3, recipw)
+		r.rasterize(buf, t1, t2, t3, recipw)
 	}
 }
 
@@ -338,7 +346,7 @@ func (r *Renderer) rasterize(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.V
 }
 
 // interpoVaryings perspective correct interpolates
-func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[primitive.Attribute]any,
+func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[primitive.AttrName]any,
 	recipw, bc [3]float32) {
 	l := len(frag)
 	for name := range v1 {

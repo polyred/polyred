@@ -36,12 +36,9 @@ func (m Vec3[T]) String() string {
 
 // Eq compares the two given vectors, and returns true if they are equal.
 func (v Vec3[T]) Eq(u Vec3[T]) bool {
-	if ApproxEq(v.X, u.X, Epsilon) &&
+	return ApproxEq(v.X, u.X, Epsilon) &&
 		ApproxEq(v.Y, u.Y, Epsilon) &&
-		ApproxEq(v.Z, u.Z, Epsilon) {
-		return true
-	}
-	return false
+		ApproxEq(v.Z, u.Z, Epsilon)
 }
 
 // Add add the two given vectors, and returns the resulting vector.
@@ -56,16 +53,7 @@ func (v Vec3[T]) Sub(u Vec3[T]) Vec3[T] {
 
 // IsZero checks if the given vector is a zero vector.
 func (v Vec3[T]) IsZero() bool {
-	if !ApproxEq(v.X, 0, Epsilon) {
-		return false
-	}
-	if !ApproxEq(v.Y, 0, Epsilon) {
-		return false
-	}
-	if !ApproxEq(v.Z, 0, Epsilon) {
-		return false
-	}
-	return true
+	return ApproxEq(v.X, 0, Epsilon) && ApproxEq(v.Y, 0, Epsilon) && ApproxEq(v.Z, 0, Epsilon)
 }
 
 // Scale scales the given 3D vector and returns the resulting vector.

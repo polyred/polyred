@@ -7,6 +7,7 @@ package render
 import (
 	"fmt"
 	"image"
+	"log"
 	"runtime"
 
 	"poly.red/buffer"
@@ -17,8 +18,8 @@ import (
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/object"
 	"poly.red/scene"
+	"poly.red/scene/object"
 	"poly.red/shader"
 	"poly.red/texture/imageutil"
 
@@ -183,74 +184,55 @@ func (r *Renderer) NextBuffer() *buffer.FragmentBuffer {
 	return r.bufs[r.bufcur]
 }
 
-func (r *Renderer) DrawImage(buf *buffer.FragmentBuffer, img *image.RGBA) {
-	for i := 0; i < buf.Bounds().Dx(); i++ {
-		for j := 0; j < buf.Bounds().Dy(); j++ {
-			buf.Set(i, j, buffer.Fragment{
-				Ok: true,
-				Fragment: primitive.Fragment{
-					X: i, Y: j, Col: img.RGBAAt(i, img.Bounds().Dy()),
-				},
-			})
-		}
-	}
-}
-
 func (r *Renderer) passForward() {
 	if r.debug {
 		done := profiling.Timed("forward pass (world)")
 		defer done()
 	}
 
-	matView := r.renderCamera.ViewMatrix()
-	matProj := r.renderCamera.ProjMatrix()
-	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
-
+	sum := 0
 	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
 
 		mesh := o.(mesh.Mesh[float32])
-		r.sched.Add(mesh.NumTriangles())
+		sum += len(mesh.Triangles())
+		r.sched.Add(len(mesh.Triangles()))
 		return true
 	})
+	log.Println(sum)
 
 	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
-
-		mesh := o.(mesh.Mesh[float32])
-		uniforms := map[string]any{
-			"matModel":   mesh.ModelMatrix(),
-			"matView":    matView,
-			"matViewInv": matView.Inv(),
-			"matProj":    matProj,
-			"matProjInv": matProj.Inv(),
-			"matVP":      matVP,
-			"matVPInv":   matVP.Inv(),
-			// NormalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
-			// depending on which transformation space. Here we use the 2nd form,
-			// i.e. model space normal matrix to save some computation of camera
-			// transforamtion in the shading process.
-			// The reason we need normal matrix is that normals are transformed
-			// incorrectly using MVP matrices. However, a normal matrix helps us
-			// to fix the problem.
-			"matNormal": mesh.ModelMatrix().Inv().T(),
+		mesh := o.(*mesh.TriangleMesh)
+		mvp := &shader.MVP{
+			Model: mesh.ModelMatrix(),
+			View:  r.renderCamera.ViewMatrix(),
+			Proj:  r.renderCamera.ProjMatrix(),
+			Viewport: math.ViewportMatrix(
+				float32(r.bufs[0].Bounds().Dx()),
+				float32(r.bufs[0].Bounds().Dy()),
+			),
+			Normal: mesh.ModelMatrix().Inv().T(),
 		}
+		mvp.ViewInv = mvp.View.Inv()
+		mvp.ProjInv = mvp.Proj.Inv()
+		mvp.ViewportInv = mvp.Viewport.Inv()
 
-		mesh.Faces(func(f primitive.Face[float32], m material.Material) bool {
-			f.Triangles(func(t *primitive.Triangle) bool {
-				r.sched.Run(func() {
-					if t.IsValid() {
-						r.draw(uniforms, t, m)
-					}
-				})
-				return true
+		tris := mesh.Triangles()
+		for i := range tris {
+			t := tris[i]
+			r.sched.Run(func() {
+				if !t.IsValid() {
+					return
+				}
+
+				r.draw(mvp, t, mesh.GetMaterial())
 			})
-			return true
-		})
+		}
 		return true
 	})
 	r.sched.Wait()
@@ -268,13 +250,13 @@ func (r *Renderer) passDeferred() {
 	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
 	matVPInv := matVP.Inv()
 	matScreenToWorld := matViewInv.MulM(matProjInv).MulM(matVPInv)
-	uniforms := map[string]any{
-		"matView":          matView,
-		"matViewInv":       matViewInv,
-		"matProj":          matProj,
-		"matProjInv":       matProjInv,
-		"matVP":            matVP,
-		"matScreenToWorld": matScreenToWorld,
+	uniforms := &shader.MVP{
+		View:            matView,
+		ViewInv:         matViewInv,
+		Proj:            matProj,
+		ProjInv:         matProjInv,
+		Viewport:        matVP,
+		ViewportToWorld: matScreenToWorld,
 	}
 
 	ao := ambientOcclusionPass{buf: r.bufs[0]}
@@ -284,7 +266,7 @@ func (r *Renderer) passDeferred() {
 	})
 }
 
-func (r *Renderer) shade(info buffer.Fragment, uniforms map[string]any) color.RGBA {
+func (r *Renderer) shade(info buffer.Fragment, uniforms *shader.MVP) color.RGBA {
 	if !info.Ok {
 		return r.background
 	}
@@ -337,36 +319,46 @@ func (r *Renderer) passAntialiasing() {
 		defer done()
 	}
 
-	r.passGammaCorrect()
+	// converts color from linear to sRGB space.
+	if r.correctGamma {
+		r.DrawFragments(r.bufs[0], shader.GammaCorrection)
+	}
 	r.outBuf = imageutil.Resize(r.width, r.height, r.bufs[0].Image())
 }
 
 func (r *Renderer) draw(
-	uniforms map[string]any,
-	tri *primitive.Triangle,
+	mvp *shader.MVP,
+	t *primitive.Triangle,
 	mat material.Material) {
-	var t1, t2, t3 primitive.Vertex
-	if mat != nil {
-		t1 = mat.VertexShader(tri.V1, uniforms)
-		t2 = mat.VertexShader(tri.V2, uniforms)
-		t3 = mat.VertexShader(tri.V3, uniforms)
-	} else {
-		t1 = defaultVertexShader(tri.V1, uniforms)
-		t2 = defaultVertexShader(tri.V2, uniforms)
-		t3 = defaultVertexShader(tri.V3, uniforms)
+	var t1, t2, t3 *primitive.Vertex
+	t1 = &primitive.Vertex{
+		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V1.Pos),
+		Col: t.V1.Col,
+		UV:  t.V1.UV,
+		Nor: t.V1.Nor.Apply(mvp.Normal),
 	}
-
-	matVP := uniforms["matVP"].(math.Mat4[float32])
+	t2 = &primitive.Vertex{
+		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V2.Pos),
+		Col: t.V2.Col,
+		UV:  t.V2.UV,
+		Nor: t.V2.Nor.Apply(mvp.Normal),
+	}
+	t3 = &primitive.Vertex{
+		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V3.Pos),
+		Col: t.V3.Col,
+		UV:  t.V3.UV,
+		Nor: t.V3.Nor.Apply(mvp.Normal),
+	}
 
 	// For perspective corrected interpolation, see below.
-	recipw := math.NewVec4[float32](1, 1, 1, 0)
+	recipw := math.NewVec3[float32](1, 1, 1)
 	if _, ok := r.renderCamera.(*camera.Perspective); ok {
-		recipw = math.NewVec4(-1/t1.Pos.W, -1/t2.Pos.W, -1/t3.Pos.W, 0)
+		recipw = math.NewVec3(-1/t1.Pos.W, -1/t2.Pos.W, -1/t3.Pos.W)
 	}
 
-	t1.Pos = t1.Pos.Apply(matVP).Pos()
-	t2.Pos = t2.Pos.Apply(matVP).Pos()
-	t3.Pos = t3.Pos.Apply(matVP).Pos()
+	t1.Pos = t1.Pos.Apply(mvp.Viewport).Pos()
+	t2.Pos = t2.Pos.Apply(mvp.Viewport).Pos()
+	t3.Pos = t3.Pos.Apply(mvp.Viewport).Pos()
 
 	// Backface culling
 	if t2.Pos.Sub(t1.Pos).Cross(t3.Pos.Sub(t1.Pos)).Z < 0 {
@@ -380,38 +372,29 @@ func (r *Renderer) draw(
 
 	w := float32(r.bufs[0].Bounds().Dx())
 	h := float32(r.bufs[0].Bounds().Dy())
-
-	// t1 is outside the viewfrustum
 	outside := func(v *math.Vec4[float32], w, h float32) bool {
-		if v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1 {
-			return true
-		}
-		return false
+		return v.X < 0 || v.X > w || v.Y < 0 || v.Y > h || v.Z > 1 || v.Z < -1
 	}
 
 	if outside(&t1.Pos, w, h) || outside(&t2.Pos, w, h) || outside(&t3.Pos, w, h) {
-		tris := r.clipTriangle(&t1, &t2, &t3, w, h, recipw)
+		tris := r.clipTriangle(t1, t2, t3, w, h, recipw)
 		for _, tri := range tris {
-			r.drawClipped(tri.V1, tri.V2, tri.V3, recipw, uniforms, mat)
+			r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, mat)
 		}
 		return
 	}
 
-	r.drawClipped(&t1, &t2, &t3, recipw, uniforms, mat)
+	r.drawClipped(mvp, t1, t2, t3, recipw, mat)
 }
 
 func (r *Renderer) drawClipped(
+	mvp *shader.MVP,
 	t1, t2, t3 *primitive.Vertex,
-	recipw math.Vec4[float32],
-	uniforms map[string]any,
+	recipw math.Vec3[float32],
 	mat material.Material) {
-
-	matViewInv := uniforms["matViewInv"].(math.Mat4[float32])
-	matProjInv := uniforms["matProjInv"].(math.Mat4[float32])
-	matVPInv := uniforms["matVPInv"].(math.Mat4[float32])
-	m1 := t1.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
-	m2 := t2.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
-	m3 := t3.Pos.Apply(matVPInv).Apply(matProjInv).Apply(matViewInv)
+	m1 := t1.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
+	m2 := t2.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
+	m3 := t3.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
 
 	// Compute AABB make the AABB a little bigger that align with
 	// pixels to contain the entire triangle
@@ -510,7 +493,7 @@ func (r *Renderer) drawClipped(
 					Dv:    dv,
 					Nor:   n,
 					Col:   col,
-					AttrFlat: map[primitive.Attribute]any{
+					AttrFlat: map[primitive.AttrName]any{
 						"Pos": pos,
 						"Mat": mat,
 						"fN":  fN,
@@ -519,23 +502,4 @@ func (r *Renderer) drawClipped(
 			})
 		}
 	}
-}
-
-// passGammaCorrect does a gamma correction that converts color from linear to sRGB space.
-func (r *Renderer) passGammaCorrect() {
-	if !r.correctGamma {
-		return
-	}
-
-	r.DrawFragments(r.bufs[0], shader.GammaCorrection)
-}
-
-func (r *Renderer) inViewport(v1, v2, v3 math.Vec4[float32]) bool {
-	viewportAABB := primitive.NewAABB(
-		math.NewVec3(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()), 1),
-		math.NewVec3[float32](0, 0, 0),
-		math.NewVec3[float32](0, 0, -1),
-	)
-	triangleAABB := primitive.NewAABB(v1.ToVec3(), v2.ToVec3(), v3.ToVec3())
-	return viewportAABB.Intersect(triangleAABB)
 }

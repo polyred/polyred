@@ -9,7 +9,7 @@ import (
 
 	"poly.red/camera"
 	"poly.red/math"
-	"poly.red/object"
+	"poly.red/scene/object"
 )
 
 func TestCameraProperties(t *testing.T) {

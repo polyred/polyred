@@ -30,9 +30,9 @@ func (p *plane) intersectSegment(v0, v1 math.Vec4[float32]) math.Vec4[float32] {
 
 func sutherlandHodgman(points []math.Vec4[float32], w, h float32) []math.Vec4[float32] {
 	planes := []plane{
-		{math.NewVec4[float32](w, 0, 0, 1), math.NewVec4[float32](-1, 0, 0, 1)},
+		{math.NewVec4(w, 0, 0, 1), math.NewVec4[float32](-1, 0, 0, 1)},
 		{math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](1, 0, 0, 1)},
-		{math.NewVec4[float32](0, h, 0, 1), math.NewVec4[float32](0, -1, 0, 1)},
+		{math.NewVec4(0, h, 0, 1), math.NewVec4[float32](0, -1, 0, 1)},
 		{math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](0, 1, 0, 1)},
 		{math.NewVec4[float32](0, 0, 1, 1), math.NewVec4[float32](0, 0, -1, 1)},
 		{math.NewVec4[float32](0, 0, -1, 1), math.NewVec4[float32](0, 0, 1, 1)},
@@ -64,7 +64,7 @@ func sutherlandHodgman(points []math.Vec4[float32], w, h float32) []math.Vec4[fl
 	return output
 }
 
-func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, recipw math.Vec4[float32]) []*primitive.Triangle {
+func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, recipw math.Vec3[float32]) []*primitive.Triangle {
 	p1 := v1.Pos
 	p2 := v2.Pos
 	p3 := v3.Pos
@@ -79,7 +79,7 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 		b3bc := math.Barycoord(math.NewVec2(clips[i].X, clips[i].Y),
 			p1.ToVec2(), p2.ToVec2(), p3.ToVec2())
 
-		t1 := primitive.Vertex{
+		t1 := &primitive.Vertex{
 			Pos: math.Vec4[float32]{
 				X: b1bc[0]*v1.Pos.X + b1bc[1]*v2.Pos.X + b1bc[2]*v3.Pos.X,
 				Y: b1bc[0]*v1.Pos.Y + b1bc[1]*v2.Pos.Y + b1bc[2]*v3.Pos.Y,
@@ -103,7 +103,7 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 				A: uint8(math.Clamp(b1bc[0]*float32(v1.Col.A)+b1bc[1]*float32(v2.Col.A)+b1bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
-		t2 := primitive.Vertex{
+		t2 := &primitive.Vertex{
 			Pos: math.Vec4[float32]{
 				X: b2bc[0]*v1.Pos.X + b2bc[1]*v2.Pos.X + b2bc[2]*v3.Pos.X,
 				Y: b2bc[0]*v1.Pos.Y + b2bc[1]*v2.Pos.Y + b2bc[2]*v3.Pos.Y,
@@ -127,7 +127,7 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 				A: uint8(math.Clamp(b2bc[0]*float32(v1.Col.A)+b2bc[1]*float32(v2.Col.A)+b2bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
-		t3 := primitive.Vertex{
+		t3 := &primitive.Vertex{
 			Pos: math.Vec4[float32]{
 				X: b3bc[0]*v1.Pos.X + b3bc[1]*v2.Pos.X + b3bc[2]*v3.Pos.X,
 				Y: b3bc[0]*v1.Pos.Y + b3bc[1]*v2.Pos.Y + b3bc[2]*v3.Pos.Y,
@@ -151,7 +151,7 @@ func (r *Renderer) clipTriangle(v1, v2, v3 *primitive.Vertex, w, h float32, reci
 				A: uint8(math.Clamp(b3bc[0]*float32(v1.Col.A)+b3bc[1]*float32(v2.Col.A)+b3bc[2]*float32(v3.Col.A), 0, 0xff)),
 			},
 		}
-		result = append(result, primitive.NewTriangle(&t1, &t2, &t3))
+		result = append(result, primitive.NewTriangle(t1, t2, t3))
 	}
 	return result
 }

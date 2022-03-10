@@ -8,7 +8,7 @@ import (
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
-	"poly.red/object"
+	"poly.red/scene/object"
 )
 
 // Scene is a scene graph

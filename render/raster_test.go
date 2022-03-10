@@ -16,12 +16,12 @@ import (
 	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/object"
 	"poly.red/scene"
+	"poly.red/scene/object"
+	"poly.red/shader"
 	"poly.red/texture/imageutil"
 )
 
@@ -53,7 +53,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.5),
 	))
 
-	m := mesh.MustLoadAs[*mesh.TriangleSoup]("../internal/testdata/bunny.obj")
+	m := mesh.MustLoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
 	data := imageutil.MustLoadImage("../internal/testdata/bunny.png")
 	mat := material.NewBlinnPhong(
 		material.Texture(buffer.NewTexture(
@@ -162,15 +162,15 @@ func BenchmarkAntiAliasingPass(b *testing.B) {
 	}
 }
 
-func BenchmarkAntiGammaCorrection(b *testing.B) {
+func BenchmarkGammaCorrection(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r.passGammaCorrect()
+		r.DrawFragments(r.bufs[0], shader.GammaCorrection)
 	}
 }
 
-func BenchmarkDraw(b *testing.B) {
+func BenchmarkDrawCall(b *testing.B) {
 	for block := 1; block <= 1024; block *= 2 {
 		matView := c.ViewMatrix()
 		matProj := c.ProjMatrix()
@@ -189,51 +189,31 @@ func BenchmarkDraw(b *testing.B) {
 			return true
 		})
 
-		uniforms := map[string]any{
-			"matModel":   modelMat,
-			"matView":    matView,
-			"matViewInv": matView.Inv(),
-			"matProj":    matProj,
-			"matProjInv": matProj.Inv(),
-			"matVP":      matVP,
-			"matVPInv":   matVP.Inv(),
-			"matNormal":  modelMat.Inv().T(),
+		mvp := &shader.MVP{
+			Model:       modelMat,
+			View:        matView,
+			ViewInv:     matView.Inv(),
+			Proj:        matProj,
+			ProjInv:     matProj.Inv(),
+			Viewport:    matVP,
+			ViewportInv: matVP.Inv(),
+			Normal:      modelMat.Inv().T(),
 		}
 
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
-			var (
-				ts  = []*primitive.Triangle{}
-				mat material.Material
-				nt  = m.NumTriangles()
-			)
-
-			m.Faces(func(f primitive.Face[float32], m material.Material) bool {
-				mat = m
-				f.Triangles(func(t *primitive.Triangle) bool {
-					ts = append(ts, t)
-					return true
-				})
-				return true
-			})
-
 			b.ReportAllocs()
 			b.ResetTimer()
+			tris := m.Triangles()
+			nt := len(tris)
 			for i := 0; i < b.N; i++ {
-				f := ts[i%int(nt)]
-				Draw(r, uniforms, f, modelMat, mat)
+				f := tris[i%int(nt)]
+				Draw(r, mvp, f, m.GetMaterial())
 			}
 		})
 	}
 }
 
 func BenchmarkInViewport(b *testing.B) {
-	v1, v2, v3 := math.NewRandVec4[float32](), math.NewRandVec4[float32](), math.NewRandVec4[float32]()
-	for i := 0; i < b.N; i++ {
-		r.inViewport(v1, v2, v3)
-	}
-}
-
-func BenchmarkInViewport2(b *testing.B) {
 	v1, v2, v3 := math.NewRandVec4[float32](), math.NewRandVec4[float32](), math.NewRandVec4[float32]()
 	for i := 0; i < b.N; i++ {
 		r.inViewFrustum(r.CurrBuffer(), v1, v2, v3)

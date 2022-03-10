@@ -21,7 +21,7 @@ import (
 
 var (
 	rend *render.Renderer
-	m    *mesh.TriangleSoup
+	m    *mesh.TriangleMesh
 	prog shader.Program
 	buf  *buffer.FragmentBuffer
 )
@@ -40,7 +40,7 @@ func init() {
 
 	// Use a different model
 	var err error
-	m, err = mesh.LoadAs[*mesh.TriangleSoup]("../internal/testdata/bunny.obj")
+	m, err = mesh.LoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
 	if err != nil {
 		panic(err)
 	}
@@ -60,8 +60,7 @@ func init() {
 }
 
 func TestDrawPrimitives(t *testing.T) {
-	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
-	rend.DrawPrimitives(buf, vi, vb, prog.Vertex)
+	rend.DrawPrimitives(buf, m.IndexBuffer(), m.VertexBuffer(), prog.Vertex)
 	rend.DrawFragments(buf, prog.Fragment)
 	imageutil.Save(buf.Image(), "../internal/examples/out/draw-primitives.png")
 }
@@ -76,6 +75,6 @@ func BenchmarkDrawPrimitive(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		r.DrawPrimitive(buf, &primitive.Triangle{}, p.Vertex)
+		render.DrawPrimitive(r, buf, &primitive.Vertex{}, &primitive.Vertex{}, &primitive.Vertex{}, p.Vertex)
 	}
 }

@@ -11,7 +11,7 @@ import (
 	"poly.red/geometry/primitive"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/object"
+	"poly.red/scene/object"
 )
 
 var _ Mesh[float32] = &BufferedMesh{}
@@ -37,10 +37,13 @@ func NewBufferAttribute(stride int, values []float32) *BufferAttribute {
 // BufferedMesh is a dense representation of a surface geometry and
 // implements the Mesh interface.
 type BufferedMesh struct {
-	vertIdx  buffer.IndexBuffer
+	ibo      buffer.IndexBuffer
+	vbo      buffer.VertexBuffer
 	attrs    map[AttributeName]*BufferAttribute
-	aabb     *primitive.AABB
 	material material.Material
+
+	tris []*primitive.Triangle
+	aabb *primitive.AABB
 
 	math.TransformContext[float32]
 }
@@ -58,31 +61,24 @@ func NewBufferedMesh() *BufferedMesh {
 	return bm
 }
 
-func (bm *BufferedMesh) SetVertexIndex(vertIdx buffer.IndexBuffer) {
-	bm.vertIdx = vertIdx
-}
-
+func (bm *BufferedMesh) SetIndexBuffer(ibo buffer.IndexBuffer) { bm.ibo = ibo }
 func (bm *BufferedMesh) SetAttribute(name AttributeName, attribute *BufferAttribute) {
 	bm.attrs[name] = attribute
 }
-
-func (bm *BufferedMesh) GetAttribute(name AttributeName) *BufferAttribute {
-	return bm.attrs[name]
-}
-
-func (bm *BufferedMesh) Type() object.Type {
-	return object.TypeMesh
-}
+func (bm *BufferedMesh) GetAttribute(name AttributeName) *BufferAttribute { return bm.attrs[name] }
+func (bm *BufferedMesh) Type() object.Type                                { return object.TypeMesh }
+func (bm *BufferedMesh) GetMaterial() material.Material                   { return bm.material }
+func (bm *BufferedMesh) SetMaterial(mat material.Material)                { bm.material = mat }
 
 func (bm *BufferedMesh) AABB() primitive.AABB {
 	if bm.aabb == nil {
 		min := math.NewVec3[float32](math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
 		max := math.NewVec3[float32](-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
 		attr := bm.GetAttribute(AttributePos)
-		for _, vIndex := range bm.vertIdx {
-			x := attr.Values[attr.Stride*int(vIndex)+0]
-			y := attr.Values[attr.Stride*int(vIndex)+1]
-			z := attr.Values[attr.Stride*int(vIndex)+2]
+		for _, idx := range bm.ibo {
+			x := attr.Values[attr.Stride*int(idx)+0]
+			y := attr.Values[attr.Stride*int(idx)+1]
+			z := attr.Values[attr.Stride*int(idx)+2]
 			min.X = math.Min(min.X, x)
 			min.Y = math.Min(min.Y, y)
 			min.Z = math.Min(min.Z, z)
@@ -105,7 +101,7 @@ func (bm *BufferedMesh) Normalize() {
 
 	// scale all vertices
 	attr := bm.GetAttribute(AttributePos)
-	for _, vIndex := range bm.vertIdx {
+	for _, vIndex := range bm.ibo {
 		x := attr.Values[attr.Stride*int(vIndex)+0]
 		y := attr.Values[attr.Stride*int(vIndex)+1]
 		z := attr.Values[attr.Stride*int(vIndex)+2]
@@ -122,115 +118,107 @@ func (bm *BufferedMesh) Normalize() {
 	bm.ResetContext()
 }
 
-func (bm *BufferedMesh) GetMaterial() material.Material {
-	return bm.material
-}
+func (bm *BufferedMesh) Triangles() []*primitive.Triangle {
+	if bm.tris != nil {
+		return bm.tris
+	}
 
-func (bm *BufferedMesh) SetMaterial(mat material.Material) {
-	bm.material = mat
-}
-
-func (bm *BufferedMesh) NumTriangles() uint64 {
-	return uint64(len(bm.vertIdx) / 3)
-}
-
-func (bm *BufferedMesh) Faces(iter func(primitive.Face[float32], material.Material) bool) {
 	attrPos := bm.GetAttribute(AttributePos)
 	attrNor := bm.GetAttribute(AttributeNor)
 	attrColor := bm.GetAttribute(AttributeCol)
 	attrUV := bm.GetAttribute(AttributeUV)
+	tris := []*primitive.Triangle{}
 
-	for i := 0; i < len(bm.vertIdx); i += 3 {
+	for i := 0; i < len(bm.ibo); i += 3 {
 		var px, py, pz, nx, ny, nz, u, v float32
 		var cr, cb, cg, ca uint8
-		px = attrPos.Values[attrPos.Stride*bm.vertIdx[i]+0]
-		py = attrPos.Values[attrPos.Stride*bm.vertIdx[i]+1]
-		pz = attrPos.Values[attrPos.Stride*bm.vertIdx[i]+2]
+		px = attrPos.Values[attrPos.Stride*bm.ibo[i]+0]
+		py = attrPos.Values[attrPos.Stride*bm.ibo[i]+1]
+		pz = attrPos.Values[attrPos.Stride*bm.ibo[i]+2]
 		if attrNor != nil {
-			nx = attrNor.Values[attrNor.Stride*bm.vertIdx[i]+0]
-			ny = attrNor.Values[attrNor.Stride*bm.vertIdx[i]+1]
-			nz = attrNor.Values[attrNor.Stride*bm.vertIdx[i]+2]
+			nx = attrNor.Values[attrNor.Stride*bm.ibo[i]+0]
+			ny = attrNor.Values[attrNor.Stride*bm.ibo[i]+1]
+			nz = attrNor.Values[attrNor.Stride*bm.ibo[i]+2]
 		}
 		if attrColor != nil {
-			cr = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i]+0] * 0xff)
-			cb = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i]+1] * 0xff)
-			cg = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i]+2] * 0xff)
-			ca = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i]+3] * 0xff)
+			cr = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i]+0] * 0xff)
+			cb = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i]+1] * 0xff)
+			cg = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i]+2] * 0xff)
+			ca = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i]+3] * 0xff)
 		}
 		if attrUV != nil {
-			u = attrUV.Values[attrUV.Stride*bm.vertIdx[i]+0]
-			v = attrUV.Values[attrUV.Stride*bm.vertIdx[i]+1]
+			u = attrUV.Values[attrUV.Stride*bm.ibo[i]+0]
+			v = attrUV.Values[attrUV.Stride*bm.ibo[i]+1]
 		}
-		v1 := primitive.Vertex{
-			Pos: math.NewVec4(px, py, pz, 1),
-			Nor: math.NewVec4(nx, ny, nz, 0),
-			Col: color.RGBA{cr, cb, cg, ca},
-			UV:  math.NewVec2(u, v),
-		}
+		v1 := primitive.NewVertex(
+			primitive.Pos(math.NewVec4(px, py, pz, 1)),
+			primitive.Nor(math.NewVec4(nx, ny, nz, 0)),
+			primitive.Col(color.RGBA{cr, cb, cg, ca}),
+			primitive.UV(math.NewVec2(u, v)),
+		)
 
-		px = attrPos.Values[attrPos.Stride*bm.vertIdx[i+1]+0]
-		py = attrPos.Values[attrPos.Stride*bm.vertIdx[i+1]+1]
-		pz = attrPos.Values[attrPos.Stride*bm.vertIdx[i+1]+2]
+		px = attrPos.Values[attrPos.Stride*bm.ibo[i+1]+0]
+		py = attrPos.Values[attrPos.Stride*bm.ibo[i+1]+1]
+		pz = attrPos.Values[attrPos.Stride*bm.ibo[i+1]+2]
 		if attrNor != nil {
-			nx = attrNor.Values[attrNor.Stride*bm.vertIdx[i+1]+0]
-			ny = attrNor.Values[attrNor.Stride*bm.vertIdx[i+1]+1]
-			nz = attrNor.Values[attrNor.Stride*bm.vertIdx[i+1]+2]
+			nx = attrNor.Values[attrNor.Stride*bm.ibo[i+1]+0]
+			ny = attrNor.Values[attrNor.Stride*bm.ibo[i+1]+1]
+			nz = attrNor.Values[attrNor.Stride*bm.ibo[i+1]+2]
 		}
 		if attrColor != nil {
-			cr = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i+1]+0] * 0xff)
-			cb = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i+1]+1] * 0xff)
-			cg = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i+1]+2] * 0xff)
-			ca = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i+1]+3] * 0xff)
+			cr = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i+1]+0] * 0xff)
+			cb = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i+1]+1] * 0xff)
+			cg = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i+1]+2] * 0xff)
+			ca = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i+1]+3] * 0xff)
 		}
 		if attrUV != nil {
-			u = attrUV.Values[attrUV.Stride*bm.vertIdx[i+1]+0]
-			v = attrUV.Values[attrUV.Stride*bm.vertIdx[i+1]+1]
+			u = attrUV.Values[attrUV.Stride*bm.ibo[i+1]+0]
+			v = attrUV.Values[attrUV.Stride*bm.ibo[i+1]+1]
 		}
-		v2 := primitive.Vertex{
-			Pos: math.NewVec4(px, py, pz, 1),
-			Nor: math.NewVec4(nx, ny, nz, 0),
-			Col: color.RGBA{cr, cb, cg, ca},
-			UV:  math.NewVec2(u, v),
-		}
+		v2 := primitive.NewVertex(
+			primitive.Pos(math.NewVec4(px, py, pz, 1)),
+			primitive.Nor(math.NewVec4(nx, ny, nz, 0)),
+			primitive.Col(color.RGBA{cr, cb, cg, ca}),
+			primitive.UV(math.NewVec2(u, v)),
+		)
 
-		px = attrPos.Values[attrPos.Stride*bm.vertIdx[i+2]+0]
-		py = attrPos.Values[attrPos.Stride*bm.vertIdx[i+2]+1]
-		pz = attrPos.Values[attrPos.Stride*bm.vertIdx[i+2]+2]
+		px = attrPos.Values[attrPos.Stride*bm.ibo[i+2]+0]
+		py = attrPos.Values[attrPos.Stride*bm.ibo[i+2]+1]
+		pz = attrPos.Values[attrPos.Stride*bm.ibo[i+2]+2]
 		if attrNor != nil {
-			nx = attrNor.Values[attrNor.Stride*bm.vertIdx[i+2]+0]
-			ny = attrNor.Values[attrNor.Stride*bm.vertIdx[i+2]+1]
-			nz = attrNor.Values[attrNor.Stride*bm.vertIdx[i+2]+2]
+			nx = attrNor.Values[attrNor.Stride*bm.ibo[i+2]+0]
+			ny = attrNor.Values[attrNor.Stride*bm.ibo[i+2]+1]
+			nz = attrNor.Values[attrNor.Stride*bm.ibo[i+2]+2]
 		}
 		if attrColor != nil {
-			cr = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i+2]+0] * 0xff)
-			cb = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i+2]+1] * 0xff)
-			cg = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i+2]+2] * 0xff)
-			ca = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i+2]+3] * 0xff)
+			cr = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i+2]+0] * 0xff)
+			cb = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i+2]+1] * 0xff)
+			cg = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i+2]+2] * 0xff)
+			ca = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i+2]+3] * 0xff)
 		}
 		if attrUV != nil {
-			u = attrUV.Values[attrUV.Stride*bm.vertIdx[i+2]+0]
-			v = attrUV.Values[attrUV.Stride*bm.vertIdx[i+2]+1]
+			u = attrUV.Values[attrUV.Stride*bm.ibo[i+2]+0]
+			v = attrUV.Values[attrUV.Stride*bm.ibo[i+2]+1]
 		}
-		v3 := primitive.Vertex{
-			Pos: math.NewVec4(px, py, pz, 1),
-			Nor: math.NewVec4(nx, ny, nz, 0),
-			Col: color.RGBA{cr, cb, cg, ca},
-			UV:  math.NewVec2(u, v),
-		}
+		v3 := primitive.NewVertex(
+			primitive.Pos(math.NewVec4(px, py, pz, 1)),
+			primitive.Nor(math.NewVec4(nx, ny, nz, 0)),
+			primitive.Col(color.RGBA{cr, cb, cg, ca}),
+			primitive.UV(math.NewVec2(u, v)),
+		)
 
-		if !iter(&primitive.Triangle{
-			V1: &v1, V2: &v2, V3: &v3,
-		}, bm.material) {
-			return
-		}
+		tris = append(tris, &primitive.Triangle{V1: v1, V2: v2, V3: v3})
 	}
+	bm.tris = tris
+	return tris
 }
 
-func (bm *BufferedMesh) GetVertexIndex() buffer.IndexBuffer {
-	return bm.vertIdx
-}
+func (bm *BufferedMesh) IndexBuffer() buffer.IndexBuffer { return bm.ibo }
+func (bm *BufferedMesh) VertexBuffer() buffer.VertexBuffer {
+	if bm.vbo != nil {
+		return bm.vbo
+	}
 
-func (bm *BufferedMesh) GetVertexBuffer() []*primitive.Vertex {
 	attrPos := bm.GetAttribute(AttributePos)
 	attrNor := bm.GetAttribute(AttributeNor)
 	attrColor := bm.GetAttribute(AttributeCol)
@@ -239,32 +227,32 @@ func (bm *BufferedMesh) GetVertexBuffer() []*primitive.Vertex {
 	var px, py, pz, nx, ny, nz, u, v float32
 	var cr, cb, cg, ca uint8
 
-	vs := make([]*primitive.Vertex, len(bm.vertIdx))
-	for i := 0; i < len(bm.vertIdx); i++ {
-		px = attrPos.Values[attrPos.Stride*bm.vertIdx[i]+0]
-		py = attrPos.Values[attrPos.Stride*bm.vertIdx[i]+1]
-		pz = attrPos.Values[attrPos.Stride*bm.vertIdx[i]+2]
+	bm.vbo = make([]*primitive.Vertex, len(bm.ibo))
+	for i := 0; i < len(bm.ibo); i++ {
+		px = attrPos.Values[attrPos.Stride*bm.ibo[i]+0]
+		py = attrPos.Values[attrPos.Stride*bm.ibo[i]+1]
+		pz = attrPos.Values[attrPos.Stride*bm.ibo[i]+2]
 		if attrNor != nil {
-			nx = attrNor.Values[attrNor.Stride*bm.vertIdx[i]+0]
-			ny = attrNor.Values[attrNor.Stride*bm.vertIdx[i]+1]
-			nz = attrNor.Values[attrNor.Stride*bm.vertIdx[i]+2]
+			nx = attrNor.Values[attrNor.Stride*bm.ibo[i]+0]
+			ny = attrNor.Values[attrNor.Stride*bm.ibo[i]+1]
+			nz = attrNor.Values[attrNor.Stride*bm.ibo[i]+2]
 		}
 		if attrColor != nil {
-			cr = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i]+0] * 0xff)
-			cb = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i]+1] * 0xff)
-			cg = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i]+2] * 0xff)
-			ca = uint8(attrColor.Values[attrColor.Stride*bm.vertIdx[i]+3] * 0xff)
+			cr = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i]+0] * 0xff)
+			cb = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i]+1] * 0xff)
+			cg = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i]+2] * 0xff)
+			ca = uint8(attrColor.Values[attrColor.Stride*bm.ibo[i]+3] * 0xff)
 		}
 		if attrUV != nil {
-			u = attrUV.Values[attrUV.Stride*bm.vertIdx[i]+0]
-			v = attrUV.Values[attrUV.Stride*bm.vertIdx[i]+1]
+			u = attrUV.Values[attrUV.Stride*bm.ibo[i]+0]
+			v = attrUV.Values[attrUV.Stride*bm.ibo[i]+1]
 		}
-		vs[i] = &primitive.Vertex{
-			Pos: math.NewVec4(px, py, pz, 1).Apply(bm.ModelMatrix()),
-			Nor: math.NewVec4(nx, ny, nz, 0).Apply(bm.ModelMatrix().Inv()),
-			Col: color.RGBA{cr, cb, cg, ca},
-			UV:  math.NewVec2(u, v),
-		}
+		bm.vbo[i] = primitive.NewVertex(
+			primitive.Pos(math.NewVec4(px, py, pz, 1).Apply(bm.ModelMatrix())),
+			primitive.Nor(math.NewVec4(nx, ny, nz, 0).Apply(bm.ModelMatrix().Inv())),
+			primitive.Col(color.RGBA{cr, cb, cg, ca}),
+			primitive.UV(math.NewVec2(u, v)),
+		)
 	}
-	return vs
+	return bm.vbo
 }

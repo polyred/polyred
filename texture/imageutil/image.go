@@ -78,7 +78,7 @@ func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
 		batch := 1 << 12 // empirical
 		length := len(data.Pix)
 		batcheEnd := length / (4 * batch)
-		pool.Add(uint64(batcheEnd) + 1)
+		pool.Add(batcheEnd + 1)
 
 		// All batches with equal sizes
 		for i := 0; i < batcheEnd*(4*batch); i += 4 * batch {

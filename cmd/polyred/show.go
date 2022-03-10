@@ -24,7 +24,7 @@ type App struct {
 	ctrl  *controls.OrbitControl
 	r     *render.Renderer
 	prog  *shader.TextureShader
-	m     *mesh.TriangleSoup
+	m     *mesh.TriangleMesh
 	cam   camera.Interface
 	vi    buffer.IndexBuffer
 	vb    buffer.VertexBuffer
@@ -47,16 +47,15 @@ func newApp(meshPath, texPath string) *App {
 		render.PixelFormat(buffer.PixelFormatBGRA),
 	)
 
-	m := mesh.MustLoadAs[*mesh.TriangleSoup](meshPath)
+	m := mesh.MustLoadAs[*mesh.TriangleMesh](meshPath)
 	m.Normalize()
-	vi, vb := m.GetVertexIndex(), m.GetVertexBuffer()
 	prog := &shader.TextureShader{
 		ModelMatrix: m.ModelMatrix(),
 		ViewMatrix:  cam.ViewMatrix(),
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage(texPath))),
 	}
-	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: vi, vb: vb}
+	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: m.IndexBuffer(), vb: m.VertexBuffer()}
 	a.ctrl = controls.NewOrbitControl(a, cam)
 
 	return a

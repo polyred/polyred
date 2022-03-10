@@ -37,7 +37,7 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 		),
 	)
 
-	m, err := mesh.LoadAs[*mesh.TriangleSoup]("../testdata/bunny.obj")
+	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +56,7 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m, err = mesh.LoadAs[*mesh.TriangleSoup]("../testdata/ground.obj")
+	m, err = mesh.LoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
 	if err != nil {
 		panic(err)
 	}

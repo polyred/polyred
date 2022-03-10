@@ -9,7 +9,7 @@ package camera
 
 import (
 	"poly.red/math"
-	"poly.red/object"
+	"poly.red/scene/object"
 )
 
 // Interface assertion

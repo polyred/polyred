@@ -28,7 +28,7 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.5),
 	))
 
-	m, err := mesh.LoadAs[*mesh.TriangleSoup]("../testdata/dragon.obj")
+	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/dragon.obj")
 	if err != nil {
 		panic(err)
 	}

@@ -28,7 +28,7 @@ func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.7),
 	))
 
-	m, err := mesh.LoadAs[*mesh.TriangleSoup]("../testdata/gopher.obj")
+	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/gopher.obj")
 	if err != nil {
 		panic(err)
 	}

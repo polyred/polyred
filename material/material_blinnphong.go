@@ -11,6 +11,7 @@ import (
 	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/math"
+	"poly.red/shader"
 )
 
 type BlinnPhongMaterial struct {
@@ -43,19 +44,17 @@ func NewBlinnPhong(opts ...Opt) Material {
 	return t
 }
 
-func (m *BlinnPhongMaterial) VertexShader(v *primitive.Vertex, uniforms map[string]any) primitive.Vertex {
-	matModel := uniforms["matModel"].(math.Mat4[float32])
-	matView := uniforms["matView"].(math.Mat4[float32])
-	matProj := uniforms["matProj"].(math.Mat4[float32])
-	matNormal := uniforms["matNormal"].(math.Mat4[float32])
-
-	pos := matProj.MulM(matView).MulM(matModel).MulV(v.Pos)
-	return primitive.Vertex{
-		Pos: pos,
-		Col: v.Col,
-		UV:  v.UV,
-		Nor: v.Nor.Apply(matNormal),
-	}
+func (m *BlinnPhongMaterial) VertexShader(v *primitive.Vertex) *primitive.Vertex {
+	mvp := v.AttrFlat[shader.MVPAttr].(*shader.MVP)
+	pos := mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(v.Pos)
+	vv := primitive.NewVertex(
+		primitive.Pos(pos),
+		primitive.Col(v.Col),
+		primitive.UV(v.UV),
+		primitive.Nor(v.Nor.Apply(mvp.Normal)),
+	)
+	vv.AttrFlat[shader.MVPAttr] = mvp
+	return vv
 }
 
 func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec4[float32], ls []light.Source, es []light.Environment) color.RGBA {

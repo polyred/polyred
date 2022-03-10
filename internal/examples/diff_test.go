@@ -31,7 +31,7 @@ func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Inter
 		light.CastShadow(true)),
 		light.NewAmbient(light.Intensity(0.5)))
 
-	m, err := mesh.LoadAs[*mesh.TriangleSoup]("../testdata/bunny.obj")
+	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +53,7 @@ func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Inter
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m, err = mesh.LoadAs[*mesh.TriangleSoup]("../testdata/ground.obj")
+	m, err = mesh.LoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
 	if err != nil {
 		panic(err)
 	}

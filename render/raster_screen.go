@@ -46,7 +46,7 @@ func (r *Renderer) DrawFragments(buf *buffer.FragmentBuffer, shaders ...shader.F
 	}
 
 	numTasks := n / batchSize
-	r.sched.Add(uint64(numTasks))
+	r.sched.Add(numTasks)
 	for i := 0; i < numTasks; i++ {
 		ii := i
 		r.sched.Run(func() {

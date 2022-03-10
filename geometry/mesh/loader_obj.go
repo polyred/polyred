@@ -27,7 +27,7 @@ func LoadObjAs[T Mesh[float32]](path string) (x T, err error) {
 
 	var m T
 	switch (interface{})(m).(type) {
-	case *TriangleSoup:
+	case *TriangleMesh:
 		v, err := loadObjToTriangleSoup(f)
 		return interface{}(v).(T), err
 	default:
@@ -35,7 +35,7 @@ func LoadObjAs[T Mesh[float32]](path string) (x T, err error) {
 	}
 }
 
-func loadObjToTriangleSoup(r io.Reader) (*TriangleSoup, error) {
+func loadObjToTriangleSoup(r io.Reader) (*TriangleMesh, error) {
 	vs := make([]math.Vec4[float32], 1)
 	vts := make([]math.Vec2[float32], 1, 1024)
 	vns := make([]math.Vec4[float32], 1, 1024)
@@ -73,9 +73,9 @@ func loadObjToTriangleSoup(r io.Reader) (*TriangleSoup, error) {
 			for i := 1; i < len(fvs)-1; i++ {
 				i1, i2, i3 := 0, i, i+1
 				t := primitive.Triangle{
-					V1: &primitive.Vertex{},
-					V2: &primitive.Vertex{},
-					V3: &primitive.Vertex{},
+					V1: primitive.NewVertex(),
+					V2: primitive.NewVertex(),
+					V3: primitive.NewVertex(),
 				}
 				t.V1.Pos = vs[fvs[i1]]
 				t.V2.Pos = vs[fvs[i2]]
@@ -102,7 +102,7 @@ func loadObjToTriangleSoup(r io.Reader) (*TriangleSoup, error) {
 			}
 		}
 	}
-	return NewTriangleSoup(tris), s.Err()
+	return NewTriangleMesh(tris), s.Err()
 }
 
 func parseFloats(items []string) []float32 {

@@ -16,7 +16,8 @@ import (
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/object"
+	"poly.red/scene/object"
+	"poly.red/shader"
 	"poly.red/texture/imageutil"
 	"poly.red/texture/shadow"
 
@@ -117,18 +118,13 @@ func (r *Renderer) passShadows(index int) {
 			imageutil.Save(img, file)
 		}()
 	}
-
-	c := r.shadowBufs[index].settings.Camera()
-	matView := c.ViewMatrix()
-	matProj := c.ProjMatrix()
-	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
 	r.scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeMesh {
 			return true
 		}
 
 		mesh := o.(mesh.Mesh[float32])
-		r.sched.Add(mesh.NumTriangles())
+		r.sched.Add(len(mesh.Triangles()))
 		return true
 	})
 
@@ -138,11 +134,12 @@ func (r *Renderer) passShadows(index int) {
 		}
 
 		mesh := o.(mesh.Mesh[float32])
-		uniforms := map[string]any{
-			"matModel": mesh.ModelMatrix(),
-			"matView":  matView,
-			"matProj":  matProj,
-			"matVP":    matVP,
+		mvp := shader.MVP{
+			Model:    mesh.ModelMatrix(),
+			View:     r.shadowBufs[index].settings.Camera().ViewMatrix(),
+			Proj:     r.shadowBufs[index].settings.Camera().ProjMatrix(),
+			Viewport: math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy())),
+
 			// NormalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
 			// depending on which transformation space. Here we use the 2nd form,
 			// i.e. model space normal matrix to save some computation of camera
@@ -150,41 +147,47 @@ func (r *Renderer) passShadows(index int) {
 			// The reason we need normal matrix is that normals are transformed
 			// incorrectly using MVP matrices. However, a normal matrix helps us
 			// to fix the problem.
-			"matNormal": mesh.ModelMatrix().Inv().T(),
+			Normal: mesh.ModelMatrix().Inv().T(),
 		}
 
-		mesh.Faces(func(f primitive.Face[float32], m material.Material) bool {
-			f.Triangles(func(t *primitive.Triangle) bool {
-				r.sched.Run(func() {
-					if t.IsValid() {
-						r.drawDepth(index, uniforms, t, m)
-					}
-				})
-				return true
+		tris := mesh.Triangles()
+		for i := range tris {
+			t := tris[i]
+			r.sched.Run(func() {
+				if !t.IsValid() {
+					return
+				}
+				r.drawDepth(index, t, mesh.GetMaterial(), mvp)
 			})
-			return true
-		})
+		}
 		return true
 	})
 	r.sched.Wait()
 }
 
-func (r *Renderer) drawDepth(index int, uniforms map[string]any, tri *primitive.Triangle, mat material.Material) {
-	var t1, t2, t3 primitive.Vertex
-	if mat != nil {
-		t1 = mat.VertexShader(tri.V1, uniforms)
-		t2 = mat.VertexShader(tri.V2, uniforms)
-		t3 = mat.VertexShader(tri.V3, uniforms)
-	} else {
-		t1 = defaultVertexShader(tri.V1, uniforms)
-		t2 = defaultVertexShader(tri.V2, uniforms)
-		t3 = defaultVertexShader(tri.V3, uniforms)
+func (r *Renderer) drawDepth(index int, t *primitive.Triangle, mat material.Material, mvp shader.MVP) {
+	var t1, t2, t3 *primitive.Vertex
+	t1 = &primitive.Vertex{
+		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V1.Pos),
+		Col: t.V1.Col,
+		UV:  t.V1.UV,
+		Nor: t.V1.Nor.Apply(mvp.Normal),
 	}
-	matVP := uniforms["matVP"].(math.Mat4[float32])
-
-	t1.Pos = t1.Pos.Apply(matVP).Pos()
-	t2.Pos = t2.Pos.Apply(matVP).Pos()
-	t3.Pos = t3.Pos.Apply(matVP).Pos()
+	t2 = &primitive.Vertex{
+		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V2.Pos),
+		Col: t.V2.Col,
+		UV:  t.V2.UV,
+		Nor: t.V2.Nor.Apply(mvp.Normal),
+	}
+	t3 = &primitive.Vertex{
+		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V3.Pos),
+		Col: t.V3.Col,
+		UV:  t.V3.UV,
+		Nor: t.V3.Nor.Apply(mvp.Normal),
+	}
+	t1.Pos = t1.Pos.Apply(mvp.Viewport).Pos()
+	t2.Pos = t2.Pos.Apply(mvp.Viewport).Pos()
+	t3.Pos = t3.Pos.Apply(mvp.Viewport).Pos()
 
 	// Backface culling
 	if t2.Pos.Sub(t1.Pos).Cross(t3.Pos.Sub(t1.Pos)).Z < 0 {
@@ -241,14 +244,14 @@ func (r *Renderer) shadowDepthTest(index int, x, y int, z float32) bool {
 }
 
 func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
-	info buffer.Fragment, uniforms map[string]any,
+	info buffer.Fragment, uniforms *shader.MVP,
 ) bool {
 	if !r.lightSources[shadowIdx].CastShadow() {
 		return true
 	}
 
-	matVP := uniforms["matVP"].(math.Mat4[float32])
-	matScreenToWorld := uniforms["matScreenToWorld"].(math.Mat4[float32])
+	matVP := uniforms.Viewport
+	matScreenToWorld := uniforms.ViewportToWorld
 	shadowMap := &r.shadowBufs[shadowIdx]
 
 	// transform scrren coordinate to light viewport

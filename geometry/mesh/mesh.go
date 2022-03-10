@@ -7,10 +7,11 @@ package mesh
 import (
 	_ "image/jpeg" // for jpg encoding
 
+	"poly.red/buffer"
 	"poly.red/geometry/primitive"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/object"
+	"poly.red/scene/object"
 )
 
 type Mesh[T math.Float] interface {
@@ -20,6 +21,8 @@ type Mesh[T math.Float] interface {
 	Normalize()
 	SetMaterial(m material.Material)
 	GetMaterial() material.Material
-	NumTriangles() uint64
-	Faces(func(f primitive.Face[T], m material.Material) bool)
+
+	IndexBuffer() buffer.IndexBuffer
+	VertexBuffer() buffer.VertexBuffer
+	Triangles() []*primitive.Triangle
 }

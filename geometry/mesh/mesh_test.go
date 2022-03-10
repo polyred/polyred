@@ -29,7 +29,7 @@ func BenchmarkNewTriangleMesh(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				mesh.NewTriangleSoup(ts)
+				mesh.NewTriangleMesh(ts)
 			}
 		})
 	}

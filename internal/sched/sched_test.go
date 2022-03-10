@@ -57,7 +57,7 @@ var (
 func BenchmarkSched(b *testing.B) {
 	l := sched.New(sched.Workers(runtime.GOMAXPROCS(0)))
 	b.Run("no-args", func(b *testing.B) {
-		l.Add(uint64(b.N))
+		l.Add(b.N)
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -66,7 +66,7 @@ func BenchmarkSched(b *testing.B) {
 		l.Wait()
 	})
 	b.Run("with-args", func(b *testing.B) {
-		l.Add(uint64(b.N))
+		l.Add(b.N)
 		b.ReportAllocs()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {

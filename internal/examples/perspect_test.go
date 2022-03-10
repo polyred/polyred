@@ -5,10 +5,10 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 	"poly.red/texture/imageutil"
@@ -17,7 +17,7 @@ import (
 func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene()
 	s.Add(light.NewAmbient(light.Intensity(1)))
-	m := mesh.NewPlane(1, 1)
+	m := model.NewPlane(1, 1)
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(buffer.NewTexture(
 			buffer.TextureImage(imageutil.MustLoadImage("../testdata/uvgrid2.png")),

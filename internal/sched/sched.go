@@ -92,8 +92,8 @@ func (p *Pool) RunWithArgs(f func(args any), args any) {
 	p.workers[ii] <- funcdata{fg: f, ar: args}
 }
 
-func (p *Pool) Add(numTasks uint64) uint64 {
-	return atomic.AddUint64(&p.running, numTasks)
+func (p *Pool) Add(numTasks int) int {
+	return int(atomic.AddUint64(&p.running, uint64(numTasks)))
 }
 
 func (p *Pool) Running() uint64 {

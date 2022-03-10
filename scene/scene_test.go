@@ -8,21 +8,21 @@ import (
 	"fmt"
 	"testing"
 
-	"poly.red/geometry/mesh"
 	"poly.red/math"
-	"poly.red/object"
+	"poly.red/model"
 	"poly.red/scene"
+	"poly.red/scene/object"
 )
 
 func TestScene(t *testing.T) {
 	s := scene.NewScene()
-	p1 := mesh.NewPlane(1, 1)
-	p2 := mesh.NewPlane(1, 2)
-	p3 := mesh.NewPlane(2, 1)
-	p4 := mesh.NewPlane(2, 2)
-	p5 := mesh.NewPlane(3, 2)
-	p6 := mesh.NewPlane(2, 3)
-	p7 := mesh.NewPlane(3, 3)
+	p1 := model.NewPlane(1, 1)
+	p2 := model.NewPlane(1, 2)
+	p3 := model.NewPlane(2, 1)
+	p4 := model.NewPlane(2, 2)
+	p5 := model.NewPlane(3, 2)
+	p6 := model.NewPlane(2, 3)
+	p7 := model.NewPlane(3, 3)
 
 	g1 := s.Add(p1)
 	g2 := g1.Add(p2, p3)

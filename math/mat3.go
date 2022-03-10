@@ -119,7 +119,7 @@ func (m *Mat3[T]) Set(i, j int, v T) {
 
 // Eq checks whether the given two matrices are equal or not.
 func (m Mat3[T]) Eq(n Mat3[T]) bool {
-	if ApproxEq(m.X00, n.X00, Epsilon) &&
+	return ApproxEq(m.X00, n.X00, Epsilon) &&
 		ApproxEq(m.X10, n.X10, Epsilon) &&
 		ApproxEq(m.X20, n.X20, Epsilon) &&
 		ApproxEq(m.X01, n.X01, Epsilon) &&
@@ -127,10 +127,7 @@ func (m Mat3[T]) Eq(n Mat3[T]) bool {
 		ApproxEq(m.X21, n.X21, Epsilon) &&
 		ApproxEq(m.X02, n.X02, Epsilon) &&
 		ApproxEq(m.X12, n.X12, Epsilon) &&
-		ApproxEq(m.X22, n.X22, Epsilon) {
-		return true
-	}
-	return false
+		ApproxEq(m.X22, n.X22, Epsilon)
 }
 
 func (m Mat3[T]) Add(n Mat3[T]) Mat3[T] {

@@ -31,7 +31,7 @@ func New() *App {
 	s := scene.NewScene()
 
 	// Create and add a point light and a bunny to the scene graph
-	s.Add(light.NewPoint(), model.StanfordBunnyAs[*mesh.TriangleSoup]())
+	s.Add(light.NewPoint(), model.StanfordBunnyAs[*mesh.TriangleMesh]())
 
 	// Create a camera for the rendering
 	c := camera.NewPerspective()
