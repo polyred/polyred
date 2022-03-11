@@ -18,9 +18,9 @@ var (
 
 // TriangleMesh implements a triangular mesh.
 type TriangleMesh struct { // TriangleSoup
-	ibo      buffer.IndexBuffer
-	vbo      buffer.VertexBuffer
-	material material.Material
+	ibo buffer.IndexBuffer
+	vbo buffer.VertexBuffer
+	mat material.Material
 
 	// caches
 	tris []*primitive.Triangle
@@ -31,8 +31,8 @@ type TriangleMesh struct { // TriangleSoup
 
 func (f *TriangleMesh) Type() object.Type                 { return object.TypeMesh }
 func (f *TriangleMesh) Triangles() []*primitive.Triangle  { return f.tris }
-func (f *TriangleMesh) GetMaterial() material.Material    { return f.material }
-func (t *TriangleMesh) SetMaterial(mat material.Material) { t.material = mat }
+func (f *TriangleMesh) GetMaterial() material.Material    { return f.mat }
+func (t *TriangleMesh) SetMaterial(mat material.Material) { t.mat = mat }
 func (m *TriangleMesh) IndexBuffer() buffer.IndexBuffer   { return m.ibo }
 func (m *TriangleMesh) VertexBuffer() buffer.VertexBuffer { return m.vbo }
 

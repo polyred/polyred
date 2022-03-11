@@ -16,7 +16,7 @@ type Scene struct {
 	root *Group
 }
 
-func NewScene() *Scene {
+func NewScene(objects ...object.Object[float32]) *Scene {
 	s := &Scene{}
 
 	rootGroup := newGroup()
@@ -24,7 +24,9 @@ func NewScene() *Scene {
 	rootGroup.object = nil
 	rootGroup.root = s
 	s.root = rootGroup
-
+	for _, obj := range objects {
+		s.root.Add(obj)
+	}
 	return s
 }
 

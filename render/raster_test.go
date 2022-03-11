@@ -43,16 +43,13 @@ func init() {
 }
 
 func newscene(w, h int) (*scene.Scene, camera.Interface) {
-	s := scene.NewScene()
-
-	s.Add(light.NewPoint(
+	s := scene.NewScene(light.NewPoint(
 		light.Intensity(5),
 		light.Color(color.RGBA{0, 0, 0, 255}),
 		light.Position(math.NewVec3[float32](-2, 2.5, 6)),
 	), light.NewAmbient(
 		light.Intensity(0.5),
 	))
-
 	m := mesh.MustLoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
 	data := imageutil.MustLoadImage("../internal/testdata/bunny.png")
 	mat := material.NewBlinnPhong(

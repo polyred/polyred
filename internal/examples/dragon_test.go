@@ -20,8 +20,7 @@ import (
 )
 
 func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
-	s := scene.NewScene()
-	s.Add(light.NewPoint(
+	s := scene.NewScene(light.NewPoint(
 		light.Intensity(2),
 		light.Color(color.RGBA{255, 255, 255, 255}),
 		light.Position(math.NewVec3[float32](-1.5, -1, 1)),

@@ -22,8 +22,7 @@ import (
 )
 
 func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
-	s := scene.NewScene()
-	s.Add(light.NewPoint(
+	s := scene.NewScene(light.NewPoint(
 		light.Intensity(200),
 		light.Color(color.RGBA{255, 255, 255, 255}),
 		light.Position(math.NewVec3[float32](-200, 250, 600)),

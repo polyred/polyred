@@ -17,40 +17,29 @@ import (
 )
 
 type App struct {
-	c     camera.Interface
-	s     *scene.Scene
-	r     *render.Renderer
-	w, h  int
-	image *image.RGBA
+	r   *render.Renderer
+	buf *image.RGBA
 }
 
 func New() *App {
-	w, h := 800, 600
-
-	// Create a scene graph
-	s := scene.NewScene()
-
-	// Create and add a point light and a bunny to the scene graph
-	s.Add(light.NewPoint(), model.StanfordBunnyAs[*mesh.TriangleMesh]())
-
-	// Create a camera for the rendering
-	c := camera.NewPerspective()
-
+	cam := camera.NewPerspective()
 	// Create a renderer and specify scene and camera
-	r := render.NewRenderer(render.Size(w, h), render.Scene(s), render.Camera(c))
+	r := render.NewRenderer(
+		render.Scene(scene.NewScene(
+			model.StanfordBunnyAs[*mesh.TriangleMesh](),
+			light.NewPoint(),
+		)),
+		render.Camera(cam),
+	)
 
-	return &App{c: c, s: s, r: r, w: w, h: h}
-}
-
-func (a *App) Size() (int, int) {
-	return a.w, a.h
+	return &App{r: r}
 }
 
 func (a *App) Draw() (*image.RGBA, bool) {
-	if a.image == nil {
-		a.image = a.r.Render()
+	if a.buf == nil {
+		a.buf = a.r.Render()
 	}
-	return a.image, true
+	return a.buf, true
 }
 
 func main() { app.Run(New()) }

@@ -13,7 +13,12 @@ import (
 )
 
 // Window is a minimum abstraction of a Window.
-type Window interface {
+type Window interface{}
+
+// SizeHandler is an extended interface of a Window
+// which reports the desired size of a window.
+type SizeHandler interface {
+	Window
 	Size() (w, h int)
 }
 
@@ -61,9 +66,14 @@ func Run(instance Window, opts ...Opt) {
 			Dot:  math.P(0*64, 13*64),
 		},
 	}
+	width, height := 800, 600
+	if ins, ok := instance.(SizeHandler); ok {
+		width, height = ins.Size()
+	}
+
 	go w.run(instance, config{
 		title:   "polyred",
-		size:    image.Pt(instance.Size()),
+		size:    image.Pt(width, height),
 		minSize: image.Pt(50, 50),
 		maxSize: image.Pt(1920*2, 1080*2),
 		fps:     false,

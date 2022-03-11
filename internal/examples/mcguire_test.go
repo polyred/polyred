@@ -184,16 +184,15 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 	scenes := make([]*Scene, len(models))
 	for i, model := range models {
 		s := &Scene{
-			Scene: scene.NewScene(),
-			Name:  model,
+			Scene: scene.NewScene(light.NewPoint(
+				light.Intensity(5),
+				light.Color(color.RGBA{255, 255, 255, 255}),
+				light.Position(math.NewVec3[float32](2, 2, 2)),
+			), light.NewAmbient(
+				light.Intensity(0.5),
+			)),
+			Name: model,
 		}
-		s.Scene.Add(light.NewPoint(
-			light.Intensity(5),
-			light.Color(color.RGBA{255, 255, 255, 255}),
-			light.Position(math.NewVec3[float32](2, 2, 2)),
-		), light.NewAmbient(
-			light.Intensity(0.5),
-		))
 
 		m, err := mesh.LoadAs[*mesh.TriangleMesh](fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
 		if err != nil {

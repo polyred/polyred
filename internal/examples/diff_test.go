@@ -23,18 +23,14 @@ import (
 
 func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Interface) {
 	// Create a scene graph
-	s := scene.NewScene()
-	s.Add(light.NewPoint(
+	s := scene.NewScene(light.NewPoint(
 		light.Intensity(lightI),
 		light.Color(color.RGBA{255, 255, 255, 255}),
 		light.Position(math.NewVec3[float32](4, 4, 2)),
 		light.CastShadow(true)),
 		light.NewAmbient(light.Intensity(0.5)))
 
-	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
-	if err != nil {
-		panic(err)
-	}
+	m := mesh.MustLoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(
 			buffer.NewTexture(
@@ -53,10 +49,7 @@ func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Inter
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m, err = mesh.LoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
-	if err != nil {
-		panic(err)
-	}
+	m = mesh.MustLoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
 	m.SetMaterial(material.NewBlinnPhong(
 		material.Texture(buffer.NewTexture(
 			buffer.TextureImage(

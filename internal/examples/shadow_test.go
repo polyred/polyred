@@ -19,9 +19,7 @@ import (
 )
 
 func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
-	s := scene.NewScene()
-
-	s.Add(
+	s := scene.NewScene(
 		light.NewPoint(
 			light.Intensity(3),
 			light.Position(math.NewVec3[float32](4, 4, 2)),
@@ -37,11 +35,7 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 		),
 	)
 
-	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
-	if err != nil {
-		panic(err)
-	}
-
+	m := mesh.MustLoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
 	data := imageutil.MustLoadImage("../testdata/bunny.png")
 	tex := buffer.NewTexture(
 		buffer.TextureImage(data),
@@ -56,10 +50,7 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m, err = mesh.LoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
-	if err != nil {
-		panic(err)
-	}
+	m = mesh.MustLoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
 	data = imageutil.MustLoadImage("../testdata/ground.png")
 	tex = buffer.NewTexture(
 		buffer.TextureImage(data),

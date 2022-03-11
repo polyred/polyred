@@ -18,13 +18,11 @@ import (
 )
 
 func TestPlane(t *testing.T) {
-	s := scene.NewScene()
-	s.Add(light.NewPoint(
+	s := scene.NewScene(light.NewPoint(
 		light.Intensity(1),
 		light.Color(color.RGBA{0, 128, 255, 255}),
 		light.Position(math.NewVec3[float32](2, 2, 2)),
-	))
-	s.Add(model.NewPlane(1, 1))
+	), model.NewPlane(1, 1))
 	r := render.NewRenderer(
 		render.Camera(camera.NewPerspective(
 			camera.Position(math.NewVec3[float32](2, 2, 2)),

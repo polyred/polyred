@@ -5,6 +5,8 @@
 package controls
 
 import (
+	"image"
+
 	"poly.red/app"
 	"poly.red/camera"
 	"poly.red/math"
@@ -60,12 +62,16 @@ type OrbitControl struct {
 	zoomStart float32
 
 	win app.Window
+	siz image.Point
 }
 
 // NewOrbitControl creates and returns a pointer to a new orbit control
 // for the specified camera.
 func NewOrbitControl(win app.Window, cam camera.Interface) *OrbitControl {
-
+	siz := image.Point{800, 600}
+	if w, ok := win.(app.SizeHandler); ok {
+		siz.X, siz.Y = w.Size()
+	}
 	oc := &OrbitControl{
 		cam:     cam,
 		target:  math.NewVec3[float32](0, 0, 0),
@@ -82,6 +88,7 @@ func NewOrbitControl(win app.Window, cam camera.Interface) *OrbitControl {
 		ZoomSpeed:       0.1,
 
 		win: win,
+		siz: siz,
 	}
 	return oc
 }
@@ -165,7 +172,7 @@ func (oc *OrbitControl) Pan(deltaX, deltaY float32) {
 
 	// Conversion constant between an on-screen cursor delta and its
 	// projection on the target plane
-	w, h := oc.win.Size()
+	w, h := oc.siz.X, oc.siz.Y
 	c := 2 * vdir.Len() * math.Tan(math.DegToRad(oc.cam.Fov()/2.0)) /
 		math.Max(float32(w), float32(h))
 
@@ -234,7 +241,7 @@ func (oc *OrbitControl) OnMouse(ev app.MouseEvent) (updated bool) {
 
 	switch oc.state {
 	case stateRotate:
-		w, h := oc.win.Size()
+		w, h := oc.siz.X, oc.siz.Y
 		c := -2 * math.Pi * oc.RotSpeed / math.Max(float32(w), float32(h))
 		oc.Rotate(c*(ev.Xpos-oc.rotStart.X), c*(ev.Ypos-oc.rotStart.Y))
 		oc.rotStart.X = ev.Xpos

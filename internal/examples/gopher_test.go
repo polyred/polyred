@@ -19,8 +19,7 @@ import (
 )
 
 func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
-	s := scene.NewScene()
-	s.Add(light.NewPoint(
+	s := scene.NewScene(light.NewPoint(
 		light.Intensity(5),
 		light.Color(color.RGBA{255, 255, 255, 255}),
 		light.Position(math.NewVec3[float32](0, 0, 5)),

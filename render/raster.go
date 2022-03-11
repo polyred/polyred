@@ -61,7 +61,7 @@ func NewRenderer(opts ...Option) *Renderer {
 
 		cfg: &option{
 			Width:     800,
-			Height:    500,
+			Height:    600,
 			MSAA:      1,
 			ShadowMap: false,
 			Debug:     false,

@@ -70,8 +70,7 @@ func main() {
 
 func bench(opt *benchOpts) {
 	result := testing.Benchmark(func(b *testing.B) {
-		s := scene.NewScene()
-		s.Add(light.NewPoint(
+		s := scene.NewScene(light.NewPoint(
 			light.Intensity(7),
 			light.Color(color.RGBA{0, 0, 0, 255}),
 			light.Position(math.NewVec3[float32](4, 4, 2)),
@@ -81,10 +80,7 @@ func bench(opt *benchOpts) {
 			light.Color(color.RGBA{255, 255, 255, 255}),
 		))
 
-		m, err := mesh.LoadAs[*mesh.TriangleMesh]("../../testdata/bunny.obj")
-		if err != nil {
-			panic(err)
-		}
+		m := mesh.MustLoadAs[*mesh.TriangleMesh]("../../testdata/bunny.obj")
 		data := imageutil.MustLoadImage(
 			"../../testdata/bunny.png",
 			imageutil.GammaCorrect(opt.gammaCorrection),
@@ -102,11 +98,7 @@ func bench(opt *benchOpts) {
 		m.Scale(2, 2, 2)
 		s.Add(m)
 
-		m, err = mesh.LoadAs[*mesh.TriangleMesh]("../../testdata/ground.obj")
-		if err != nil {
-			panic(err)
-		}
-
+		m = mesh.MustLoadAs[*mesh.TriangleMesh]("../../testdata/ground.obj")
 		data = imageutil.MustLoadImage("../../testdata/ground.png",
 			imageutil.GammaCorrect(opt.gammaCorrection))
 		m.SetMaterial(material.NewBlinnPhong(
