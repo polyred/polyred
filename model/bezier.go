@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package geometry
+package model
 
 import (
 	"poly.red/geometry/primitive"
@@ -13,7 +13,7 @@ type BezierCurve struct {
 	controlPoints []primitive.Vertex
 }
 
-func NewBezierCurve[T math.Float](cp ...*primitive.Vertex) *BezierCurve {
+func NewBezierCurve(cp ...*primitive.Vertex) *BezierCurve {
 	bc := &BezierCurve{
 		controlPoints: make([]primitive.Vertex, len(cp)),
 	}
