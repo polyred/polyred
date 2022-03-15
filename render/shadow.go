@@ -32,15 +32,16 @@ type shadowInfo struct {
 }
 
 func (r *Renderer) initShadowMaps() {
-	r.shadowBufs = make([]shadowInfo, len(r.lightSources))
-	for i := 0; i < len(r.lightSources); i++ {
-		if !r.lightSources[i].CastShadow() {
+	lightSources, _ := r.cfg.Scene.Lights()
+	r.shadowBufs = make([]shadowInfo, len(lightSources))
+	for i := 0; i < len(lightSources); i++ {
+		if !lightSources[i].CastShadow() {
 			continue
 		}
 
 		// initialize scene camera
 		tm := camera.ViewMatrix(
-			r.lightSources[i].Position(),
+			lightSources[i].Position(),
 			r.cfg.Scene.Center(),
 			math.NewVec3[float32](0, 1, 0),
 		).MulM(r.cfg.Camera.ViewMatrix().Inv()).MulM(r.cfg.Camera.ProjMatrix().Inv())
@@ -62,7 +63,7 @@ func (r *Renderer) initShadowMaps() {
 		// aspect := ri / to
 		// fov := 2 * math.Atan(to/math.Abs(ne))
 
-		li := r.lightSources[i]
+		li := lightSources[i]
 		var c camera.Interface
 		switch l := li.(type) {
 		case *light.Point:
@@ -90,7 +91,8 @@ func (r *Renderer) initShadowMaps() {
 }
 
 func (r *Renderer) passShadows(index int) {
-	if !r.lightSources[index].CastShadow() {
+	lightSources, _ := r.cfg.Scene.Lights()
+	if !lightSources[index].CastShadow() {
 		return
 	}
 
@@ -230,10 +232,11 @@ func (r *Renderer) shadowDepthTest(index int, x, y int, z float32) bool {
 	return !(z <= buf.depths[idx])
 }
 
-func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
+func (r *Renderer) shadingVisibility(shadowIdx int,
 	info buffer.Fragment, uniforms *shader.MVP,
 ) bool {
-	if !r.lightSources[shadowIdx].CastShadow() {
+	lightSources, _ := r.cfg.Scene.Lights()
+	if !lightSources[shadowIdx].CastShadow() {
 		return true
 	}
 
@@ -242,7 +245,7 @@ func (r *Renderer) shadingVisibility(x, y int, shadowIdx int,
 	shadowMap := &r.shadowBufs[shadowIdx]
 
 	// transform scrren coordinate to light viewport
-	screenCoord := math.NewVec4(float32(x), float32(y), info.Depth, 1).
+	screenCoord := math.NewVec4(float32(info.X), float32(info.Y), info.Depth, 1).
 		Apply(matScreenToWorld).
 		Apply(shadowMap.settings.Camera().ViewMatrix()).
 		Apply(shadowMap.settings.Camera().ProjMatrix()).

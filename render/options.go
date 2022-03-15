@@ -9,8 +9,6 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/camera"
-	"poly.red/light"
-	"poly.red/math"
 	"poly.red/scene"
 )
 
@@ -114,19 +112,6 @@ func (r *Renderer) Options(opts ...Option) {
 
 	r.bufs = make([]*buffer.FragmentBuffer, r.buflen)
 	r.resetBufs()
-	r.lightSources = []light.Source{}
-	r.lightEnv = []light.Environment{}
-	if r.cfg.Scene != nil {
-		r.cfg.Scene.IterLights(func(ll light.Light, modelMatrix math.Mat4[float32]) bool {
-			switch l := ll.(type) {
-			case light.Source:
-				r.lightSources = append(r.lightSources, l)
-			case light.Environment:
-				r.lightEnv = append(r.lightEnv, l)
-			}
-			return true
-		})
-	}
 
 	// initialize shadow maps
 	if r.cfg.Scene != nil && r.cfg.ShadowMap {

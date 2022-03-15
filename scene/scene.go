@@ -68,6 +68,20 @@ func (s *Scene) IterLights(iter func(l light.Light, modelMatrix math.Mat4[float3
 	}
 }
 
+func (s *Scene) Lights() ([]light.Source, []light.Environment) {
+	sources, envs := []light.Source{}, []light.Environment{}
+	s.IterLights(func(ll light.Light, modelMatrix math.Mat4[float32]) bool {
+		switch l := ll.(type) {
+		case light.Source:
+			sources = append(sources, l)
+		case light.Environment:
+			envs = append(envs, l)
+		}
+		return true
+	})
+	return sources, envs
+}
+
 func (s *Scene) Center() math.Vec3[float32] {
 	aabb := &primitive.AABB{
 		Min: math.NewVec3[float32](0, 0, 0),

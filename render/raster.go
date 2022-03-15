@@ -13,7 +13,6 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
-	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/shader"
@@ -37,14 +36,12 @@ type Renderer struct {
 	stop    uint32 // atomic
 
 	// rendering caches
-	lightSources []light.Source
-	lightEnv     []light.Environment
-	sched        *sched.Pool
-	bufcur       int
-	buflen       int
-	bufs         []*buffer.FragmentBuffer
-	shadowBufs   []shadowInfo
-	outBuf       *image.RGBA
+	sched      *sched.Pool
+	bufcur     int
+	buflen     int
+	bufs       []*buffer.FragmentBuffer
+	shadowBufs []shadowInfo
+	outBuf     *image.RGBA
 }
 
 // NewRenderer creates a new renderer.
@@ -52,11 +49,8 @@ type Renderer struct {
 // The returned renderer implements a rasterization rendering pipeline.
 func NewRenderer(opts ...Option) *Renderer {
 	r := &Renderer{ // default settings
-		buflen:       2, // use 2 by default.
-		bufs:         nil,
-		lightSources: []light.Source{},
-		lightEnv:     []light.Environment{},
-
+		buflen: 2, // use 2 by default.
+		bufs:   nil,
 		cfg: &option{
 			Width:     800,
 			Height:    600,
@@ -81,17 +75,6 @@ func NewRenderer(opts ...Option) *Renderer {
 		r.sched.Release()
 	})
 
-	if r.cfg.Scene != nil {
-		r.cfg.Scene.IterLights(func(l light.Light, modelMatrix math.Mat4[float32]) bool {
-			switch ll := l.(type) {
-			case light.Source:
-				r.lightSources = append(r.lightSources, ll)
-			case light.Environment:
-				r.lightEnv = append(r.lightEnv, ll)
-			}
-			return true
-		})
-	}
 	// initialize shadow maps
 	if r.cfg.Scene != nil && r.cfg.ShadowMap {
 		r.initShadowMaps()
@@ -262,17 +245,18 @@ func (r *Renderer) shade(info buffer.Fragment, uniforms *shader.MVP) color.RGBA 
 			lod = math.Log2(siz)
 		}
 
+		lightSources, lightEnv := r.cfg.Scene.Lights()
 		col = mat.Texture().Query(lod, info.U, 1-info.V)
 		col = mat.FragmentShader(
 			col, pos, info.Nor, fN,
-			r.cfg.Camera.Position().ToVec4(1), r.lightSources, r.lightEnv)
+			r.cfg.Camera.Position().ToVec4(1), lightSources, lightEnv)
 	}
 
 	if r.cfg.ShadowMap && mat != nil && mat.ReceiveShadow() {
 		visibles := float32(0.0)
 		ns := len(r.shadowBufs)
 		for i := 0; i < ns; i++ {
-			visible := r.shadingVisibility(info.X, info.Y, i, info, uniforms)
+			visible := r.shadingVisibility(i, info, uniforms)
 			if visible {
 				visibles++
 			}
