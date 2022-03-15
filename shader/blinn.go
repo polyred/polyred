@@ -89,13 +89,13 @@ func (s *BlinnShader) Fragment(frag *primitive.Fragment) color.RGBA {
 		LsB += Ls * float32(l.Color().B) * I
 	}
 
-	r := LaR + s.Kdiff*LdR + s.Kspec*LsR
-	g := LaG + s.Kdiff*LdG + s.Kspec*LsG
-	b := LaB + s.Kdiff*LdB + s.Kspec*LsB
+	r := uint8(LaR + s.Kdiff*LdR + s.Kspec*LsR)
+	g := uint8(LaG + s.Kdiff*LdG + s.Kspec*LsG)
+	b := uint8(LaB + s.Kdiff*LdB + s.Kspec*LsB)
 
 	return color.RGBA{
-		uint8(math.Clamp(r, 0, 0xff)),
-		uint8(math.Clamp(g, 0, 0xff)),
-		uint8(math.Clamp(b, 0, 0xff)),
-		uint8(math.Clamp(float32(col.A), 0, 0xff))}
+		math.Clamp(r, 0, 0xff),
+		math.Clamp(g, 0, 0xff),
+		math.Clamp(b, 0, 0xff),
+		math.Clamp(col.A, 0, 0xff)}
 }

@@ -7,6 +7,7 @@ package scene
 import (
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/light"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
@@ -36,11 +37,33 @@ func (s *Scene) Add(geo ...object.Object[float32]) *Group {
 }
 
 func (s *Scene) IterObjects(iter func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool) {
-
 	for i := range s.root.children {
 		s.root.children[i].IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-			iter(o, s.root.ModelMatrix().MulM(modelMatrix))
-			return true
+			return iter(o, s.root.ModelMatrix().MulM(modelMatrix))
+		})
+	}
+}
+
+func (s *Scene) IterMeshes(iter func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool) {
+	for i := range s.root.children {
+		s.root.children[i].IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+			if o.Type() != object.TypeMesh {
+				return true
+			}
+
+			return iter(o.(mesh.Mesh[float32]), s.root.ModelMatrix().MulM(modelMatrix))
+		})
+	}
+}
+
+func (s *Scene) IterLights(iter func(l light.Light, modelMatrix math.Mat4[float32]) bool) {
+	for i := range s.root.children {
+		s.root.children[i].IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+			if o.Type() != object.TypeLight {
+				return true
+			}
+
+			return iter(o.(light.Light), s.root.ModelMatrix().MulM(modelMatrix))
 		})
 	}
 }
@@ -50,12 +73,8 @@ func (s *Scene) Center() math.Vec3[float32] {
 		Min: math.NewVec3[float32](0, 0, 0),
 		Max: math.NewVec3[float32](0, 0, 0),
 	}
-	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		if o.Type() != object.TypeMesh {
-			return true
-		}
-		mesh := o.(mesh.Mesh[float32])
-		aabb.Add(mesh.AABB())
+	s.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+		aabb.Add(m.AABB())
 		return true
 	})
 	return aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)

@@ -12,7 +12,6 @@ import (
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/scene"
-	"poly.red/scene/object"
 )
 
 type option struct {
@@ -118,12 +117,8 @@ func (r *Renderer) Options(opts ...Option) {
 	r.lightSources = []light.Source{}
 	r.lightEnv = []light.Environment{}
 	if r.cfg.Scene != nil {
-		r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-			if o.Type() != object.TypeLight {
-				return true
-			}
-
-			switch l := o.(type) {
+		r.cfg.Scene.IterLights(func(ll light.Light, modelMatrix math.Mat4[float32]) bool {
+			switch l := ll.(type) {
 			case light.Source:
 				r.lightSources = append(r.lightSources, l)
 			case light.Environment:

@@ -11,6 +11,12 @@ import (
 	"poly.red/scene/object"
 )
 
+// Light represents a colored light.
+type Light interface {
+	object.Object[float32]
+	Color() color.RGBA
+}
+
 // Environment represents the abstraction of environment lighting.
 // Such as ambient light, etc.
 type Environment interface {

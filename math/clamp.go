@@ -5,7 +5,7 @@
 package math
 
 // Clamp clamps a given value in [min, max].
-func Clamp[T ~int | ~int32 | ~int64 | Float](n, min, max T) T {
+func Clamp[T ~uint | ~uint8 | ~uint32 | ~uint64 | ~int | ~int32 | ~int64 | Float](n, min, max T) T {
 	if n < min {
 		return min
 	}

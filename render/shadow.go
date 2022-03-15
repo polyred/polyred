@@ -16,7 +16,6 @@ import (
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/scene/object"
 	"poly.red/shader"
 	"poly.red/texture/imageutil"
 	"poly.red/texture/shadow"
@@ -44,9 +43,7 @@ func (r *Renderer) initShadowMaps() {
 			r.lightSources[i].Position(),
 			r.cfg.Scene.Center(),
 			math.NewVec3[float32](0, 1, 0),
-		).
-			MulM(r.cfg.Camera.ViewMatrix().Inv()).
-			MulM(r.cfg.Camera.ProjMatrix().Inv())
+		).MulM(r.cfg.Camera.ViewMatrix().Inv()).MulM(r.cfg.Camera.ProjMatrix().Inv())
 		v1 := math.NewVec4[float32](1, 1, 1, 1).Apply(tm).Pos().ToVec3()
 		v2 := math.NewVec4[float32](1, 1, -1, 1).Apply(tm).Pos().ToVec3()
 		v3 := math.NewVec4[float32](1, -1, 1, 1).Apply(tm).Pos().ToVec3()
@@ -118,24 +115,14 @@ func (r *Renderer) passShadows(index int) {
 			imageutil.Save(img, file)
 		}()
 	}
-	r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		if o.Type() != object.TypeMesh {
-			return true
-		}
-
-		mesh := o.(mesh.Mesh[float32])
-		r.sched.Add(len(mesh.Triangles()))
+	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+		r.sched.Add(len(m.Triangles()))
 		return true
 	})
 
-	r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		if o.Type() != object.TypeMesh {
-			return true
-		}
-
-		mesh := o.(mesh.Mesh[float32])
+	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
 		mvp := shader.MVP{
-			Model:    mesh.ModelMatrix(),
+			Model:    m.ModelMatrix(),
 			View:     r.shadowBufs[index].settings.Camera().ViewMatrix(),
 			Proj:     r.shadowBufs[index].settings.Camera().ProjMatrix(),
 			Viewport: math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy())),
@@ -147,17 +134,17 @@ func (r *Renderer) passShadows(index int) {
 			// The reason we need normal matrix is that normals are transformed
 			// incorrectly using MVP matrices. However, a normal matrix helps us
 			// to fix the problem.
-			Normal: mesh.ModelMatrix().Inv().T(),
+			Normal: m.ModelMatrix().Inv().T(),
 		}
 
-		tris := mesh.Triangles()
+		tris := m.Triangles()
 		for i := range tris {
 			t := tris[i]
 			r.sched.Run(func() {
 				if !t.IsValid() {
 					return
 				}
-				r.drawDepth(index, t, mesh.GetMaterial(), mvp)
+				r.drawDepth(index, t, m.GetMaterial(), mvp)
 			})
 		}
 		return true

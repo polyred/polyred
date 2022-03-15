@@ -7,7 +7,6 @@ package render
 import (
 	"fmt"
 	"image"
-	"log"
 	"runtime"
 
 	"poly.red/buffer"
@@ -17,7 +16,6 @@ import (
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
-	"poly.red/scene/object"
 	"poly.red/shader"
 	"poly.red/texture/imageutil"
 
@@ -84,16 +82,12 @@ func NewRenderer(opts ...Option) *Renderer {
 	})
 
 	if r.cfg.Scene != nil {
-		r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-			if o.Type() != object.TypeLight {
-				return true
-			}
-
-			switch l := o.(type) {
+		r.cfg.Scene.IterLights(func(l light.Light, modelMatrix math.Mat4[float32]) bool {
+			switch ll := l.(type) {
 			case light.Source:
-				r.lightSources = append(r.lightSources, l)
+				r.lightSources = append(r.lightSources, ll)
 			case light.Environment:
-				r.lightEnv = append(r.lightEnv, l)
+				r.lightEnv = append(r.lightEnv, ll)
 			}
 			return true
 		})
@@ -179,23 +173,14 @@ func (r *Renderer) passForward() {
 	}
 
 	sum := 0
-	r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		if o.Type() != object.TypeMesh {
-			return true
-		}
-
-		mesh := o.(mesh.Mesh[float32])
-		sum += len(mesh.Triangles())
-		r.sched.Add(len(mesh.Triangles()))
+	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+		sum += len(m.Triangles())
+		r.sched.Add(len(m.Triangles()))
 		return true
 	})
-	log.Println(sum)
 
-	r.cfg.Scene.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		if o.Type() != object.TypeMesh {
-			return true
-		}
-		mesh := o.(*mesh.TriangleMesh)
+	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+		mesh := m.(*mesh.TriangleMesh)
 		mvp := &shader.MVP{
 			Model: mesh.ModelMatrix(),
 			View:  r.cfg.Camera.ViewMatrix(),
