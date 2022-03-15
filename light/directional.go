@@ -45,26 +45,9 @@ func NewDirectional(opts ...Opt) Source {
 	return d
 }
 
-func (d *Directional) Type() object.Type {
-	return object.TypeLight
-}
-
-func (d *Directional) Intensity() float32 {
-	return d.intensity
-}
-
-func (d *Directional) Position() math.Vec3[float32] {
-	return d.pos
-}
-
-func (d *Directional) Dir() math.Vec3[float32] {
-	return d.dir
-}
-
-func (d *Directional) Color() color.RGBA {
-	return d.color
-}
-
-func (d *Directional) CastShadow() bool {
-	return d.useShadowMap
-}
+func (d *Directional) Type() object.Type            { return object.TypeLight }
+func (d *Directional) Intensity() float32           { return d.intensity }
+func (d *Directional) Position() math.Vec3[float32] { return d.pos }
+func (d *Directional) Dir() math.Vec3[float32]      { return d.dir }
+func (d *Directional) Color() color.RGBA            { return d.color }
+func (d *Directional) CastShadow() bool             { return d.useShadowMap }

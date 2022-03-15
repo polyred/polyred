@@ -320,7 +320,7 @@ func TestVec_Unit(t *testing.T) {
 	t.Run("Vec2", func(t *testing.T) {
 		v1 := math.NewVec2[float32](1, 1)
 		got := v1.Unit()
-		want := math.NewVec2[float32](1/math.Sqrt[float32](2), 1/math.Sqrt[float32](2))
+		want := math.NewVec2(1/math.Sqrt[float32](2), 1/math.Sqrt[float32](2))
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Len, want %v, got %v", want, got)
 		}
@@ -328,7 +328,7 @@ func TestVec_Unit(t *testing.T) {
 	t.Run("Vec3", func(t *testing.T) {
 		v1 := math.NewVec3[float32](1, 1, 1)
 		got := v1.Unit()
-		want := math.NewVec3[float32](1/math.Sqrt[float32](3), 1/math.Sqrt[float32](3), 1/math.Sqrt[float32](3))
+		want := math.NewVec3(1/math.Sqrt[float32](3), 1/math.Sqrt[float32](3), 1/math.Sqrt[float32](3))
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Len, want %v, got %v", want, got)
 		}
@@ -337,7 +337,7 @@ func TestVec_Unit(t *testing.T) {
 	t.Run("Vec4", func(t *testing.T) {
 		v1 := math.NewVec4[float32](1, 1, 1, 0)
 		got := v1.Unit()
-		want := math.NewVec4[float32](1/math.Sqrt[float32](3), 1/math.Sqrt[float32](3), 1/math.Sqrt[float32](3), 0)
+		want := math.NewVec4(1/math.Sqrt[float32](3), 1/math.Sqrt[float32](3), 1/math.Sqrt[float32](3), 0)
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Len, want %v, got %v", want, got)
 		}
@@ -422,7 +422,7 @@ func TestVec_Convert(t *testing.T) {
 	t.Run("Vec3ToVec4", func(t *testing.T) {
 		v1 := math.NewRandVec3[float32]()
 		got := v1.ToVec4(1)
-		want := math.NewVec4[float32](v1.X, v1.Y, v1.Z, 1)
+		want := math.NewVec4(v1.X, v1.Y, v1.Z, 1)
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Vec3ToVec4, got %v, want %v", got, want)
 		}
@@ -430,7 +430,7 @@ func TestVec_Convert(t *testing.T) {
 	t.Run("Vec4ToVec3", func(t *testing.T) {
 		v1 := math.NewRandVec4[float32]()
 		got := v1.ToVec3()
-		want := math.NewVec3[float32](v1.X, v1.Y, v1.Z)
+		want := math.NewVec3(v1.X, v1.Y, v1.Z)
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Vec4ToVec3, got %v, want %v", got, want)
 		}
@@ -438,7 +438,7 @@ func TestVec_Convert(t *testing.T) {
 	t.Run("Vec4ToVec2", func(t *testing.T) {
 		v1 := math.NewRandVec4[float32]()
 		got := v1.ToVec2()
-		want := math.NewVec2[float32](v1.X, v1.Y)
+		want := math.NewVec2(v1.X, v1.Y)
 		if !got.Eq(want) {
 			t.Fatalf("unexpected Vec4ToVec3, got %v, want %v", got, want)
 		}
@@ -494,9 +494,9 @@ func TestVec_Convert(t *testing.T) {
 func FuzzVec_Add(f *testing.F) {
 	f.Add(float32(1), float32(1), float32(2), float32(3))
 	f.Fuzz(func(t *testing.T, a1, a2, a3, a4 float32) {
-		v1 := math.NewVec2[float32](a1, a2)
-		v2 := math.NewVec2[float32](a3, a4)
-		want := math.NewVec2[float32](a1+a3, a2+a4)
+		v1 := math.NewVec2(a1, a2)
+		v2 := math.NewVec2(a3, a4)
+		want := math.NewVec2(a1+a3, a2+a4)
 		if !v1.Add(v2).Eq(want) {
 			t.Fatalf("unexpected add results: %v+%v=%v, want: %v", v1, v2, v1.Add(v2), want)
 		}

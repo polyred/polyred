@@ -29,17 +29,17 @@ func TestClamp(t *testing.T) {
 	})
 
 	t.Run("int", func(t *testing.T) {
-		got := math.Clamp[int](128, 0, 255)
+		got := math.Clamp(128, 0, 255)
 		if got != 128 {
 			t.Fatalf("unexpected clamp, got %v, want 128", got)
 		}
 
-		got = math.Clamp[int](-1, 0, 255)
+		got = math.Clamp(-1, 0, 255)
 		if got != 0 {
 			t.Fatalf("unexpected clamp, got %v, want 0", got)
 		}
 
-		got = math.Clamp[int](256, 0, 255)
+		got = math.Clamp(256, 0, 255)
 		if got != 255 {
 			t.Fatalf("unexpected clamp, got %v, want 255", got)
 		}
@@ -130,7 +130,7 @@ func BenchmarkClampInt(b *testing.B) {
 
 	var bb int
 	for i := 0; i < b.N; i++ {
-		bb = math.Clamp[int](v, 0, 255)
+		bb = math.Clamp(v, 0, 255)
 	}
 	_ = bb
 }

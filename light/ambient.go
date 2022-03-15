@@ -37,14 +37,6 @@ func NewAmbient(opts ...Opt) *Ambient {
 	return a
 }
 
-func (l *Ambient) Type() object.Type {
-	return object.TypeLight
-}
-
-func (a *Ambient) Color() color.RGBA {
-	return a.color
-}
-
-func (a *Ambient) Intensity() float32 {
-	return a.intensity
-}
+func (a *Ambient) Type() object.Type  { return object.TypeLight }
+func (a *Ambient) Color() color.RGBA  { return a.color }
+func (a *Ambient) Intensity() float32 { return a.intensity }
