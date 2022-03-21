@@ -20,8 +20,8 @@ type Material interface {
 	Texture() *buffer.Texture
 	VertexShader(v *primitive.Vertex) *primitive.Vertex
 	FragmentShader(
-		col color.RGBA,
-		x, n, fn, camera math.Vec4[float32],
+		info buffer.Fragment,
+		camera math.Vec3[float32],
 		ls []light.Source,
 		es []light.Environment,
 	) color.RGBA

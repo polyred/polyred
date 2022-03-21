@@ -306,6 +306,7 @@ func (r *Renderer) rasterize(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.V
 			bcx := math.Barycoord(p1, v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 			bcy := math.Barycoord(p2, v1.Pos.ToVec2(), v2.Pos.ToVec2(), v3.Pos.ToVec2())
 
+			// Compute du dv (This could be optional if shader don't use it.)
 			uvdU := r.interpolate([3]float32{v1.UV.X, v2.UV.X, v3.UV.X}, recipw, bcx)
 			uvdX := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcx)
 			uvdV := r.interpolate([3]float32{v1.UV.Y, v2.UV.Y, v3.UV.Y}, recipw, bcy)

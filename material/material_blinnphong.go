@@ -57,7 +57,20 @@ func (m *BlinnPhongMaterial) VertexShader(v *primitive.Vertex) *primitive.Vertex
 	return vv
 }
 
-func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec4[float32], ls []light.Source, es []light.Environment) color.RGBA {
+func (m *BlinnPhongMaterial) FragmentShader(
+	info buffer.Fragment, c math.Vec3[float32],
+	ls []light.Source, es []light.Environment,
+) color.RGBA {
+	lod := float32(0.0)
+	if m.tex.UseMipmap() {
+		siz := float32(m.tex.Size()) * math.Sqrt(math.Max(info.Du, info.Dv))
+		if siz < 1 {
+			siz = 1
+		}
+		lod = math.Log2(siz)
+	}
+	col := m.tex.Query(lod, info.U, 1-info.V)
+
 	LaR := float32(0.0)
 	LaG := float32(0.0)
 	LaB := float32(0.0)
@@ -76,9 +89,11 @@ func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec
 	LsG := float32(0.0)
 	LsB := float32(0.0)
 
+	n := info.Nor
 	if m.flatShading {
-		n = fN
+		n = info.AttrFlat["fN"].(math.Vec4[float32])
 	}
+	x := info.AttrFlat["Pos"].(math.Vec4[float32])
 
 	for _, l := range ls {
 		var (
@@ -95,7 +110,7 @@ func (m *BlinnPhongMaterial) FragmentShader(col color.RGBA, x, n, fN, c math.Vec
 			I = ll.Intensity()
 		}
 
-		V := c.Sub(x).Unit()
+		V := c.ToVec4(1).Sub(x).Unit()
 		H := L.Add(V).Unit()
 		Ld := math.Clamp(n.Dot(L), 0, 1)
 		Ls := math.Pow(math.Clamp(n.Dot(H), 0, 1), m.shininess)

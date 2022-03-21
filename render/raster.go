@@ -215,59 +215,46 @@ func (r *Renderer) passDeferred() {
 		ViewportToWorld: matScreenToWorld,
 	}
 
-	ao := ambientOcclusionPass{buf: r.bufs[0]}
 	r.DrawFragments(r.bufs[0], func(frag *primitive.Fragment) color.RGBA {
-		frag.Col = r.shade(r.bufs[0].UnsafeGet(frag.X, frag.Y), uniforms)
-		return ao.Shade(frag.X, frag.Y, frag.Col)
+		return r.shade(frag, uniforms)
 	})
 }
 
-func (r *Renderer) shade(info buffer.Fragment, uniforms *shader.MVP) color.RGBA {
+func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.RGBA {
+
+	info := r.bufs[0].UnsafeGet(frag.X, frag.Y)
 	if !info.Ok {
 		return r.cfg.Background
 	}
 
 	col := info.Col
 	mat, ok := info.AttrFlat["Mat"].(material.Material)
-	if !ok {
-		mat = nil
-	}
-
-	pos := info.AttrFlat["Pos"].(math.Vec4[float32])
-	fN := info.AttrFlat["fN"].(math.Vec4[float32])
-	if mat != nil {
-		lod := float32(0.0)
-		if mat.Texture().UseMipmap() {
-			siz := float32(mat.Texture().Size()) * math.Sqrt(math.Max(info.Du, info.Dv))
-			if siz < 1 {
-				siz = 1
-			}
-			lod = math.Log2(siz)
-		}
-
+	if ok {
 		lightSources, lightEnv := r.cfg.Scene.Lights()
-		col = mat.Texture().Query(lod, info.U, 1-info.V)
 		col = mat.FragmentShader(
-			col, pos, info.Nor, fN,
-			r.cfg.Camera.Position().ToVec4(1), lightSources, lightEnv)
+			info,
+			r.cfg.Camera.Position(), lightSources, lightEnv)
+
+		if r.cfg.ShadowMap && mat.ReceiveShadow() {
+			visibles := float32(0.0)
+			ns := len(r.shadowBufs)
+			for i := 0; i < ns; i++ {
+				visible := r.shadingVisibility(i, info, uniforms)
+				if visible {
+					visibles++
+				}
+			}
+			w := math.Pow(0.5, visibles)
+			r := uint8(float32(col.R) * w)
+			g := uint8(float32(col.G) * w)
+			b := uint8(float32(col.B) * w)
+			col = color.RGBA{r, g, b, col.A}
+		}
 	}
 
-	if r.cfg.ShadowMap && mat != nil && mat.ReceiveShadow() {
-		visibles := float32(0.0)
-		ns := len(r.shadowBufs)
-		for i := 0; i < ns; i++ {
-			visible := r.shadingVisibility(i, info, uniforms)
-			if visible {
-				visibles++
-			}
-		}
-		w := math.Pow(0.5, visibles)
-		r := uint8(float32(col.R) * w)
-		g := uint8(float32(col.G) * w)
-		b := uint8(float32(col.B) * w)
-		col = color.RGBA{r, g, b, col.A}
-	}
-	return col
+	// FIXME: why it has to be frag?
+	frag.Col = col
+	return material.AmbientOcclusionShade(r.bufs[0], frag)
 }
 
 func (r *Renderer) passAntialiasing() {

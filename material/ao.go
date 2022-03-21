@@ -2,51 +2,49 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package render
+package material
 
 import (
 	"image/color"
 
 	"poly.red/buffer"
-	"poly.red/material"
+	"poly.red/geometry/primitive"
 	"poly.red/math"
 )
 
-type ambientOcclusionPass struct{ buf *buffer.FragmentBuffer }
+type AmbientOcclusionPass struct{ Buf *buffer.FragmentBuffer }
 
-func (ao *ambientOcclusionPass) Shade(x, y int, col color.RGBA) color.RGBA {
+func AmbientOcclusionShade(buf *buffer.FragmentBuffer, info *primitive.Fragment) color.RGBA {
 	// FIXME: naive and super slow SSAO implementation. Optimize
 	// when denoiser is available.
-
-	info := ao.buf.Get(x, y)
-	mat, ok := info.AttrFlat["Mat"].(material.Material)
+	mat, ok := info.AttrFlat["Mat"].(Material)
 	if !ok {
 		mat = nil
 	}
 	if mat == nil || !mat.AmbientOcclusion() {
-		return col
+		return info.Col
 	}
 
 	total := float32(0.0)
 	for a := float32(0.0); a < math.TwoPi-1e-4; a += math.Pi / 4 {
-		total += math.HalfPi - ao.maxElevationAngle(x, y, math.Cos(a), math.Sin(a))
+		total += math.HalfPi - maxElevationAngle(buf, info, math.Cos(a), math.Sin(a))
 	}
 	total /= (math.Pi / 2) * 8
 	total = math.Pow(total, 10000)
 
 	return color.RGBA{
-		uint8(total * float32(col.R)),
-		uint8(total * float32(col.G)),
-		uint8(total * float32(col.B)), col.A}
+		uint8(total * float32(info.Col.R)),
+		uint8(total * float32(info.Col.G)),
+		uint8(total * float32(info.Col.B)), info.Col.A}
 }
 
-func (ao *ambientOcclusionPass) maxElevationAngle(x, y int, dirX, dirY float32) float32 {
-	p := math.NewVec4(float32(x), float32(y), 0, 1)
+func maxElevationAngle(buf *buffer.FragmentBuffer, info *primitive.Fragment, dirX, dirY float32) float32 {
+	p := math.NewVec4(float32(info.X), float32(info.Y), 0, 1)
 	dir := math.NewVec4(dirX, dirY, 0, 0)
 	maxangle := float32(0.0)
 	for t := float32(0.0); t < 100; t += 1 {
 		cur := p.Add(dir.Scale(t, t, 1, 1))
-		if !ao.buf.In(int(cur.X), int(cur.Y)) {
+		if !buf.In(int(cur.X), int(cur.Y)) {
 			return maxangle
 		}
 
@@ -58,8 +56,8 @@ func (ao *ambientOcclusionPass) maxElevationAngle(x, y int, dirX, dirY float32) 
 		// FIXME: I think the implementation here has internal bugs.
 		// The minimum depth is assumed to be -1, otherwise the calculation
 		// can be wrong. Figure out why.
-		shadeInfo := ao.buf.Get(int(cur.X), int(cur.Y))
-		traceInfo := ao.buf.Get(int(p.X), int(p.Y))
+		shadeInfo := buf.Get(int(cur.X), int(cur.Y))
+		traceInfo := buf.Get(int(p.X), int(p.Y))
 		shadeDepth := shadeInfo.Depth
 		traceDepth := traceInfo.Depth
 		if !shadeInfo.Ok {

@@ -10,17 +10,17 @@ import (
 	"testing"
 
 	"poly.red/buffer"
+	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 )
 
 func BenchmarkBlinnPhongShader(b *testing.B) {
-	col := color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int())}
 	x := math.NewRandVec3[float32]().ToVec4(1)
 	n := math.NewRandVec3[float32]().ToVec4(0).Unit()
 	fn := math.NewRandVec3[float32]().ToVec4(0).Unit()
-	c := math.NewRandVec3[float32]().ToVec4(1)
+	c := math.NewRandVec3[float32]()
 	l := []light.Source{
 		light.NewPoint(
 			light.Intensity(20),
@@ -36,17 +36,28 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 		),
 	}
 
-	mat := material.NewBlinnPhong(
+	m := material.NewBlinnPhong(
 		material.Texture(buffer.NewTexture()),
 		material.Kdiff(0.6), material.Kspec(200),
 		material.Shininess(25),
 	)
 
+	frag := primitive.Fragment{
+		U:        1,
+		V:        1,
+		Du:       1,
+		Dv:       1,
+		Nor:      n,
+		AttrFlat: map[primitive.AttrName]any{},
+	}
+	frag.AttrFlat["fN"] = fn
+	frag.AttrFlat["Pos"] = x
+	info := buffer.Fragment{Ok: true, Fragment: frag}
 	b.ReportAllocs()
 	b.ResetTimer()
 	var cc color.RGBA
 	for i := 0; i < b.N; i++ {
-		cc = mat.FragmentShader(col, x, n, fn, c, l, a)
+		cc = m.FragmentShader(info, c, l, a)
 	}
 	_ = cc
 }
