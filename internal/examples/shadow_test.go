@@ -10,12 +10,12 @@ import (
 	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
+	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture/imageutil"
 )
 
 func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {

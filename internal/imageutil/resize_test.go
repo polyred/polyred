@@ -8,7 +8,7 @@ import (
 	"image"
 	"testing"
 
-	"poly.red/texture/imageutil"
+	"poly.red/internal/imageutil"
 )
 
 var dst *image.RGBA

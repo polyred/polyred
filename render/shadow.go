@@ -13,11 +13,11 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/shader"
-	"poly.red/texture/imageutil"
 	"poly.red/texture/shadow"
 
 	"poly.red/internal/profiling"

@@ -13,9 +13,7 @@ import (
 )
 
 // Scene is a scene graph
-type Scene struct {
-	root *Group
-}
+type Scene struct{ root *Group }
 
 func NewScene(objects ...object.Object[float32]) *Scene {
 	s := &Scene{}

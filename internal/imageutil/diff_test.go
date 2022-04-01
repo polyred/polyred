@@ -7,7 +7,7 @@ package imageutil_test
 import (
 	"testing"
 
-	"poly.red/texture/imageutil"
+	"poly.red/internal/imageutil"
 )
 
 func TestDiff(t *testing.T) {

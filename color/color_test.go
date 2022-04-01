@@ -5,7 +5,6 @@
 package color_test
 
 import (
-	"math/rand"
 	"testing"
 
 	"poly.red/color"
@@ -24,11 +23,11 @@ func TestColor(t *testing.T) {
 
 	for _, tt := range tests {
 		col := color.FromHex(tt.col)
-		if !color.Equal(col, color.White) {
+		if col != color.White {
 			t.Fatalf("unexpected color from hex, got %v, want %v", col, color.White)
 		}
 
-		if color.Equal(col, color.Black) {
+		if col == color.Black {
 			t.Fatalf("unexpected color from hex, got %v, want %v", col, color.White)
 		}
 	}
@@ -74,14 +73,5 @@ func BenchmarkFromHex(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		color.FromHex(x)
-	}
-}
-
-func BenchmarkEqual(b *testing.B) {
-	c1 := color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int())}
-	c2 := color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int())}
-
-	for i := 0; i < b.N; i++ {
-		color.Equal(c1, c2)
 	}
 }

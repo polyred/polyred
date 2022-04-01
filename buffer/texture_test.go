@@ -11,7 +11,7 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/color"
-	"poly.red/texture/imageutil"
+	"poly.red/internal/imageutil"
 )
 
 func mustLoadTexture(path string) *buffer.Texture {
@@ -158,7 +158,7 @@ func TestQuery(t *testing.T) {
 	for i, tt := range tests {
 		t.Run(fmt.Sprintf("%s-lod-%f", tt.name, tt.lod), func(t *testing.T) {
 			got := tt.tex.Query(tt.lod, tt.u, tt.v)
-			if !color.Equal(got, tt.want) {
+			if got != tt.want {
 				t.Errorf("#%d want: %+v, got: %+v", i, tt.want, got)
 			}
 		})

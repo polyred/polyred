@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"poly.red/internal/imageutil"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture/imageutil"
 )
 
 type BasicOpt struct {

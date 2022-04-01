@@ -11,8 +11,8 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/imageutil"
 	"poly.red/render"
-	"poly.red/texture/imageutil"
 )
 
 func TestBlending(t *testing.T) {

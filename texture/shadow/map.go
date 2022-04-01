@@ -6,34 +6,14 @@ package shadow
 
 import "poly.red/camera"
 
-// Type represents a shadow type
-type Type int
-
-// All kinds of shadow types
-const (
-	ShadowTypeHard Type = iota // hard shadow mapping
-	ShadowTypePCF              // percentage closer filtering
-	ShadowTypePCSS             // percentage closer soft shadows
-	ShadowTypeVSSM             // variance soft shadow mapping
-	ShadowTypeMSM              // moment shadow mapping
-)
-
-// Map is a shadow map.
+// Map is a hard shadow map.
 type Map struct {
-	typ    Type
 	camera camera.Interface
 	bias   float32
 }
 
 // Opt represents a shadow option
 type Opt func(sm *Map)
-
-// Method specifies a underlying used algorithm for rendering shadows.
-func Method(typ Type) Opt {
-	return func(sm *Map) {
-		sm.typ = typ
-	}
-}
 
 // Camera specifies a camera for rendering a shadow map.
 func Camera(c camera.Interface) Opt {
@@ -52,7 +32,6 @@ func Bias(bias float32) Opt {
 // NewMap creates a new shadow map.
 func NewMap(opts ...Opt) *Map {
 	sm := &Map{
-		typ:    ShadowTypeHard,
 		camera: nil, // default left nil to allow rasterizer decide at runtime
 		bias:   0.03,
 	}

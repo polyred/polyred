@@ -9,12 +9,12 @@ import (
 
 	"poly.red/camera"
 	"poly.red/color"
+	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture/imageutil"
 )
 
 func TestPlane(t *testing.T) {

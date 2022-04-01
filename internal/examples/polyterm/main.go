@@ -5,8 +5,8 @@
 package main
 
 import (
+	"poly.red/internal/imageutil"
 	"poly.red/internal/term"
-	"poly.red/texture/imageutil"
 )
 
 var t *term.Terminal

@@ -13,10 +13,10 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/imageutil"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/shader"
-	"poly.red/texture/imageutil"
 
 	"poly.red/internal/profiling"
 	"poly.red/internal/sched"
@@ -221,7 +221,6 @@ func (r *Renderer) passDeferred() {
 }
 
 func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.RGBA {
-
 	info := r.bufs[0].UnsafeGet(frag.X, frag.Y)
 	if !info.Ok {
 		return r.cfg.Background

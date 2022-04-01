@@ -11,7 +11,7 @@ import (
 	"io"
 	"os"
 
-	"poly.red/texture/imageutil"
+	"poly.red/internal/imageutil"
 )
 
 // Terminal is a drawing canvas on system terminal.

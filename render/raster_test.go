@@ -16,13 +16,13 @@ import (
 	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
+	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene"
 	"poly.red/scene/object"
 	"poly.red/shader"
-	"poly.red/texture/imageutil"
 )
 
 var (

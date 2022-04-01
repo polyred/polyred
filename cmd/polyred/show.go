@@ -12,10 +12,10 @@ import (
 	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
+	"poly.red/internal/imageutil"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/shader"
-	"poly.red/texture/imageutil"
 )
 
 type App struct {

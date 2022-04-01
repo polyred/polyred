@@ -11,10 +11,10 @@ import (
 	"poly.red/buffer"
 	"poly.red/color"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/imageutil"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
-	"poly.red/texture/imageutil"
 )
 
 func TestBazier(t *testing.T) {

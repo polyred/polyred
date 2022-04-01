@@ -10,7 +10,7 @@ import (
 	"os"
 	"testing"
 
-	"poly.red/texture/imageutil"
+	"poly.red/internal/imageutil"
 )
 
 func TestLoadImage(t *testing.T) {

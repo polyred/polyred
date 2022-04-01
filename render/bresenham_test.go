@@ -10,9 +10,9 @@ import (
 	"testing"
 
 	"poly.red/buffer"
+	"poly.red/internal/imageutil"
 	"poly.red/math"
 	"poly.red/render"
-	"poly.red/texture/imageutil"
 )
 
 func TestDrawLine(t *testing.T) {

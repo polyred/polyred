@@ -118,7 +118,6 @@ func TestViewMatrix(t *testing.T) {
 		0.5098869, 0.21981792, 0.83168226, -372.66165,
 		0, 0, 0, 1,
 	)
-
 	vm := camera.ViewMatrix(pos, lookAt, up)
 
 	if !vm.Eq(want) {
@@ -132,7 +131,7 @@ func TestViewMatrix(t *testing.T) {
 	)
 	vm = cp.ViewMatrix()
 	if !vm.Eq(want) {
-		t.Errorf("view matrix is wrong, want %v got %v", want, vm)
+		t.Errorf("view matrix is wrong,\nwant\n%v\ngot\n%v", want, vm)
 	}
 
 	op := camera.NewOrthographic(
@@ -141,7 +140,7 @@ func TestViewMatrix(t *testing.T) {
 	)
 	vm = op.ViewMatrix()
 	if !vm.Eq(want) {
-		t.Errorf("view matrix is wrong, want %v got %v", want, vm)
+		t.Errorf("view matrix is wrong,\nwant\n%v\ngot\n%v", want, vm)
 	}
 }
 

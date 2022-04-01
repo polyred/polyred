@@ -5,13 +5,13 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/camera"
+	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/texture/imageutil"
 )
 
 func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {

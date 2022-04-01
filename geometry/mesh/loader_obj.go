@@ -18,7 +18,7 @@ import (
 )
 
 // LoadObjAs loads a .obj file to a Mesh object.
-func LoadObjAs[T Mesh[float32], _ MeshPointer[T]](path string) (x T, err error) {
+func LoadObjAs[T Mesh[float32]](path string) (x T, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return x, fmt.Errorf("mesh: failed to open file %s: %w", path, err)

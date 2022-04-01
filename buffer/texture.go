@@ -9,8 +9,8 @@ import (
 	"image"
 	"image/color"
 
+	"poly.red/internal/imageutil"
 	"poly.red/math"
-	"poly.red/texture/imageutil"
 )
 
 // NewUniformTexture returns a uniform colored texture.

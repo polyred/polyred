@@ -13,10 +13,10 @@ import (
 	"poly.red/camera"
 	"poly.red/color"
 	"poly.red/geometry/mesh"
+	"poly.red/internal/imageutil"
 	"poly.red/math"
 	"poly.red/render"
 	"poly.red/shader"
-	"poly.red/texture/imageutil"
 )
 
 func init() {
