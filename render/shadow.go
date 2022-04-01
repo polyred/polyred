@@ -18,17 +18,16 @@ import (
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/shader"
-	"poly.red/texture/shadow"
 
 	"poly.red/internal/profiling"
 	"poly.red/internal/spinlock"
 )
 
 type shadowInfo struct {
-	active   bool
-	settings *shadow.Map
-	depths   []float32
-	lock     []spinlock.SpinLock
+	active bool
+	camera camera.Interface
+	depths []float32
+	lock   []spinlock.SpinLock
 }
 
 func (r *Renderer) initShadowMaps() {
@@ -84,7 +83,7 @@ func (r *Renderer) initShadowMaps() {
 		default:
 		}
 		r.shadowBufs[i].active = true
-		r.shadowBufs[i].settings = shadow.NewMap(shadow.Camera(c))
+		r.shadowBufs[i].camera = c
 		r.shadowBufs[i].depths = make([]float32, r.bufs[0].Bounds().Dx()*r.bufs[0].Bounds().Dy())
 		r.shadowBufs[i].lock = make([]spinlock.SpinLock, r.bufs[0].Bounds().Dx()*r.bufs[0].Bounds().Dy())
 	}
@@ -125,8 +124,8 @@ func (r *Renderer) passShadows(index int) {
 	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
 		mvp := shader.MVP{
 			Model:    m.ModelMatrix(),
-			View:     r.shadowBufs[index].settings.Camera().ViewMatrix(),
-			Proj:     r.shadowBufs[index].settings.Camera().ProjMatrix(),
+			View:     r.shadowBufs[index].camera.ViewMatrix(),
+			Proj:     r.shadowBufs[index].camera.ProjMatrix(),
 			Viewport: math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy())),
 
 			// NormalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
@@ -247,8 +246,8 @@ func (r *Renderer) shadingVisibility(shadowIdx int,
 	// transform scrren coordinate to light viewport
 	screenCoord := math.NewVec4(float32(info.X), float32(info.Y), info.Depth, 1).
 		Apply(matScreenToWorld).
-		Apply(shadowMap.settings.Camera().ViewMatrix()).
-		Apply(shadowMap.settings.Camera().ProjMatrix()).
+		Apply(shadowMap.camera.ViewMatrix()).
+		Apply(shadowMap.camera.ProjMatrix()).
 		Apply(matVP).Pos()
 
 	lightX, lightY := int(screenCoord.X), int(screenCoord.Y)
@@ -257,7 +256,7 @@ func (r *Renderer) shadingVisibility(shadowIdx int,
 	shadow := float32(0)
 	if bufIdx > 0 && bufIdx < len(shadowMap.depths) {
 		shadowZ := shadowMap.depths[bufIdx]
-		bias := shadowMap.settings.Bias()
+		const bias = 0.03
 		if screenCoord.Z < shadowZ-bias {
 			shadow++
 		}
