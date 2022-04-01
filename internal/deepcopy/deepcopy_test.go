@@ -1,12 +1,18 @@
-package deepcopy
+// Copyright 2022 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
+
+package deepcopy_test
 
 import (
 	"fmt"
-	. "reflect"
+	"reflect"
 	"testing"
+
+	"poly.red/internal/deepcopy"
 )
 
-func ExampleAnything() {
+func ExampleValue() {
 	tests := []interface{}{
 		`"Now cut that out!"`,
 		39,
@@ -26,7 +32,7 @@ func ExampleAnything() {
 	}
 
 	for _, expected := range tests {
-		actual := MustAnything(expected)
+		actual := deepcopy.Value(expected)
 		fmt.Println(actual)
 	}
 	// Output:
@@ -46,10 +52,10 @@ type Foo struct {
 
 func ExampleMap() {
 	x := map[string]*Foo{
-		"foo": &Foo{Bar: 1},
-		"bar": &Foo{Bar: 2},
+		"foo": {Bar: 1},
+		"bar": {Bar: 2},
 	}
-	y := MustAnything(x).(map[string]*Foo)
+	y := deepcopy.Value(x)
 	for _, k := range []string{"foo", "bar"} { // to ensure consistent order
 		fmt.Printf("x[\"%v\"] = y[\"%v\"]: %v\n", k, k, x[k] == y[k])
 		fmt.Printf("x[\"%v\"].Foo = y[\"%v\"].Foo: %v\n", k, k, x[k].Foo == y[k].Foo)
@@ -66,89 +72,50 @@ func ExampleMap() {
 
 func TestInterface(t *testing.T) {
 	x := []interface{}{nil}
-	y := MustAnything(x).([]interface{})
-	if !DeepEqual(x, y) || len(y) != 1 {
+	y := deepcopy.Value(x)
+	if !reflect.DeepEqual(x, y) || len(y) != 1 {
 		t.Errorf("expect %v == %v; y had length %v (expected 1)", x, y, len(y))
 	}
 	var a interface{}
-	b := MustAnything(a)
+	b := deepcopy.Value(a)
 	if a != b {
 		t.Errorf("expected %v == %v", a, b)
 	}
 }
 
-func ExampleAvoidInfiniteLoops() {
+func TestAvoidInfiniteLoops(t *testing.T) {
 	x := &Foo{
 		Bar: 4,
 	}
 	x.Foo = x
-	y := MustAnything(x).(*Foo)
-	fmt.Printf("x == y: %v\n", x == y)
-	fmt.Printf("x == x.Foo: %v\n", x == x.Foo)
-	fmt.Printf("y == y.Foo: %v\n", y == y.Foo)
-	// Output:
-	// x == y: false
-	// x == x.Foo: true
-	// y == y.Foo: true
-}
-
-func TestUnsupportedKind(t *testing.T) {
-	x := func() {}
-
-	tests := []interface{}{
-		x,
-		map[bool]interface{}{true: x},
-		[]interface{}{x},
+	y := deepcopy.Value(x)
+	if x == y {
+		t.Fatalf("expect x==y returns false")
 	}
-
-	for _, test := range tests {
-		y, err := Anything(test)
-		if y != nil {
-			t.Errorf("expected %v to be nil", y)
-		}
-		if err == nil {
-			t.Errorf("expected err to not be nil")
-		}
+	if x != x.Foo {
+		t.Fatalf("expect x==x.Foo returns true")
+	}
+	if y != y.Foo {
+		t.Fatalf("expect y==y.Foo returns true")
 	}
 }
 
-func TestUnsupportedKindPanicsOnMust(t *testing.T) {
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("expected a panic; didn't get one")
-		}
-	}()
-	x := func() {}
-	MustAnything(x)
-}
-
-func TestMismatchedTypesFail(t *testing.T) {
-	tests := []struct {
-		input interface{}
-		kind  Kind
-	}{
-		{
-			map[int]int{1: 2, 2: 4, 3: 8},
-			Map,
-		},
-		{
-			[]int{2, 8},
-			Slice,
-		},
+func TestSpecialKind(t *testing.T) {
+	x := func() int { return 42 }
+	y := deepcopy.Value(x)
+	if y() != 42 || reflect.DeepEqual(x, y) {
+		t.Fatalf("copied value is equal")
 	}
-	for _, test := range tests {
-		for kind, copier := range copiers {
-			if kind == test.kind {
-				continue
-			}
-			actual, err := copier(test.input, nil)
-			if actual != nil {
 
-				t.Errorf("%v attempted value %v as %v; should be nil value, got %v", test.kind, test.input, kind, actual)
-			}
-			if err == nil {
-				t.Errorf("%v attempted value %v as %v; should have gotten an error", test.kind, test.input, kind)
-			}
-		}
+	a := map[bool]interface{}{true: x}
+	b := deepcopy.Value(a)
+	if reflect.DeepEqual(a, b) {
+		t.Fatalf("copied value is equal")
+	}
+
+	c := []interface{}{x}
+	d := deepcopy.Value(c)
+	if reflect.DeepEqual(c, d) {
+		t.Fatalf("copied value is equal")
 	}
 }

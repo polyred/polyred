@@ -5,7 +5,6 @@
 package primitive
 
 import (
-	"fmt"
 	"image/color"
 	"math/rand"
 
@@ -99,18 +98,11 @@ func (v *Vertex) Copy() *Vertex {
 		UV(v.UV),
 	)
 
-	var err error
 	for k, attr := range v.AttrSmooth {
-		u.AttrSmooth[k], err = deepcopy.Anything(attr)
-		if err != nil {
-			panic(fmt.Sprintf("primitive: vertex %d stored non-copiable content in AttrSmooth: %v", v.Idx, k))
-		}
+		u.AttrSmooth[k] = deepcopy.Value(attr)
 	}
 	for k, attr := range v.AttrFlat {
-		u.AttrFlat[k], err = deepcopy.Anything(attr)
-		if err != nil {
-			panic(fmt.Sprintf("primitive: vertex %d stored non-copiable content in AttrFlat: %v", v.Idx, k))
-		}
+		u.AttrFlat[k] = deepcopy.Value(attr)
 	}
 	return u
 }
