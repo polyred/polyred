@@ -11,7 +11,7 @@ import (
 )
 
 func NewRandomAs[T Mesh[float32]](numTri int) (m T) {
-	switch (interface{})(m).(type) {
+	switch any(m).(type) {
 	case *BufferedMesh:
 		ibo := make([]int, numTri*3)
 		vertPos := make([]float32, numTri*3*3)
@@ -46,7 +46,7 @@ func NewRandomAs[T Mesh[float32]](numTri int) (m T) {
 		bm.SetAttribute(AttributeNor, NewBufferAttribute(3, vertNor))
 		bm.SetAttribute(AttributeCol, NewBufferAttribute(4, vertCol))
 		bm.SetAttribute(AttributeUV, NewBufferAttribute(2, vertUV))
-		return (interface{})(bm).(T)
+		return any(bm).(T)
 	default:
 		panic("not supported")
 	}

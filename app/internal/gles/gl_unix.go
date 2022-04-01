@@ -525,7 +525,7 @@ static void glBlitFramebuffer(glFunctions *f, GLint srcX0, GLint srcY0, GLint sr
 */
 import "C"
 
-type Context interface{}
+type Context any
 
 type Functions struct {
 	// Query caches.

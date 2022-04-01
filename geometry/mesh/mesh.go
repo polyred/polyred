@@ -26,3 +26,7 @@ type Mesh[T math.Float] interface {
 	VertexBuffer() buffer.VertexBuffer
 	Triangles() []*primitive.Triangle
 }
+
+type MeshPointer[T Mesh[float32]] interface {
+	*T
+}

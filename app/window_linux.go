@@ -129,7 +129,7 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 	w.ready <- event{}
 }
 
-func slice2bytes(s interface{}) []byte {
+func slice2bytes(s any) []byte {
 	v := reflect.ValueOf(s)
 	first := v.Index(0)
 	sz := int(first.Type().Size())

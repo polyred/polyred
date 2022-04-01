@@ -13,7 +13,7 @@ import (
 )
 
 // Window is a minimum abstraction of a Window.
-type Window interface{}
+type Window any
 
 // SizeHandler is an extended interface of a Window
 // which reports the desired size of a window.

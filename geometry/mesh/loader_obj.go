@@ -18,18 +18,17 @@ import (
 )
 
 // LoadObjAs loads a .obj file to a Mesh object.
-func LoadObjAs[T Mesh[float32]](path string) (x T, err error) {
+func LoadObjAs[T Mesh[float32], _ MeshPointer[T]](path string) (x T, err error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return x, fmt.Errorf("mesh: failed to open file %s: %w", path, err)
 	}
 	defer f.Close()
 
-	var m T
-	switch (interface{})(m).(type) {
+	switch any(x).(type) {
 	case *TriangleMesh:
 		v, err := loadObjToTriangleSoup(f)
-		return interface{}(v).(T), err
+		return any(v).(T), err
 	default:
 		panic("unsupported")
 	}

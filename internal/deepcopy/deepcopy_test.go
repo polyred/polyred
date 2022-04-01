@@ -13,7 +13,7 @@ import (
 )
 
 func ExampleValue() {
-	tests := []interface{}{
+	tests := []any{
 		`"Now cut that out!"`,
 		39,
 		true,
@@ -71,12 +71,12 @@ func ExampleMap() {
 }
 
 func TestInterface(t *testing.T) {
-	x := []interface{}{nil}
+	x := []any{nil}
 	y := deepcopy.Value(x)
 	if !reflect.DeepEqual(x, y) || len(y) != 1 {
 		t.Errorf("expect %v == %v; y had length %v (expected 1)", x, y, len(y))
 	}
-	var a interface{}
+	var a any
 	b := deepcopy.Value(a)
 	if a != b {
 		t.Errorf("expected %v == %v", a, b)
@@ -107,13 +107,13 @@ func TestSpecialKind(t *testing.T) {
 		t.Fatalf("copied value is equal")
 	}
 
-	a := map[bool]interface{}{true: x}
+	a := map[bool]any{true: x}
 	b := deepcopy.Value(a)
 	if reflect.DeepEqual(a, b) {
 		t.Fatalf("copied value is equal")
 	}
 
-	c := []interface{}{x}
+	c := []any{x}
 	d := deepcopy.Value(c)
 	if reflect.DeepEqual(c, d) {
 		t.Fatalf("copied value is equal")
