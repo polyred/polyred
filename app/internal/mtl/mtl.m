@@ -75,6 +75,33 @@ void * CommandBuffer_MakeBlitCommandEncoder(void * commandBuffer) {
 	return [(id<MTLCommandBuffer>)commandBuffer blitCommandEncoder];
 }
 
+void * CommandBuffer_MakeComputeCommandEncoder(void * commandBuffer) {
+	return [(id<MTLCommandBuffer>)commandBuffer computeCommandEncoder];
+}
+
+void ComputeCommandEncoder_SetComputePipelineState(void * computeCommandEncoder, void * computePipelineState) {
+	[(id<MTLComputeCommandEncoder>)computeCommandEncoder setComputePipelineState:(id<MTLComputePipelineState>)computePipelineState];
+}
+
+void ComputeCommandEncoder_SetBytes(void * computeCommandEncoder, void *bytes, int length, int index) {
+	[(id<MTLComputeCommandEncoder>)computeCommandEncoder setBytes:bytes length:length atIndex:index];
+}
+
+void ComputeCommandEncoder_SetBuffer(void * computeCommandEncoder, void *buffer, int offset, int index) {
+	[(id<MTLComputeCommandEncoder>)computeCommandEncoder setBuffer:buffer
+		offset:offset
+		atIndex:index];
+}
+
+void * Buffer_Content(void *buffer) {
+	return ((id<MTLBuffer>)buffer).contents;
+}
+
+void ComputeCommandEncoder_DispatchThreads(void * computeCommandEncoder, struct Size threadsPerGrid, struct Size threadsPerThreadgroup) {
+	[(id<MTLComputeCommandEncoder>)computeCommandEncoder dispatchThreads:(MTLSize){threadsPerGrid.Width, threadsPerGrid.Height, threadsPerGrid.Depth}
+		threadsPerThreadgroup:(MTLSize){threadsPerThreadgroup.Width, threadsPerThreadgroup.Height, threadsPerThreadgroup.Depth}];
+}
+
 void BlitCommandEncoder_Release(void *blitCommandEncoder) {
   [(id<MTLBlitCommandEncoder>)blitCommandEncoder release];
 }
@@ -113,4 +140,59 @@ void CommandBuffer_AddCompletedHandler(void *commandBuffer) {
 
 void CommandBuffer_Release(void *commandBuffer) {
   [(id<MTLCommandBuffer>)commandBuffer release];
+}
+
+
+void * Device_MakeBuffer(void * device, const void * bytes, size_t length, uint16_t options) {
+	if (bytes == NULL) {
+		return [(id<MTLDevice>)device newBufferWithLength:(NSUInteger)length
+			options:(MTLResourceOptions)options];
+	} else {
+		return [(id<MTLDevice>)device newBufferWithBytes:(const void *)bytes
+			length:(NSUInteger)length
+			options:(MTLResourceOptions)options];
+	}
+}
+
+struct Library Device_MakeLibrary(void * device, const char * source, struct CompileOption opt) {
+	MTLCompileOptions *compileOptions = [MTLCompileOptions new];
+	compileOptions.languageVersion = (NSUInteger)opt.languageVersion;
+
+	NSError * error;
+	id<MTLLibrary> library = [(id<MTLDevice>)device
+		newLibraryWithSource:[NSString stringWithUTF8String:source]
+		options:compileOptions
+		error:&error];
+
+	struct Library l;
+	l.Library = library;
+	if (!library) {
+		l.Error = error.localizedDescription.UTF8String;
+	}
+	return l;
+}
+
+void * Library_MakeFunction(void * library, const char * name) {
+	return [(id<MTLLibrary>)library newFunctionWithName:[NSString stringWithUTF8String:name]];
+}
+
+struct ComputePipelineState Device_MakeComputePipelineState(void * device, void *function) {
+	NSError * error;
+	id<MTLComputePipelineState> computePipelineState = [(id<MTLDevice>)device newComputePipelineStateWithFunction:(id<MTLFunction>)(function)
+	error:&error];
+
+	struct ComputePipelineState cps;
+	cps.ComputePipelineState = computePipelineState;
+	if (!computePipelineState) {
+		cps.Error = error.localizedDescription.UTF8String;
+	}
+	return cps;
+}
+
+int ComputePipelineState_ThreadExecutionWidth(void *cps) {
+	return ((id<MTLComputePipelineState>)(cps)).threadExecutionWidth;
+}
+
+int ComputePipelineState_MaxTotalThreadsPerThreadgroup(void *cps) {
+	return ((id<MTLComputePipelineState>)(cps)).maxTotalThreadsPerThreadgroup;
 }

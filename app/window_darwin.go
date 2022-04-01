@@ -390,7 +390,7 @@ func (w *window) flush(f frame) {
 	})
 
 	region := mtl.RegionMake2D(0, 0, dx, dy)
-	tex.ReplaceRegion(region, 0, &f.img.Pix[0], uintptr(4*dx))
+	tex.ReplaceRegion(region, 0, f.img.Pix, uintptr(4*dx))
 	cb := w.win.ctx.queue.MakeCommandBuffer()
 	bce := cb.MakeBlitCommandEncoder()
 	drawTex := drawable.Texture()
