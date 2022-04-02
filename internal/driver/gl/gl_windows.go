@@ -45,7 +45,6 @@ func Viewport(x, y int32, width, height int32) {
 }
 
 func DrawPixels(width, height int32, format, xtype Enum, data []byte) {
-
 	var p unsafe.Pointer
 	if len(data) > 0 {
 		p = unsafe.Pointer(&data[0])

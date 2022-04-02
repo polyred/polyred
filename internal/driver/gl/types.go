@@ -37,3 +37,7 @@ const (
 	GL_COLOR_BUFFER_BIT Enum = C.GL_COLOR_BUFFER_BIT
 	GL_DEPTH_BUFFER_BIT Enum = C.GL_DEPTH_BUFFER_BIT
 )
+
+type Device struct{}
+
+func (Device) Available() bool { return false }

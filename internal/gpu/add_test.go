@@ -2,8 +2,6 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-//go:build darwin
-
 package gpu_test
 
 import (
@@ -17,7 +15,7 @@ import (
 
 func TestAdd(t *testing.T) {
 	if !gpu.Driver().Available() {
-		t.Skip("no Metal device available")
+		t.Skip("no GPU device available")
 	}
 
 	m1 := math.NewRandMat[float32](10, 10)

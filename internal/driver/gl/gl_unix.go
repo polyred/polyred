@@ -62,3 +62,22 @@ func ClearColor(red, green, blue, alpha float32) {
 func Finish() {
 	C.glFinish()
 }
+
+func CreateProgram() Enum         { panic("unimplemented") }
+func AttachShader() Enum          { panic("unimplemented") }
+func LinkProgram() Enum           { panic("unimplemented") }
+func CreateShader() Enum          { panic("unimplemented") }
+func ShaderSource() Enum          { panic("unimplemented") }
+func CompileShader() Enum         { panic("unimplemented") }
+func GetShaderiv() Enum           { panic("unimplemented") }
+func GetShaderInfoLog() Enum      { panic("unimplemented") }
+func GetProgramiv() Enum          { panic("unimplemented") }
+func GetProgramInfoLog() Enum     { panic("unimplemented") }
+func DeleteShader() Enum          { panic("unimplemented") }
+func CreateBuffer() Enum          { panic("unimplemented") }
+func BindBuffer() Enum            { panic("unimplemented") }
+func BufferData() Enum            { panic("unimplemented") }
+func BindBufferBase() Enum        { panic("unimplemented") }
+func DispatchCompute() Enum       { panic("unimplemented") }
+func GetNamedBufferSubData() Enum { panic("unimplemented") }
+func UseProgram() Enum            { panic("unimplemented") }
