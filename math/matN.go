@@ -113,21 +113,33 @@ func (m Mat[T]) Eq(n Mat[T]) bool {
 }
 
 // Add adds two given matrix: m+n
-func (m Mat[T]) Add(n Mat[T]) {
+func (m Mat[T]) Add(n Mat[T]) Mat[T] {
 	if m.Row == n.Row && m.Col == n.Col {
-		for i := range m.Data {
-			m.Data[i] += n.Data[i]
+		r := Mat[T]{
+			Row:  m.Row,
+			Col:  m.Col,
+			Data: make([]T, len(m.Data)),
 		}
+		for i := range m.Data {
+			r.Data[i] = m.Data[i] + n.Data[i]
+		}
+		return r
 	}
-	panic("math: mismatched matrix dimension")
+	panic(fmt.Sprintf("math: mismatched matrix dimension: A(%v, %v) != B(%v, %v)", m.Row, m.Col, n.Row, n.Col))
 }
 
 // Add subtracts two given matrix: m-n
-func (m Mat[T]) Sub(n Mat[T]) {
+func (m Mat[T]) Sub(n Mat[T]) Mat[T] {
 	if m.Row == n.Row && m.Col == n.Col {
-		for i := range m.Data {
-			m.Data[i] -= n.Data[i]
+		r := Mat[T]{
+			Row:  m.Row,
+			Col:  m.Col,
+			Data: make([]T, len(m.Data)),
 		}
+		for i := range m.Data {
+			r.Data[i] = m.Data[i] - n.Data[i]
+		}
+		return r
 	}
 	panic("math: mismatched matrix dimension")
 }

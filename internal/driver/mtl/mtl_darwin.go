@@ -67,6 +67,11 @@ func CreateSystemDefaultDevice() (Device, error) {
 	}, nil
 }
 
+// Supported returns true if the current macOS supports Metal.
+func (d Device) Supported() bool {
+	return d != Device{}
+}
+
 // Device returns the underlying id<MTLDevice> pointer.
 func (d Device) Device() unsafe.Pointer { return d.device }
 
