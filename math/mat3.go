@@ -51,7 +51,11 @@ func NewMat3[T Float](
 
 // String returns a string format of the given Mat3.
 func (m Mat3[T]) String() string {
-	return fmt.Sprintf(`[[%v, %v, %v], [%v, %v, %v], [%v, %v, %v]]`,
+	return fmt.Sprintf(`[
+	[%v, %v, %v],
+	[%v, %v, %v],
+	[%v, %v, %v],
+]`,
 		m.X00, m.X01, m.X02,
 		m.X10, m.X11, m.X12,
 		m.X20, m.X21, m.X22)

@@ -62,7 +62,10 @@ func TestMat_String(t *testing.T) {
 			3, 4,
 		)
 
-		want := "[[1, 2], [3, 4]]"
+		want := `[
+	[1, 2],
+	[3, 4],
+]`
 		t.Log(m)
 		if strings.Compare(m.String(), want) != 0 {
 			t.Fatalf("string format of Mat2 returns unexpected value, want %v got %v", want, m)
@@ -76,7 +79,11 @@ func TestMat_String(t *testing.T) {
 			7, 8, 9,
 		)
 
-		want := "[[1, 2, 3], [4, 5, 6], [7, 8, 9]]"
+		want := `[
+	[1, 2, 3],
+	[4, 5, 6],
+	[7, 8, 9],
+]`
 		t.Log(m)
 		if strings.Compare(m.String(), want) != 0 {
 			t.Fatalf("string format of Mat3 returns unexpected value, want %v got %v", want, m)
@@ -91,10 +98,15 @@ func TestMat_String(t *testing.T) {
 			13, 14, 15, 16,
 		)
 
-		want := "[[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]"
+		want := `[
+	[1, 2, 3, 4],
+	[5, 6, 7, 8],
+	[9, 10, 11, 12],
+	[13, 14, 15, 16],
+]`
 		t.Log(m)
 		if strings.Compare(m.String(), want) != 0 {
-			t.Fatalf("string format of Mat3 returns unexpected value, want %v got %v", want, m)
+			t.Fatalf("string format of Mat4 returns unexpected value, want %v got %v", want, m)
 		}
 	})
 }

@@ -46,7 +46,10 @@ func NewMat2[T Float](
 
 // String returns a string format of the given matrix.
 func (m Mat2[T]) String() string {
-	return fmt.Sprintf(`[[%v, %v], [%v, %v]]`, m.X00, m.X01, m.X10, m.X11)
+	return fmt.Sprintf(`[
+	[%v, %v],
+	[%v, %v],
+]`, m.X00, m.X01, m.X10, m.X11)
 }
 
 // Get gets the Mat2 elements
