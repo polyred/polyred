@@ -15,14 +15,13 @@ import "C"
 import (
 	"fmt"
 	"image"
-	"reflect"
 	"runtime"
 	"sync"
 	"time"
 	"unsafe"
 
-	"poly.red/app/internal/bytes"
-	"poly.red/app/internal/gles"
+	"poly.red/internal/bytes"
+	"poly.red/internal/driver/gles"
 	"poly.red/math"
 )
 

@@ -7,7 +7,7 @@ package app
 import (
 	"syscall"
 
-	"poly.red/app/internal/gl"
+	"poly.red/internal/driver/gl"
 )
 
 type glContext struct {

@@ -7,7 +7,7 @@ package app
 import (
 	"errors"
 
-	"poly.red/app/internal/mtl"
+	"poly.red/internal/driver/mtl"
 )
 
 type mtlContext struct {

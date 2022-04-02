@@ -100,7 +100,7 @@ import (
 	"time"
 	"unsafe"
 
-	"poly.red/app/internal/mtl"
+	"poly.red/internal/driver/mtl"
 	"poly.red/math"
 )
 

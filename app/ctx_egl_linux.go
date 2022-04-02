@@ -7,8 +7,8 @@
 package app
 
 import (
-	"poly.red/app/internal/egl"
-	"poly.red/app/internal/gles"
+	"poly.red/internal/driver/egl"
+	"poly.red/internal/driver/gles"
 )
 
 type x11Context struct {

@@ -10,7 +10,7 @@ import (
 	"errors"
 	"unsafe"
 
-	"poly.red/app/internal/mtl"
+	"poly.red/internal/driver/mtl"
 )
 
 // This file provides access to CAMetalLayer.

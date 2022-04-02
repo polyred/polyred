@@ -11,27 +11,57 @@ import (
 	"strings"
 )
 
+// Type are types that can be used in GPU.
+type Type interface {
+	~uint8 | ~uint32 | ~int32 | ~float32
+}
+
+// TypeSize returns the corresponding type size.
+func TypeSize[T Type]() int {
+	var v T
+	switch any(v).(type) {
+	case uint8:
+		return 1
+	case int32:
+		return 4
+	case uint32:
+		return 4
+	case float32:
+		return 4
+	}
+	panic("unknown data size for type")
+}
+
+// FIXME: decide of column major and row major.
+
 // Mat represents a WxH matrix.
-type Mat[T Float] struct {
+type Mat[T Type] struct {
 	Row  int
 	Col  int
 	Data []T
 }
 
 // NewMat creates a new WxH matrix.
-func NewMat[T Float](row, col int, xn ...T) Mat[T] {
-	if len(xn) == row*col {
+func NewMat[T Type](row, col int, xn ...T) Mat[T] {
+	switch len(xn) {
+	case row * col:
 		return Mat[T]{
 			Row:  row,
 			Col:  col,
 			Data: append([]T{}, xn...),
+		}
+	case 0:
+		return Mat[T]{
+			Row:  row,
+			Col:  col,
+			Data: make([]T, row*col),
 		}
 	}
 	panic("math: incorrect matrix dimension")
 }
 
 // NewRandMat returns a random matrix.
-func NewRandMat[T Float](row, col int) Mat[T] {
+func NewRandMat[T Type](row, col int) Mat[T] {
 	m := Mat[T]{
 		Row:  row,
 		Col:  col,

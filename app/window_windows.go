@@ -13,8 +13,8 @@ import (
 	"time"
 	"unsafe"
 
-	"poly.red/app/internal/gl"
-	"poly.red/app/internal/windows"
+	"poly.red/internal/driver/gl"
+	"poly.red/internal/driver/windows"
 	"poly.red/math"
 )
 
