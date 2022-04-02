@@ -6,6 +6,11 @@ package gpu
 
 import "errors"
 
+// DataType are types that can be used in GPU.
+type DataType interface {
+	~uint8 | ~uint32 | ~int32 | ~float32
+}
+
 func try[T any](v T, err error) T {
 	if err != nil {
 		panic(err)

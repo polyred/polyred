@@ -11,6 +11,6 @@ import (
 )
 
 // Add is a GPU version of math.Mat[float32].Add method.
-func Add[T math.Type](m1, m2 math.Mat[T]) math.Mat[T] {
+func Add[T DataType](m1, m2 math.Mat[T]) math.Mat[T] {
 	return add(m1, m2)
 }

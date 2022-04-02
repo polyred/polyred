@@ -2,6 +2,8 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
+//go:build darwin
+
 package gpu
 
 import (
@@ -27,7 +29,7 @@ func init() {
 	addFn = try(newAddShader(device))
 }
 
-func add[T math.Type](m1, m2 math.Mat[T]) math.Mat[T] {
+func add[T DataType](m1, m2 math.Mat[T]) math.Mat[T] {
 	if m1.Row != m2.Row || m1.Col != m2.Col {
 		panic("gpu: input matrix for Add have different dimensions")
 	}

@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// Type are types that can be used in GPU.
+// Type defines all supported data types.
 type Type interface {
 	~uint8 | ~uint32 | ~int32 | ~float32
 }

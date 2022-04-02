@@ -25,14 +25,18 @@ package gl
 import "C"
 
 type (
-	Attrib uint
-	Enum   uint
+	Attrib  uint
+	Enum    uint
+	Program uint
+	Shader  uint
+	Buffer  uint
 )
 
 const (
 	FRONT               Enum = 0x0404
 	UNSIGNED_BYTE       Enum = 0x1401
 	RGBA                Enum = 0x1908
+	INFO_LOG_LENGTH          = 0x8B84
 	BGRA                Enum = 0x80E1
 	GL_COLOR_BUFFER_BIT Enum = C.GL_COLOR_BUFFER_BIT
 	GL_DEPTH_BUFFER_BIT Enum = C.GL_DEPTH_BUFFER_BIT
@@ -40,4 +44,4 @@ const (
 
 type Device struct{}
 
-func (Device) Available() bool { return false }
+func (Device) Available() bool { return true }
