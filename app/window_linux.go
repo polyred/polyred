@@ -21,6 +21,7 @@ import (
 	"time"
 	"unsafe"
 
+	"poly.red/app/internal/bytes"
 	"poly.red/app/internal/gles"
 	"poly.red/math"
 )
@@ -129,14 +130,6 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 	w.ready <- event{}
 }
 
-func slice2bytes(s any) []byte {
-	v := reflect.ValueOf(s)
-	first := v.Index(0)
-	sz := int(first.Type().Size())
-	res := unsafe.Slice((*byte)(unsafe.Pointer(v.Pointer())), sz*v.Cap())
-	return res[:sz*v.Len()]
-}
-
 func (w *window) draw(app Window) {
 	defer func() { w.win.terminate <- event{} }()
 
@@ -145,7 +138,7 @@ func (w *window) draw(app Window) {
 	w.win.ctx.Lock()
 	defer w.win.ctx.Unlock()
 
-	vertices := slice2bytes([]float32{
+	vertices := bytes.FromSlice([]float32{
 		-1, +1, 0, 0,
 		+1, +1, 1, 0,
 		-1, -1, 0, 1,
