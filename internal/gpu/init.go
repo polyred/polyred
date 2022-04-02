@@ -28,6 +28,14 @@ func init() {
 	addFn = try(newAddShader(device))
 }
 
+type Device interface {
+	Available() bool
+}
+
+func Driver() Device {
+	return device
+}
+
 type shaderFn struct {
 	fn  mtl.Function
 	cps mtl.ComputePipelineState

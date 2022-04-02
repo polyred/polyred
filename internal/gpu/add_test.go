@@ -16,7 +16,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
-	if !gpu.Device.Supported() {
+	if !gpu.Driver().Available() {
 		t.Skip("no Metal device available")
 	}
 
@@ -31,7 +31,7 @@ func TestAdd(t *testing.T) {
 }
 
 func BenchmarkAdd(b *testing.B) {
-	if !gpu.Device.Supported() {
+	if !gpu.Driver().Available() {
 		b.Skip("no Metal device available")
 	}
 
@@ -52,5 +52,7 @@ func BenchmarkAdd(b *testing.B) {
 		if !reflect.DeepEqual(outCPU, outGPU) {
 			b.Fatal("inconsistent results")
 		}
+
+		b.Log(outGPU)
 	}
 }
