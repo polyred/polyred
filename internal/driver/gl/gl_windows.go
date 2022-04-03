@@ -51,7 +51,7 @@ func DrawPixels(width, height int32, format, xtype Enum, data []byte) {
 	}
 
 	syscall.Syscall6(_glDrawPixels.Addr(), 5, uintptr(width), uintptr(height), uintptr(format), uintptr(xtype), uintptr(p), 0)
-	runtime.KeepAlive(p) // See https://golang.org/issue/34474
+	runtime.KeepAlive(p) // see go.dev/issue/34474
 }
 
 func Finish() {

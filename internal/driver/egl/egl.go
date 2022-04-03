@@ -3,8 +3,7 @@
 // can be found in the LICENSE file.
 // Modified from https://github.com/gioui/gio
 
-//go:build linux
-// +build linux
+//go:build linux || windows
 
 package egl
 

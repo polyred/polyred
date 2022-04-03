@@ -118,7 +118,7 @@ func NewFunctions(ctx Context, forceES bool) (*Functions, error) {
 	return new(Functions), nil
 }
 
-func (c *Functions) Available() bool { return f != nil }
+func (c *Functions) Available() bool { return c != nil }
 
 func (c *Functions) ActiveTexture(t Enum) {
 	syscall.Syscall(_glActiveTexture.Addr(), 1, uintptr(t), 0, 0)
@@ -508,7 +508,7 @@ func cString(s string) []byte {
 }
 
 // issue34474KeepAlive calls runtime.KeepAlive as a
-// workaround for golang.org/issue/34474.
+// workaround for go.dev/issue/34474.
 func issue34474KeepAlive(v any) {
 	runtime.KeepAlive(v)
 }
