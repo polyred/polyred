@@ -545,6 +545,8 @@ func NewFunctions() (*Functions, error) {
 	return f, nil
 }
 
+func (f *Functions) Available() bool { return f != nil }
+
 func dlsym(handle unsafe.Pointer, s string) unsafe.Pointer {
 	cs := C.CString(s)
 	defer C.free(unsafe.Pointer(cs))
@@ -570,6 +572,8 @@ func (f *Functions) load() error {
 		libNames = []string{"/System/Library/Frameworks/OpenGLES.framework/OpenGLES"}
 	case runtime.GOOS == "android":
 		libNames = []string{"libGLESv2.so", "libGLESv3.so"}
+	case runtime.GOOS == "linux":
+		libNames = []string{"libGLESv2.so.2"}
 	default:
 		libNames = []string{"libGLESv2.so.2"}
 	}

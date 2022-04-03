@@ -118,6 +118,8 @@ func NewFunctions(ctx Context, forceES bool) (*Functions, error) {
 	return new(Functions), nil
 }
 
+func (c *Functions) Available() bool { return f != nil }
+
 func (c *Functions) ActiveTexture(t Enum) {
 	syscall.Syscall(_glActiveTexture.Addr(), 1, uintptr(t), 0, 0)
 }

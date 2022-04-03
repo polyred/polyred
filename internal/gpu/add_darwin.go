@@ -26,7 +26,7 @@ func init() {
 	})
 
 	device = try(mtl.CreateSystemDefaultDevice())
-	addFn = try(newAddShader(device))
+	addFn = try(newAddShader())
 }
 
 func add[T DataType](m1, m2 math.Mat[T]) math.Mat[T] {
@@ -74,7 +74,7 @@ var (
 	addFn    Function
 )
 
-func newAddShader(device mtl.Device) (sf Function, err error) {
+func newAddShader() (sf Function, err error) {
 	defer handle(func(er error) { err = er })
 	fn := try(try(device.MakeLibrary(addMetal, mtl.CompileOptions{
 		LanguageVersion: mtl.LanguageVersion2_4,
