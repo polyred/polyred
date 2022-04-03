@@ -22,3 +22,11 @@ func FromSlice(s any) []byte {
 	res := unsafe.Slice((*byte)(unsafe.Pointer(v.Pointer())), sz*v.Cap())
 	return res[:sz*v.Len()]
 }
+
+func Convert[To, From any](s []From) []To {
+	v := reflect.ValueOf(s)
+	first := v.Index(0)
+	sz := int(first.Type().Size())
+	res := unsafe.Slice((*To)(unsafe.Pointer(v.Pointer())), sz*v.Cap())
+	return res[:sz*v.Len()]
+}

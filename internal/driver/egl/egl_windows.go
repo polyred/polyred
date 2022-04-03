@@ -156,7 +156,16 @@ func eglTerminate(disp _EGLDisplay) bool {
 
 func eglQueryString(disp _EGLDisplay, name _EGLint) string {
 	r, _, _ := _eglQueryString.Call(uintptr(disp), uintptr(name))
-	return syscall.BytePtrToString((*byte)(unsafe.Pointer(r)))
+	return bytePtrToString((*byte)(unsafe.Pointer(r)))
+}
+
+func bytePtrToString(p *uint8) string {
+	a := (*[10000]uint8)(unsafe.Pointer(p))
+	i := 0
+	for a[i] != 0 {
+		i++
+	}
+	return string(a[:i])
 }
 
 func eglWaitClient() bool {

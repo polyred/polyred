@@ -111,12 +111,7 @@ type Functions struct {
 
 type Context any
 
-func NewFunctions(ctx Context, forceES bool) (*Functions, error) {
-	if ctx != nil {
-		panic("non-nil context")
-	}
-	return new(Functions), nil
-}
+func NewFunctions() (*Functions, error) { return new(Functions), nil }
 
 func (c *Functions) Available() bool { return c != nil }
 
@@ -382,6 +377,7 @@ func (c *Functions) GetString(pname Enum) string {
 	s, _, _ := syscall.Syscall(_glGetString.Addr(), 1, uintptr(pname), 0, 0)
 	return bytePtrToString((*byte)(unsafe.Pointer(s)))
 }
+
 func bytePtrToString(p *uint8) string {
 	a := (*[10000]uint8)(unsafe.Pointer(p))
 	i := 0

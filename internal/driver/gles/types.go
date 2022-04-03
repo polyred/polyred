@@ -39,6 +39,7 @@ const (
 	DEPTH_WRITEMASK                       = 0x0B72
 	DRAW_FRAMEBUFFER                      = 0x8CA9
 	DST_COLOR                             = 0x306
+	DYNAMIC_COPY                          = 0x88EA
 	DYNAMIC_DRAW                          = 0x88E8
 	DYNAMIC_READ                          = 0x88E9
 	ELEMENT_ARRAY_BUFFER                  = 0x8893
@@ -62,6 +63,11 @@ const (
 	LINK_STATUS                           = 0x8b82
 	LUMINANCE                             = 0x1909
 	MAP_READ_BIT                          = 0x0001
+	MAP_WRITE_BIT                         = 0x0002
+	MAP_INVALIDATE_RANGE_BIT              = 0x0004
+	MAP_INVALIDATE_BUFFER_BIT             = 0x0008
+	MAP_FLUSH_EXPLICIT_BIT                = 0x0010
+	MAP_UNSYNCHRONIZED_BIT                = 0x0020
 	MAX_TEXTURE_SIZE                      = 0xd33
 	NEAREST                               = 0x2600
 	NO_ERROR                              = 0x0
@@ -94,7 +100,12 @@ const (
 	SRGB_ALPHA_EXT                        = 0x8c42
 	SRGB8                                 = 0x8c41
 	SRGB8_ALPHA8                          = 0x8c43
-	STATIC_DRAW                           = 0x88e4
+	STATIC_COPY                           = 0x88E6
+	STATIC_DRAW                           = 0x88E4
+	STATIC_READ                           = 0x88E5
+	STREAM_COPY                           = 0x88E2
+	STREAM_DRAW                           = 0x88E0
+	STREAM_READ                           = 0x88E1
 	STENCIL_BUFFER_BIT                    = 0x00000400
 	TEXTURE_2D                            = 0xde1
 	TEXTURE_BINDING_2D                    = 0x8069

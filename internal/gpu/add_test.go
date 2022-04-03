@@ -6,7 +6,6 @@ package gpu_test
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"poly.red/internal/gpu"
@@ -23,8 +22,8 @@ func TestAdd(t *testing.T) {
 	sum1 := gpu.Add(m1, m2)
 	sum2 := m1.Add(m2)
 
-	if !reflect.DeepEqual(sum1, sum2) {
-		t.Fatalf("GPU Add receives different results compare to CPU: GPU(%v) CPU(%v)", sum1, sum2)
+	if !sum1.Eq(sum2) {
+		t.Fatalf("GPU Add receives different results compare to CPU: GPU(%v)-CPU(%v)=(%v), m1(%v), m2(%v)", sum1, sum2, sum1.Sub(sum2), m1, m2)
 	}
 }
 
@@ -47,7 +46,7 @@ func BenchmarkAdd(b *testing.B) {
 			outCPU = m1.Add(m2)
 		})
 
-		if !reflect.DeepEqual(outCPU, outGPU) {
+		if !outCPU.Eq(outGPU) {
 			b.Fatal("inconsistent results")
 		}
 
