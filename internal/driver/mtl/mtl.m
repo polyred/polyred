@@ -97,6 +97,10 @@ void * Buffer_Content(void *buffer) {
 	return ((id<MTLBuffer>)buffer).contents;
 }
 
+void Buffer_Release(void *buffer) {
+	[(id<MTLBuffer>)buffer release];
+}
+
 void ComputeCommandEncoder_DispatchThreads(void * computeCommandEncoder, struct Size threadsPerGrid, struct Size threadsPerThreadgroup) {
 	[(id<MTLComputeCommandEncoder>)computeCommandEncoder dispatchThreads:(MTLSize){threadsPerGrid.Width, threadsPerGrid.Height, threadsPerGrid.Depth}
 		threadsPerThreadgroup:(MTLSize){threadsPerThreadgroup.Width, threadsPerThreadgroup.Height, threadsPerThreadgroup.Depth}];

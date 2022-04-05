@@ -3,6 +3,8 @@
 // can be found in the LICENSE file.
 // Modified from https://github.com/gioui/gio
 
+//go:build darwin || linux || windows
+
 package gles
 
 import (

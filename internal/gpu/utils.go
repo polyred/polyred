@@ -31,5 +31,4 @@ func handle(f func(err error)) {
 		}
 		f(err)
 	}
-	return
 }

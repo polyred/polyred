@@ -80,6 +80,7 @@ void Texture_Release(void * texture);
 
 void * Device_MakeBuffer(void * device, const void * bytes, size_t length, uint16_t options);
 void * Buffer_Content(void *buffer);
+void Buffer_Release(void *buffer);
 
 struct Library {
 	void *       Library;

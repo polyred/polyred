@@ -7,7 +7,6 @@ package math
 import (
 	"fmt"
 	"math/rand"
-	"reflect"
 	"strings"
 )
 
@@ -109,7 +108,12 @@ func (m Mat[T]) Eq(n Mat[T]) bool {
 		return false
 	}
 
-	return reflect.DeepEqual(m.Data, n.Data)
+	for i := range m.Data {
+		if !ApproxEq(float64(m.Data[i]), float64(n.Data[i]), Epsilon) {
+			return false
+		}
+	}
+	return true
 }
 
 // Add adds two given matrix: m+n
@@ -128,7 +132,7 @@ func (m Mat[T]) Add(n Mat[T]) Mat[T] {
 	panic(fmt.Sprintf("math: mismatched matrix dimension: A(%v, %v) != B(%v, %v)", m.Row, m.Col, n.Row, n.Col))
 }
 
-// Add subtracts two given matrix: m-n
+// Sub subtracts two given matrix: m-n
 func (m Mat[T]) Sub(n Mat[T]) Mat[T] {
 	if m.Row == n.Row && m.Col == n.Col {
 		r := Mat[T]{
@@ -142,6 +146,19 @@ func (m Mat[T]) Sub(n Mat[T]) Mat[T] {
 		return r
 	}
 	panic("math: mismatched matrix dimension")
+}
+
+// Sqrt computes element wise sequare of root.
+func (m Mat[T]) Sqrt() Mat[T] {
+	r := Mat[T]{
+		Row:  m.Row,
+		Col:  m.Col,
+		Data: make([]T, len(m.Data)),
+	}
+	for i := range m.Data {
+		r.Data[i] = T(Sqrt(float64(m.Data[i])))
+	}
+	return r
 }
 
 // Mul applies matrix multiplication of two given matrix, and returns

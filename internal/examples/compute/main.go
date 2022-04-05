@@ -50,7 +50,7 @@ func Compute[TIn, TOut math.Type](in math.Mat[TIn], out math.Mat[TOut]) (err err
 
 	device := try(mtl.CreateSystemDefaultDevice())
 	fn := try(try(device.MakeLibrary(compute, mtl.CompileOptions{
-		LanguageVersion: mtl.LanguageVersion1_1,
+		LanguageVersion: mtl.LanguageVersion2_4,
 	})).MakeFunction("main0"))
 	cps := try(device.MakeComputePipelineState(fn))
 
@@ -64,12 +64,12 @@ func Compute[TIn, TOut math.Type](in math.Mat[TIn], out math.Mat[TOut]) (err err
 		HOut: int32(out.Col),
 	}
 
-	cmdBuffer := device.MakeCommandQueue().MakeCommandBuffer()
-	computeEncoder := cmdBuffer.MakeComputeCommandEncoder()
-	computeEncoder.SetComputePipelineState(cps)
-	computeEncoder.SetBytes(bytes.FromStruct(p), 0)
-	computeEncoder.SetBuffer(bufIn, 0, 1)
-	computeEncoder.SetBuffer(bufOut, 0, 2)
+	cb := device.MakeCommandQueue().MakeCommandBuffer()
+	ce := cb.MakeComputeCommandEncoder()
+	ce.SetComputePipelineState(cps)
+	ce.SetBytes(bytes.FromStruct(p), 0)
+	ce.SetBuffer(bufIn, 0, 1)
+	ce.SetBuffer(bufOut, 0, 2)
 
 	threadsPerGrid := mtl.Size{
 		Width:  in.Row,
@@ -83,10 +83,10 @@ func Compute[TIn, TOut math.Type](in math.Mat[TIn], out math.Mat[TOut]) (err err
 		Height: h,
 		Depth:  1,
 	}
-	computeEncoder.DispatchThreads(threadsPerGrid, threadsPerThreadgroup)
-	computeEncoder.EndEncoding()
-	cmdBuffer.Commit()
-	cmdBuffer.WaitUntilCompleted()
+	ce.DispatchThreads(threadsPerGrid, threadsPerThreadgroup)
+	ce.EndEncoding()
+	cb.Commit()
+	cb.WaitUntilCompleted()
 	copy(out.Data, unsafe.Slice((*TOut)(bufOut.Content()), len(out.Data)))
 	return nil
 }

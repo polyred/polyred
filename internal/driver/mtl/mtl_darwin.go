@@ -474,6 +474,10 @@ func (b Buffer) Content() unsafe.Pointer {
 	return C.Buffer_Content(b.buffer)
 }
 
+func (b Buffer) Release() {
+	C.Buffer_Release(b.buffer)
+}
+
 // MakeBuffer allocates a new buffer of a given length
 // and initializes its contents by copying existing data into it.
 //
