@@ -5,6 +5,7 @@
 package camera
 
 import (
+	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
@@ -40,6 +41,8 @@ func NewPerspective(opts ...Opt) Interface {
 	c.ResetContext()
 	return c
 }
+
+func (c *Perspective) Name() string { return "perspective_camera" }
 
 // Type returns the object type, i.e. object.TypeCamera
 func (c *Perspective) Type() object.Type {
@@ -118,3 +121,5 @@ func (c *Perspective) ProjMatrix() math.Mat4[float32] {
 		0, 0, 1, 0,
 	)
 }
+
+func (c *Perspective) AABB() primitive.AABB { return primitive.NewAABB(c.position) }

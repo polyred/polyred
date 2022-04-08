@@ -7,6 +7,7 @@ package light
 import (
 	"image/color"
 
+	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
@@ -45,9 +46,11 @@ func NewDirectional(opts ...Opt) Source {
 	return d
 }
 
+func (a *Directional) Name() string                 { return "directional_light" }
 func (d *Directional) Type() object.Type            { return object.TypeLight }
 func (d *Directional) Intensity() float32           { return d.intensity }
 func (d *Directional) Position() math.Vec3[float32] { return d.pos }
 func (d *Directional) Dir() math.Vec3[float32]      { return d.dir }
 func (d *Directional) Color() color.RGBA            { return d.color }
 func (d *Directional) CastShadow() bool             { return d.useShadowMap }
+func (d *Directional) AABB() primitive.AABB         { return primitive.NewAABB(math.NewVec3[float32](0, 0, 0)) }

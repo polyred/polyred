@@ -66,6 +66,7 @@ func (bm *BufferedMesh) SetAttribute(name AttributeName, attribute *BufferAttrib
 	bm.attrs[name] = attribute
 }
 func (bm *BufferedMesh) GetAttribute(name AttributeName) *BufferAttribute { return bm.attrs[name] }
+func (bm *BufferedMesh) Name() string                                     { return "buffered_mesh" }
 func (bm *BufferedMesh) Type() object.Type                                { return object.TypeMesh }
 func (bm *BufferedMesh) GetMaterial() material.Material                   { return bm.material }
 func (bm *BufferedMesh) SetMaterial(mat material.Material)                { bm.material = mat }

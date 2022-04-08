@@ -7,6 +7,7 @@ package light
 import (
 	"image/color"
 
+	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
@@ -37,6 +38,8 @@ func NewAmbient(opts ...Opt) *Ambient {
 	return a
 }
 
-func (a *Ambient) Type() object.Type  { return object.TypeLight }
-func (a *Ambient) Color() color.RGBA  { return a.color }
-func (a *Ambient) Intensity() float32 { return a.intensity }
+func (a *Ambient) Name() string         { return "ambient_light" }
+func (a *Ambient) Type() object.Type    { return object.TypeLight }
+func (a *Ambient) Color() color.RGBA    { return a.color }
+func (a *Ambient) Intensity() float32   { return a.intensity }
+func (a *Ambient) AABB() primitive.AABB { return primitive.NewAABB(math.NewVec3[float32](0, 0, 0)) }

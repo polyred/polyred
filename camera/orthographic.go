@@ -5,6 +5,7 @@
 package camera
 
 import (
+	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
@@ -45,6 +46,8 @@ func NewOrthographic(opts ...Opt) Interface {
 	c.ResetContext()
 	return c
 }
+
+func (c *Orthographic) Name() string { return "orthographic_camera" }
 
 // Type returns the object type, i.e. object.TypeCamera
 func (c *Orthographic) Type() object.Type {
@@ -126,3 +129,5 @@ func (c *Orthographic) ProjMatrix() math.Mat4[float32] {
 		0, 0, 0, 1,
 	)
 }
+
+func (c *Orthographic) AABB() primitive.AABB { return primitive.NewAABB(c.position) }

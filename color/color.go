@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"image/color"
 	"strings"
+
+	"poly.red/math"
 )
 
 // RGBA represents a traditional 32-bit alpha-premultiplied color, having 8
@@ -26,6 +28,20 @@ var (
 	Blue    = color.RGBA{0, 0, 255, 255}
 	Discard = color.RGBA{0, 0, 0, 0}
 )
+
+// FromValue converts a values in [0, 1] to color.RGBA.
+func FromValue[T math.Float](r, g, b, a T) color.RGBA {
+	if r < 0 || r > 1 || g < 0 || g > 1 || b < 0 || b > 1 || a < 0 || a > 1 {
+		panic(fmt.Sprintf("out of range [0, 1], got (%v, %v, %v, %v)", r, g, b, a))
+	}
+
+	return color.RGBA{
+		R: uint8(math.Round(r * 255)),
+		G: uint8(math.Round(g * 255)),
+		B: uint8(math.Round(b * 255)),
+		A: uint8(math.Round(a * 255)),
+	}
+}
 
 // FromHex converts a given '#' prefixed hex string to RGBA color.
 func FromHex(x string) color.RGBA {

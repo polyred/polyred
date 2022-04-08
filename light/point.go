@@ -7,6 +7,7 @@ package light
 import (
 	"image/color"
 
+	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
@@ -43,6 +44,8 @@ func NewPoint(opts ...Opt) Source {
 	return l
 }
 
+func (l *Point) Name() string { return "point_light" }
+
 func (l *Point) Type() object.Type {
 	return object.TypeLight
 }
@@ -62,3 +65,5 @@ func (l *Point) Color() color.RGBA {
 func (l *Point) CastShadow() bool {
 	return l.useShadowMap
 }
+
+func (l *Point) AABB() primitive.AABB { return primitive.NewAABB(l.pos) }

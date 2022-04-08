@@ -4,7 +4,10 @@
 
 package object
 
-import "poly.red/math"
+import (
+	"poly.red/geometry/primitive"
+	"poly.red/math"
+)
 
 type Type int
 
@@ -16,6 +19,8 @@ const (
 )
 
 type Object[T math.Float] interface {
+	Name() string
+
 	Type() Type
 	Rotate(dir math.Vec3[T], angle T)
 	RotateX(a T)
@@ -23,5 +28,6 @@ type Object[T math.Float] interface {
 	RotateZ(a T)
 	Translate(x, y, z T)
 	Scale(x, y, z T)
+	AABB() primitive.AABB
 	ModelMatrix() math.Mat4[T]
 }
