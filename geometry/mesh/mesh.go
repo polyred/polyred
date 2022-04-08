@@ -9,7 +9,6 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/geometry/primitive"
-	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
@@ -19,8 +18,6 @@ type Mesh[T math.Float] interface {
 
 	AABB() primitive.AABB
 	Normalize()
-	SetMaterial(m material.Material)
-	GetMaterial() material.Material
 
 	IndexBuffer() buffer.IndexBuffer
 	VertexBuffer() buffer.VertexBuffer

@@ -12,10 +12,10 @@ import (
 	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/internal/imageutil"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
-	"poly.red/shader"
+	"poly.red/scene"
 )
 
 type App struct {
@@ -23,40 +23,35 @@ type App struct {
 
 	ctrl  *controls.OrbitControl
 	r     *render.Renderer
-	prog  *shader.TextureShader
-	m     *mesh.TriangleMesh
-	cam   camera.Interface
-	vi    buffer.IndexBuffer
-	vb    buffer.VertexBuffer
+	c     camera.Interface
+	s     *scene.Scene
 	cache *image.RGBA
 }
 
-func newApp(meshPath, texPath string) *App {
+func newApp(objPath string) *App {
 	w, h := 800, 600
 
 	// camera and renderer
-	cam := camera.NewPerspective(
+	c := camera.NewPerspective(
 		camera.Position(math.NewVec3[float32](0, 3, 3)),
 		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 10),
 	)
 
 	r := render.NewRenderer(
 		render.Size(w, h),
-		render.Camera(cam),
+		render.Camera(c),
 		render.Workers(2),
 		render.PixelFormat(buffer.PixelFormatBGRA),
 	)
 
-	m := mesh.MustLoadAs[*mesh.TriangleMesh](meshPath)
-	m.Normalize()
-	prog := &shader.TextureShader{
-		ModelMatrix: m.ModelMatrix(),
-		ViewMatrix:  cam.ViewMatrix(),
-		ProjMatrix:  cam.ProjMatrix(),
-		Texture:     buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage(texPath))),
-	}
-	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: m.IndexBuffer(), vb: m.VertexBuffer()}
-	a.ctrl = controls.NewOrbitControl(a, cam)
+	s := scene.NewScene()
+	g := model.MustLoadAs[*mesh.TriangleMesh](objPath)
+
+	g.Normalize()
+	s.Add(g)
+	r.Options(render.Scene(s))
+	a := &App{w: w, h: h, r: r, c: c, s: s}
+	a.ctrl = controls.NewOrbitControl(a, c)
 
 	return a
 }
@@ -68,7 +63,7 @@ func (a *App) Size() (int, int) {
 func (a *App) OnResize(w, h int) {
 	a.w = w
 	a.h = h
-	a.cam.SetAspect(float32(w), float32(h))
+	a.c.SetAspect(float32(w), float32(h))
 	a.r.Options(render.Size(w, h))
 	a.cache = nil
 }
@@ -78,13 +73,8 @@ func (a *App) Draw() (*image.RGBA, bool) {
 		return nil, false
 	}
 
-	a.prog.ModelMatrix = a.m.ModelMatrix()
-	a.prog.ViewMatrix = a.cam.ViewMatrix()
-	a.prog.ProjMatrix = a.cam.ProjMatrix()
-
-	buf := a.r.NextBuffer()
-	a.r.DrawPrimitives(buf, a.vi, a.vb, a.prog.Vertex)
-	a.r.DrawFragments(buf, a.prog.Fragment)
+	buf := a.r.CurrBuffer()
+	a.r.Render()
 	a.cache = buf.Image()
 	return a.cache, true
 }

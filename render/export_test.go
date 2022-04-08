@@ -7,13 +7,12 @@ package render
 import (
 	"poly.red/buffer"
 	"poly.red/geometry/primitive"
-	"poly.red/material"
 	"poly.red/shader"
 )
 
 var (
-	Draw = func(r *Renderer, mvp *shader.MVP, tri *primitive.Triangle, m material.Material) {
-		r.draw(mvp, tri, m)
+	Draw = func(r *Renderer, mvp *shader.MVP, tri *primitive.Triangle) {
+		r.draw(mvp, tri)
 	}
 	PassForward = func(r *Renderer) {
 		r.passForward()

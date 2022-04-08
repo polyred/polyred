@@ -11,12 +11,11 @@ import (
 	"os"
 	"testing"
 
-	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
-	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 )
@@ -182,7 +181,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 	}
 
 	scenes := make([]*Scene, len(models))
-	for i, model := range models {
+	for i, mo := range models {
 		s := &Scene{
 			Scene: scene.NewScene(light.NewPoint(
 				light.Intensity(5),
@@ -191,21 +190,11 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 			), light.NewAmbient(
 				light.Intensity(0.5),
 			)),
-			Name: model,
+			Name: mo,
 		}
 
-		m, err := mesh.LoadAs[*mesh.TriangleMesh](fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, model))
-		if err != nil {
-			panic(err)
-		}
-
-		m.Normalize()
-		m.SetMaterial(material.NewBlinnPhong(
-			material.Texture(buffer.NewUniformTexture(color.RGBA{0, 128, 255, 255})),
-			material.Kdiff(0.6), material.Kspec(1),
-			material.Shininess(100),
-			material.FlatShading(false),
-		))
+		m := model.MustLoadAs[*mesh.TriangleMesh](fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, mo))
+		// m.Normalize()
 		s.Scene.Add(m)
 
 		scenes[i] = s

@@ -38,8 +38,8 @@ polyred show /path/to/mesh.obj
 			flag.Usage()
 			return
 		}
-		app.Run(newApp(args[1], "../../internal/testdata/bunny.png"),
-			app.Title("polywine today"),
+		app.Run(newApp(args[1]),
+			app.Title("polyred"),
 			app.MinSize(80, 60),
 			app.MaxSize(1920*2, 1080*2),
 			app.FPS(false),

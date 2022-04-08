@@ -7,13 +7,11 @@ package example_test
 import (
 	"testing"
 
-	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/internal/imageutil"
 	"poly.red/light"
-	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 )
@@ -35,34 +33,11 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 		),
 	)
 
-	m := mesh.MustLoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
-	data := imageutil.MustLoadImage("../testdata/bunny.png")
-	tex := buffer.NewTexture(
-		buffer.TextureImage(data),
-		buffer.TextureIsoMipmap(true),
-	)
-	mat := material.NewBlinnPhong(
-		material.Texture(tex),
-		material.Kdiff(0.6), material.Kspec(0.3),
-		material.Shininess(20),
-	)
-	m.SetMaterial(mat)
+	m := model.MustLoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m = mesh.MustLoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
-	data = imageutil.MustLoadImage("../testdata/ground.png")
-	tex = buffer.NewTexture(
-		buffer.TextureImage(data),
-		buffer.TextureIsoMipmap(true),
-	)
-	mat = material.NewBlinnPhong(
-		material.Texture(tex),
-		material.Kdiff(0.6), material.Kspec(0.3),
-		material.Shininess(20),
-		material.ReceiveShadow(true),
-	)
-	m.SetMaterial(mat)
+	m = model.MustLoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
 	m.Scale(2, 2, 2)
 	s.Add(m)
 

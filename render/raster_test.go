@@ -13,13 +13,12 @@ import (
 	"runtime/pprof"
 	"testing"
 
-	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
-	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/scene"
 	"poly.red/scene/object"
 	"poly.red/shader"
@@ -50,18 +49,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	), light.NewAmbient(
 		light.Intensity(0.5),
 	))
-	m := mesh.MustLoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
-	data := imageutil.MustLoadImage("../internal/testdata/bunny.png")
-	mat := material.NewBlinnPhong(
-		material.Texture(buffer.NewTexture(
-			buffer.TextureImage(data),
-			buffer.TextureIsoMipmap(true),
-		)),
-		material.Kdiff(0.8), material.Kspec(1),
-		material.Shininess(100),
-		material.AmbientOcclusion(false),
-	)
-	m.SetMaterial(mat)
+	m := model.MustLoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
 	m.Rotate(math.NewVec3[float32](0, 1, 0), -math.Pi/6)
 	m.Scale(4, 4, 4)
 	m.Translate(0.1, 0, -0.2)
@@ -204,7 +192,7 @@ func BenchmarkDrawCall(b *testing.B) {
 			nt := len(tris)
 			for i := 0; i < b.N; i++ {
 				f := tris[i%int(nt)]
-				Draw(r, mvp, f, m.GetMaterial())
+				Draw(r, mvp, f)
 			}
 		})
 	}

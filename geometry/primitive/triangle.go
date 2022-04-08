@@ -12,8 +12,9 @@ var _ Face[float32] = &Triangle{}
 
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
-	Idx        int
+	Idx        uint64
 	V1, V2, V3 *Vertex
+	MaterialId uint64
 
 	aabb       *AABB
 	faceNormal math.Vec4[float32]

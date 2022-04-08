@@ -11,16 +11,17 @@ import (
 	"runtime"
 
 	"poly.red/geometry/mesh"
+	"poly.red/scene"
 )
 
 // StanfordBunny returns a mesh of stanford bunny.
-func StanfordBunnyAs[T mesh.Mesh[float32]]() T {
-	return mesh.MustLoadAs[T](fix("../internal/testdata/bunny.obj"))
+func StanfordBunnyAs[T mesh.Mesh[float32]]() *scene.Group {
+	return MustLoadAs[T](fix("../internal/testdata/bunny.obj"))
 }
 
 // ChineseDragon returns a mesh of chinese dragon.
-func ChineseDragonAs[T mesh.Mesh[float32]]() T {
-	return mesh.MustLoadAs[T](fix("../internal/testdata/dragon.obj"))
+func ChineseDragonAs[T mesh.Mesh[float32]]() *scene.Group {
+	return MustLoadAs[T](fix("../internal/testdata/dragon.obj"))
 }
 
 // fix returns the absolute path of a given relative path

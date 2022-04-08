@@ -5,6 +5,7 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/camera"
+	"poly.red/color"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
@@ -22,7 +23,7 @@ func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 			buffer.TextureImage(imageutil.MustLoadImage("../testdata/uvgrid2.png")),
 			buffer.TextureIsoMipmap(true),
 		)),
-		material.Kdiff(0.6), material.Kspec(0.5),
+		material.Kdiff(color.FromValue(0.6, 0.6, 0.6, 1.0)), material.Kspec(color.FromValue(0.5, 0.5, 0.5, 1.0)),
 		material.Shininess(150),
 	))
 	m.Scale(2, 2, 2)

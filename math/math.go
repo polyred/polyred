@@ -19,6 +19,7 @@ const (
 	MaxInt64   = math.MaxInt64
 	MaxFloat32 = math.MaxFloat32
 	MaxFloat64 = math.MaxFloat64
+	MaxUint32  = math.MaxUint32
 )
 
 var (

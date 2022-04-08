@@ -10,13 +10,12 @@ import (
 	"math/rand"
 	"testing"
 
-	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
-	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 )
@@ -30,39 +29,11 @@ func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Inter
 		light.CastShadow(true)),
 		light.NewAmbient(light.Intensity(0.5)))
 
-	m := mesh.MustLoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
-	m.SetMaterial(material.NewBlinnPhong(
-		material.Texture(
-			buffer.NewTexture(
-				buffer.TextureImage(
-					imageutil.MustLoadImage("../testdata/bunny.png",
-						imageutil.GammaCorrect(true)),
-				),
-				buffer.TextureIsoMipmap(true),
-			),
-		),
-		material.Kdiff(0.6), material.Kspec(1),
-		material.Shininess(150),
-		material.ReceiveShadow(true),
-		material.AmbientOcclusion(true),
-	))
+	m := model.MustLoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m = mesh.MustLoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
-	m.SetMaterial(material.NewBlinnPhong(
-		material.Texture(buffer.NewTexture(
-			buffer.TextureImage(
-				imageutil.MustLoadImage("../testdata/ground.png",
-					imageutil.GammaCorrect(true)),
-			),
-			buffer.TextureIsoMipmap(true),
-		),
-		),
-		material.Kdiff(0.6), material.Kspec(0.5),
-		material.Shininess(150),
-		material.ReceiveShadow(true),
-	))
+	m = model.MustLoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
 	m.Scale(2, 2, 2)
 	s.Add(m)
 

@@ -8,11 +8,9 @@ import (
 	"image/color"
 	"testing"
 
-	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
-	"poly.red/material"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
@@ -29,17 +27,9 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 	))
 
 	m := model.ChineseDragonAs[*mesh.TriangleMesh]()
-	m.SetMaterial(material.NewBlinnPhong(
-		material.Texture(
-			buffer.NewUniformTexture(color.RGBA{0, 128, 255, 255}),
-		),
-		material.Kdiff(0.6), material.Kspec(1),
-		material.Shininess(100),
-		material.AmbientOcclusion(true),
-	))
 	m.Scale(1.5, 1.5, 1.5)
 	m.Translate(0, -0.1, -0.15)
-	m.Normalize()
+	// m.Normalize()
 	s.Add(m)
 
 	return s, camera.NewPerspective(

@@ -37,5 +37,5 @@ func TestBazier(t *testing.T) {
 		prev = next
 	}
 
-	imageutil.Save(buf.Image(), "bazier.png")
+	imageutil.Save(buf.Image(), "../internal/examples/out/bazier.png")
 }

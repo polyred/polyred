@@ -15,6 +15,7 @@ import (
 	"poly.red/geometry/primitive"
 	"poly.red/internal/imageutil"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/shader"
 )
@@ -39,12 +40,8 @@ func init() {
 	)
 
 	// Use a different model
-	var err error
-	m, err = mesh.LoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
-	if err != nil {
-		panic(err)
-	}
-	m.Normalize()
+	m := model.MustLoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
+	// m.Normalize()
 
 	tex := buffer.NewTexture(
 		buffer.TextureImage(imageutil.MustLoadImage("../internal/testdata/bunny.png")),

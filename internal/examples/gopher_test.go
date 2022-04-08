@@ -8,12 +8,11 @@ import (
 	"image/color"
 	"testing"
 
-	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/light"
-	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 )
@@ -27,21 +26,9 @@ func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.7),
 	))
 
-	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/gopher.obj")
-	if err != nil {
-		panic(err)
-	}
+	m := model.MustLoadAs[*mesh.TriangleMesh]("../testdata/gopher.obj")
 	m.RotateY(-math.Pi / 2)
-
-	mat := material.NewBlinnPhong(
-		material.Texture(buffer.NewUniformTexture(color.RGBA{0, 128, 255, 255})),
-		material.Kdiff(0.6), material.Kspec(1),
-		material.Shininess(150),
-		material.FlatShading(true),
-		material.AmbientOcclusion(true),
-	)
-	m.SetMaterial(mat)
-	m.Normalize()
+	// m.Normalize()
 	s.Add(m)
 
 	return s, camera.NewPerspective(

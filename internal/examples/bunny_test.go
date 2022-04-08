@@ -8,13 +8,11 @@ import (
 	"image/color"
 	"testing"
 
-	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
-	"poly.red/internal/imageutil"
 	"poly.red/light"
-	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 
@@ -30,28 +28,13 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.7),
 	))
 
-	// load a mesh
-	done := profiling.Timed("loading mesh")
-	m, err := mesh.LoadAs[*mesh.TriangleMesh]("../testdata/bunny-smooth.obj")
+	done := profiling.Timed("loading obj")
+	m, err := model.LoadAs[*mesh.TriangleMesh]("../testdata/bunny-smooth.obj")
 	if err != nil {
 		panic(err)
 	}
 	done()
 
-	done = profiling.Timed("loading texture")
-	data := imageutil.MustLoadImage("../testdata/bunny.png")
-	tex := buffer.NewTexture(
-		buffer.TextureImage(data),
-		buffer.TextureIsoMipmap(true),
-	)
-	done()
-
-	m.SetMaterial(material.NewBlinnPhong(
-		material.Texture(tex),
-		material.Kdiff(0.6), material.Kspec(1),
-		material.Shininess(150),
-		material.FlatShading(true),
-	))
 	m.Scale(1500, 1500, 1500)
 	m.Translate(-700, -5, 350)
 	s.Add(m)

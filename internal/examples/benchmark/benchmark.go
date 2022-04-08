@@ -11,13 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
-	"poly.red/material"
 	"poly.red/math"
+	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
 )
@@ -80,36 +79,11 @@ func bench(opt *benchOpts) {
 			light.Color(color.RGBA{255, 255, 255, 255}),
 		))
 
-		m := mesh.MustLoadAs[*mesh.TriangleMesh]("../../testdata/bunny.obj")
-		data := imageutil.MustLoadImage(
-			"../../testdata/bunny.png",
-			imageutil.GammaCorrect(opt.gammaCorrection),
-		)
-		m.SetMaterial(material.NewBlinnPhong(
-			material.Texture(buffer.NewTexture(
-				buffer.TextureImage(data),
-				buffer.TextureIsoMipmap(true),
-			)),
-			material.Kdiff(0.6), material.Kspec(0.5),
-			material.Shininess(150),
-			material.ReceiveShadow(opt.shadowmap),
-			material.AmbientOcclusion(true),
-		))
+		m := model.MustLoadAs[*mesh.TriangleMesh]("../../testdata/bunny.obj")
 		m.Scale(2, 2, 2)
 		s.Add(m)
 
-		m = mesh.MustLoadAs[*mesh.TriangleMesh]("../../testdata/ground.obj")
-		data = imageutil.MustLoadImage("../../testdata/ground.png",
-			imageutil.GammaCorrect(opt.gammaCorrection))
-		m.SetMaterial(material.NewBlinnPhong(
-			material.Texture(buffer.NewTexture(
-				buffer.TextureImage(data),
-				buffer.TextureIsoMipmap(true),
-			)),
-			material.Kdiff(0.6), material.Kspec(0.5),
-			material.Shininess(150),
-			material.ReceiveShadow(opt.shadowmap),
-		))
+		m = model.MustLoadAs[*mesh.TriangleMesh]("../../testdata/ground.obj")
 		m.Scale(2, 2, 2)
 		s.Add(m)
 

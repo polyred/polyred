@@ -13,6 +13,7 @@ import (
 	"poly.red/color"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/cache"
 	"poly.red/internal/imageutil"
 	"poly.red/material"
 	"poly.red/math"
@@ -185,8 +186,7 @@ func (r *Renderer) passForward() {
 				if !t.IsValid() {
 					return
 				}
-
-				r.draw(mvp, t, mesh.GetMaterial())
+				r.draw(mvp, t)
 			})
 		}
 		return true
@@ -227,14 +227,14 @@ func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.R
 	}
 
 	col := info.Col
-	mat, ok := info.AttrFlat["Mat"].(material.Material)
-	if ok {
+	mat := cache.Get[*material.BlinnPhong](info.MaterialID)
+	if mat != nil {
 		lightSources, lightEnv := r.cfg.Scene.Lights()
 		col = mat.FragmentShader(
 			info,
 			r.cfg.Camera.Position(), lightSources, lightEnv)
 
-		if r.cfg.ShadowMap && mat.ReceiveShadow() {
+		if r.cfg.ShadowMap && mat.ReceiveShadow {
 			visibles := float32(0.0)
 			ns := len(r.shadowBufs)
 			for i := 0; i < ns; i++ {
@@ -271,8 +271,7 @@ func (r *Renderer) passAntialiasing() {
 
 func (r *Renderer) draw(
 	mvp *shader.MVP,
-	t *primitive.Triangle,
-	mat material.Material) {
+	t *primitive.Triangle) {
 	var t1, t2, t3 *primitive.Vertex
 	t1 = &primitive.Vertex{
 		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V1.Pos),
@@ -310,7 +309,7 @@ func (r *Renderer) draw(
 	}
 
 	if r.inViewport(r.bufs[0], t1.Pos, t2.Pos, t3.Pos) {
-		r.drawClipped(mvp, t1, t2, t3, recipw, mat)
+		r.drawClipped(mvp, t1, t2, t3, recipw, t.MaterialId)
 		return
 	}
 
@@ -318,7 +317,7 @@ func (r *Renderer) draw(
 	h := float32(r.cfg.MSAA * r.bufs[0].Bounds().Dy())
 	tris := r.clipTriangle(t1, t2, t3, w, h, recipw)
 	for _, tri := range tris {
-		r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, mat)
+		r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, t.MaterialId)
 	}
 }
 
@@ -326,7 +325,7 @@ func (r *Renderer) drawClipped(
 	mvp *shader.MVP,
 	t1, t2, t3 *primitive.Vertex,
 	recipw [3]float32,
-	mat material.Material) {
+	materialId uint64) {
 	m1 := t1.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
 	m2 := t2.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
 	m3 := t3.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
@@ -376,7 +375,7 @@ func (r *Renderer) drawClipped(
 
 			// Compute du dv
 			var du, dv float32
-			if mat != nil && mat.Texture().UseMipmap() {
+			if materialId > 0 {
 				p1 := math.NewVec2(p.X+1, p.Y)
 				p2 := math.NewVec2(p.X, p.Y+1)
 				bcx := math.Barycoord(p1, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())
@@ -420,18 +419,18 @@ func (r *Renderer) drawClipped(
 			r.bufs[0].Set(x, y, buffer.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
-					X:     x,
-					Y:     y,
-					Depth: z,
-					U:     uvX,
-					V:     uvY,
-					Du:    du,
-					Dv:    dv,
-					Nor:   n,
-					Col:   col,
+					X:          x,
+					Y:          y,
+					Depth:      z,
+					U:          uvX,
+					V:          uvY,
+					Du:         du,
+					Dv:         dv,
+					Nor:        n,
+					Col:        col,
+					MaterialID: materialId,
 					AttrFlat: map[primitive.AttrName]any{
 						"Pos": pos,
-						"Mat": mat,
 						"fN":  fN,
 					},
 				},

@@ -18,6 +18,7 @@ import (
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
+	"poly.red/scene/object"
 	"poly.red/shader"
 )
 
@@ -54,23 +55,28 @@ func newApp() *App {
 	}
 
 	m := model.StanfordBunnyAs[*mesh.TriangleMesh]()
-	m.Normalize()
+	var geom *mesh.TriangleMesh
+	m.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		if o.Type() == object.TypeMesh {
+			geom = o.(*mesh.TriangleMesh)
+			return false
+		}
+		return true
+	})
+	// m.Normalize()
 	prog := &shader.TextureShader{
-		ModelMatrix: m.ModelMatrix(),
+		ModelMatrix: geom.ModelMatrix(),
 		ViewMatrix:  cam.ViewMatrix(),
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage("../../testdata/bunny.png"))),
 	}
-	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: m, vi: m.IndexBuffer(), vb: m.VertexBuffer()}
+	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: geom, vi: geom.IndexBuffer(), vb: geom.VertexBuffer()}
 	a.ctrl = controls.NewOrbitControl(a, cam)
 
 	return a
 }
 
-func (a *App) Size() (int, int) {
-	return a.w, a.h
-}
-
+func (a *App) Size() (int, int) { return a.w, a.h }
 func (a *App) OnResize(w, h int) {
 	log.Printf("siz:(%vx%v)", w, h)
 

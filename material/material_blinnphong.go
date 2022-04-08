@@ -5,46 +5,15 @@
 package material
 
 import (
-	"image/color"
-
 	"poly.red/buffer"
+	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/shader"
 )
 
-type BlinnPhongMaterial struct {
-	tex              *buffer.Texture
-	kDiff            float32
-	kSpec            float32
-	shininess        float32
-	flatShading      bool
-	receiveShadow    bool
-	ambientOcclusion bool
-}
-
-func (m *BlinnPhongMaterial) Texture() *buffer.Texture {
-	return m.tex
-}
-
-func NewBlinnPhong(opts ...Opt) Material {
-	t := &BlinnPhongMaterial{
-		tex:              nil,
-		kDiff:            0.5,
-		kSpec:            1,
-		shininess:        1,
-		flatShading:      false,
-		receiveShadow:    false,
-		ambientOcclusion: false,
-	}
-	for _, opt := range opts {
-		opt(t)
-	}
-	return t
-}
-
-func (m *BlinnPhongMaterial) VertexShader(v *primitive.Vertex) *primitive.Vertex {
+func (m *BlinnPhong) VertexShader(v *primitive.Vertex) *primitive.Vertex {
 	mvp := v.AttrFlat[shader.MVPAttr].(*shader.MVP)
 	pos := mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(v.Pos)
 	vv := primitive.NewVertex(
@@ -57,19 +26,19 @@ func (m *BlinnPhongMaterial) VertexShader(v *primitive.Vertex) *primitive.Vertex
 	return vv
 }
 
-func (m *BlinnPhongMaterial) FragmentShader(
+func (m *BlinnPhong) FragmentShader(
 	info buffer.Fragment, c math.Vec3[float32],
 	ls []light.Source, es []light.Environment,
 ) color.RGBA {
 	lod := float32(0.0)
-	if m.tex.UseMipmap() {
-		siz := float32(m.tex.Size()) * math.Sqrt(math.Max(info.Du, info.Dv))
+	if m.Texture.UseMipmap() {
+		siz := float32(m.Texture.Size()) * math.Sqrt(math.Max(info.Du, info.Dv))
 		if siz < 1 {
 			siz = 1
 		}
 		lod = math.Log2(siz)
 	}
-	col := m.tex.Query(lod, info.U, 1-info.V)
+	col := m.Texture.Query(lod, info.U, 1-info.V)
 
 	LaR := float32(0.0)
 	LaG := float32(0.0)
@@ -90,7 +59,7 @@ func (m *BlinnPhongMaterial) FragmentShader(
 	LsB := float32(0.0)
 
 	n := info.Nor
-	if m.flatShading {
+	if m.FlatShading {
 		n = info.AttrFlat["fN"].(math.Vec4[float32])
 	}
 	x := info.AttrFlat["Pos"].(math.Vec4[float32])
@@ -113,7 +82,7 @@ func (m *BlinnPhongMaterial) FragmentShader(
 		V := c.ToVec4(1).Sub(x).Unit()
 		H := L.Add(V).Unit()
 		Ld := math.Clamp(n.Dot(L), 0, 1)
-		Ls := math.Pow(math.Clamp(n.Dot(H), 0, 1), m.shininess)
+		Ls := math.Pow(math.Clamp(n.Dot(H), 0, 1), m.Shininess)
 
 		LdR += Ld * float32(col.R) * I
 		LdG += Ld * float32(col.G) * I
@@ -125,21 +94,13 @@ func (m *BlinnPhongMaterial) FragmentShader(
 	}
 
 	// The Blinn-Phong Reflection Model
-	r := LaR + m.kDiff*LdR + m.kSpec*LsR
-	g := LaG + m.kDiff*LdG + m.kSpec*LsG
-	b := LaB + m.kDiff*LdB + m.kSpec*LsB
+	r := LaR + (float32(m.Diffuse.R)/255.0)*LdR + (float32(m.Specular.R)/255.0)*LsR
+	g := LaG + (float32(m.Diffuse.G)/255.0)*LdG + (float32(m.Specular.G)/255.0)*LsG
+	b := LaB + (float32(m.Diffuse.B)/255.0)*LdB + (float32(m.Specular.B)/255.0)*LsB
 
 	return color.RGBA{
 		uint8(math.Clamp(r, 0, 0xff)),
 		uint8(math.Clamp(g, 0, 0xff)),
 		uint8(math.Clamp(b, 0, 0xff)),
 		uint8(math.Clamp(float32(col.A), 0, 0xff))}
-}
-
-func (m *BlinnPhongMaterial) ReceiveShadow() bool {
-	return m.receiveShadow
-}
-
-func (m *BlinnPhongMaterial) AmbientOcclusion() bool {
-	return m.ambientOcclusion
 }

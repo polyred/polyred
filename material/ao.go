@@ -9,6 +9,7 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/cache"
 	"poly.red/math"
 )
 
@@ -17,11 +18,8 @@ type AmbientOcclusionPass struct{ Buf *buffer.FragmentBuffer }
 func AmbientOcclusionShade(buf *buffer.FragmentBuffer, info *primitive.Fragment) color.RGBA {
 	// FIXME: naive and super slow SSAO implementation. Optimize
 	// when denoiser is available.
-	mat, ok := info.AttrFlat["Mat"].(Material)
-	if !ok {
-		mat = nil
-	}
-	if mat == nil || !mat.AmbientOcclusion() {
+	mat := cache.Get[*BlinnPhong](info.MaterialID)
+	if mat == nil || !mat.AmbientOcclusion {
 		return info.Col
 	}
 

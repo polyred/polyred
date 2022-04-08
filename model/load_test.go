@@ -1,0 +1,29 @@
+// Copyright 2022 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
+
+package model_test
+
+import (
+	"testing"
+
+	"poly.red/geometry/mesh"
+	"poly.red/model"
+)
+
+func TestLoadOBJ(t *testing.T) {
+	path := "../internal/testdata/bunny.obj"
+	_, err := model.LoadObjAs[*mesh.TriangleMesh](path)
+	if err != nil {
+		t.Fatalf("cannot load obj model, path: %s, err: %v", path, err)
+	}
+}
+
+func BenchmarkLoadOBJ(b *testing.B) {
+	path := "../internal/testdata/bunny-smooth.obj"
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		model.LoadObjAs[*mesh.TriangleMesh](path)
+	}
+}

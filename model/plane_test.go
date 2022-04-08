@@ -33,5 +33,5 @@ func TestPlane(t *testing.T) {
 		render.Scene(s),
 		render.Background(color.FromHex("#181818")),
 	)
-	imageutil.Save(r.Render(), "plane.png")
+	imageutil.Save(r.Render(), "../internal/examples/out/plane.png")
 }

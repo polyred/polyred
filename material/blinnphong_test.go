@@ -5,11 +5,11 @@
 package material_test
 
 import (
-	"image/color"
 	"math/rand"
 	"testing"
 
 	"poly.red/buffer"
+	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/material"
@@ -38,7 +38,8 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 
 	m := material.NewBlinnPhong(
 		material.Texture(buffer.NewTexture()),
-		material.Kdiff(0.6), material.Kspec(200),
+		material.Kdiff(color.FromValue(0.6, 0.6, 0.6, 1.0)),
+		material.Kspec(color.FromValue(0.6, 0.6, 0.6, 1.0)),
 		material.Shininess(25),
 	)
 

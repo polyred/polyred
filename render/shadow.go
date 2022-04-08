@@ -13,6 +13,7 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
+	"poly.red/internal/cache"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
@@ -145,7 +146,7 @@ func (r *Renderer) passShadows(index int) {
 				if !t.IsValid() {
 					return
 				}
-				r.drawDepth(index, t, m.GetMaterial(), mvp)
+				r.drawDepth(index, t, cache.Get[*material.BlinnPhong](t.MaterialId), mvp)
 			})
 		}
 		return true
@@ -153,7 +154,7 @@ func (r *Renderer) passShadows(index int) {
 	r.sched.Wait()
 }
 
-func (r *Renderer) drawDepth(index int, t *primitive.Triangle, mat material.Material, mvp shader.MVP) {
+func (r *Renderer) drawDepth(index int, t *primitive.Triangle, mat *material.BlinnPhong, mvp shader.MVP) {
 	var t1, t2, t3 *primitive.Vertex
 	t1 = &primitive.Vertex{
 		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V1.Pos),

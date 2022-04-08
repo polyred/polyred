@@ -5,7 +5,6 @@
 package scene_test
 
 import (
-	"fmt"
 	"testing"
 
 	"poly.red/math"
@@ -33,7 +32,7 @@ func TestScene(t *testing.T) {
 	g1.Translate(1, 2, 3)
 
 	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		fmt.Println(o, modelMatrix)
+		t.Log(o, modelMatrix)
 		return true
 	})
 }
