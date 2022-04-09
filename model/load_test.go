@@ -8,15 +8,22 @@ import (
 	"testing"
 
 	"poly.red/geometry/mesh"
+	"poly.red/math"
 	"poly.red/model"
+	"poly.red/scene"
 )
 
 func TestLoadOBJ(t *testing.T) {
 	path := "../internal/testdata/bunny.obj"
-	_, err := model.LoadObjAs[*mesh.TriangleMesh](path)
+	g, err := model.LoadObjAs[*mesh.TriangleMesh](path)
 	if err != nil {
 		t.Fatalf("cannot load obj model, path: %s, err: %v", path, err)
 	}
+
+	scene.IterGroupObjects(g, func(m *mesh.TriangleMesh, modelMatrix math.Mat4[float32]) bool {
+		t.Log(m, modelMatrix)
+		return true
+	})
 }
 
 func BenchmarkLoadOBJ(b *testing.B) {

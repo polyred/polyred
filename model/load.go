@@ -6,6 +6,7 @@ package model
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 
 	"poly.red/buffer"
@@ -58,21 +59,25 @@ func loadObjScene(f *obj.File) (*scene.Group, error) {
 	objs := []object.Object[float32]{}
 	for _, obj := range f.Objs {
 		fmat := f.Materials[obj.Faces[0].Material]
-		mat := material.NewBlinnPhong(
-			material.Texture(buffer.NewTexture(
-				buffer.TextureImage(
-					imageutil.MustLoadImage(filepath.Join(f.MtlDir, fmat.MapKd),
-						imageutil.GammaCorrect(true),
-					)),
-				buffer.TextureIsoMipmap(true),
-			)),
-			material.Kdiff(fmat.Diffuse), material.Kspec(fmat.Specular),
-			material.Shininess(fmat.Shininess),
-			material.FlatShading(true),
-			material.AmbientOcclusion(false),
-			material.ReceiveShadow(false),
-		)
-		cache.Set(mat.Material.ID, mat)
+		var mat *material.BlinnPhong
+		if fmat.MapKd != "" {
+			log.Println("loading: ", filepath.Join(f.MtlDir, fmat.MapKd))
+			mat = material.NewBlinnPhong(
+				material.Texture(buffer.NewTexture(
+					buffer.TextureImage(
+						imageutil.MustLoadImage(filepath.Join(f.MtlDir, fmat.MapKd),
+							imageutil.GammaCorrect(true),
+						)),
+					buffer.TextureIsoMipmap(true),
+				)),
+				material.Kdiff(fmat.Diffuse), material.Kspec(fmat.Specular),
+				material.Shininess(fmat.Shininess),
+				material.FlatShading(true),
+				material.AmbientOcclusion(false),
+				material.ReceiveShadow(false),
+			)
+			cache.Set(mat.Material.ID, mat)
+		}
 
 		var tris []*primitive.Triangle
 		for _, face := range obj.Faces {
@@ -110,7 +115,9 @@ func loadObjScene(f *obj.File) (*scene.Group, error) {
 			t.V2.Col = color.FromValue[float32](1, 1, 1, 1)
 			t.V3.Col = color.FromValue[float32](1, 1, 1, 1)
 
-			t.MaterialId = mat.Material.ID
+			if mat != nil {
+				t.MaterialId = mat.Material.ID
+			}
 			tris = append(tris, &t)
 		}
 		objs = append(objs, mesh.NewTriangleMesh(tris))

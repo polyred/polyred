@@ -18,7 +18,7 @@ import (
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
-	"poly.red/scene/object"
+	"poly.red/scene"
 	"poly.red/shader"
 )
 
@@ -56,14 +56,11 @@ func newApp() *App {
 
 	m := model.StanfordBunnyAs[*mesh.TriangleMesh]()
 	var geom *mesh.TriangleMesh
-	m.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		if o.Type() == object.TypeMesh {
-			geom = o.(*mesh.TriangleMesh)
-			return false
-		}
-		return true
+	scene.IterGroupObjects(m, func(o *mesh.TriangleMesh, m math.Mat4[float32]) bool {
+		geom = o
+		return false
 	})
-	// m.Normalize()
+	m.Normalize()
 	prog := &shader.TextureShader{
 		ModelMatrix: geom.ModelMatrix(),
 		ViewMatrix:  cam.ViewMatrix(),

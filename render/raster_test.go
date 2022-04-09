@@ -20,7 +20,6 @@ import (
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/scene"
-	"poly.red/scene/object"
 	"poly.red/shader"
 )
 
@@ -165,15 +164,11 @@ func BenchmarkDrawCall(b *testing.B) {
 			m        mesh.Mesh[float32]
 			modelMat math.Mat4[float32]
 		)
-		s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-			if o.Type() == object.TypeMesh {
-				m = o.(mesh.Mesh[float32])
-				modelMat = modelMatrix
-				return false
-			}
-			return true
+		scene.IterObjects(s, func(o mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+			m = o
+			modelMat = modelMatrix
+			return false
 		})
-
 		mvp := &shader.MVP{
 			Model:       modelMat,
 			View:        matView,

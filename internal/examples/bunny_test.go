@@ -56,7 +56,7 @@ func TestBunny(t *testing.T) {
 			MemProf:    false,
 			ExecTracer: false,
 			RenderOpts: []render.Option{
-				render.Debug(false),
+				render.Debug(true),
 				render.MSAA(2),
 				render.ShadowMap(true),
 			},

@@ -52,24 +52,16 @@ func (s *Scene) IterObjects(iter func(o object.Object[float32], modelMatrix math
 
 func (s *Scene) IterMeshes(iter func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool) {
 	for i := range s.root.children {
-		s.root.children[i].IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-			if o.Type() != object.TypeMesh {
-				return true
-			}
-
-			return iter(o.(mesh.Mesh[float32]), s.root.ModelMatrix().MulM(modelMatrix))
+		IterGroupObjects(s.root.children[i], func(o mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+			return iter(o, s.root.ModelMatrix().MulM(modelMatrix))
 		})
 	}
 }
 
 func (s *Scene) IterLights(iter func(l light.Light, modelMatrix math.Mat4[float32]) bool) {
 	for i := range s.root.children {
-		s.root.children[i].IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-			if o.Type() != object.TypeLight {
-				return true
-			}
-
-			return iter(o.(light.Light), s.root.ModelMatrix().MulM(modelMatrix))
+		IterGroupObjects(s.root.children[i], func(o light.Light, modelMatrix math.Mat4[float32]) bool {
+			return iter(o, s.root.ModelMatrix().MulM(modelMatrix))
 		})
 	}
 }
@@ -190,5 +182,27 @@ func (g *Group) Normalize() {
 		m.Translate(-center.X, -center.Y, -center.Z)
 		m.Scale(1/radius, 1/radius, 1/radius)
 		return true
+	})
+}
+
+func IterObjects[T any](s *Scene, iter func(T, math.Mat4[float32]) bool) {
+	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		switch any(o).(type) {
+		case T:
+			return iter(o.(T), modelMatrix)
+		default:
+			return true
+		}
+	})
+}
+
+func IterGroupObjects[T any](g *Group, iter func(T, math.Mat4[float32]) bool) {
+	g.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		switch any(o).(type) {
+		case T:
+			return iter(o.(T), modelMatrix)
+		default:
+			return true
+		}
 	})
 }
