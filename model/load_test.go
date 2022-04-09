@@ -20,7 +20,7 @@ func TestLoadOBJ(t *testing.T) {
 		t.Fatalf("cannot load obj model, path: %s, err: %v", path, err)
 	}
 
-	scene.IterGroupObjects(g, func(m *mesh.TriangleMesh, modelMatrix math.Mat4[float32]) bool {
+	scene.IterObjects(g, func(m *mesh.TriangleMesh, modelMatrix math.Mat4[float32]) bool {
 		t.Log(m, modelMatrix)
 		return true
 	})

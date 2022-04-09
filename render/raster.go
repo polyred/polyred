@@ -17,6 +17,7 @@ import (
 	"poly.red/internal/imageutil"
 	"poly.red/material"
 	"poly.red/math"
+	"poly.red/scene"
 	"poly.red/shader"
 
 	"poly.red/internal/profiling"
@@ -155,15 +156,7 @@ func (r *Renderer) passForward() {
 		done := profiling.Timed("forward pass (world)")
 		defer done()
 	}
-
-	sum := 0
-	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
-		sum += len(m.Triangles())
-		r.sched.Add(len(m.Triangles()))
-		return true
-	})
-
-	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+	scene.IterObjects(r.cfg.Scene, func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
 		mesh := m.(*mesh.TriangleMesh)
 		mvp := &shader.MVP{
 			Model: mesh.ModelMatrix(),
@@ -182,10 +175,11 @@ func (r *Renderer) passForward() {
 		tris := mesh.Triangles()
 		for i := range tris {
 			t := tris[i]
+			if !t.IsValid() {
+				continue
+			}
+			r.sched.Add(1)
 			r.sched.Run(func() {
-				if !t.IsValid() {
-					return
-				}
 				r.draw(mvp, t)
 			})
 		}

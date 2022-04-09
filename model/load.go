@@ -6,7 +6,6 @@ package model
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
 
 	"poly.red/buffer"
@@ -19,7 +18,6 @@ import (
 	"poly.red/math"
 	"poly.red/model/obj"
 	"poly.red/scene"
-	"poly.red/scene/object"
 )
 
 func MustLoadAs[T mesh.Mesh[float32]](path string) *scene.Group {
@@ -56,12 +54,11 @@ func LoadObjAs[T mesh.Mesh[float32]](path string) (*scene.Group, error) {
 }
 
 func loadObjScene(f *obj.File) (*scene.Group, error) {
-	objs := []object.Object[float32]{}
+	g := scene.NewGroup()
 	for _, obj := range f.Objs {
 		fmat := f.Materials[obj.Faces[0].Material]
 		var mat *material.BlinnPhong
 		if fmat.MapKd != "" {
-			log.Println("loading: ", filepath.Join(f.MtlDir, fmat.MapKd))
 			mat = material.NewBlinnPhong(
 				material.Texture(buffer.NewTexture(
 					buffer.TextureImage(
@@ -120,7 +117,7 @@ func loadObjScene(f *obj.File) (*scene.Group, error) {
 			}
 			tris = append(tris, &t)
 		}
-		objs = append(objs, mesh.NewTriangleMesh(tris))
+		g.Add(mesh.NewTriangleMesh(tris))
 	}
-	return scene.NewScene().Add(objs...), nil
+	return g, nil
 }

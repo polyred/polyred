@@ -56,7 +56,7 @@ func newApp() *App {
 
 	m := model.StanfordBunnyAs[*mesh.TriangleMesh]()
 	var geom *mesh.TriangleMesh
-	scene.IterGroupObjects(m, func(o *mesh.TriangleMesh, m math.Mat4[float32]) bool {
+	scene.IterObjects(m, func(o *mesh.TriangleMesh, m math.Mat4[float32]) bool {
 		geom = o
 		return false
 	})

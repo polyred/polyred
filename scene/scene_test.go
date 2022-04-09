@@ -5,8 +5,11 @@
 package scene_test
 
 import (
+	"fmt"
+	"math/rand"
 	"testing"
 
+	"poly.red/geometry/mesh"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/scene"
@@ -16,23 +19,344 @@ import (
 func TestScene(t *testing.T) {
 	s := scene.NewScene()
 	p1 := model.NewPlane(1, 1)
-	p2 := model.NewPlane(1, 2)
-	p3 := model.NewPlane(2, 1)
-	p4 := model.NewPlane(2, 2)
-	p5 := model.NewPlane(3, 2)
-	p6 := model.NewPlane(2, 3)
-	p7 := model.NewPlane(3, 3)
+	g := s.Add(p1)
 
-	g1 := s.Add(p1)
-	g2 := g1.Add(p2, p3)
-	g3 := g2.Add(p4)
-	g3.Add(p5, p6, p7)
-
-	g1.Scale(2, 2, 2)
-	g1.Translate(1, 2, 3)
+	iterCount := 0
 
 	scene.IterObjects(s, func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		t.Log(o, modelMatrix)
+		iterCount++
+		want := math.NewMat4[float32](
+			1, 0, 0, 0,
+			0, 1, 0, 0,
+			0, 0, 1, 0,
+			0, 0, 0, 1,
+		)
+		if !want.Eq(modelMatrix) {
+			t.Fatalf("unexpected model matrix. want %v got %v", want, modelMatrix)
+		}
 		return true
 	})
+	if iterCount != 1 {
+		t.Fatalf("unexpected iteration, want %v, got %v", 1, iterCount)
+	}
+
+	g.Scale(2, 2, 2)
+	scene.IterObjects(s, func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		iterCount++
+		want := math.NewMat4[float32](
+			2, 0, 0, 0,
+			0, 2, 0, 0,
+			0, 0, 2, 0,
+			0, 0, 0, 1,
+		)
+		if !want.Eq(modelMatrix) {
+			t.Fatalf("unexpected model matrix. want %v got %v", want, modelMatrix)
+		}
+		return true
+	})
+	if iterCount != 2 {
+		t.Fatalf("unexpected iteration, want %v, got %v", 2, iterCount)
+	}
+
+	g.Translate(1, 2, 3)
+	scene.IterObjects(s, func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		iterCount++
+		want := math.NewMat4[float32](
+			2, 0, 0, 1,
+			0, 2, 0, 2,
+			0, 0, 2, 3,
+			0, 0, 0, 1,
+		)
+		if !want.Eq(modelMatrix) {
+			t.Fatalf("unexpected model matrix. want %v got %v", want, modelMatrix)
+		}
+		return true
+	})
+	if iterCount != 3 {
+		t.Fatalf("unexpected iteration, want %v, got %v", 3, iterCount)
+	}
+
+	p2 := model.NewPlane(1, 1)
+	g2 := scene.NewGroup()
+	g2.SetName("another")
+	g2.Add(p2)
+	g.Add(g2)
+	g2.Scale(2, 2, 2)
+	g2.Translate(1, 1, 1)
+
+	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		iterCount++
+
+		if o == p1 {
+			t.Log("p1")
+			want := math.NewMat4[float32](
+				2, 0, 0, 1,
+				0, 2, 0, 2,
+				0, 0, 2, 3,
+				0, 0, 0, 1,
+			)
+			if !want.Eq(modelMatrix) {
+				t.Fatalf("unexpected model matrix. want %v got %v", want, modelMatrix)
+			}
+			return true
+		}
+
+		if o == p2 {
+			t.Log("p2")
+			want := math.NewMat4[float32](
+				4, 0, 0, 3,
+				0, 4, 0, 4,
+				0, 0, 4, 5,
+				0, 0, 0, 1,
+			)
+			if !want.Eq(modelMatrix) {
+				t.Fatalf("unexpected model matrix. want %v got %v", want, modelMatrix)
+			}
+			return true
+		}
+
+		panic("unknown object")
+	})
+	if iterCount != 5 {
+		t.Fatalf("unexpected iteration, want %v, got %v", 5, iterCount)
+	}
+
+	p3 := model.NewPlane(1, 1)
+	g3 := scene.NewGroup()
+	g3.SetName("another")
+	g3.Add(p3)
+	s.Add(g3)
+	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		iterCount++
+		if o == p1 || o == p2 {
+			return true
+		}
+
+		if o == p3 {
+			t.Log("p3")
+			want := math.NewMat4[float32](
+				2, 0, 0, 1,
+				0, 2, 0, 2,
+				0, 0, 2, 3,
+				0, 0, 0, 1,
+			)
+			if !want.Eq(modelMatrix) {
+				t.Fatalf("unexpected model matrix. want %v got %v", want, modelMatrix)
+			}
+			return true
+		}
+
+		panic("unknown object")
+	})
+	if iterCount != 8 {
+		t.Fatalf("unexpected iteration, want %v, got %v", 8, iterCount)
+	}
+
+	p4 := model.NewPlane(1, 1)
+	s.Add(p4)
+	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		iterCount++
+		if o == p1 || o == p2 || o == p3 {
+			return true
+		}
+
+		if o == p4 {
+			t.Log("p4")
+			want := math.NewMat4[float32](
+				2, 0, 0, 1,
+				0, 2, 0, 2,
+				0, 0, 2, 3,
+				0, 0, 0, 1,
+			)
+			if !want.Eq(modelMatrix) {
+				t.Fatalf("unexpected model matrix. want %v got %v", want, modelMatrix)
+			}
+			return true
+		}
+
+		panic("unknown object")
+	})
+	if iterCount != 12 {
+		t.Fatalf("unexpected iteration, want %v, got %v", 12, iterCount)
+	}
+
+	g3.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		if o != p3 {
+			t.Fatalf("unexpected iterated object: want %v got %v", p3, o)
+		}
+		return true
+	})
+}
+
+func TestSceneGraphStop(t *testing.T) {
+	s := scene.NewScene()
+	p1 := model.NewPlane(1, 1)
+	g := s.Add(p1)
+
+	iterCount := 0
+
+	g.Scale(2, 2, 2)
+	g.Translate(1, 2, 3)
+	p2 := model.NewPlane(1, 1)
+	g2 := scene.NewGroup()
+	g2.Add(p2)
+	g.Add(g2)
+	g2.Scale(2, 2, 2)
+	g2.Translate(1, 1, 1)
+	p3 := model.NewPlane(1, 1)
+	g3 := scene.NewGroup()
+	g3.Add(p3)
+	s.Add(g3)
+	p4 := model.NewPlane(1, 1)
+	s.Add(p4)
+
+	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		iterCount++
+		if iterCount == 3 {
+			return false
+		}
+		return true
+	})
+	if iterCount != 3 {
+		t.Fatalf("iter objects does not stop properly, want %v got %v", 3, iterCount)
+	}
+}
+
+func TestSceneGraphIterPanic(t *testing.T) {
+	s := scene.NewScene()
+	p1 := model.NewPlane(1, 1)
+	s.Add(p1)
+
+	defer func() {
+		if r := recover(); r != nil {
+			return
+		}
+		t.Fatalf("unexpected panic did not happen.")
+	}()
+
+	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		panic("unexpected panic")
+	})
+}
+
+var all int
+
+func createGroup(n int) *scene.Group {
+	g := scene.NewGroup()
+	for i := 0; i < n; i++ {
+		p := model.NewPlane(1, 1)
+		all++
+		g.Add(p)
+	}
+	return g
+}
+
+func createDepthGroup(n, depth int) *scene.Group {
+	if depth < 0 {
+		return nil
+	}
+	g := scene.NewGroup()
+	for i := 0; i <= n; i++ {
+		var gg *scene.Group
+		if rand.Intn(2) < 1 { // 50% chance to create a new random group.
+			gg = createGroup(n)
+			if gg == nil {
+				continue
+			}
+		} else { // or enter to the next level.
+			gg = createDepthGroup(n, depth-1)
+			if gg == nil {
+				continue
+			}
+		}
+		g.Add(gg)
+	}
+	return g
+}
+
+func createRandomSceneGraph(n, depth int) *scene.Scene {
+	s := scene.NewScene(createDepthGroup(n, depth))
+	return s
+}
+
+func TestCreateDepthGroup(t *testing.T) {
+	s := createRandomSceneGraph(1, 2)
+	t.Log(all)
+
+	n := 0
+	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		n++
+		return true
+	})
+	if all != n {
+		t.Fatalf("unexpected created objects: want %v got %v", all, n)
+	}
+}
+
+func TestGenericIterator(t *testing.T) {
+	s := scene.NewScene()
+
+	s.Add(model.NewPlane(1, 1))
+	s.Add(model.NewPlane(1, 1))
+	s.Add(model.NewPlane(1, 1))
+	s.Add(model.NewPlane(1, 1))
+	s.Add(model.NewPlane(1, 1))
+
+	n := 0
+	scene.IterObjects(s, func(o mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+		n++
+		return true
+	})
+	if n != 5 {
+		t.Fatalf("unexpected iteration, expect %v got %v", 5, n)
+	}
+}
+
+func BenchmarkIterator(b *testing.B) {
+	for i := 5; i < 8; i++ {
+		for j := 5; j < 8; j++ {
+			s := createRandomSceneGraph(i, j)
+			b.Run(fmt.Sprintf("%v-%v", i, j), func(b *testing.B) {
+				for k := 0; k < b.N; k++ {
+					scene.IterObjects(s, func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+						return true
+					})
+				}
+			})
+		}
+	}
+}
+
+func TestAddMultiple(t *testing.T) {
+	p := model.NewPlane(1, 1)
+
+	s := scene.NewScene()
+	s.Add(p)
+	s.Add(p)
+	s.Add(p)
+	s.Add(p)
+	s.Add(p)
+	s.Add(p)
+
+	n := 0
+	scene.IterObjects(s, func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		n++
+		return true
+	})
+	if n != 6 {
+		t.Fatalf("unexpected objects, want %v got %v", 6, n)
+	}
+
+	g := scene.NewGroup()
+	g.Add(p)
+	s.Add(g)
+	n = 0
+	scene.IterObjects(s, func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
+		n++
+		t.Log(o.Name())
+		return true
+	})
+	if n != 7 {
+		t.Fatalf("unexpected objects, want %v got %v", 6, n)
+	}
 }
