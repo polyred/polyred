@@ -13,7 +13,17 @@ import (
 	"unsafe"
 
 	"poly.red/internal/driver/gles"
+	"poly.red/internal/driver/windows"
 )
+
+func NewDisplay() NativeDisplayType {
+	hdc, err := windows.GetDC(0)
+	if err != nil {
+		panic(err)
+	}
+
+	return NativeDisplayType(hdc)
+}
 
 type (
 	_EGLint           int32
