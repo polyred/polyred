@@ -9,7 +9,6 @@ import (
 
 	"poly.red/app"
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/model"
 	"poly.red/render"
@@ -26,7 +25,7 @@ func New() *App {
 	// Create a renderer and specify scene and camera
 	r := render.NewRenderer(
 		render.Scene(scene.NewScene(
-			model.StanfordBunnyAs[*mesh.TriangleMesh](),
+			model.StanfordBunny(),
 			light.NewPoint(),
 		)),
 		render.Camera(cam),

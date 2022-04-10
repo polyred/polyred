@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/math"
@@ -29,11 +28,11 @@ func NewDiffScene(width, height int, lightI float32) (*scene.Scene, camera.Inter
 		light.CastShadow(true)),
 		light.NewAmbient(light.Intensity(0.5)))
 
-	m := model.MustLoadAs[*mesh.TriangleMesh]("../testdata/bunny.obj")
+	m := model.MustLoad("../testdata/bunny.obj")
 	m.Scale(2, 2, 2)
 	s.Add(m)
 
-	m = model.MustLoadAs[*mesh.TriangleMesh]("../testdata/ground.obj")
+	m = model.MustLoad("../testdata/ground.obj")
 	m.Scale(2, 2, 2)
 	s.Add(m)
 

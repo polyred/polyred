@@ -10,16 +10,22 @@ import (
 	"poly.red/internal/alloc"
 )
 
-type Material struct {
-	ID               uint64
+type Material interface {
+	ID() uint64
+}
+
+type Standard struct {
+	id               uint64
 	FlatShading      bool
 	AmbientOcclusion bool
 	ReceiveShadow    bool
 	Texture          *buffer.Texture
 }
 
+func (m *Standard) ID() uint64 { return m.id }
+
 type BlinnPhong struct {
-	Material
+	Standard
 	Ambient   color.RGBA
 	Diffuse   color.RGBA
 	Specular  color.RGBA
@@ -30,8 +36,8 @@ type BlinnPhong struct {
 
 func NewBlinnPhong(opts ...BlinnPhongOption) *BlinnPhong {
 	t := &BlinnPhong{
-		Material: Material{
-			ID:               alloc.ID(),
+		Standard: Standard{
+			id:               alloc.ID(),
 			FlatShading:      false,
 			ReceiveShadow:    false,
 			AmbientOcclusion: false,
@@ -46,3 +52,5 @@ func NewBlinnPhong(opts ...BlinnPhongOption) *BlinnPhong {
 	}
 	return t
 }
+
+func (m *BlinnPhong) ID() uint64 { return m.Standard.ID() }

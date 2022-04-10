@@ -40,8 +40,8 @@ func init() {
 	)
 
 	// Use a different model
-	m := model.MustLoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
-	// m.Normalize()
+	m := model.MustLoad("../internal/testdata/bunny.obj")
+	m.Normalize()
 
 	tex := buffer.NewTexture(
 		buffer.TextureImage(imageutil.MustLoadImage("../internal/testdata/bunny.png")),

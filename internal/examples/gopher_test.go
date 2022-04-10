@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/model"
@@ -26,9 +25,9 @@ func NewGopherScene(width, height int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.7),
 	))
 
-	m := model.MustLoadAs[*mesh.TriangleMesh]("../testdata/gopher.obj")
+	m := model.MustLoad("../testdata/gopher.obj")
 	m.RotateY(-math.Pi / 2)
-	// m.Normalize()
+	m.Normalize()
 	s.Add(m)
 
 	return s, camera.NewPerspective(

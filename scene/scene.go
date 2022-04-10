@@ -5,24 +5,24 @@
 package scene
 
 import (
-	"poly.red/geometry/mesh"
+	"poly.red/geometry"
 	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
 
-func (s *Scene) IterMeshes(iter func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool) {
+func (s *Scene) IterGeometry(iter func(m *geometry.Geometry, modelMatrix math.Mat4[float32]) bool) {
 	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		if o.Type() != object.TypeMesh {
+		if o.Type() != object.TypeGeometry {
 			return true
 		}
 
-		return iter(o.(mesh.Mesh[float32]), s.root.ModelMatrix().MulM(modelMatrix))
+		return iter(o.(*geometry.Geometry), s.root.ModelMatrix().MulM(modelMatrix))
 	})
 }
 
-func (s *Scene) IterLights(iter func(l light.Light, modelMatrix math.Mat4[float32]) bool) {
+func (s *Scene) IterLight(iter func(l light.Light, modelMatrix math.Mat4[float32]) bool) {
 	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if o.Type() != object.TypeLight {
 			return true
@@ -34,7 +34,7 @@ func (s *Scene) IterLights(iter func(l light.Light, modelMatrix math.Mat4[float3
 
 func (s *Scene) Lights() ([]light.Source, []light.Environment) {
 	sources, envs := []light.Source{}, []light.Environment{}
-	s.IterLights(func(ll light.Light, modelMatrix math.Mat4[float32]) bool {
+	s.IterLight(func(ll light.Light, modelMatrix math.Mat4[float32]) bool {
 		switch l := ll.(type) {
 		case light.Source:
 			sources = append(sources, l)
@@ -51,7 +51,7 @@ func (s *Scene) Center() math.Vec3[float32] {
 		Min: math.NewVec3[float32](0, 0, 0),
 		Max: math.NewVec3[float32](0, 0, 0),
 	}
-	s.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+	s.IterGeometry(func(m *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
 		aabb.Add(m.AABB())
 		return true
 	})

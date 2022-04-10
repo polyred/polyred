@@ -2,6 +2,10 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
+// Package mesh represents polygon based mesh objects.
+//
+// Note that a mesh object cannot be transformed unless it is turned
+// to a geometry.Geometry object. See package geometry for more info.
 package mesh
 
 import (
@@ -10,20 +14,13 @@ import (
 	"poly.red/buffer"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
-	"poly.red/scene/object"
 )
 
 type Mesh[T math.Float] interface {
-	object.Object[T]
-
 	AABB() primitive.AABB
 	Normalize()
 
 	IndexBuffer() buffer.IndexBuffer
 	VertexBuffer() buffer.VertexBuffer
 	Triangles() []*primitive.Triangle
-}
-
-type MeshPointer[T Mesh[float32]] interface {
-	*T
 }

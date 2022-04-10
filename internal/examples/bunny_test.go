@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/model"
@@ -29,10 +28,7 @@ func NewBunnyScene(width, height int) (*scene.Scene, camera.Interface) {
 	))
 
 	done := profiling.Timed("loading obj")
-	m, err := model.LoadAs[*mesh.TriangleMesh]("../testdata/bunny-smooth.obj")
-	if err != nil {
-		panic(err)
-	}
+	m := model.MustLoad("../testdata/bunny.obj")
 	done()
 
 	m.Scale(1500, 1500, 1500)

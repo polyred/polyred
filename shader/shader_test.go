@@ -12,6 +12,7 @@ import (
 	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/color"
+	"poly.red/geometry"
 	"poly.red/geometry/mesh"
 	"poly.red/internal/imageutil"
 	"poly.red/math"
@@ -28,7 +29,7 @@ func prepare(num int) (*render.Renderer, *buffer.FragmentBuffer, shader.Program,
 	r := render.NewRenderer(render.Size(500, 500), render.Camera(c))
 	buf := buffer.NewBuffer(image.Rect(0, 0, 500, 500))
 
-	m := mesh.NewRandomAs[*mesh.BufferedMesh](num)
+	m := geometry.NewWith(mesh.NewRandomAs[*mesh.BufferedMesh](num), nil)
 	m.Normalize()
 	m.TranslateZ(-1)
 	return r, buf, &shader.BasicShader{

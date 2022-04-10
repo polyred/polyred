@@ -13,7 +13,7 @@ type Type int
 
 const (
 	TypeGroup = iota
-	TypeMesh
+	TypeGeometry
 	TypeCamera
 	TypeLight
 )

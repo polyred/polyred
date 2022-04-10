@@ -1,3 +1,8 @@
+// Copyright 2022 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
+// Modified from https://github.com/g3n/engine/blob/master/loader/obj/obj.go
+
 package example_test
 
 import (
@@ -6,6 +11,7 @@ import (
 	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/color"
+	"poly.red/geometry"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
@@ -17,19 +23,17 @@ import (
 
 func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene(light.NewAmbient(light.Intensity(1)))
-	m := model.NewPlane(1, 1)
-	// FIXME: setup material
-	_ = material.NewBlinnPhong(
-		material.Texture(buffer.NewTexture(
-			buffer.TextureImage(imageutil.MustLoadImage("../testdata/uvgrid2.png")),
-			buffer.TextureIsoMipmap(true),
-		)),
-		material.Kdiff(color.FromValue(0.6, 0.6, 0.6, 1.0)), material.Kspec(color.FromValue(0.5, 0.5, 0.5, 1.0)),
-		material.Shininess(150),
-	)
-
-	m.Scale(2, 2, 2)
-	s.Add(m)
+	g := geometry.NewWith(model.NewPlane(1, 1),
+		material.NewBlinnPhong(
+			material.Texture(buffer.NewTexture(
+				buffer.TextureImage(imageutil.MustLoadImage("../testdata/uvgrid2.png")),
+				buffer.TextureIsoMipmap(true),
+			)),
+			material.Kdiff(color.FromValue(0.6, 0.6, 0.6, 1.0)), material.Kspec(color.FromValue(0.5, 0.5, 0.5, 1.0)),
+			material.Shininess(150),
+		))
+	g.Scale(2, 2, 2)
+	s.Add(g)
 	return s, camera.NewPerspective(
 		camera.Position(math.NewVec3[float32](0, 3, 3)),
 		camera.ViewFrustum(45, 1, 0.1, 10),

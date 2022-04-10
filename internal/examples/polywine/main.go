@@ -13,7 +13,7 @@ import (
 	"poly.red/app/controls"
 	"poly.red/buffer"
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
+	"poly.red/geometry"
 	"poly.red/internal/imageutil"
 	"poly.red/math"
 	"poly.red/model"
@@ -28,7 +28,7 @@ type App struct {
 	ctrl  *controls.OrbitControl
 	r     *render.Renderer
 	prog  *shader.TextureShader
-	m     *mesh.TriangleMesh
+	geom  *geometry.Geometry
 	cam   camera.Interface
 	vi    buffer.IndexBuffer
 	vb    buffer.VertexBuffer
@@ -54,9 +54,9 @@ func newApp() *App {
 		r.Options(render.PixelFormat(buffer.PixelFormatRGBA))
 	}
 
-	m := model.StanfordBunnyAs[*mesh.TriangleMesh]()
-	var geom *mesh.TriangleMesh
-	scene.IterObjects(m, func(o *mesh.TriangleMesh, m math.Mat4[float32]) bool {
+	m := model.StanfordBunny()
+	var geom *geometry.Geometry
+	scene.IterObjects(m, func(o *geometry.Geometry, m math.Mat4[float32]) bool {
 		geom = o
 		return false
 	})
@@ -67,7 +67,7 @@ func newApp() *App {
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage("../../testdata/bunny.png"))),
 	}
-	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, m: geom, vi: geom.IndexBuffer(), vb: geom.VertexBuffer()}
+	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, geom: geom, vi: geom.IndexBuffer(), vb: geom.VertexBuffer()}
 	a.ctrl = controls.NewOrbitControl(a, cam)
 
 	return a
@@ -89,7 +89,7 @@ func (a *App) Draw() (*image.RGBA, bool) {
 		return a.cache, false
 	}
 
-	a.prog.ModelMatrix = a.m.ModelMatrix()
+	a.prog.ModelMatrix = a.geom.ModelMatrix()
 	a.prog.ViewMatrix = a.cam.ViewMatrix()
 	a.prog.ProjMatrix = a.cam.ProjMatrix()
 

@@ -9,9 +9,7 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/geometry/primitive"
-	"poly.red/material"
 	"poly.red/math"
-	"poly.red/scene/object"
 )
 
 var _ Mesh[float32] = &BufferedMesh{}
@@ -37,15 +35,12 @@ func NewBufferAttribute(stride int, values []float32) *BufferAttribute {
 // BufferedMesh is a dense representation of a surface geometry and
 // implements the Mesh interface.
 type BufferedMesh struct {
-	ibo      buffer.IndexBuffer
-	vbo      buffer.VertexBuffer
-	attrs    map[AttributeName]*BufferAttribute
-	material material.Material
+	ibo   buffer.IndexBuffer
+	vbo   buffer.VertexBuffer
+	attrs map[AttributeName]*BufferAttribute
 
 	tris []*primitive.Triangle
 	aabb *primitive.AABB
-
-	math.TransformContext[float32]
 }
 
 func NewBufferedMesh() *BufferedMesh {
@@ -57,7 +52,6 @@ func NewBufferedMesh() *BufferedMesh {
 			AttributeCol: nil,
 		},
 	}
-	bm.ResetContext()
 	return bm
 }
 
@@ -66,10 +60,6 @@ func (bm *BufferedMesh) SetAttribute(name AttributeName, attribute *BufferAttrib
 	bm.attrs[name] = attribute
 }
 func (bm *BufferedMesh) GetAttribute(name AttributeName) *BufferAttribute { return bm.attrs[name] }
-func (bm *BufferedMesh) Name() string                                     { return "buffered_mesh" }
-func (bm *BufferedMesh) Type() object.Type                                { return object.TypeMesh }
-func (bm *BufferedMesh) GetMaterial() material.Material                   { return bm.material }
-func (bm *BufferedMesh) SetMaterial(mat material.Material)                { bm.material = mat }
 
 func (bm *BufferedMesh) AABB() primitive.AABB {
 	if bm.aabb == nil {
@@ -89,9 +79,7 @@ func (bm *BufferedMesh) AABB() primitive.AABB {
 		}
 		bm.aabb = &primitive.AABB{Min: min, Max: max}
 	}
-	min := bm.aabb.Min.ToVec4(1).Apply(bm.ModelMatrix()).ToVec3()
-	max := bm.aabb.Max.ToVec4(1).Apply(bm.ModelMatrix()).ToVec3()
-	return primitive.AABB{Min: min, Max: max}
+	return primitive.AABB{Min: bm.aabb.Min, Max: bm.aabb.Max}
 }
 
 func (bm *BufferedMesh) Normalize() {
@@ -106,7 +94,7 @@ func (bm *BufferedMesh) Normalize() {
 		x := attr.Values[attr.Stride*int(vIndex)+0]
 		y := attr.Values[attr.Stride*int(vIndex)+1]
 		z := attr.Values[attr.Stride*int(vIndex)+2]
-		v := math.NewVec4(x, y, z, 1).Apply(bm.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+		v := math.NewVec4(x, y, z, 1).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
 		attr.Values[attr.Stride*int(vIndex)+0] = v.X
 		attr.Values[attr.Stride*int(vIndex)+1] = v.Y
 		attr.Values[attr.Stride*int(vIndex)+2] = v.Z
@@ -116,7 +104,6 @@ func (bm *BufferedMesh) Normalize() {
 	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
 	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
 	bm.aabb = &primitive.AABB{Min: min, Max: max}
-	bm.ResetContext()
 }
 
 func (bm *BufferedMesh) Triangles() []*primitive.Triangle {
@@ -249,8 +236,8 @@ func (bm *BufferedMesh) VertexBuffer() buffer.VertexBuffer {
 			v = attrUV.Values[attrUV.Stride*bm.ibo[i]+1]
 		}
 		bm.vbo[i] = primitive.NewVertex(
-			primitive.Pos(math.NewVec4(px, py, pz, 1).Apply(bm.ModelMatrix())),
-			primitive.Nor(math.NewVec4(nx, ny, nz, 0).Apply(bm.ModelMatrix().Inv())),
+			primitive.Pos(math.NewVec4(px, py, pz, 1)),
+			primitive.Nor(math.NewVec4(nx, ny, nz, 0)),
 			primitive.Col(color.RGBA{cr, cb, cg, ca}),
 			primitive.UV(math.NewVec2(u, v)),
 		)

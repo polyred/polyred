@@ -23,23 +23,6 @@ import (
 	"poly.red/shader"
 )
 
-var (
-	s *scene.Scene
-	c camera.Interface
-	r *Renderer
-)
-
-func init() {
-	w, h, msaa := 800, 600, 2
-	s, c = newscene(w, h)
-	r = NewRenderer(
-		Size(w, h),
-		MSAA(msaa),
-		Scene(s),
-		Background(color.RGBA{0, 127, 255, 255}),
-	)
-}
-
 func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene(light.NewPoint(
 		light.Intensity(5),
@@ -48,7 +31,7 @@ func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	), light.NewAmbient(
 		light.Intensity(0.5),
 	))
-	m := model.MustLoadAs[*mesh.TriangleMesh]("../internal/testdata/bunny.obj")
+	m := model.MustLoad("../internal/testdata/bunny.obj")
 	m.Rotate(math.NewVec3[float32](0, 1, 0), -math.Pi/6)
 	m.Scale(4, 4, 4)
 	m.Translate(0.1, 0, -0.2)
@@ -95,11 +78,21 @@ func TestRender(t *testing.T) {
 	f.Close()
 
 	path := "../internal/testdata/render.png"
-	fmt.Printf("render saved at: %s\n", path)
+	t.Logf("render saved at: %s\n", path)
 	imageutil.Save(buf, path)
 }
 
 func BenchmarkRasterizer(b *testing.B) {
+	w, h, msaa := 800, 600, 2
+	s, c := newscene(w, h)
+	r := NewRenderer(
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Debug(true),
+		Background(color.RGBA{0, 127, 255, 255}),
+	)
+
 	for block := 1; block <= 1024; block *= 2 {
 		r.Options(BatchSize(block), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
@@ -113,6 +106,15 @@ func BenchmarkRasterizer(b *testing.B) {
 }
 
 func BenchmarkForwardPass(b *testing.B) {
+	w, h, msaa := 800, 600, 2
+	s, c := newscene(w, h)
+	r := NewRenderer(
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Background(color.RGBA{0, 127, 255, 255}),
+	)
+
 	for block := 1; block <= 1024; block *= 2 {
 		r.Options(BatchSize(block), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
@@ -126,6 +128,15 @@ func BenchmarkForwardPass(b *testing.B) {
 }
 
 func BenchmarkDeferredPass(b *testing.B) {
+	w, h, msaa := 800, 600, 2
+	s, c := newscene(w, h)
+	r := NewRenderer(
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Background(color.RGBA{0, 127, 255, 255}),
+	)
+
 	for block := 1; block <= 1024; block *= 2 {
 		r.Options(BatchSize(block), Camera(c))
 		b.Run(fmt.Sprintf("concurrent-size %d", block), func(b *testing.B) {
@@ -139,6 +150,15 @@ func BenchmarkDeferredPass(b *testing.B) {
 }
 
 func BenchmarkAntiAliasingPass(b *testing.B) {
+	w, h, msaa := 800, 600, 2
+	s, _ := newscene(w, h)
+	r := NewRenderer(
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Background(color.RGBA{0, 127, 255, 255}),
+	)
+
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -147,6 +167,15 @@ func BenchmarkAntiAliasingPass(b *testing.B) {
 }
 
 func BenchmarkGammaCorrection(b *testing.B) {
+	w, h, msaa := 800, 600, 2
+	s, _ := newscene(w, h)
+	r := NewRenderer(
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Background(color.RGBA{0, 127, 255, 255}),
+	)
+
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -155,6 +184,15 @@ func BenchmarkGammaCorrection(b *testing.B) {
 }
 
 func BenchmarkDrawCall(b *testing.B) {
+	w, h, msaa := 800, 600, 2
+	s, c := newscene(w, h)
+	r := NewRenderer(
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Background(color.RGBA{0, 127, 255, 255}),
+	)
+
 	for block := 1; block <= 1024; block *= 2 {
 		matView := c.ViewMatrix()
 		matProj := c.ProjMatrix()
@@ -194,6 +232,15 @@ func BenchmarkDrawCall(b *testing.B) {
 }
 
 func BenchmarkInViewport(b *testing.B) {
+	w, h, msaa := 800, 600, 2
+	s, _ := newscene(w, h)
+	r := NewRenderer(
+		Size(w, h),
+		MSAA(msaa),
+		Scene(s),
+		Background(color.RGBA{0, 127, 255, 255}),
+	)
+
 	v1, v2, v3 := math.NewRandVec4[float32](), math.NewRandVec4[float32](), math.NewRandVec4[float32]()
 	for i := 0; i < b.N; i++ {
 		r.cullViewFrustum(r.CurrBuffer(), v1, v2, v3)

@@ -5,6 +5,8 @@
 package primitive
 
 import (
+	"fmt"
+
 	"poly.red/math"
 )
 
@@ -12,9 +14,9 @@ var _ Face[float32] = &Triangle{}
 
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {
-	Idx        uint64
+	ID         uint64
 	V1, V2, V3 *Vertex
-	MaterialId uint64
+	MaterialID uint64
 
 	aabb       *AABB
 	faceNormal math.Vec4[float32]
@@ -45,6 +47,16 @@ func NewTriangle(v1, v2, v3 *Vertex) *Triangle {
 		faceNormal: v2v3.Cross(v2v1).Unit(),
 		aabb:       &AABB{min, max},
 	}
+}
+
+func (t *Triangle) String() string {
+	return fmt.Sprintf(`&Triangle{
+	ID: %d,
+	V1: %+v,
+	V2: %+v,
+	V3: %+v,
+	MatID: %d,
+}`, t.ID, t.V1, t.V2, t.V3, t.MaterialID)
 }
 
 // IsValid is an assertion to check if the given triangle is valid or not.

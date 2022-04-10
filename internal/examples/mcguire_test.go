@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/model"
@@ -193,7 +192,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 			Name: mo,
 		}
 
-		m := model.MustLoadAs[*mesh.TriangleMesh](fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, mo))
+		m := model.MustLoad(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, mo))
 		// m.Normalize()
 		s.Scene.Add(m)
 

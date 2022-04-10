@@ -11,7 +11,6 @@ import (
 	"poly.red/app/controls"
 	"poly.red/buffer"
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
@@ -37,19 +36,18 @@ func newApp(objPath string) *App {
 		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 10),
 	)
 
+	s := scene.NewScene()
+	g := model.MustLoad(objPath)
+	g.Normalize()
+	s.Add(g)
+
 	r := render.NewRenderer(
 		render.Size(w, h),
 		render.Camera(c),
 		render.Workers(2),
 		render.PixelFormat(buffer.PixelFormatBGRA),
+		render.Scene(s),
 	)
-
-	s := scene.NewScene()
-	g := model.MustLoadAs[*mesh.TriangleMesh](objPath)
-
-	g.Normalize()
-	s.Add(g)
-	r.Options(render.Scene(s))
 	a := &App{w: w, h: h, r: r, c: c, s: s}
 	a.ctrl = controls.NewOrbitControl(a, c)
 
@@ -73,9 +71,7 @@ func (a *App) Draw() (*image.RGBA, bool) {
 		return nil, false
 	}
 
-	buf := a.r.CurrBuffer()
-	a.r.Render()
-	a.cache = buf.Image()
+	a.cache = a.r.Render()
 	return a.cache, true
 }
 

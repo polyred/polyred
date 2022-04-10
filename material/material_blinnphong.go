@@ -7,24 +7,9 @@ package material
 import (
 	"poly.red/buffer"
 	"poly.red/color"
-	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/math"
-	"poly.red/shader"
 )
-
-func (m *BlinnPhong) VertexShader(v *primitive.Vertex) *primitive.Vertex {
-	mvp := v.AttrFlat[shader.MVPAttr].(*shader.MVP)
-	pos := mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(v.Pos)
-	vv := primitive.NewVertex(
-		primitive.Pos(pos),
-		primitive.Col(v.Col),
-		primitive.UV(v.UV),
-		primitive.Nor(v.Nor.Apply(mvp.Normal)),
-	)
-	vv.AttrFlat[shader.MVPAttr] = mvp
-	return vv
-}
 
 func (m *BlinnPhong) FragmentShader(
 	info buffer.Fragment, c math.Vec3[float32],

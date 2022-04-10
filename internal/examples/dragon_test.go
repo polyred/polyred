@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/model"
@@ -26,10 +25,10 @@ func NewDragonScene(w, h int) (*scene.Scene, camera.Interface) {
 		light.Intensity(0.5),
 	))
 
-	m := model.ChineseDragonAs[*mesh.TriangleMesh]()
+	m := model.ChineseDragon()
 	m.Scale(1.5, 1.5, 1.5)
 	m.Translate(0, -0.1, -0.15)
-	// m.Normalize()
+	m.Normalize()
 	s.Add(m)
 
 	return s, camera.NewPerspective(

@@ -11,7 +11,7 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/color"
-	"poly.red/geometry/mesh"
+	"poly.red/geometry"
 	"poly.red/geometry/primitive"
 	"poly.red/internal/cache"
 	"poly.red/internal/imageutil"
@@ -80,8 +80,8 @@ func NewRenderer(opts ...Option) *Renderer {
 	// initialize shadow maps
 	if r.cfg.Scene != nil && r.cfg.ShadowMap {
 		r.initShadowMaps()
-		r.bufs[0].ClearFragment()
-		r.bufs[0].ClearColor()
+		r.CurrBuffer().ClearFragment()
+		r.CurrBuffer().ClearColor()
 	}
 
 	return r
@@ -104,13 +104,15 @@ func (r *Renderer) Render() *image.RGBA {
 		total := profiling.Timed("entire rendering")
 		defer total()
 	}
+	buf := r.CurrBuffer()
+	defer r.NextBuffer()
 
 	// record running
 	r.startRunning()
 	defer r.stopRunning()
 
 	// reset buffers
-	r.bufs[0].ClearColor()
+	buf.ClearColor()
 	if r.shouldStop() {
 		return r.outBuf
 	}
@@ -123,7 +125,7 @@ func (r *Renderer) Render() *image.RGBA {
 				return r.outBuf
 			}
 		}
-		r.bufs[0].ClearColor()
+		buf.ClearColor()
 	}
 
 	r.passForward()
@@ -131,7 +133,7 @@ func (r *Renderer) Render() *image.RGBA {
 		return r.outBuf
 	}
 
-	r.bufs[0].ClearColor()
+	buf.ClearColor()
 	r.passDeferred()
 	if r.shouldStop() {
 		return r.outBuf
@@ -141,10 +143,7 @@ func (r *Renderer) Render() *image.RGBA {
 	return r.outBuf
 }
 
-func (r *Renderer) CurrBuffer() *buffer.FragmentBuffer {
-	return r.bufs[r.bufcur]
-}
-
+func (r *Renderer) CurrBuffer() *buffer.FragmentBuffer { return r.bufs[r.bufcur] }
 func (r *Renderer) NextBuffer() *buffer.FragmentBuffer {
 	r.bufcur = (r.bufcur + 1) % r.buflen
 	r.bufs[r.bufcur].Clear()
@@ -156,32 +155,29 @@ func (r *Renderer) passForward() {
 		done := profiling.Timed("forward pass (world)")
 		defer done()
 	}
-	scene.IterObjects(r.cfg.Scene, func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
-		mesh := m.(*mesh.TriangleMesh)
-		mvp := &shader.MVP{
-			Model: mesh.ModelMatrix(),
-			View:  r.cfg.Camera.ViewMatrix(),
-			Proj:  r.cfg.Camera.ProjMatrix(),
-			Viewport: math.ViewportMatrix(
-				float32(r.bufs[0].Bounds().Dx()),
-				float32(r.bufs[0].Bounds().Dy()),
-			),
-			Normal: mesh.ModelMatrix().Inv().T(),
-		}
+	buf := r.CurrBuffer()
+	mvp := &shader.MVP{
+		View: r.cfg.Camera.ViewMatrix(),
+		Proj: r.cfg.Camera.ProjMatrix(),
+		Viewport: math.ViewportMatrix(
+			float32(buf.Bounds().Dx()),
+			float32(buf.Bounds().Dy()),
+		),
+	}
+	scene.IterObjects(r.cfg.Scene, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
+		mvp.Model = modelMatrix.MulM(g.ModelMatrix())
+		mvp.Normal = mvp.Model.Inv().T()
 		mvp.ViewInv = mvp.View.Inv()
 		mvp.ProjInv = mvp.Proj.Inv()
 		mvp.ViewportInv = mvp.Viewport.Inv()
-
-		tris := mesh.Triangles()
+		tris := g.Triangles()
 		for i := range tris {
 			t := tris[i]
 			if !t.IsValid() {
 				continue
 			}
 			r.sched.Add(1)
-			r.sched.Run(func() {
-				r.draw(mvp, t)
-			})
+			r.sched.Run(func() { r.draw(mvp, t) })
 		}
 		return true
 	})
@@ -193,11 +189,12 @@ func (r *Renderer) passDeferred() {
 		done := profiling.Timed("deferred pass (shading)")
 		defer done()
 	}
+	buf := r.CurrBuffer()
 	matView := r.cfg.Camera.ViewMatrix()
 	matViewInv := matView.Inv()
 	matProj := r.cfg.Camera.ProjMatrix()
 	matProjInv := matProj.Inv()
-	matVP := math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy()))
+	matVP := math.ViewportMatrix(float32(buf.Bounds().Dx()), float32(buf.Bounds().Dy()))
 	matVPInv := matVP.Inv()
 	matScreenToWorld := matViewInv.MulM(matProjInv).MulM(matVPInv)
 	uniforms := &shader.MVP{
@@ -209,19 +206,20 @@ func (r *Renderer) passDeferred() {
 		ViewportToWorld: matScreenToWorld,
 	}
 
-	r.DrawFragments(r.bufs[0], func(frag *primitive.Fragment) color.RGBA {
+	r.DrawFragments(buf, func(frag *primitive.Fragment) color.RGBA {
 		return r.shade(frag, uniforms)
 	})
 }
 
 func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.RGBA {
-	info := r.bufs[0].UnsafeGet(frag.X, frag.Y)
+	buf := r.CurrBuffer()
+	info := buf.UnsafeGet(frag.X, frag.Y)
 	if !info.Ok {
 		return r.cfg.Background
 	}
 
 	col := info.Col
-	mat := cache.Get[*material.BlinnPhong](info.MaterialID)
+	mat := cache.Get[*material.BlinnPhong](frag.MaterialID)
 	if mat != nil {
 		lightSources, lightEnv := r.cfg.Scene.Lights()
 		col = mat.FragmentShader(
@@ -247,7 +245,7 @@ func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.R
 
 	// FIXME: why it has to be frag?
 	frag.Col = col
-	return material.AmbientOcclusionShade(r.bufs[0], frag)
+	return material.AmbientOcclusionShade(buf, frag)
 }
 
 func (r *Renderer) passAntialiasing() {
@@ -258,14 +256,14 @@ func (r *Renderer) passAntialiasing() {
 
 	// converts color from linear to sRGB space.
 	if r.cfg.GammaCorrect {
-		r.DrawFragments(r.bufs[0], shader.GammaCorrection)
+		r.DrawFragments(r.CurrBuffer(), shader.GammaCorrection)
 	}
-	r.outBuf = imageutil.Resize(r.cfg.Width, r.cfg.Height, r.bufs[0].Image())
+	r.outBuf = imageutil.Resize(r.cfg.Width, r.cfg.Height, r.CurrBuffer().Image())
 }
 
-func (r *Renderer) draw(
-	mvp *shader.MVP,
-	t *primitive.Triangle) {
+func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
+	buf := r.CurrBuffer()
+
 	var t1, t2, t3 *primitive.Vertex
 	t1 = &primitive.Vertex{
 		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V1.Pos),
@@ -298,28 +296,26 @@ func (r *Renderer) draw(
 	if r.cullBackFace(t1.Pos, t2.Pos, t3.Pos) {
 		return
 	}
-	if r.cullViewFrustum(r.bufs[0], t1.Pos, t2.Pos, t3.Pos) {
+	if r.cullViewFrustum(buf, t1.Pos, t2.Pos, t3.Pos) {
 		return
 	}
 
-	if r.inViewport(r.bufs[0], t1.Pos, t2.Pos, t3.Pos) {
-		r.drawClipped(mvp, t1, t2, t3, recipw, t.MaterialId)
+	if r.inViewport(buf, t1.Pos, t2.Pos, t3.Pos) {
+		r.drawClipped(mvp, t1, t2, t3, recipw, t.MaterialID)
 		return
 	}
 
-	w := float32(r.cfg.MSAA * r.bufs[0].Bounds().Dx())
-	h := float32(r.cfg.MSAA * r.bufs[0].Bounds().Dy())
+	w := float32(r.cfg.MSAA * buf.Bounds().Dx())
+	h := float32(r.cfg.MSAA * buf.Bounds().Dy())
 	tris := r.clipTriangle(t1, t2, t3, w, h, recipw)
 	for _, tri := range tris {
-		r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, t.MaterialId)
+		r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, t.MaterialID)
 	}
 }
 
-func (r *Renderer) drawClipped(
-	mvp *shader.MVP,
-	t1, t2, t3 *primitive.Vertex,
-	recipw [3]float32,
-	materialId uint64) {
+func (r *Renderer) drawClipped(mvp *shader.MVP, t1, t2, t3 *primitive.Vertex, recipw [3]float32, materialId uint64) {
+	buf := r.CurrBuffer()
+
 	m1 := t1.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
 	m2 := t2.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
 	m3 := t3.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
@@ -336,7 +332,7 @@ func (r *Renderer) drawClipped(
 
 	for x := xmin; x <= xmax; x++ {
 		for y := ymin; y <= ymax; y++ {
-			if !r.bufs[0].In(x, y) {
+			if !buf.In(x, y) {
 				continue
 			}
 
@@ -350,7 +346,7 @@ func (r *Renderer) drawClipped(
 
 			// Z-test
 			z := bc[0]*t1.Pos.Z + bc[1]*t2.Pos.Z + bc[2]*t3.Pos.Z
-			if !r.bufs[0].DepthTest(x, y, z) {
+			if !buf.DepthTest(x, y, z) {
 				continue
 			}
 
@@ -410,7 +406,7 @@ func (r *Renderer) drawClipped(
 			}
 
 			// update G-buffer
-			r.bufs[0].Set(x, y, buffer.Fragment{
+			buf.Set(x, y, buffer.Fragment{
 				Ok: true,
 				Fragment: primitive.Fragment{
 					X:          x,

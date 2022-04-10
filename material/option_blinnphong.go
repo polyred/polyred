@@ -38,18 +38,18 @@ func Shininess(val float32) BlinnPhongOption {
 
 func FlatShading(enable bool) BlinnPhongOption {
 	return func(m *BlinnPhong) {
-		m.FlatShading = true
+		m.FlatShading = enable
 	}
 }
 
 func AmbientOcclusion(enable bool) BlinnPhongOption {
 	return func(m *BlinnPhong) {
-		m.AmbientOcclusion = true
+		m.AmbientOcclusion = enable
 	}
 }
 
 func ReceiveShadow(enable bool) BlinnPhongOption {
 	return func(m *BlinnPhong) {
-		m.ReceiveShadow = true
+		m.ReceiveShadow = enable
 	}
 }

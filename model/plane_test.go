@@ -9,6 +9,7 @@ import (
 
 	"poly.red/camera"
 	"poly.red/color"
+	"poly.red/geometry"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/math"
@@ -22,7 +23,7 @@ func TestPlane(t *testing.T) {
 		light.Intensity(1),
 		light.Color(color.RGBA{0, 128, 255, 255}),
 		light.Position(math.NewVec3[float32](2, 2, 2)),
-	), model.NewPlane(1, 1))
+	), geometry.NewWith(model.NewPlane(1, 1), nil))
 	r := render.NewRenderer(
 		render.Camera(camera.NewPerspective(
 			camera.Position(math.NewVec3[float32](2, 2, 2)),

@@ -17,9 +17,10 @@ import (
 
 func TestDrawLine(t *testing.T) {
 	buf := buffer.NewBuffer(image.Rect(0, 0, 100, 100))
-
 	render.DrawLine(buf, math.NewVec4[float32](0, 0, 0, 1), math.NewVec4[float32](100, 100, 0, 1), color.RGBA{255, 0, 0, 255})
 	render.DrawLine(buf, math.NewVec4[float32](0, 100, 0, 1), math.NewVec4[float32](100, 0, 0, 1), color.RGBA{255, 0, 0, 255})
 
-	imageutil.Save(buf.Image(), "../internal/examples/out/line.png")
+	path := "../internal/examples/out/line.png"
+	imageutil.Save(buf.Image(), path)
+	t.Logf("render saved at: %v", path)
 }

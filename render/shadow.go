@@ -11,13 +11,14 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
+	"poly.red/geometry"
 	"poly.red/geometry/primitive"
 	"poly.red/internal/cache"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
+	"poly.red/scene"
 	"poly.red/shader"
 
 	"poly.red/internal/profiling"
@@ -117,36 +118,33 @@ func (r *Renderer) passShadows(index int) {
 			imageutil.Save(img, file)
 		}()
 	}
-	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
-		r.sched.Add(len(m.Triangles()))
-		return true
-	})
 
-	r.cfg.Scene.IterMeshes(func(m mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+	scene.IterObjects(r.cfg.Scene, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
+		r.sched.Add(len(g.Triangles()))
 		mvp := shader.MVP{
-			Model:    m.ModelMatrix(),
+			Model:    modelMatrix.MulM(g.ModelMatrix()),
 			View:     r.shadowBufs[index].camera.ViewMatrix(),
 			Proj:     r.shadowBufs[index].camera.ProjMatrix(),
 			Viewport: math.ViewportMatrix(float32(r.bufs[0].Bounds().Dx()), float32(r.bufs[0].Bounds().Dy())),
-
-			// NormalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
-			// depending on which transformation space. Here we use the 2nd form,
-			// i.e. model space normal matrix to save some computation of camera
-			// transforamtion in the shading process.
-			// The reason we need normal matrix is that normals are transformed
-			// incorrectly using MVP matrices. However, a normal matrix helps us
-			// to fix the problem.
-			Normal: m.ModelMatrix().Inv().T(),
 		}
 
-		tris := m.Triangles()
+		// NormalMatrix can be ((Tcamera * Tmodel)^(-1))^T or ((Tmodel)^(-1))^T
+		// depending on which transformation space. Here we use the 2nd form,
+		// i.e. model space normal matrix to save some computation of camera
+		// transforamtion in the shading process.
+		// The reason we need normal matrix is that normals are transformed
+		// incorrectly using MVP matrices. However, a normal matrix helps us
+		// to fix the problem.
+		mvp.Normal = mvp.Model.Inv().T()
+
+		tris := g.Triangles()
 		for i := range tris {
 			t := tris[i]
 			r.sched.Run(func() {
 				if !t.IsValid() {
 					return
 				}
-				r.drawDepth(index, t, cache.Get[*material.BlinnPhong](t.MaterialId), mvp)
+				r.drawDepth(index, t, cache.Get[*material.BlinnPhong](t.MaterialID), mvp)
 			})
 		}
 		return true

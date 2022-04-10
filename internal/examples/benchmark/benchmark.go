@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/math"
@@ -79,11 +78,11 @@ func bench(opt *benchOpts) {
 			light.Color(color.RGBA{255, 255, 255, 255}),
 		))
 
-		m := model.MustLoadAs[*mesh.TriangleMesh]("../../testdata/bunny.obj")
+		m := model.MustLoad("../../testdata/bunny.obj")
 		m.Scale(2, 2, 2)
 		s.Add(m)
 
-		m = model.MustLoadAs[*mesh.TriangleMesh]("../../testdata/ground.obj")
+		m = model.MustLoad("../../testdata/ground.obj")
 		m.Scale(2, 2, 2)
 		s.Add(m)
 

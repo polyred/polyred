@@ -194,7 +194,7 @@ func (g *Group) iterObjects(iter func(o object.Object[float32], modelMatrix math
 				panic(errStop)
 			})
 		} else {
-			if ok := iter(g.objects[i], g.ModelMatrix().MulM(g.objects[i].ModelMatrix())); ok {
+			if ok := iter(g.objects[i], g.ModelMatrix()); ok {
 				continue
 			}
 			panic(errStop)

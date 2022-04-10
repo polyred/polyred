@@ -7,9 +7,7 @@ package mesh
 import (
 	"poly.red/buffer"
 	"poly.red/geometry/primitive"
-	"poly.red/material"
 	"poly.red/math"
-	"poly.red/scene/object"
 )
 
 var (
@@ -17,20 +15,15 @@ var (
 )
 
 // TriangleMesh implements a triangular mesh.
-type TriangleMesh struct { // TriangleSoup
+type TriangleMesh struct {
 	ibo buffer.IndexBuffer
 	vbo buffer.VertexBuffer
-	mat material.BlinnPhong
 
 	// caches
 	tris []*primitive.Triangle
 	aabb *primitive.AABB
-
-	math.TransformContext[float32]
 }
 
-func (f *TriangleMesh) Name() string                      { return "triangle_mesh" }
-func (f *TriangleMesh) Type() object.Type                 { return object.TypeMesh }
 func (f *TriangleMesh) Triangles() []*primitive.Triangle  { return f.tris }
 func (m *TriangleMesh) IndexBuffer() buffer.IndexBuffer   { return m.ibo }
 func (m *TriangleMesh) VertexBuffer() buffer.VertexBuffer { return m.vbo }
@@ -54,15 +47,13 @@ func NewTriangleMesh(ts []*primitive.Triangle) *TriangleMesh {
 		aabb.Add(ts[i].AABB())
 	}
 
-	ret := &TriangleMesh{
+	return &TriangleMesh{
 		ibo: ibo,
 		vbo: vbo,
 
 		tris: ts,
 		aabb: &aabb,
 	}
-	ret.ResetContext()
-	return ret
 }
 
 func (m *TriangleMesh) AABB() primitive.AABB {
@@ -76,9 +67,7 @@ func (m *TriangleMesh) AABB() primitive.AABB {
 		m.aabb = &aabb
 	}
 
-	min := m.aabb.Min.ToVec4(1).Apply(m.ModelMatrix()).ToVec3()
-	max := m.aabb.Max.ToVec4(1).Apply(m.ModelMatrix()).ToVec3()
-	return primitive.AABB{Min: min, Max: max}
+	return primitive.AABB{Min: m.aabb.Min, Max: m.aabb.Max}
 }
 
 func (m *TriangleMesh) Center() math.Vec3[float32] {
@@ -101,14 +90,13 @@ func (m *TriangleMesh) Normalize() {
 	// scale all vertices
 	for i := 0; i < len(m.tris); i++ {
 		f := m.tris[i]
-		f.V1.Pos = f.V1.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-		f.V2.Pos = f.V2.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-		f.V3.Pos = f.V3.Pos.Apply(m.ModelMatrix()).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+		f.V1.Pos = f.V1.Pos.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+		f.V2.Pos = f.V2.Pos.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
+		f.V3.Pos = f.V3.Pos.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
 	}
 
 	// update AABB after scaling
 	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
 	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
 	m.aabb = &primitive.AABB{Min: min, Max: max}
-	m.ResetContext()
 }
