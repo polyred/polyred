@@ -2,7 +2,7 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-// The polyred command offers a mesh processing facilities.
+// The polyred command offers a collection of 3D graphics utils.
 package main // go install poly.red/cmd/polyred@latest
 
 import (
