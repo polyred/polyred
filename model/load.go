@@ -24,111 +24,127 @@ import (
 func MustLoad(path string) *scene.Group {
 	m, err := Load(path)
 	if err != nil {
-		panic(fmt.Errorf("mesh: cannot load a given mesh: %w", err))
+		panic(err)
 	}
 	return m
 }
 
 func Load(path string) (*scene.Group, error) {
-	switch filepath.Ext(path) {
+	switch v := filepath.Ext(path); v {
 	case ".obj":
-		return LoadObj(path)
+		return loadObj(path)
 	default:
-		panic("mesh: unsupported format")
+		return nil, fmt.Errorf("model: unsupported format %v", v)
 	}
 }
 
-// LoadObjAs loads a .obj file to a Mesh object.
-func LoadObj(path string) (*scene.Group, error) {
-	f, err := obj.Load(path)
+func loadObj(path string) (*scene.Group, error) {
+	fi, err := obj.Load(path)
 	if err != nil {
-		return nil, fmt.Errorf("mesh: failed to open file %s: %w", path, err)
+		return nil, fmt.Errorf("model: cannot load the given file %v: %w", path, err)
 	}
 
-	return loadObjScene(f)
-}
-
-func loadObjScene(f *obj.File) (*scene.Group, error) {
 	g := scene.NewGroup()
 
 	// Create all materials.
 	ms := map[string]material.Material{}
-	for name, m := range f.Materials {
-		opts := []material.BlinnPhongOption{
-			material.Kdiff(m.Diffuse),
-			material.Kspec(m.Specular),
-			material.Shininess(m.Shininess),
-			material.FlatShading(false),
-			material.AmbientOcclusion(false),
-			material.ReceiveShadow(false),
-		}
-		if m.MapKd != "" {
-			opts = append(opts, material.Texture(buffer.NewTexture(
-				buffer.TextureImage(
-					// Note: this might be problematic when the MapKd is a windows \ separated path.
-					imageutil.MustLoadImage(filepath.Join(filepath.Clean(f.MtlDir), filepath.Clean(m.MapKd)),
-						imageutil.GammaCorrect(true),
-					)),
-				buffer.TextureIsoMipmap(true),
-			)))
-		} else {
-			opts = append(opts, material.Texture(buffer.NewUniformTexture(color.Blue)))
+	for name, mat := range fi.Materials {
+		var m material.Material
+		switch mat.Illum {
+		case 0, 2:
+			opts := []material.Option[material.BlinnPhong]{
+				material.Diffuse(mat.Diffuse),
+				material.Specular(mat.Specular),
+				material.Shininess(mat.Shininess),
+				material.FlatShading[material.BlinnPhong](false),
+				material.AmbientOcclusion[material.BlinnPhong](false),
+				material.ReceiveShadow[material.BlinnPhong](false),
+			}
+			if mat.MapKd != "" {
+				opts = append(opts, material.Texture[material.BlinnPhong](buffer.NewTexture(
+					buffer.TextureImage(
+						// Note: this might be problematic when the MapKd is a windows \ separated path.
+						imageutil.MustLoadImage(filepath.Join(filepath.Clean(fi.MtlDir), filepath.Clean(mat.MapKd)),
+							imageutil.GammaCorrect(true),
+						)),
+					buffer.TextureIsoMipmap(true),
+				)))
+			} else {
+				opts = append(opts, material.Texture[material.BlinnPhong](buffer.NewUniformTexture(color.Blue)))
+			}
+
+			m = material.NewBlinnPhong(opts...)
+		default:
+			panic("unsupported illumination model")
 		}
 
-		mat := material.NewBlinnPhong(opts...)
-		cache.Set(mat.ID(), mat)
-		ms[name] = mat
+		cache.Set(m.ID(), m)
+		ms[name] = m
 	}
 
-	for i := range f.Objs {
-		var tris []*primitive.Triangle
-		for _, face := range f.Objs[i].Faces {
-			materialId := uint64(0)
+	// Create all mesh objects.
+	for i := range fi.Objs {
+		var faces []*primitive.Triangle
+		for _, face := range fi.Objs[i].Faces {
+			materialID := uint64(0)
 			if mat, ok := ms[face.Material]; ok {
-				materialId = mat.ID()
-			}
-			t := &primitive.Triangle{
-				V1:         primitive.NewVertex(),
-				V2:         primitive.NewVertex(),
-				V3:         primitive.NewVertex(),
-				MaterialID: materialId,
-			}
-			vs := face.Vertices
-			t.V1.Pos = math.NewVec4(f.Vertices[3*vs[0]+0], f.Vertices[3*vs[0]+1], f.Vertices[3*vs[0]+2], 1)
-			t.V2.Pos = math.NewVec4(f.Vertices[3*vs[1]+0], f.Vertices[3*vs[1]+1], f.Vertices[3*vs[1]+2], 1)
-			t.V3.Pos = math.NewVec4(f.Vertices[3*vs[2]+0], f.Vertices[3*vs[2]+1], f.Vertices[3*vs[2]+2], 1)
-
-			vs = face.Normals
-			if len(f.Normals) > 0 {
-				t.V1.Nor = math.NewVec4(f.Normals[3*vs[0]], f.Normals[3*vs[0]+1], f.Normals[3*vs[0]+2], 0)
-				t.V2.Nor = math.NewVec4(f.Normals[3*vs[1]], f.Normals[3*vs[1]+1], f.Normals[3*vs[1]+2], 0)
-				t.V3.Nor = math.NewVec4(f.Normals[3*vs[2]], f.Normals[3*vs[2]+1], f.Normals[3*vs[2]+2], 0)
-				if t.V1.Nor.IsZero() {
-					t.V1.Nor = t.Normal()
-				}
-				if t.V2.Nor.IsZero() {
-					t.V1.Nor = t.Normal()
-				}
-				if t.V3.Nor.IsZero() {
-					t.V1.Nor = t.Normal()
-				}
+				materialID = mat.ID()
 			}
 
-			vs = face.Uvs
-			if len(f.Uvs) > 0 {
-				t.V1.UV = math.NewVec2(f.Uvs[2*vs[0]], f.Uvs[2*vs[0]+1])
-				t.V2.UV = math.NewVec2(f.Uvs[2*vs[1]], f.Uvs[2*vs[1]+1])
-				t.V3.UV = math.NewVec2(f.Uvs[2*vs[2]], f.Uvs[2*vs[2]+1])
+			var f primitive.Face
+			switch len(face.Vertices) {
+			case 3:
+				f = newTrianglePrimitive(fi, &face, materialID)
+			default:
+				panic("unsupported")
 			}
 
-			t.V1.Col = color.FromValue[float32](1, 1, 1, 1)
-			t.V2.Col = color.FromValue[float32](1, 1, 1, 1)
-			t.V3.Col = color.FromValue[float32](1, 1, 1, 1)
-			tris = append(tris, t)
+			faces = append(faces, f.(*primitive.Triangle))
 		}
 
-		geom := geometry.NewWith(mesh.NewTriangleMesh(tris), nil)
+		geom := geometry.NewWith(mesh.NewTriangleMesh(faces), nil)
 		g.Add(geom)
 	}
 	return g, nil
+}
+
+func newTrianglePrimitive(f *obj.File, face *obj.Face, materialID uint64) primitive.Face {
+	t := &primitive.Triangle{
+		V1:         primitive.NewVertex(),
+		V2:         primitive.NewVertex(),
+		V3:         primitive.NewVertex(),
+		MaterialID: materialID,
+	}
+	vs := face.Vertices
+	t.V1.Pos = math.NewVec4(f.Vertices[3*vs[0]+0], f.Vertices[3*vs[0]+1], f.Vertices[3*vs[0]+2], 1)
+	t.V2.Pos = math.NewVec4(f.Vertices[3*vs[1]+0], f.Vertices[3*vs[1]+1], f.Vertices[3*vs[1]+2], 1)
+	t.V3.Pos = math.NewVec4(f.Vertices[3*vs[2]+0], f.Vertices[3*vs[2]+1], f.Vertices[3*vs[2]+2], 1)
+
+	vs = face.Normals
+	if len(f.Normals) > 0 {
+		t.V1.Nor = math.NewVec4(f.Normals[3*vs[0]], f.Normals[3*vs[0]+1], f.Normals[3*vs[0]+2], 0)
+		t.V2.Nor = math.NewVec4(f.Normals[3*vs[1]], f.Normals[3*vs[1]+1], f.Normals[3*vs[1]+2], 0)
+		t.V3.Nor = math.NewVec4(f.Normals[3*vs[2]], f.Normals[3*vs[2]+1], f.Normals[3*vs[2]+2], 0)
+		if t.V1.Nor.IsZero() {
+			t.V1.Nor = t.Normal()
+		}
+		if t.V2.Nor.IsZero() {
+			t.V1.Nor = t.Normal()
+		}
+		if t.V3.Nor.IsZero() {
+			t.V1.Nor = t.Normal()
+		}
+	}
+
+	vs = face.Uvs
+	if len(f.Uvs) > 0 {
+		t.V1.UV = math.NewVec2(f.Uvs[2*vs[0]], f.Uvs[2*vs[0]+1])
+		t.V2.UV = math.NewVec2(f.Uvs[2*vs[1]], f.Uvs[2*vs[1]+1])
+		t.V3.UV = math.NewVec2(f.Uvs[2*vs[2]], f.Uvs[2*vs[2]+1])
+	}
+
+	t.V1.Col = color.FromValue[float32](1, 1, 1, 1)
+	t.V2.Col = color.FromValue[float32](1, 1, 1, 1)
+	t.V3.Col = color.FromValue[float32](1, 1, 1, 1)
+	return t
 }

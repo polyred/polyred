@@ -14,7 +14,10 @@ import (
 	"poly.red/scene/object"
 )
 
-var _ object.Object[float32] = &Geometry{}
+var (
+	_ object.Object[float32] = &Geometry{}
+	_ mesh.Mesh[float32]     = &Geometry{}
+)
 
 type Geometry struct {
 	math.TransformContext[float32]
@@ -66,7 +69,8 @@ func (g *Geometry) Name() string      { return "geometry" }
 func (g *Geometry) Type() object.Type { return object.TypeGeometry }
 
 func (g *Geometry) Normalize() {
-	panic("unimplemented")
+	// FIXME: this might also be problematic.
+	g.mesh.Normalize()
 }
 
 func (g *Geometry) Triangles() []*primitive.Triangle {

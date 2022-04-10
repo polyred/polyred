@@ -2,16 +2,18 @@
 // Use of this source code is governed by a GPLv3 license that
 // can be found in the LICENSE file.
 
-package material
+package shader
 
 import (
+	"image/color"
+
 	"poly.red/buffer"
-	"poly.red/color"
 	"poly.red/light"
+	"poly.red/material"
 	"poly.red/math"
 )
 
-func (m *BlinnPhong) FragmentShader(
+func FragmentShader(m *material.BlinnPhong,
 	info buffer.Fragment, c math.Vec3[float32],
 	ls []light.Source, es []light.Environment,
 ) color.RGBA {
@@ -79,9 +81,9 @@ func (m *BlinnPhong) FragmentShader(
 	}
 
 	// The Blinn-Phong Reflection Model
-	r := LaR + (float32(m.Diffuse.R)/255.0)*LdR + (float32(m.Specular.R)/255.0)*LsR
-	g := LaG + (float32(m.Diffuse.G)/255.0)*LdG + (float32(m.Specular.G)/255.0)*LsG
-	b := LaB + (float32(m.Diffuse.B)/255.0)*LdB + (float32(m.Specular.B)/255.0)*LsB
+	r := math.Round(LaR + (float32(m.Diffuse.R) * LdR / 255.0) + (float32(m.Specular.R) * LsR / 255.0))
+	g := math.Round(LaG + (float32(m.Diffuse.G) * LdG / 255.0) + (float32(m.Specular.G) * LsG / 255.0))
+	b := math.Round(LaB + (float32(m.Diffuse.B) * LdB / 255.0) + (float32(m.Specular.B) * LsB / 255.0))
 
 	return color.RGBA{
 		uint8(math.Clamp(r, 0, 0xff)),

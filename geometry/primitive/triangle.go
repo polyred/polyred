@@ -10,7 +10,7 @@ import (
 	"poly.red/math"
 )
 
-var _ Face[float32] = &Triangle{}
+var _ Face = &Triangle{}
 
 // Triangle is a triangle that contains three vertices.
 type Triangle struct {

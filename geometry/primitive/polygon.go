@@ -10,11 +10,12 @@ import (
 	"poly.red/math"
 )
 
-var _ Face[float32] = &Polygon{}
+var _ Face = &Polygon{}
 
 // Polygon is a polygon that contains multiple vertices.
 type Polygon struct {
-	vs     []*Vertex
+	Verts []*Vertex
+
 	normal math.Vec4[float32]
 	aabb   *AABB
 }
@@ -25,12 +26,12 @@ func NewPolygon[T math.Float](vs ...*Vertex) (*Polygon, error) {
 	}
 
 	p := &Polygon{
-		vs: make([]*Vertex, len(vs)),
+		Verts: make([]*Vertex, len(vs)),
 	}
 
-	p.vs[0] = vs[0]
-	p.vs[1] = vs[1]
-	p.vs[2] = vs[2]
+	p.Verts[0] = vs[0]
+	p.Verts[1] = vs[1]
+	p.Verts[2] = vs[2]
 
 	xmax := math.Max(vs[0].Pos.X, vs[1].Pos.X, vs[2].Pos.X)
 	xmin := math.Min(vs[0].Pos.X, vs[1].Pos.X, vs[2].Pos.X)
@@ -46,7 +47,7 @@ func NewPolygon[T math.Float](vs ...*Vertex) (*Polygon, error) {
 		ymin = math.Min(ymin, vs[i].Pos.Y)
 		zmax = math.Max(zmax, vs[i].Pos.Z)
 		zmin = math.Min(zmin, vs[i].Pos.Z)
-		p.vs[i] = vs[i]
+		p.Verts[i] = vs[i]
 	}
 	min := math.NewVec3(xmin, ymin, zmin)
 	max := math.NewVec3(xmax, ymax, zmax)
@@ -59,13 +60,13 @@ func (p *Polygon) AABB() AABB {
 		min := math.NewVec3[float32](math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
 		max := math.NewVec3[float32](-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
 
-		for i := 0; i < len(p.vs); i++ {
-			min.X = math.Min(min.X, p.vs[i].Pos.X)
-			min.Y = math.Min(min.Y, p.vs[i].Pos.X)
-			min.Z = math.Min(min.Z, p.vs[i].Pos.Y)
-			max.X = math.Max(max.X, p.vs[i].Pos.Y)
-			max.Y = math.Max(max.Y, p.vs[i].Pos.Z)
-			max.Z = math.Max(max.Z, p.vs[i].Pos.Z)
+		for i := 0; i < len(p.Verts); i++ {
+			min.X = math.Min(min.X, p.Verts[i].Pos.X)
+			min.Y = math.Min(min.Y, p.Verts[i].Pos.X)
+			min.Z = math.Min(min.Z, p.Verts[i].Pos.Y)
+			max.X = math.Max(max.X, p.Verts[i].Pos.Y)
+			max.Y = math.Max(max.Y, p.Verts[i].Pos.Z)
+			max.Z = math.Max(max.Z, p.Verts[i].Pos.Z)
 		}
 		p.aabb = &AABB{min, max}
 	}
@@ -77,8 +78,8 @@ func (p *Polygon) Normal() math.Vec4[float32] {
 }
 
 func (p *Polygon) Triangles(iter func(t *Triangle) bool) {
-	for i := 0; i < len(p.vs); i += 3 {
-		tri := &Triangle{V1: p.vs[i], V2: p.vs[i+1], V3: p.vs[i+2]}
+	for i := 0; i < len(p.Verts); i += 3 {
+		tri := &Triangle{V1: p.Verts[i], V2: p.Verts[i+1], V3: p.Verts[i+2]}
 		if !iter(tri) {
 			return
 		}
@@ -86,8 +87,8 @@ func (p *Polygon) Triangles(iter func(t *Triangle) bool) {
 }
 
 func (p *Polygon) Vertices(iter func(v *Vertex) bool) {
-	for i := 0; i < len(p.vs); i++ {
-		if !iter(p.vs[i]) {
+	for i := 0; i < len(p.Verts); i++ {
+		if !iter(p.Verts[i]) {
 			return
 		}
 	}

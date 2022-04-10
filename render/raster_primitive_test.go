@@ -11,18 +11,19 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/camera"
-	"poly.red/geometry/mesh"
+	"poly.red/geometry"
 	"poly.red/geometry/primitive"
 	"poly.red/internal/imageutil"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
+	"poly.red/scene"
 	"poly.red/shader"
 )
 
 var (
 	rend *render.Renderer
-	m    *mesh.TriangleMesh
+	m    *geometry.Geometry
 	prog shader.Program
 	buf  *buffer.FragmentBuffer
 )
@@ -40,15 +41,22 @@ func init() {
 	)
 
 	// Use a different model
-	m := model.MustLoad("../internal/testdata/bunny.obj")
-	m.Normalize()
+	s := model.MustLoad("../internal/testdata/bunny.obj")
+	s.Normalize()
+
+	var Mm math.Mat4[float32]
+	scene.IterObjects(s, func(o *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
+		m = o
+		Mm = modelMatrix
+		return false
+	})
 
 	tex := buffer.NewTexture(
 		buffer.TextureImage(imageutil.MustLoadImage("../internal/testdata/bunny.png")),
 		buffer.TextureIsoMipmap(true),
 	)
 	prog = &shader.TextureShader{
-		ModelMatrix: m.ModelMatrix(),
+		ModelMatrix: Mm,
 		ViewMatrix:  cam.ViewMatrix(),
 		ProjMatrix:  cam.ProjMatrix(),
 		Texture:     tex,

@@ -24,34 +24,38 @@ type TriangleMesh struct {
 	aabb *primitive.AABB
 }
 
-func (f *TriangleMesh) Triangles() []*primitive.Triangle  { return f.tris }
+func (m *TriangleMesh) Triangles() []*primitive.Triangle  { return m.tris }
 func (m *TriangleMesh) IndexBuffer() buffer.IndexBuffer   { return m.ibo }
 func (m *TriangleMesh) VertexBuffer() buffer.VertexBuffer { return m.vbo }
 
 // NewTriangleMesh returns a triangular soup.
-func NewTriangleMesh(ts []*primitive.Triangle) *TriangleMesh {
-	ibo := make([]int, len(ts)*3)
+func NewTriangleMesh(tris []*primitive.Triangle) *TriangleMesh {
+	if len(tris) == 0 {
+		panic("mesh: cannot construct a triangle mesh without any faces")
+	}
+
+	ibo := make([]int, len(tris)*3)
 	for i := 0; i < len(ibo); i++ {
 		ibo[i] = i
 	}
-	vbo := make([]*primitive.Vertex, len(ts)*3)
-	for i := 0; i < len(ts); i++ {
-		vbo[3*i+0] = ts[i].V1
-		vbo[3*i+1] = ts[i].V2
-		vbo[3*i+2] = ts[i].V3
+	vbo := make([]*primitive.Vertex, len(tris)*3)
+	for i := 0; i < len(tris); i++ {
+		vbo[3*i+0] = tris[i].V1
+		vbo[3*i+1] = tris[i].V2
+		vbo[3*i+2] = tris[i].V3
 	}
 
 	// Compute AABB at loading time.
-	aabb := ts[0].AABB()
-	for i := 1; i < len(ts); i++ {
-		aabb.Add(ts[i].AABB())
+	aabb := tris[0].AABB()
+	for i := 1; i < len(tris); i++ {
+		aabb.Add(tris[i].AABB())
 	}
 
 	return &TriangleMesh{
 		ibo: ibo,
 		vbo: vbo,
 
-		tris: ts,
+		tris: tris,
 		aabb: &aabb,
 	}
 }

@@ -32,7 +32,7 @@ type File struct {
 	Warnings  []string             // warning messages
 	MtlDir    string               // Directory of material file
 
-	// Parsing status
+	// Intermediate parsing status
 	line          uint      // current line number
 	objCurrent    *Object   // current obj
 	matCurrent    *Material // current material

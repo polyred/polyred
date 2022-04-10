@@ -42,10 +42,10 @@ func NewRandomAs[T Mesh[float32]](numTri int) (m T) {
 
 		bm := NewBufferedMesh()
 		bm.SetIndexBuffer(ibo)
-		bm.SetAttribute(AttributePos, NewBufferAttribute(3, vertPos))
-		bm.SetAttribute(AttributeNor, NewBufferAttribute(3, vertNor))
-		bm.SetAttribute(AttributeCol, NewBufferAttribute(4, vertCol))
-		bm.SetAttribute(AttributeUV, NewBufferAttribute(2, vertUV))
+		bm.SetAttribute(AttribPosition, NewBufferAttrib(3, vertPos))
+		bm.SetAttribute(AttribNormal, NewBufferAttrib(3, vertNor))
+		bm.SetAttribute(AttribColor, NewBufferAttrib(4, vertCol))
+		bm.SetAttribute(AttriTexcoord, NewBufferAttrib(2, vertUV))
 		return any(bm).(T)
 	default:
 		panic("not supported")

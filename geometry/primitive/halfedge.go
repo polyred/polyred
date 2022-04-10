@@ -6,7 +6,7 @@ package primitive
 
 import "poly.red/math"
 
-var _ Edge[float32] = &Halfedge{}
+var _ Edge = &Halfedge{}
 
 // Halfedge holds a halfedge representation.
 type Halfedge struct {
@@ -14,7 +14,7 @@ type Halfedge struct {
 	Next *Halfedge
 	Prev *Halfedge
 	Twin *Halfedge
-	Face Face[float32]
+	Face Face
 
 	v          *Vertex
 	onBoundary bool

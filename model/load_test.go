@@ -18,7 +18,7 @@ import (
 
 func TestLoadOBJ(t *testing.T) {
 	path := "../internal/testdata/bunny.obj"
-	g, err := model.LoadObj(path)
+	g, err := model.Load(path)
 	if err != nil {
 		t.Fatalf("cannot load obj model, path: %s, err: %v", path, err)
 	}
@@ -36,7 +36,7 @@ func TestLoadSponza(t *testing.T) {
 	}
 
 	path := fmt.Sprintf("%s/Dropbox/Data/sponza.obj", home)
-	g, err := model.LoadObj(path)
+	g, err := model.Load(path)
 	if err != nil {
 		t.Fatalf("cannot load obj model, path: %s, err: %v", path, err)
 	}
@@ -52,6 +52,6 @@ func BenchmarkLoadOBJ(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		model.LoadObj(path)
+		model.MustLoad(path)
 	}
 }

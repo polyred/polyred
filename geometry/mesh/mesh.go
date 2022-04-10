@@ -9,8 +9,6 @@
 package mesh
 
 import (
-	_ "image/jpeg" // for jpg encoding
-
 	"poly.red/buffer"
 	"poly.red/geometry/primitive"
 	"poly.red/math"

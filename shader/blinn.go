@@ -23,8 +23,8 @@ type BlinnShader struct {
 	ProjectionMatrix math.Mat4[float32]
 	LightSources     []light.Source
 	LightEnviron     []light.Environment
-	Kdiff            float32
-	Kspec            float32
+	Diffuse          float32
+	Specular         float32
 	Shininess        float32
 	Texture          *buffer.Texture
 }
@@ -89,9 +89,9 @@ func (s *BlinnShader) Fragment(frag *primitive.Fragment) color.RGBA {
 		LsB += Ls * float32(l.Color().B) * I
 	}
 
-	r := uint8(LaR + s.Kdiff*LdR + s.Kspec*LsR)
-	g := uint8(LaG + s.Kdiff*LdG + s.Kspec*LsG)
-	b := uint8(LaB + s.Kdiff*LdB + s.Kspec*LsB)
+	r := uint8(math.Round(LaR + s.Diffuse*LdR + s.Specular*LsR))
+	g := uint8(math.Round(LaG + s.Diffuse*LdG + s.Specular*LsG))
+	b := uint8(math.Round(LaB + s.Diffuse*LdB + s.Specular*LsB))
 
 	return color.RGBA{
 		math.Clamp(r, 0, 0xff),

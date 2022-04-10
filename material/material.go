@@ -34,7 +34,7 @@ type BlinnPhong struct {
 	Opacity   float32
 }
 
-func NewBlinnPhong(opts ...BlinnPhongOption) *BlinnPhong {
+func NewBlinnPhong(opts ...Option[BlinnPhong]) *BlinnPhong {
 	t := &BlinnPhong{
 		Standard: Standard{
 			id:               alloc.ID(),

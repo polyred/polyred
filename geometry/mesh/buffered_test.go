@@ -12,7 +12,7 @@ import (
 
 func TestBufferedMesh(t *testing.T) {
 	bm := mesh.NewBufferedMesh()
-	bm.SetAttribute(mesh.AttributePos, &mesh.BufferAttribute{
+	bm.SetAttribute(mesh.AttribPosition, &mesh.BufferAttribute{
 		Stride: 3,
 		Values: []float32{
 			-0.363322, -0.387725, 0.85933, // 0

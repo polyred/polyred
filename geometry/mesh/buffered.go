@@ -14,21 +14,34 @@ import (
 
 var _ Mesh[float32] = &BufferedMesh{}
 
-type AttributeName string
+type AttribType int
 
-var (
-	AttributePos AttributeName = "position"
-	AttributeNor AttributeName = "normal"
-	AttributeUV  AttributeName = "uv"
-	AttributeCol AttributeName = "color"
+const (
+	AttribUndefined AttribType = iota
+	AttribPosition
+	AttribNormal
+	AttriTexcoord
+	AttribColor
 )
+
+var attribNames = map[AttribType]string{
+	AttribUndefined: "undefined",
+	AttribPosition:  "position",
+	AttribNormal:    "normal",
+	AttriTexcoord:   "texcoord",
+	AttribColor:     "color",
+}
+
+func (a AttribType) String() string {
+	return attribNames[a]
+}
 
 type BufferAttribute struct {
 	Stride int
 	Values []float32
 }
 
-func NewBufferAttribute(stride int, values []float32) *BufferAttribute {
+func NewBufferAttrib(stride int, values []float32) *BufferAttribute {
 	return &BufferAttribute{stride, values}
 }
 
@@ -37,7 +50,7 @@ func NewBufferAttribute(stride int, values []float32) *BufferAttribute {
 type BufferedMesh struct {
 	ibo   buffer.IndexBuffer
 	vbo   buffer.VertexBuffer
-	attrs map[AttributeName]*BufferAttribute
+	attrs map[AttribType]*BufferAttribute
 
 	tris []*primitive.Triangle
 	aabb *primitive.AABB
@@ -45,27 +58,27 @@ type BufferedMesh struct {
 
 func NewBufferedMesh() *BufferedMesh {
 	bm := &BufferedMesh{
-		attrs: map[AttributeName]*BufferAttribute{
-			AttributePos: nil,
-			AttributeNor: nil,
-			AttributeUV:  nil,
-			AttributeCol: nil,
+		attrs: map[AttribType]*BufferAttribute{
+			AttribPosition: nil,
+			AttribNormal:   nil,
+			AttriTexcoord:  nil,
+			AttribColor:    nil,
 		},
 	}
 	return bm
 }
 
 func (bm *BufferedMesh) SetIndexBuffer(ibo buffer.IndexBuffer) { bm.ibo = ibo }
-func (bm *BufferedMesh) SetAttribute(name AttributeName, attribute *BufferAttribute) {
+func (bm *BufferedMesh) SetAttribute(name AttribType, attribute *BufferAttribute) {
 	bm.attrs[name] = attribute
 }
-func (bm *BufferedMesh) GetAttribute(name AttributeName) *BufferAttribute { return bm.attrs[name] }
+func (bm *BufferedMesh) GetAttribute(name AttribType) *BufferAttribute { return bm.attrs[name] }
 
 func (bm *BufferedMesh) AABB() primitive.AABB {
 	if bm.aabb == nil {
 		min := math.NewVec3[float32](math.MaxFloat32, math.MaxFloat32, math.MaxFloat32)
 		max := math.NewVec3[float32](-math.MaxFloat32, -math.MaxFloat32, -math.MaxFloat32)
-		attr := bm.GetAttribute(AttributePos)
+		attr := bm.GetAttribute(AttribPosition)
 		for _, idx := range bm.ibo {
 			x := attr.Values[attr.Stride*int(idx)+0]
 			y := attr.Values[attr.Stride*int(idx)+1]
@@ -89,7 +102,7 @@ func (bm *BufferedMesh) Normalize() {
 	fac := 1 / radius
 
 	// scale all vertices
-	attr := bm.GetAttribute(AttributePos)
+	attr := bm.GetAttribute(AttribPosition)
 	for _, vIndex := range bm.ibo {
 		x := attr.Values[attr.Stride*int(vIndex)+0]
 		y := attr.Values[attr.Stride*int(vIndex)+1]
@@ -111,10 +124,10 @@ func (bm *BufferedMesh) Triangles() []*primitive.Triangle {
 		return bm.tris
 	}
 
-	attrPos := bm.GetAttribute(AttributePos)
-	attrNor := bm.GetAttribute(AttributeNor)
-	attrColor := bm.GetAttribute(AttributeCol)
-	attrUV := bm.GetAttribute(AttributeUV)
+	attrPos := bm.GetAttribute(AttribPosition)
+	attrNor := bm.GetAttribute(AttribNormal)
+	attrColor := bm.GetAttribute(AttribColor)
+	attrUV := bm.GetAttribute(AttriTexcoord)
 	tris := []*primitive.Triangle{}
 
 	for i := 0; i < len(bm.ibo); i += 3 {
@@ -207,10 +220,10 @@ func (bm *BufferedMesh) VertexBuffer() buffer.VertexBuffer {
 		return bm.vbo
 	}
 
-	attrPos := bm.GetAttribute(AttributePos)
-	attrNor := bm.GetAttribute(AttributeNor)
-	attrColor := bm.GetAttribute(AttributeCol)
-	attrUV := bm.GetAttribute(AttributeUV)
+	attrPos := bm.GetAttribute(AttribPosition)
+	attrNor := bm.GetAttribute(AttribNormal)
+	attrColor := bm.GetAttribute(AttribColor)
+	attrUV := bm.GetAttribute(AttriTexcoord)
 
 	var px, py, pz, nx, ny, nz, u, v float32
 	var cr, cb, cg, ca uint8

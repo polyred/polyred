@@ -31,6 +31,7 @@ func (g *Group) AABB() primitive.AABB {
 }
 
 func (g *Group) Normalize() {
+	// FIXME: this seems problematic.
 	aabb := g.AABB()
 	center := aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 	radius := aabb.Max.Sub(aabb.Min).Len() / 2

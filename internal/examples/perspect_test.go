@@ -25,11 +25,12 @@ func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene(light.NewAmbient(light.Intensity(1)))
 	g := geometry.NewWith(model.NewPlane(1, 1),
 		material.NewBlinnPhong(
-			material.Texture(buffer.NewTexture(
+			material.Texture[material.BlinnPhong](buffer.NewTexture(
 				buffer.TextureImage(imageutil.MustLoadImage("../testdata/uvgrid2.png")),
 				buffer.TextureIsoMipmap(true),
 			)),
-			material.Kdiff(color.FromValue(0.6, 0.6, 0.6, 1.0)), material.Kspec(color.FromValue(0.5, 0.5, 0.5, 1.0)),
+			material.Diffuse(color.FromValue(0.6, 0.6, 0.6, 1.0)),
+			material.Specular(color.FromValue(0.5, 0.5, 0.5, 1.0)),
 			material.Shininess(150),
 		))
 	g.Scale(2, 2, 2)

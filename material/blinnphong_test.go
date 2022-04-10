@@ -14,6 +14,7 @@ import (
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
+	"poly.red/shader"
 )
 
 func BenchmarkBlinnPhongShader(b *testing.B) {
@@ -37,9 +38,9 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	}
 
 	m := material.NewBlinnPhong(
-		material.Texture(buffer.NewTexture()),
-		material.Kdiff(color.FromValue(0.6, 0.6, 0.6, 1.0)),
-		material.Kspec(color.FromValue(0.6, 0.6, 0.6, 1.0)),
+		material.Texture[material.BlinnPhong](buffer.NewTexture()),
+		material.Diffuse(color.FromValue(0.6, 0.6, 0.6, 1.0)),
+		material.Specular(color.FromValue(0.6, 0.6, 0.6, 1.0)),
 		material.Shininess(25),
 	)
 
@@ -58,7 +59,7 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	b.ResetTimer()
 	var cc color.RGBA
 	for i := 0; i < b.N; i++ {
-		cc = m.FragmentShader(info, c, l, a)
+		cc = shader.FragmentShader(m, info, c, l, a)
 	}
 	_ = cc
 }
