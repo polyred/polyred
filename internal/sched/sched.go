@@ -24,16 +24,16 @@ type funcdata struct {
 	ar any
 }
 
-// Opt is a scheduler option.
-type Opt func(w *Pool)
+// Option is a scheduler option.
+type Option func(w *Pool)
 
-func Workers(limit int) Opt {
+func Workers(limit int) Option {
 	return func(w *Pool) {
 		w.numWorkers = limit
 	}
 }
 
-func Randomizer(f func(min, max int) int) Opt {
+func Randomizer(f func(min, max int) int) Option {
 	return func(w *Pool) {
 		w.randomizer = f
 	}
@@ -43,7 +43,7 @@ func Randomizer(f func(min, max int) int) Opt {
 
 // New creates a new task scheduler and returns a pool of workers.
 //
-func New(opts ...Opt) *Pool {
+func New(opts ...Option) *Pool {
 	p := &Pool{
 		randomizer: func(min, max int) int {
 			return rand.Intn(max)

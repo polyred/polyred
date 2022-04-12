@@ -21,11 +21,11 @@ type Terminal struct {
 	width, height int
 }
 
-// Opt represents a terminal option.
-type Opt func(t *Terminal)
+// Option represents a terminal option.
+type Option func(t *Terminal)
 
 // Size is an option to configure terminal drawing size.
-func Size(w, h int) Opt {
+func Size(w, h int) Option {
 	return func(t *Terminal) {
 		t.width = w
 		t.height = h
@@ -33,7 +33,7 @@ func Size(w, h int) Opt {
 }
 
 // New returns a terminal instance.
-func New(opts ...Opt) *Terminal {
+func New(opts ...Option) *Terminal {
 	t := &Terminal{
 		out: os.Stdout,
 	}

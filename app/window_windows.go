@@ -81,7 +81,7 @@ var dead = make(chan struct{})
 
 func (w *window) main(app Window) { <-dead }
 
-func (w *window) run(app Window, cfg config, opts ...Opt) {
+func (w *window) run(app Window, cfg config, opts ...Option) {
 	// GetMessage and PeekMessage can filter on a window HWND, but
 	// then thread-specific messages such as WM_QUIT are ignored.
 	// Instead lock the thread so window messages arrive through
@@ -134,7 +134,7 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 	dead <- struct{}{}
 }
 
-func (w *window) configs(opts ...Opt) {
+func (w *window) configs(opts ...Option) {
 	cfg := w.win.config
 	for _, o := range opts {
 		o(cfg)

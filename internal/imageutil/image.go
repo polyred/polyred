@@ -18,10 +18,10 @@ import (
 	"poly.red/internal/sched"
 )
 
-type Opt func(t any)
+type Option func(t any)
 
 // GammaCorrect is a gamma correction option
-func GammaCorrect(enable bool) Opt {
+func GammaCorrect(enable bool) Option {
 	return func(t any) {
 		switch o := t.(type) {
 		case *imageOption:
@@ -33,7 +33,7 @@ func GammaCorrect(enable bool) Opt {
 }
 
 // MustLoadImage loads a given file into a texture.
-func MustLoadImage(path string, opts ...Opt) *image.RGBA {
+func MustLoadImage(path string, opts ...Option) *image.RGBA {
 	img, err := LoadImage(path, opts...)
 	if err != nil {
 		panic(err)
@@ -45,7 +45,7 @@ type imageOption struct {
 	gammaCorrection bool
 }
 
-func LoadImage(path string, opts ...Opt) (*image.RGBA, error) {
+func LoadImage(path string, opts ...Option) (*image.RGBA, error) {
 	option := &imageOption{
 		gammaCorrection: false,
 	}

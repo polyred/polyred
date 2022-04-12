@@ -52,8 +52,8 @@ type MouseHandler interface {
 }
 
 // Run runs a object that implements Window interface.
-// The window can be configured by a list of Opt options.
-func Run(instance Window, opts ...Opt) {
+// The window can be configured by a list of options.
+func Run(instance Window, opts ...Option) {
 	w := &window{
 		ready:    make(chan event),
 		resize:   make(chan resizeEvent),

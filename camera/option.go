@@ -6,18 +6,18 @@ package camera
 
 import "poly.red/math"
 
-// Opt represents camera options.
-type Opt func(Interface)
+// Option represents camera options.
+type Option func(Interface)
 
 // Position sets the camera position.
-func Position(pos math.Vec3[float32]) Opt {
+func Position(pos math.Vec3[float32]) Option {
 	return func(i Interface) {
 		i.SetPosition(pos)
 	}
 }
 
 // LookAt sets the camera look at target and up direction.
-func LookAt(target, up math.Vec3[float32]) Opt {
+func LookAt(target, up math.Vec3[float32]) Option {
 	return func(i Interface) {
 		i.SetLookAt(target, up)
 	}
@@ -30,7 +30,7 @@ func LookAt(target, up math.Vec3[float32]) Opt {
 //
 // If the frustum is using for a orthographic camera, the parameters
 // must be suuply in this order: left, right, bottom, top, near, far
-func ViewFrustum(params ...float32) Opt {
+func ViewFrustum(params ...float32) Option {
 	return func(i Interface) {
 		switch ii := i.(type) {
 		case *Perspective:

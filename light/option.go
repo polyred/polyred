@@ -10,10 +10,10 @@ import (
 	"poly.red/math"
 )
 
-type Opt func(l any)
+type Option func(l Light)
 
-func Intensity(I float32) Opt {
-	return func(l any) {
+func Intensity(I float32) Option {
+	return func(l Light) {
 		switch a := l.(type) {
 		case *Ambient:
 			a.intensity = I
@@ -27,8 +27,8 @@ func Intensity(I float32) Opt {
 	}
 }
 
-func Color(c color.RGBA) Opt {
-	return func(l any) {
+func Color(c color.RGBA) Option {
+	return func(l Light) {
 		switch a := l.(type) {
 		case *Ambient:
 			a.color = c
@@ -42,32 +42,32 @@ func Color(c color.RGBA) Opt {
 	}
 }
 
-func Direction(dir math.Vec3[float32]) Opt {
-	return func(l any) {
-		switch a := l.(type) {
+func Direction(dir math.Vec3[float32]) Option {
+	return func(l Light) {
+		switch a := any(l).(type) {
 		case *Directional:
-			a.dir = dir
+			a.direction = dir
 		default:
 			panic("light: invalid usage of Direction option")
 		}
 	}
 }
 
-func Position(pos math.Vec3[float32]) Opt {
-	return func(l any) {
+func Position(pos math.Vec3[float32]) Option {
+	return func(l Light) {
 		switch a := l.(type) {
 		case *Directional:
-			a.pos = pos
+			a.position = pos
 		case *Point:
-			a.pos = pos
+			a.position = pos
 		default:
 			panic("light: invalid usage of Position option")
 		}
 	}
 }
 
-func CastShadow(enable bool) Opt {
-	return func(l any) {
+func CastShadow(enable bool) Option {
+	return func(l Light) {
 		switch a := l.(type) {
 		case *Directional:
 			a.useShadowMap = enable

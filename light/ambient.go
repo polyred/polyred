@@ -5,14 +5,14 @@
 package light
 
 import (
-	"image/color"
-
+	"poly.red/color"
 	"poly.red/geometry/primitive"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
 
 var (
+	_ Light                  = &Ambient{}
 	_ Environment            = &Ambient{}
 	_ object.Object[float32] = &Ambient{}
 )
@@ -24,17 +24,16 @@ type Ambient struct {
 	intensity float32
 }
 
-func NewAmbient(opts ...Opt) *Ambient {
+func NewAmbient(opts ...Option) Environment {
 	a := &Ambient{
 		intensity: 0.1,
-		color:     color.RGBA{0xff, 0xff, 0xff, 0xff},
+		color:     color.White,
 	}
 
 	for _, opt := range opts {
 		opt(a)
 	}
 	a.ResetContext()
-
 	return a
 }
 

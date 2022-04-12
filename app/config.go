@@ -6,17 +6,17 @@ package app
 
 import "image"
 
-type Opt func(*config)
+type Option func(*config)
 
 // Title sets the title of the window.
-func Title(t string) Opt {
+func Title(t string) Option {
 	return func(cfg *config) {
 		cfg.title = t
 	}
 }
 
 // MaxSize sets the maximum size of the window.
-func MaxSize(w, h int) Opt {
+func MaxSize(w, h int) Option {
 	if w <= 0 {
 		panic("width must be larger than or equal to 0")
 	}
@@ -29,7 +29,7 @@ func MaxSize(w, h int) Opt {
 }
 
 // MinSize sets the minimum size of the window.
-func MinSize(w, h int) Opt {
+func MinSize(w, h int) Option {
 	if w <= 0 {
 		panic("width must be larger than or equal to 0")
 	}
@@ -42,7 +42,7 @@ func MinSize(w, h int) Opt {
 }
 
 // FPS enables FPS indicator on the top left corner of the window.
-func FPS(enable bool) Opt {
+func FPS(enable bool) Option {
 	return func(cfg *config) {
 		cfg.fps = enable
 	}

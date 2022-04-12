@@ -52,7 +52,7 @@ func (w *window) atom(name string, onlyIfExists bool) C.Atom {
 
 var x11Threads sync.Once
 
-func (w *window) run(app Window, cfg config, opts ...Opt) {
+func (w *window) run(app Window, cfg config, opts ...Option) {
 	// Make sure all X11 and EGL APIs are called from the same thread.
 	runtime.LockOSThread()
 

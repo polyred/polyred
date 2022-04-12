@@ -200,7 +200,7 @@ type osWindow struct {
 	config      *config
 }
 
-func (w *window) run(app Window, cfg config, opts ...Opt) {
+func (w *window) run(app Window, cfg config, opts ...Option) {
 	<-launched
 
 	w.win = &osWindow{config: &cfg}
@@ -244,7 +244,7 @@ func (w *window) run(app Window, cfg config, opts ...Opt) {
 	})
 }
 
-func (w *window) configs(opts ...Opt) {
+func (w *window) configs(opts ...Option) {
 	cfg := w.win.config
 	for _, o := range opts {
 		o(cfg)
