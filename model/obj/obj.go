@@ -238,12 +238,24 @@ func (f *File) parseVertex(fields []string) error {
 	if len(fields) < 3 {
 		return f.formatError(fmt.Sprintf("vertex has less than 3 vertices in 'v' line: %v", fields))
 	}
+	w := float32(1)
+	if len(fields) == 4 {
+		v, err := strconv.ParseFloat(fields[3], 32)
+		if err != nil {
+			return err
+		}
+		w = 1 / float32(v)
+	}
 	for _, fi := range fields[:3] {
 		val, err := strconv.ParseFloat(fi, 32)
 		if err != nil {
 			return err
 		}
-		f.Vertices = append(f.Vertices, float32(val))
+		if w == 1 {
+			f.Vertices = append(f.Vertices, float32(val))
+		} else {
+			f.Vertices = append(f.Vertices, float32(val)*w)
+		}
 	}
 	return nil
 }

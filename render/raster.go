@@ -27,8 +27,7 @@ import (
 // 1 second / 60fps = 16.6666 ms/frame
 // 1 second / 30fps = 33.3333 ms/frame
 
-// Renderer is a hybrid software renderer that implements
-// rasterization and ray tracing.
+// Renderer is a hybrid renderer.
 type Renderer struct {
 	// rendering options
 	cfg *option

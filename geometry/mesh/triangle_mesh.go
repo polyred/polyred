@@ -10,9 +10,7 @@ import (
 	"poly.red/math"
 )
 
-var (
-	_ Mesh[float32] = &TriangleMesh{}
-)
+var _ Mesh[float32] = &TriangleMesh{}
 
 // TriangleMesh implements a triangular mesh.
 type TriangleMesh struct {

@@ -84,31 +84,54 @@ func loadObj(path string) (*scene.Group, error) {
 
 	// Create all mesh objects.
 	for i := range fi.Objs {
-		var faces []*primitive.Triangle
+		var (
+			tris     []*primitive.Triangle
+			quads    []*primitive.Quad
+			polygons []*primitive.Polygon
+		)
+
 		for _, face := range fi.Objs[i].Faces {
 			materialID := uint64(0)
 			if mat, ok := ms[face.Material]; ok {
 				materialID = mat.ID()
 			}
-
-			var f primitive.Face
 			switch len(face.Vertices) {
 			case 3:
-				f = newTrianglePrimitive(fi, &face, materialID)
+				tris = append(tris, newTrianglePrimitive(fi, &face, materialID))
+			case 4:
+				quads = append(quads, newQuadPrimitive(fi, &face, materialID))
 			default:
-				panic("unsupported")
+				polygons = append(polygons, newPolygonPrimitive(fi, &face, materialID))
 			}
 
-			faces = append(faces, f.(*primitive.Triangle))
 		}
 
-		geom := geometry.NewWith(mesh.NewTriangleMesh(faces), nil)
+		var m mesh.Mesh[float32]
+		switch {
+		case len(tris) != 0 && len(quads) == 0: // only with triangles
+			m = mesh.NewTriangleMesh(tris)
+		case len(tris) == 0 && len(quads) != 0: // only with quads
+			m = mesh.NewQuadMesh(quads)
+		case len(tris) != 0 && len(quads) != 0: // hybrid
+			faces := []primitive.Face{}
+			for i := range tris {
+				faces = append(faces, tris[i])
+			}
+			for i := range quads {
+				faces = append(faces, quads[i])
+			}
+			for i := range polygons {
+				faces = append(faces, polygons[i])
+			}
+			m = mesh.NewPolygonMesh(faces)
+		}
+		geom := geometry.NewWith(m, nil)
 		g.Add(geom)
 	}
 	return g, nil
 }
 
-func newTrianglePrimitive(f *obj.File, face *obj.Face, materialID uint64) primitive.Face {
+func newTrianglePrimitive(f *obj.File, face *obj.Face, materialID uint64) *primitive.Triangle {
 	t := &primitive.Triangle{
 		V1:         primitive.NewVertex(),
 		V2:         primitive.NewVertex(),
@@ -146,5 +169,69 @@ func newTrianglePrimitive(f *obj.File, face *obj.Face, materialID uint64) primit
 	t.V1.Col = color.FromValue[float32](1, 1, 1, 1)
 	t.V2.Col = color.FromValue[float32](1, 1, 1, 1)
 	t.V3.Col = color.FromValue[float32](1, 1, 1, 1)
+	return t
+}
+
+func newQuadPrimitive(f *obj.File, face *obj.Face, materialID uint64) *primitive.Quad {
+	t := &primitive.Quad{
+		V1:         primitive.NewVertex(),
+		V2:         primitive.NewVertex(),
+		V3:         primitive.NewVertex(),
+		V4:         primitive.NewVertex(),
+		MaterialID: materialID,
+	}
+	vs := face.Vertices
+	t.V1.Pos = math.NewVec4(f.Vertices[3*vs[0]+0], f.Vertices[3*vs[0]+1], f.Vertices[3*vs[0]+2], 1)
+	t.V2.Pos = math.NewVec4(f.Vertices[3*vs[1]+0], f.Vertices[3*vs[1]+1], f.Vertices[3*vs[1]+2], 1)
+	t.V3.Pos = math.NewVec4(f.Vertices[3*vs[2]+0], f.Vertices[3*vs[2]+1], f.Vertices[3*vs[2]+2], 1)
+	t.V4.Pos = math.NewVec4(f.Vertices[3*vs[3]+0], f.Vertices[3*vs[3]+1], f.Vertices[3*vs[3]+2], 1)
+
+	vs = face.Normals
+	if len(f.Normals) > 0 {
+		t.V1.Nor = math.NewVec4(f.Normals[3*vs[0]], f.Normals[3*vs[0]+1], f.Normals[3*vs[0]+2], 0)
+		t.V2.Nor = math.NewVec4(f.Normals[3*vs[1]], f.Normals[3*vs[1]+1], f.Normals[3*vs[1]+2], 0)
+		t.V3.Nor = math.NewVec4(f.Normals[3*vs[2]], f.Normals[3*vs[2]+1], f.Normals[3*vs[2]+2], 0)
+		t.V4.Nor = math.NewVec4(f.Normals[3*vs[3]], f.Normals[3*vs[3]+1], f.Normals[3*vs[3]+2], 0)
+	}
+
+	vs = face.Uvs
+	if len(f.Uvs) > 0 {
+		t.V1.UV = math.NewVec2(f.Uvs[2*vs[0]], f.Uvs[2*vs[0]+1])
+		t.V2.UV = math.NewVec2(f.Uvs[2*vs[1]], f.Uvs[2*vs[1]+1])
+		t.V3.UV = math.NewVec2(f.Uvs[2*vs[2]], f.Uvs[2*vs[2]+1])
+		t.V4.UV = math.NewVec2(f.Uvs[2*vs[3]], f.Uvs[2*vs[3]+1])
+	}
+
+	t.V1.Col = color.FromValue[float32](1, 1, 1, 1)
+	t.V2.Col = color.FromValue[float32](1, 1, 1, 1)
+	t.V3.Col = color.FromValue[float32](1, 1, 1, 1)
+	t.V4.Col = color.FromValue[float32](1, 1, 1, 1)
+	return t
+}
+
+func newPolygonPrimitive(f *obj.File, face *obj.Face, materialID uint64) *primitive.Polygon {
+	t := &primitive.Polygon{
+		Verts:      make([]*primitive.Vertex, len(face.Vertices)),
+		MaterialID: materialID,
+	}
+	for i := range t.Verts {
+		t.Verts[i] = primitive.NewVertex()
+
+		vs := face.Vertices
+		t.Verts[i].Pos = math.NewVec4(f.Vertices[3*vs[i%len(vs)]+0], f.Vertices[3*vs[i%len(vs)]+1], f.Vertices[3*vs[i%len(vs)]+2], 1)
+
+		vs = face.Normals
+		if len(f.Normals) > 0 {
+			t.Verts[i].Nor = math.NewVec4(f.Normals[3*vs[i%len(vs)]], f.Normals[3*vs[i%len(vs)]+1], f.Normals[3*vs[i%len(vs)]+2], 0)
+		}
+
+		vs = face.Uvs
+		if len(f.Uvs) > 0 {
+			t.Verts[i].UV = math.NewVec2(f.Uvs[2*vs[i%len(vs)]], f.Uvs[2*vs[i%len(vs)]+1])
+		}
+
+		t.Verts[i].Col = color.FromValue[float32](1, 1, 1, 1)
+	}
+
 	return t
 }
