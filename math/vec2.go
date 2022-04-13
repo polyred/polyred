@@ -67,7 +67,9 @@ func (v Vec2[T]) Translate(x, y T) Vec2[T] {
 
 // Dot computes the dot product of two given vectors.
 func (v Vec2[T]) Dot(u Vec2[T]) T {
-	return v.X*u.X + v.Y*u.Y
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	return FMA(v.X, u.X, v.Y*u.Y)
 }
 
 // Len returns the length of the given vector.
@@ -84,7 +86,9 @@ func (v Vec2[T]) Unit() Vec2[T] {
 // Apply applies the 2D matrix multiplication to the given vector on the
 // left side and returns the resulting 2D vector.
 func (v Vec2[T]) Apply(m Mat2[T]) Vec2[T] {
-	x := m.X00*v.X + m.X01*v.Y
-	y := m.X10*v.X + m.X11*v.Y
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	x := FMA(m.X00, v.X, m.X01*v.Y)
+	y := FMA(m.X10, v.X, m.X11*v.Y)
 	return Vec2[T]{x, y}
 }

@@ -99,19 +99,7 @@ func (c *Orthographic) SetLookAt(target, up math.Vec3[float32]) {
 // matrix transforms and places the camera up to +Y and towards -Z axis
 // at origin.
 func (c *Orthographic) ViewMatrix() math.Mat4[float32] {
-	l := c.target.Sub(c.position).Unit()
-	lxu := l.Cross(c.up).Unit()
-	u := lxu.Cross(l).Unit()
-	x := c.position.X
-	y := c.position.Y
-	z := c.position.Z
-	TrTt := math.NewMat4(
-		lxu.X, lxu.Y, lxu.Z, -lxu.X*x-lxu.Y*y-lxu.Z*z,
-		u.X, u.Y, u.Z, -u.X*x-u.Y*y-u.Z*z,
-		-l.X, -l.Y, -l.Z, l.X*x+l.Y*y+l.Z*z,
-		0, 0, 0, 1,
-	)
-	return TrTt
+	return ViewMatrix(c.position, c.target, c.up)
 }
 
 // ProjMatrix returns the projection matrix of the given camera.

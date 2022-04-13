@@ -71,12 +71,17 @@ func (v Vec4[T]) Translate(x, y, z T) Vec4[T] {
 	if v.W == 0 {
 		return v
 	}
-	return Vec4[T]{v.X/v.W + x, v.Y/v.W + y, v.Z/v.W + z, 1}
+	invW := 1 / v.W
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	return Vec4[T]{FMA(v.X, invW, x), FMA(v.Y, invW, y), FMA(v.Z, invW, z), 1}
 }
 
 // Dot implements dot product of two vectors
 func (v Vec4[T]) Dot(u Vec4[T]) T {
-	return v.X*u.X + v.Y*u.Y + v.Z*u.Z + v.W*u.W
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	return FMA(v.X, u.X, FMA(v.Y, u.Y, FMA(v.Z, u.Z, v.W*u.W)))
 }
 
 // Len computes the length of the given Vector
@@ -93,10 +98,12 @@ func (v Vec4[T]) Unit() Vec4[T] {
 // ApplyMatrix applies 4x4 matrix and 4x1 vector multiplication.
 // the given matrix multiplies v from the left.
 func (v Vec4[T]) Apply(m Mat4[T]) Vec4[T] {
-	x := m.X00*v.X + m.X01*v.Y + m.X02*v.Z + m.X03*v.W
-	y := m.X10*v.X + m.X11*v.Y + m.X12*v.Z + m.X13*v.W
-	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z + m.X23*v.W
-	w := m.X30*v.X + m.X31*v.Y + m.X32*v.Z + m.X33*v.W
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	x := FMA(m.X00, v.X, FMA(m.X01, v.Y, FMA(m.X02, v.Z, m.X03*v.W)))
+	y := FMA(m.X10, v.X, FMA(m.X11, v.Y, FMA(m.X12, v.Z, m.X13*v.W)))
+	z := FMA(m.X20, v.X, FMA(m.X21, v.Y, FMA(m.X22, v.Z, m.X23*v.W)))
+	w := FMA(m.X30, v.X, FMA(m.X31, v.Y, FMA(m.X32, v.Z, m.X33*v.W)))
 	return Vec4[T]{x, y, z, w}
 }
 
@@ -113,9 +120,11 @@ func (v Vec4[T]) ToVec3() Vec3[T] {
 // Cross applies cross product of two given vectors
 // and returns the resulting vector.
 func (v Vec4[T]) Cross(u Vec4[T]) Vec4[T] {
-	x := v.Y*u.Z - v.Z*u.Y
-	y := v.Z*u.X - v.X*u.Z
-	z := v.X*u.Y - v.Y*u.X
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	x := FMA(v.Y, u.Z, -v.Z*u.Y)
+	y := FMA(v.Z, u.X, -v.X*u.Z)
+	z := FMA(v.X, u.Y, -v.Y*u.X)
 	return Vec4[T]{x, y, z, 0}
 }
 
@@ -124,7 +133,8 @@ func (v Vec4[T]) Pos() Vec4[T] {
 	if v.W == 1 || v.W == 0 {
 		return Vec4[T]{v.X, v.Y, v.Z, 1}
 	}
-	return Vec4[T]{v.X / v.W, v.Y / v.W, v.Z / v.W, 1}
+	invW := 1.0 / v.W
+	return Vec4[T]{v.X * invW, v.Y * invW, v.Z * invW, 1}
 }
 
 // Vec converts the a homogeneous represented point to a vector
@@ -132,5 +142,6 @@ func (v Vec4[T]) Vec() Vec4[T] {
 	if v.W == 0 || v.W == 1 {
 		return Vec4[T]{v.X, v.Y, v.Z, 0}
 	}
-	return Vec4[T]{v.X / v.W, v.Y / v.W, v.Z / v.W, 0}
+	invW := 1.0 / v.W
+	return Vec4[T]{v.X * invW, v.Y * invW, v.Z * invW, 0}
 }

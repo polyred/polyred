@@ -100,7 +100,9 @@ func (v Vec[T]) Translate(u Vec[T]) (r Vec[T]) {
 func (v Vec[T]) Dot(u Vec[T]) T {
 	var dot T
 	for i := range v.Data {
-		dot += v.Data[i] * u.Data[i]
+		// Use FMA to control floating number round behavior.
+		// See https://go.dev/issue/52293
+		dot = FMA(v.Data[i], u.Data[i], dot)
 	}
 	return dot
 }

@@ -69,7 +69,9 @@ func (v Vec3[T]) Translate(x, y, z T) Vec3[T] {
 
 // Dot computes the dot product of two given vectors.
 func (v Vec3[T]) Dot(u Vec3[T]) T {
-	return v.X*u.X + v.Y*u.Y + v.Z*u.Z
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	return FMA(v.X, u.X, FMA(v.Y, u.Y, v.Z*u.Z))
 }
 
 // Len returns the length of the given vector.
@@ -91,17 +93,21 @@ func (v Vec3[T]) ToVec4(w T) Vec4[T] {
 // Apply applies the 3D matrix multiplication to the given vector on the
 // left side and returns the resulting 3D vector.
 func (v Vec3[T]) Apply(m Mat3[T]) Vec3[T] {
-	x := m.X00*v.X + m.X01*v.Y + m.X02*v.Z
-	y := m.X10*v.X + m.X11*v.Y + m.X12*v.Z
-	z := m.X20*v.X + m.X21*v.Y + m.X22*v.Z
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	x := FMA(m.X00, v.X, FMA(m.X01, v.Y, m.X02*v.Z))
+	y := FMA(m.X10, v.X, FMA(m.X11, v.Y, m.X12*v.Z))
+	z := FMA(m.X20, v.X, FMA(m.X21, v.Y, m.X22*v.Z))
 	return Vec3[T]{x, y, z}
 }
 
 // Cross applies cross product of two given vectors and returns the
 // resulting vector.
 func (v Vec3[T]) Cross(u Vec3[T]) Vec3[T] {
-	x := v.Y*u.Z - v.Z*u.Y
-	y := v.Z*u.X - v.X*u.Z
-	z := v.X*u.Y - v.Y*u.X
+	// Use FMA to control floating number round behavior.
+	// See https://go.dev/issue/52293
+	x := FMA(v.Y, u.Z, -v.Z*u.Y)
+	y := FMA(v.Z, u.X, -v.X*u.Z)
+	z := FMA(v.X, u.Y, -v.Y*u.X)
 	return Vec3[T]{x, y, z}
 }

@@ -43,13 +43,10 @@ func ViewMatrix(pos, target, up math.Vec3[float32]) math.Mat4[float32] {
 	l := target.Sub(pos).Unit()
 	lxu := l.Cross(up).Unit()
 	u := lxu.Cross(l).Unit()
-	x := pos.X
-	y := pos.Y
-	z := pos.Z
 	TrTt := math.NewMat4(
-		lxu.X, lxu.Y, lxu.Z, -lxu.X*x-lxu.Y*y-lxu.Z*z,
-		u.X, u.Y, u.Z, -u.X*x-u.Y*y-u.Z*z,
-		-l.X, -l.Y, -l.Z, l.X*x+l.Y*y+l.Z*z,
+		lxu.X, lxu.Y, lxu.Z, -lxu.Dot(pos),
+		u.X, u.Y, u.Z, -u.Dot(pos),
+		-l.X, -l.Y, -l.Z, l.Dot(pos),
 		0, 0, 0, 1,
 	)
 	return TrTt

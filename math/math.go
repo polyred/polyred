@@ -242,6 +242,12 @@ func Max[T Float](xs ...T) T {
 	return T(max)
 }
 
+// FMA returns x * y + z, computed with only one rounding.
+// (That is, FMA returns the fused multiply-add of x, y, and z.)
+func FMA[T Float](x, y, z T) T {
+	return T(math.FMA(float64(x), float64(y), float64(z)))
+}
+
 // ViewportMatrix returns the viewport matrix.
 func ViewportMatrix[T Float](w, h T) Mat4[T] {
 	return Mat4[T]{
