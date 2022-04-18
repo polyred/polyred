@@ -96,6 +96,12 @@ func NewContext(disp NativeDisplayType) (*Context, error) {
 		disp:   eglDisp,
 		eglCtx: eglCtx,
 	}
+
+	if runtime.GOOS == "windows" {
+		if err := c.CreateSurface(NativeWindowType(hwnd), 0, 0); err != nil {
+			panic(err)
+		}
+	}
 	return c, nil
 }
 
@@ -241,4 +247,11 @@ func createSurface(disp _EGLDisplay, eglCtx *eglContext, win NativeWindowType) (
 		return nilEGLSurface, fmt.Errorf("newContext: eglCreateWindowSurface failed 0x%x (sRGB=%v)", eglGetError(), eglCtx.srgb)
 	}
 	return eglSurf, nil
+}
+
+func try[T any](v T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return v
 }

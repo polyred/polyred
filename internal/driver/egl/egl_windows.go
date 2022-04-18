@@ -16,13 +16,41 @@ import (
 	"poly.red/internal/driver/windows"
 )
 
-func NewDisplay() NativeDisplayType {
-	hdc, err := windows.GetDC(0)
-	if err != nil {
-		panic(err)
-	}
+var (
+	hwnd syscall.Handle
+)
 
-	return NativeDisplayType(hdc)
+func NewDisplay() NativeDisplayType {
+	return NativeDisplayType(try(windows.GetDC(0)))
+
+	// FIXME: I don't know if the following can actually work or not.
+	// It looks like there is an issue of using EGL on Windows.
+	// hInst := try(windows.GetModuleHandle())
+	// wcls := windows.WndClassEx{
+	// 	CbSize:        uint32(unsafe.Sizeof(windows.WndClassEx{})),
+	// 	Style:         windows.CS_OWNDC,
+	// 	LpfnWndProc:   syscall.NewCallback(windowProc),
+	// 	HInstance:     hInst,
+	// 	LpszClassName: try(syscall.UTF16PtrFromString("polyred")),
+	// }
+	// hwnd = try(windows.CreateWindowEx(
+	// 	windows.WS_EX_APPWINDOW,
+	// 	try(windows.RegisterClassEx(&wcls)),
+	// 	"",
+	// 	windows.WS_OVERLAPPEDWINDOW,
+	// 	windows.CW_USEDEFAULT,
+	// 	windows.CW_USEDEFAULT,
+	// 	windows.CW_USEDEFAULT,
+	// 	windows.CW_USEDEFAULT,
+	// 	0,
+	// 	0,
+	// 	hInst,
+	// 	0))
+	// return NativeDisplayType(try(windows.GetDC(hwnd)))
+}
+
+func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr {
+	return windows.DefWindowProc(hwnd, msg, wParam, lParam)
 }
 
 type (
@@ -37,6 +65,7 @@ type (
 
 var (
 	libEGL                  = syscall.NewLazyDLL("libEGL.dll")
+	libD3DCompiler          = syscall.NewLazyDLL("d3dcompiler_47.dll")
 	_eglChooseConfig        = libEGL.NewProc("eglChooseConfig")
 	_eglCreateContext       = libEGL.NewProc("eglCreateContext")
 	_eglCreateWindowSurface = libEGL.NewProc("eglCreateWindowSurface")
@@ -61,6 +90,10 @@ func loadEGL() error {
 	var err error
 	loadOnce.Do(func() {
 		err = loadDLLs()
+		if err != nil {
+			// Give a second try to locate DLLs.
+			err = findDLLs()
+		}
 	})
 	return err
 }
@@ -73,7 +106,7 @@ func loadDLLs() error {
 		return err
 	}
 	// d3dcompiler_47.dll is needed internally for shader compilation to function.
-	return loadDLL(syscall.NewLazyDLL("d3dcompiler_47.dll"), "d3dcompiler_47.dll")
+	return loadDLL(libD3DCompiler, "d3dcompiler_47.dll")
 }
 
 func loadDLL(dll *syscall.LazyDLL, name string) error {
