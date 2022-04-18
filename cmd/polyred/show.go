@@ -36,10 +36,8 @@ func newApp(objPath string) *App {
 		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 10),
 	)
 
-	s := scene.NewScene()
-	g := model.MustLoad(objPath)
-	g.Normalize()
-	s.Add(g)
+	s := scene.NewScene(model.MustLoad(objPath))
+	s.Normalize()
 
 	r := render.NewRenderer(
 		render.Size(w, h),
@@ -71,6 +69,8 @@ func (a *App) Draw() (*image.RGBA, bool) {
 		return nil, false
 	}
 
+	// FIXME: render does not work yet.
+	// Blinn-Phong shader have issue to compute the actual color.
 	a.cache = a.r.Render()
 	return a.cache, true
 }

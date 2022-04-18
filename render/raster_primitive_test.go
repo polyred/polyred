@@ -23,8 +23,8 @@ import (
 
 var (
 	rend *render.Renderer
-	m    *geometry.Geometry
-	prog shader.Program
+	s    *scene.Group
+	prog *shader.TextureShader
 	buf  *buffer.FragmentBuffer
 )
 
@@ -41,31 +41,27 @@ func init() {
 	)
 
 	// Use a different model
-	s := model.MustLoad("../internal/testdata/bunny.obj")
+	s = model.MustLoad("../internal/testdata/bunny.obj")
 	s.Normalize()
-
-	var Mm math.Mat4[float32]
-	scene.IterObjects(s, func(o *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
-		m = o
-		Mm = modelMatrix.MulM(o.ModelMatrix())
-		return false
-	})
 
 	tex := buffer.NewTexture(
 		buffer.TextureImage(imageutil.MustLoadImage("../internal/testdata/bunny.png")),
 		buffer.TextureIsoMipmap(true),
 	)
 	prog = &shader.TextureShader{
-		ModelMatrix: Mm,
-		ViewMatrix:  cam.ViewMatrix(),
-		ProjMatrix:  cam.ProjMatrix(),
-		Texture:     tex,
+		ViewMatrix: cam.ViewMatrix(),
+		ProjMatrix: cam.ProjMatrix(),
+		Texture:    tex,
 	}
 	buf = buffer.NewBuffer(image.Rect(0, 0, width, height))
 }
 
 func TestDrawPrimitives(t *testing.T) {
-	rend.DrawPrimitives(buf, m.IndexBuffer(), m.VertexBuffer(), prog.Vertex)
+	scene.IterObjects(s, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
+		prog.ModelMatrix = modelMatrix.MulM(g.ModelMatrix())
+		rend.DrawPrimitives(buf, g.Triangles(), prog.Vertex)
+		return true
+	})
 	rend.DrawFragments(buf, prog.Fragment)
 	imageutil.Save(buf.Image(), "../internal/examples/out/draw-primitives.png")
 }
@@ -80,6 +76,10 @@ func BenchmarkDrawPrimitive(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		render.DrawPrimitive(r, buf, &primitive.Vertex{}, &primitive.Vertex{}, &primitive.Vertex{}, p.Vertex)
+		render.DrawPrimitive(r, buf, &primitive.Triangle{
+			V1: &primitive.Vertex{},
+			V2: &primitive.Vertex{},
+			V3: &primitive.Vertex{},
+		}, p.Vertex)
 	}
 }

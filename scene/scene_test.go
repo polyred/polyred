@@ -216,10 +216,7 @@ func TestSceneGraphStop(t *testing.T) {
 
 	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		iterCount++
-		if iterCount == 3 {
-			return false
-		}
-		return true
+		return iterCount != 3
 	})
 	if iterCount != 3 {
 		t.Fatalf("iter objects does not stop properly, want %v got %v", 3, iterCount)

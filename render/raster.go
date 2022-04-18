@@ -219,8 +219,9 @@ func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.R
 	}
 
 	col := info.Col
-	mat := material.Get(material.ID(frag.MaterialID)).(*material.BlinnPhong)
-	if mat != nil {
+	m := material.Get(material.ID(frag.MaterialID))
+	if m != nil {
+		mat := m.(*material.BlinnPhong)
 		lightSources, lightEnv := r.cfg.Scene.Lights()
 		col = shader.FragmentShader(mat,
 			info,
@@ -326,7 +327,7 @@ func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
 	}
 }
 
-func (r *Renderer) drawClipped(mvp *shader.MVP, t1, t2, t3 *primitive.Vertex, recipw [3]float32, materialId uint64) {
+func (r *Renderer) drawClipped(mvp *shader.MVP, t1, t2, t3 *primitive.Vertex, recipw [3]float32, materialId int64) {
 	buf := r.CurrBuffer()
 
 	m1 := t1.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)

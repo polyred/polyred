@@ -16,7 +16,7 @@ var _ Face = &Triangle{}
 type Triangle struct {
 	ID         uint64
 	V1, V2, V3 *Vertex
-	MaterialID uint64
+	MaterialID int64
 
 	aabb       *AABB
 	faceNormal math.Vec4[float32]

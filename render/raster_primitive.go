@@ -20,38 +20,29 @@ import (
 // See shader.Program for more information regarding shader programming.
 func (r *Renderer) DrawPrimitives(
 	buf *buffer.FragmentBuffer,
-	ibo buffer.IndexBuffer,
-	vbo buffer.VertexBuffer,
+	tris []*primitive.Triangle,
 	prog ...shader.Vertex,
 ) {
-	len := ibo.Len()
-	if len%3 != 0 {
-		panic("index buffer must be a 3 multiple")
-	}
-
-	r.sched.Add(len / 3)
-	for i := 0; i < len; i += 3 {
-		vs := vbo[i : i+3 : i+3]
-		v1 := vs[0]
-		v2 := vs[1]
-		v3 := vs[2]
-
+	l := len(tris)
+	r.sched.Add(l)
+	for i := 0; i < l; i++ {
+		tri := tris[i]
 		r.sched.Run(func() {
-			if !(&primitive.Triangle{V1: v1, V2: v2, V3: v3}).IsValid() {
+			if !tri.IsValid() {
 				return
 			}
-			r.drawPrimitive(buf, v1, v2, v3, prog...)
+			r.drawPrimitive(buf, tri, prog...)
 		})
 	}
 	r.sched.Wait()
 }
 
 // drawPrimitive implements a triangle draw call of the rasteriation graphics pipeline.
-func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, t1, t2, t3 *primitive.Vertex, p ...shader.Vertex) {
+func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, tri *primitive.Triangle, p ...shader.Vertex) {
 	var (
-		v1 = t1.Copy()
-		v2 = t2.Copy()
-		v3 = t3.Copy()
+		v1 = tri.V1.Copy()
+		v2 = tri.V2.Copy()
+		v3 = tri.V3.Copy()
 	)
 	for _, prog := range p {
 		v1 = prog(v1)
@@ -103,7 +94,6 @@ func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, t1, t2, t3 *primiti
 
 	// Clipping into smaller triangles
 	r.drawClip(buf, v1, v2, v3, recipw)
-	return
 }
 
 func (r *Renderer) cullViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {

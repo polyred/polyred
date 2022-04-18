@@ -13,9 +13,9 @@ func TestGet(t *testing.T) {
 		t.Fatalf("cannot find default material.")
 	}
 
-	m, ok := mat.(*material.Standard)
+	m, ok := mat.(*material.BlinnPhong)
 	if !ok {
-		t.Fatalf("default material is not standard.")
+		t.Fatalf("default material is not Blinn-Phong.")
 	}
 
 	if m.Texture.Query(0, 0, 0) != color.Blue {

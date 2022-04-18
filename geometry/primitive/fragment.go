@@ -18,7 +18,7 @@ type Fragment struct {
 	Du, Dv     float32
 	Nor        math.Vec4[float32]
 	Col        color.RGBA
-	MaterialID uint64
+	MaterialID int64
 	AttrSmooth map[AttrName]any
 	AttrFlat   map[AttrName]any
 }

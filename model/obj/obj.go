@@ -68,14 +68,6 @@ type Material struct {
 	MapKd      string     // Texture file linked to diffuse color
 }
 
-// Light gray default material used as when other materials cannot be loaded.
-var defaultMat = &Material{
-	Diffuse:   color.FromValue(0.7, 0.7, 0.7, 1.0),
-	Ambient:   color.FromValue(0.7, 0.7, 0.7, 1.0),
-	Specular:  color.FromValue(0.5, 0.5, 0.5, 1.0),
-	Shininess: 30.0,
-}
-
 // Local constants
 const (
 	blanks   = "\r\n\t "
@@ -141,7 +133,7 @@ func Load(objpath string) (*File, error) {
 	if err != nil {
 		fmt.Println("Using default material")
 		for key := range f.Materials {
-			f.Materials[key] = defaultMat
+			f.Materials[key] = nil
 		}
 		// TODO: could be an error of some custom type. But people
 		// tend to ignore errors and pass them up the call stack instead
@@ -315,10 +307,8 @@ func (f *File) parseFace(fields []string) error {
 	if f.matCurrent != nil {
 		face.Material = f.matCurrent.Name
 	} else {
-		// TODO: do something better than spamming warnings for each line
-		// f.appendWarn(objType, "No material defined")
-		face.Material = "polyred default"
-		// f.matCurrent = defaultMat
+		// No avaliable material found. Use a polyred_default material.
+		face.Material = "polyred_default"
 	}
 	face.Smooth = f.smoothCurrent
 
@@ -403,7 +393,7 @@ func (f *File) parseUsemtl(fields []string) error {
 		return f.formatError("Usemtl with no fields")
 	}
 
-	// TODO: see similar nil test in parseface()
+	// See similar nil test in parseface()
 	if f.objCurrent == nil {
 		f.parseObj([]string{fmt.Sprintf("unnamed%d", f.line)})
 	}

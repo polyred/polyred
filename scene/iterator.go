@@ -5,6 +5,8 @@
 package scene
 
 import (
+	"poly.red/camera"
+	"poly.red/geometry"
 	"poly.red/math"
 	"poly.red/scene/object"
 )
@@ -25,4 +27,10 @@ func IterObjects[S Iterator, T any](s S, iter func(o T, modelMatrix math.Mat4[fl
 		}
 		return true
 	})
+}
+
+// IterVisibleGeometry traverses only visible objects that are inside the view frustum of
+// the given camera.
+func IterVisibleGeometry[S Iterator](s S, c camera.Interface, iter func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool) {
+	panic("umimplemented")
 }

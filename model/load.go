@@ -49,40 +49,44 @@ func loadObj(path string) (*scene.Group, error) {
 	allMats := map[string]material.ID{}
 	for name, mat := range fi.Materials {
 		var id material.ID
-		switch mat.Illum {
-		case 0, 2:
-			opts := []material.Option{
-				material.Diffuse(mat.Diffuse),
-				material.Specular(mat.Specular),
-				material.Shininess(mat.Shininess),
-				material.Name(name),
-				material.FlatShading(false),
-				material.AmbientOcclusion(false),
-				material.ReceiveShadow(false),
-			}
-			if mat.MapKd != "" {
-				opts = append(opts, material.Texture(buffer.NewTexture(
-					buffer.TextureImage(
-						// FIXME: this might be problematic when the MapKd is a windows \ separated path.
-						imageutil.MustLoadImage(filepath.Join(filepath.Clean(fi.MtlDir), filepath.Clean(mat.MapKd)),
-							imageutil.GammaCorrect(true),
-						)),
-					buffer.TextureIsoMipmap(true),
-				)))
-			} else {
-				opts = append(opts, material.Texture(buffer.NewUniformTexture(color.Blue)))
-			}
+		// Convention: .obj loader will create a nil material if there is no material specified.
+		// FIXME: review obj loader logic.
+		if mat != nil {
+			switch mat.Illum {
+			case 0, 2:
+				opts := []material.Option{
+					material.Name(name),
+					material.Diffuse(mat.Diffuse),
+					material.Specular(mat.Specular),
+					material.Shininess(mat.Shininess),
+					material.FlatShading(false),
+					material.AmbientOcclusion(false),
+					material.ReceiveShadow(false),
+				}
+				if mat.MapKd == "" {
+					opts = append(opts, material.Texture(buffer.NewUniformTexture(color.Blue)))
+				} else {
+					p := filepath.Join(filepath.Clean(fi.MtlDir), filepath.Clean(mat.MapKd))
+					opts = append(opts, material.Texture(buffer.NewTexture(
+						buffer.TextureImage(
+							// FIXME: this might be problematic when the MapKd is a windows \ separated path.
+							imageutil.MustLoadImage(p,
+								imageutil.GammaCorrect(true),
+							)),
+						buffer.TextureIsoMipmap(true),
+					)))
+				}
 
-			id = material.NewBlinnPhong(opts...)
-		default:
-			panic("unsupported illumination model")
+				id = material.NewBlinnPhong(opts...)
+			default:
+				panic("unsupported illumination model")
+			}
 		}
-
 		allMats[name] = id
 	}
 
 	// Create all mesh objects.
-	activeMats := map[uint64]string{}
+	activeMats := map[int64]string{}
 	for i := range fi.Objs {
 		var (
 			tris     []*primitive.Triangle
@@ -91,11 +95,12 @@ func loadObj(path string) (*scene.Group, error) {
 		)
 
 		for _, face := range fi.Objs[i].Faces {
-			materialID := uint64(0)
+			materialID := int64(0)
 			if mat, ok := allMats[face.Material]; ok {
-				materialID = uint64(mat)
+				materialID = int64(mat)
 			}
 			activeMats[materialID] = face.Material
+
 			switch len(face.Vertices) {
 			case 3:
 				tris = append(tris, newTrianglePrimitive(fi, &face, materialID))
@@ -143,7 +148,7 @@ func loadObj(path string) (*scene.Group, error) {
 	return g, nil
 }
 
-func newTrianglePrimitive(f *obj.File, face *obj.Face, materialID uint64) *primitive.Triangle {
+func newTrianglePrimitive(f *obj.File, face *obj.Face, materialID int64) *primitive.Triangle {
 	t := &primitive.Triangle{
 		V1:         primitive.NewVertex(),
 		V2:         primitive.NewVertex(),
@@ -184,7 +189,7 @@ func newTrianglePrimitive(f *obj.File, face *obj.Face, materialID uint64) *primi
 	return t
 }
 
-func newQuadPrimitive(f *obj.File, face *obj.Face, materialID uint64) *primitive.Quad {
+func newQuadPrimitive(f *obj.File, face *obj.Face, materialID int64) *primitive.Quad {
 	t := &primitive.Quad{
 		V1:         primitive.NewVertex(),
 		V2:         primitive.NewVertex(),
@@ -221,7 +226,7 @@ func newQuadPrimitive(f *obj.File, face *obj.Face, materialID uint64) *primitive
 	return t
 }
 
-func newPolygonPrimitive(f *obj.File, face *obj.Face, materialID uint64) *primitive.Polygon {
+func newPolygonPrimitive(f *obj.File, face *obj.Face, materialID int64) *primitive.Polygon {
 	t := &primitive.Polygon{
 		Verts:      make([]*primitive.Vertex, len(face.Vertices)),
 		MaterialID: materialID,

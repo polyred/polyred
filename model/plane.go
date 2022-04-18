@@ -40,7 +40,7 @@ func NewPlane(width, height float32) mesh.Mesh[float32] {
 		primitive.Col(color.RGBA{0, 0, 0, 255}),
 	)
 	return mesh.NewTriangleMesh([]*primitive.Triangle{
-		{V1: v1, V2: v2, V3: v3},
-		{V1: v1, V2: v3, V3: v4},
+		{V1: v1, V2: v2, V3: v3, MaterialID: -1},
+		{V1: v1, V2: v3, V3: v4, MaterialID: -1},
 	})
 }

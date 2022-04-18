@@ -23,7 +23,7 @@ var (
 	PassAntiAliasing = func(r *Renderer) {
 		r.passAntialiasing()
 	}
-	DrawPrimitive = func(r *Renderer, buf *buffer.FragmentBuffer, t1, t2, t3 *primitive.Vertex, p ...shader.Vertex) {
-		r.drawPrimitive(buf, t1, t2, t3, p...)
+	DrawPrimitive = func(r *Renderer, buf *buffer.FragmentBuffer, tri *primitive.Triangle, p ...shader.Vertex) {
+		r.drawPrimitive(buf, tri, p...)
 	}
 )

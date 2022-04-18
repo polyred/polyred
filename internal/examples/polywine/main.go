@@ -28,10 +28,8 @@ type App struct {
 	ctrl  *controls.OrbitControl
 	r     *render.Renderer
 	prog  *shader.TextureShader
-	geom  *geometry.Geometry
+	scene *scene.Group
 	cam   camera.Interface
-	vi    buffer.IndexBuffer
-	vb    buffer.VertexBuffer
 	cache *image.RGBA
 }
 
@@ -54,20 +52,14 @@ func newApp() *App {
 		r.Options(render.PixelFormat(buffer.PixelFormatRGBA))
 	}
 
-	m := model.StanfordBunny()
-	var geom *geometry.Geometry
-	scene.IterObjects(m, func(o *geometry.Geometry, m math.Mat4[float32]) bool {
-		geom = o
-		return false
-	})
-	m.Normalize()
+	s := model.StanfordBunny()
+	s.Normalize()
 	prog := &shader.TextureShader{
-		ModelMatrix: geom.ModelMatrix(),
-		ViewMatrix:  cam.ViewMatrix(),
-		ProjMatrix:  cam.ProjMatrix(),
-		Texture:     buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage("../../testdata/bunny.png"))),
+		ViewMatrix: cam.ViewMatrix(),
+		ProjMatrix: cam.ProjMatrix(),
+		Texture:    buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage("../../testdata/bunny.png"))),
 	}
-	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, geom: geom, vi: geom.IndexBuffer(), vb: geom.VertexBuffer()}
+	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, scene: s}
 	a.ctrl = controls.NewOrbitControl(a, cam)
 
 	return a
@@ -88,13 +80,16 @@ func (a *App) Draw() (*image.RGBA, bool) {
 	if a.cache != nil {
 		return a.cache, false
 	}
-
-	a.prog.ModelMatrix = a.geom.ModelMatrix()
 	a.prog.ViewMatrix = a.cam.ViewMatrix()
 	a.prog.ProjMatrix = a.cam.ProjMatrix()
 
 	buf := a.r.NextBuffer()
-	a.r.DrawPrimitives(buf, a.vi, a.vb, a.prog.Vertex)
+	scene.IterObjects(a.scene, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
+		// Update model matrix before drawing primitives.
+		a.prog.ModelMatrix = modelMatrix.MulM(g.ModelMatrix())
+		a.r.DrawPrimitives(buf, g.Triangles(), a.prog.Vertex)
+		return true
+	})
 	a.r.DrawFragments(buf, a.prog.Fragment)
 	a.cache = buf.Image()
 	return a.cache, true

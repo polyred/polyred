@@ -15,7 +15,7 @@ var _ Face = &Polygon{}
 // Polygon is a polygon that contains multiple vertices.
 type Polygon struct {
 	Verts      []*Vertex
-	MaterialID uint64
+	MaterialID int64
 
 	normal math.Vec4[float32]
 	aabb   *AABB

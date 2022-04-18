@@ -12,7 +12,7 @@ var _ Face = &Quad{}
 type Quad struct {
 	ID             uint64
 	V1, V2, V3, V4 *Vertex
-	MaterialID     uint64
+	MaterialID     int64
 
 	normal math.Vec4[float32]
 	aabb   *AABB

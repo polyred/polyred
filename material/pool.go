@@ -8,11 +8,14 @@ import (
 )
 
 // ID represents the ID of a material.
-type ID uint64
+//
+// Design Decision (at the moment): This ID may be negative to hint
+// the renderer to use vertex color directly.
+type ID int64
 
 var pool struct {
 	mu      sync.RWMutex
-	allocID uint64 // incremental
+	allocID int64 // incremental
 	idToMat map[ID]Material
 	matToId map[Material]ID
 }
@@ -74,10 +77,16 @@ func Del(id ID) bool {
 	return true
 }
 
-var defaultMaterial = &Standard{
-	FlatShading:      false,
-	AmbientOcclusion: false,
-	ReceiveShadow:    false,
-	Texture:          buffer.NewUniformTexture(color.Blue),
-	name:             "default",
+var defaultMaterial = &BlinnPhong{
+	Standard: Standard{
+		FlatShading:      false,
+		AmbientOcclusion: false,
+		ReceiveShadow:    false,
+		Texture:          buffer.NewUniformTexture(color.Blue),
+		name:             "default",
+	},
+	Ambient:   color.FromValue(0.7, 0.7, 0.7, 1.0),
+	Diffuse:   color.FromValue(0.7, 0.7, 0.7, 1.0),
+	Specular:  color.FromValue(0.5, 0.5, 0.5, 1.0),
+	Shininess: 30.0,
 }

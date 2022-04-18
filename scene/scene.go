@@ -6,6 +6,7 @@ package scene
 
 import (
 	"poly.red/geometry"
+	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/scene/object"
@@ -50,4 +51,5 @@ func (s *Scene) Center() math.Vec3[float32] {
 	return aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 }
 
-func (s *Scene) Normalize() { s.root.Normalize() }
+func (s *Scene) AABB() primitive.AABB { return s.root.AABB() }
+func (s *Scene) Normalize()           { s.root.Normalize() }
