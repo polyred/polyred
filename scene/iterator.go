@@ -9,13 +9,16 @@ import (
 	"poly.red/scene/object"
 )
 
+// Iterator represents an iterable scene object.
 type Iterator interface {
 	IterObjects(iter func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool)
 }
 
-// Iterator traverses objects over a scene or a scene group or any type
-// that implements Iterator interface.
-func IterObjects[O Iterator, T any](s O, iter func(o T, modelMatrix math.Mat4[float32]) bool) {
+// IterObjects traverses all objects over a given scene graph or a scene group or any type
+// that implements Iterator interface. The user defined iter function receives the model
+// matrix of the previous group transformation. To obtain the correct model matrix of the
+// current object, one must compute o.ModelMatrix().Mul(modelMatrix) as the final matrix.
+func IterObjects[S Iterator, T any](s S, iter func(o T, modelMatrix math.Mat4[float32]) bool) {
 	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if oo, ok := o.(T); ok {
 			return iter(oo, modelMatrix)

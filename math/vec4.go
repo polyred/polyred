@@ -43,6 +43,14 @@ func (v Vec4[T]) Eq(u Vec4[T]) bool {
 		ApproxEq(v.W, u.W, Epsilon)
 }
 
+// Less compares whether all components of v is less than the given u.
+func (v Vec4[T]) Less(u Vec4[T]) bool {
+	return ApproxLess(v.X, u.X, Epsilon) &&
+		ApproxLess(v.Y, u.Z, Epsilon) &&
+		ApproxLess(v.Z, u.Z, Epsilon) &&
+		ApproxEq(v.W, u.W, Epsilon)
+}
+
 // Add adds the given two vectors, or point and vector, or two points
 func (v *Vec4[T]) Add(u Vec4[T]) Vec4[T] {
 	return Vec4[T]{v.X + u.X, v.Y + u.Y, v.Z + u.Z, v.W + u.W}

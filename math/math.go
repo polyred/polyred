@@ -38,9 +38,14 @@ type Float interface {
 	~float32 | ~float64
 }
 
-// ApproxEq approximately compares v1 and v2.
+// ApproxEq compares v1 and v2 approximately.
 func ApproxEq[T Float](v1, v2, epsilon T) bool {
 	return Abs(v1-v2) <= epsilon
+}
+
+// ApproxLess compares whether v1 is less than v2 (v1 < v2) approximately.
+func ApproxLess[T Float](v1, v2, epsilon T) bool {
+	return v1 < v2 && Abs(v1-v2) > epsilon
 }
 
 // Round returns the nearest integer, rounding half away from zero.

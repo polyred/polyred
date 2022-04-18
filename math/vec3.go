@@ -41,6 +41,13 @@ func (v Vec3[T]) Eq(u Vec3[T]) bool {
 		ApproxEq(v.Z, u.Z, Epsilon)
 }
 
+// Less compares whether all components of v is less than the given u.
+func (v Vec3[T]) Less(u Vec3[T]) bool {
+	return ApproxLess(v.X, u.X, Epsilon) &&
+		ApproxLess(v.Y, u.Z, Epsilon) &&
+		ApproxLess(v.Z, u.Z, Epsilon)
+}
+
 // Add add the two given vectors, and returns the resulting vector.
 func (v Vec3[T]) Add(u Vec3[T]) Vec3[T] {
 	return Vec3[T]{v.X + u.X, v.Y + u.Y, v.Z + u.Z}

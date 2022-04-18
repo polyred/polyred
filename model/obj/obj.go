@@ -5,7 +5,8 @@
 
 // Package obj is used to parse the Wavefront OBJ file format (*.obj), including
 // associated materials (*.mtl). Not all features of the OBJ format are
-// supported. Basic format info: https://en.wikipedia.org/wiki/Wavefront_.obj_file
+// supported. Basic format info: http://paulbourke.net/dataformats/obj/, and
+// http://paulbourke.net/dataformats/mtl/
 package obj
 
 import (
