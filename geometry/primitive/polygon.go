@@ -5,8 +5,6 @@
 package primitive
 
 import (
-	"errors"
-
 	"poly.red/math"
 )
 
@@ -17,17 +15,13 @@ type Polygon struct {
 	Verts      []*Vertex
 	MaterialID int64
 
-	normal math.Vec4[float32]
-	aabb   *AABB
+	aabb *AABB
 }
 
-func NewPolygon[T math.Float](vs ...*Vertex) (*Polygon, error) {
-	if len(vs) < 5 {
-		return nil, errors.New("too few vertex for a polygon, use Triangle or Quad instead")
-	}
-
+func NewPolygon(vs ...*Vertex) *Polygon {
 	p := &Polygon{
-		Verts: make([]*Vertex, len(vs)),
+		Verts:      make([]*Vertex, len(vs)),
+		MaterialID: -1,
 	}
 
 	p.Verts[0] = vs[0]
@@ -53,7 +47,7 @@ func NewPolygon[T math.Float](vs ...*Vertex) (*Polygon, error) {
 	min := math.NewVec3(xmin, ymin, zmin)
 	max := math.NewVec3(xmax, ymax, zmax)
 	p.aabb = &AABB{min, max}
-	return p, nil
+	return p
 }
 
 func (p *Polygon) AABB() AABB {
@@ -74,13 +68,9 @@ func (p *Polygon) AABB() AABB {
 	return *p.aabb
 }
 
-func (p *Polygon) Normal() math.Vec4[float32] {
-	return p.normal
-}
-
 func (p *Polygon) Triangles(iter func(t *Triangle) bool) {
-	for i := 0; i < len(p.Verts); i += 3 {
-		tri := &Triangle{V1: p.Verts[i], V2: p.Verts[i+1], V3: p.Verts[i+2]}
+	for i := 0; i < len(p.Verts)-2; i++ {
+		tri := &Triangle{V1: p.Verts[0], V2: p.Verts[i+1], V3: p.Verts[i+2], MaterialID: p.MaterialID}
 		if !iter(tri) {
 			return
 		}

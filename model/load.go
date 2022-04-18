@@ -71,6 +71,7 @@ func loadObj(path string) (*scene.Group, error) {
 						buffer.TextureImage(
 							// FIXME: this might be problematic when the MapKd is a windows \ separated path.
 							imageutil.MustLoadImage(p,
+								// FIXME: make sure renderer know about this and do gamma correct if needed.
 								imageutil.GammaCorrect(true),
 							)),
 						buffer.TextureIsoMipmap(true),
@@ -86,12 +87,15 @@ func loadObj(path string) (*scene.Group, error) {
 	}
 
 	// Create all mesh objects.
-	activeMats := map[int64]string{}
+	usedMats := map[int64]string{}
 	for i := range fi.Objs {
 		var (
 			tris     []*primitive.Triangle
 			quads    []*primitive.Quad
 			polygons []*primitive.Polygon
+
+			// All used materials for the primitives of the current object.
+			ids = []material.ID{}
 		)
 
 		for _, face := range fi.Objs[i].Faces {
@@ -99,7 +103,8 @@ func loadObj(path string) (*scene.Group, error) {
 			if mat, ok := allMats[face.Material]; ok {
 				materialID = int64(mat)
 			}
-			activeMats[materialID] = face.Material
+			ids = append(ids, material.ID(materialID))
+			usedMats[materialID] = face.Material
 
 			switch len(face.Vertices) {
 			case 3:
@@ -132,19 +137,20 @@ func loadObj(path string) (*scene.Group, error) {
 			m = mesh.NewPolygonMesh(faces)
 		}
 
-		ids := []material.ID{}
-		for id, name := range activeMats {
-			ids = append(ids, material.ID(id))
-			delete(allMats, name)
-		}
-		// The created materials may not match be active for rendering.
-		// Delete all unused materials to prevent memory leak.
-		for _, id := range allMats {
-			material.Del(id)
-		}
-
+		// All material ID for this current geometry.
 		g.Add(geometry.New(m, ids...))
 	}
+
+	// Remove used materials from allMats, then free the remaining
+	// materials from the material pool (because they are not used)
+	// so that we wont run into memory leak.
+	for _, name := range usedMats {
+		delete(allMats, name)
+	}
+	for _, id := range allMats {
+		material.Del(id)
+	}
+
 	return g, nil
 }
 

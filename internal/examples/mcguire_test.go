@@ -152,6 +152,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 		// "lost_empire",
 		// "mitsuba",
 		// "mitsuba-sphere",
+		// FIXME: this cannot be rendered.
 		"monkey",
 		// "plane",
 		// "powerplant",
@@ -165,7 +166,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 		// "sphere-cylcoords-1k",
 		// "sphere-cylcoords-4k",
 		"sphere",
-		// "sponza",
+		"sponza",
 		// "sportsCar",
 		"teapot",
 		// "testObj",
@@ -193,7 +194,7 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 		}
 
 		m := model.MustLoad(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, mo))
-		// m.Normalize()
+		m.Normalize()
 		s.Scene.Add(m)
 
 		scenes[i] = s

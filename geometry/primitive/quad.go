@@ -53,8 +53,13 @@ func (q *Quad) Vertices(f func(v *Vertex) bool) {
 }
 
 func (q *Quad) Triangles(f func(*Triangle) bool) {
-	f(NewTriangle(q.V1, q.V2, q.V3))
-	f(NewTriangle(q.V1, q.V3, q.V4))
+	t := NewTriangle(q.V1, q.V2, q.V3)
+	t.MaterialID = q.MaterialID
+	f(t)
+
+	t = NewTriangle(q.V1, q.V3, q.V4)
+	t.MaterialID = q.MaterialID
+	f(t)
 }
 
 func (q *Quad) Normal() math.Vec4[float32] {

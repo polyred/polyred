@@ -46,7 +46,7 @@ func TestGopher(t *testing.T) {
 			MemProf:    false,
 			ExecTracer: false,
 			RenderOpts: []render.Option{
-				render.Debug(false),
+				render.Debug(true),
 				render.MSAA(1),
 				render.ShadowMap(true),
 			},

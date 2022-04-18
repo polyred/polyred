@@ -35,8 +35,9 @@ func (he *Halfedge) DihedralAngle() float32 {
 	}
 
 	if he.Face != nil && he.Twin != nil && he.Twin.Face != nil {
-		n1 := he.Face.Normal()
-		n2 := he.Twin.Face.Normal()
+		// FIXME: this is not correct.
+		n1 := he.Face.(*Triangle).Normal()
+		n2 := he.Twin.Face.(*Triangle).Normal()
 		w := he.Vec().Unit()
 		return math.Atan2(n1.Cross(n2).Dot(w), n1.Dot(n2))
 	}

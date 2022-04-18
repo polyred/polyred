@@ -1,6 +1,8 @@
-package primitive
+// Copyright 2022 Changkun Ou <changkun.de>. All rights reserved.
+// Use of this source code is governed by a GPLv3 license that
+// can be found in the LICENSE file.
 
-import "poly.red/math"
+package primitive
 
 // Edge is an interface that abstracts any edge representations.
 type Edge interface {
@@ -9,7 +11,6 @@ type Edge interface {
 
 // Face is a polygon face that abstracts any face representations.
 type Face interface {
-	Normal() math.Vec4[float32]
 	AABB() AABB
 	Vertices(func(v *Vertex) bool)
 	Triangles(func(t *Triangle) bool)

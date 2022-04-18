@@ -38,7 +38,7 @@ func TestLoadSponza(t *testing.T) {
 	path := fmt.Sprintf("%s/Dropbox/Data/sponza.obj", home)
 	g, err := model.Load(path)
 	if err != nil {
-		t.Fatalf("cannot load obj model, path: %s, err: %v", path, err)
+		t.Skipf("cannot load obj model, path: %s, err: %v", path, err)
 	}
 
 	scene.IterObjects(g, func(m *mesh.TriangleMesh, modelMatrix math.Mat4[float32]) bool {
