@@ -122,7 +122,7 @@ type Group struct {
 }
 
 // NewGroup creates a new groupped objects.
-func NewGroup() *Group {
+func NewGroup(objects ...object.Object[float32]) *Group {
 	g := &Group{
 		name:    "group",
 		root:    nil,
@@ -130,7 +130,7 @@ func NewGroup() *Group {
 		objects: []object.Object[float32]{},
 	}
 	g.ResetContext()
-	return g
+	return g.Add(objects...)
 }
 
 // Add adds a list of given objects. The added objects are belongs to this

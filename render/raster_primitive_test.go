@@ -47,7 +47,7 @@ func init() {
 	var Mm math.Mat4[float32]
 	scene.IterObjects(s, func(o *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
 		m = o
-		Mm = modelMatrix
+		Mm = modelMatrix.MulM(o.ModelMatrix())
 		return false
 	})
 

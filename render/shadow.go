@@ -120,7 +120,6 @@ func (r *Renderer) passShadows(index int) {
 	}
 
 	scene.IterObjects(r.cfg.Scene, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
-		r.sched.Add(len(g.Triangles()))
 		mvp := shader.MVP{
 			Model:    modelMatrix.MulM(g.ModelMatrix()),
 			View:     r.shadowBufs[index].camera.ViewMatrix(),
@@ -138,6 +137,7 @@ func (r *Renderer) passShadows(index int) {
 		mvp.Normal = mvp.Model.Inv().T()
 
 		tris := g.Triangles()
+		r.sched.Add(len(tris))
 		for i := range tris {
 			t := tris[i]
 			r.sched.Run(func() {

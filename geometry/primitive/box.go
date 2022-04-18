@@ -55,3 +55,21 @@ func (aabb *AABB) Add(aabb2 AABB) {
 func (aabb *AABB) Eq(aabb2 AABB) bool {
 	return aabb.Min.Eq(aabb2.Min) && aabb.Max.Eq(aabb2.Max)
 }
+
+// Contains checks if all given positions are inside the
+// current bounding box, including points on the boundary.
+func (aabb *AABB) Contains(vs ...math.Vec3[float32]) bool {
+	lessEq := func(v1, v2 float32) bool {
+		return math.ApproxEq(v1, v2, math.Epsilon) || math.ApproxLess(v1, v2, math.Epsilon)
+	}
+	lessEqVec := func(v1, v2 math.Vec3[float32]) bool {
+		return lessEq(v1.X, v2.X) && lessEq(v1.Y, v2.Y) && lessEq(v1.Z, v2.Z)
+	}
+
+	for i := range vs {
+		if !(lessEqVec(aabb.Min, vs[i]) && lessEqVec(vs[i], aabb.Max)) {
+			return false
+		}
+	}
+	return true
+}

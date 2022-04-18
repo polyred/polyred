@@ -29,7 +29,6 @@ func TestBufferedMesh(t *testing.T) {
 	})
 
 	bm.AABB()
-	bm.Normalize()
 	if len(bm.Triangles()) != 4 {
 		t.Fatalf("expect 4 faces, but only got %v", len(bm.Triangles()))
 	}

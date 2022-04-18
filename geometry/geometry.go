@@ -68,11 +68,6 @@ func (g *Geometry) AABB() primitive.AABB {
 func (g *Geometry) Name() string      { return "geometry" }
 func (g *Geometry) Type() object.Type { return object.TypeGeometry }
 
-func (g *Geometry) Normalize() {
-	// FIXME: this might also be problematic.
-	g.mesh.Normalize()
-}
-
 func (g *Geometry) Triangles() []*primitive.Triangle {
 	return g.mesh.Triangles()
 }

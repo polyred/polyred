@@ -95,30 +95,6 @@ func (bm *BufferedMesh) AABB() primitive.AABB {
 	return primitive.AABB{Min: bm.aabb.Min, Max: bm.aabb.Max}
 }
 
-func (bm *BufferedMesh) Normalize() {
-	aabb := bm.AABB()
-	center := aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
-	radius := aabb.Max.Sub(aabb.Min).Len() / 2
-	fac := 1 / radius
-
-	// scale all vertices
-	attr := bm.GetAttribute(AttribPosition)
-	for _, vIndex := range bm.ibo {
-		x := attr.Values[attr.Stride*int(vIndex)+0]
-		y := attr.Values[attr.Stride*int(vIndex)+1]
-		z := attr.Values[attr.Stride*int(vIndex)+2]
-		v := math.NewVec4(x, y, z, 1).Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-		attr.Values[attr.Stride*int(vIndex)+0] = v.X
-		attr.Values[attr.Stride*int(vIndex)+1] = v.Y
-		attr.Values[attr.Stride*int(vIndex)+2] = v.Z
-	}
-
-	// update AABB after scaling
-	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
-	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
-	bm.aabb = &primitive.AABB{Min: min, Max: max}
-}
-
 func (bm *BufferedMesh) Triangles() []*primitive.Triangle {
 	if bm.tris != nil {
 		return bm.tris

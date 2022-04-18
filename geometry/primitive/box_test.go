@@ -93,3 +93,18 @@ func BenchmarkVertexAABB(b *testing.B) {
 		v.AABB()
 	}
 }
+
+func TestAABB_Contains(t *testing.T) {
+	v1 := math.NewVec3[float32](1, 0, 0)
+	v2 := math.NewVec3[float32](0, 1, 0)
+	v3 := math.NewVec3[float32](0, 0, 1)
+	aabb := primitive.NewAABB(v1, v2, v3)
+
+	if !aabb.Contains(v1, v2, v3) {
+		t.Fatalf("AABB should contains their boundary points, but actually not.")
+	}
+
+	if aabb.Contains(math.NewVec3[float32](-1, -1, -1)) {
+		t.Fatalf("AABB should not contain outside points, but actually contained.")
+	}
+}

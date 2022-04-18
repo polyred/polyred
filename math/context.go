@@ -19,19 +19,23 @@ type TransformContext[T Float] struct {
 	context    Mat4[T]
 	needUpdate bool
 
-	// We use a quaternion to persist the rotation context, so that we
-	// don't have the Gimbal Lock issue.
+	// The transformation context accumulates scale and translation
+	// sequentially in the internal matrix depending on the order of
+	// the call. However, due to the Gimbal Lock issue, rotations are
+	// recorded separately using a rotation quaternion. When ModelMatrix
+	// is called, the rotation quaternion is converted to a matrix then
+	// multiplies with the internal matrix to instantiates the actual
+	// model matrix.
 	//
 	// See https://en.wikipedia.org/wiki/Gimbal_lock.
-	rotation  Quaternion[T]
-	scale     Mat4[T]
-	translate Mat4[T]
+	rotation Quaternion[T]
+	internal Mat4[T]
 }
 
 // ModelMatrix returns the most recent transformation context.
 func (ctx *TransformContext[T]) ModelMatrix() Mat4[T] {
 	if ctx.needUpdate {
-		ctx.context = ctx.translate.MulM(ctx.scale).MulM(ctx.rotation.ToRoMat())
+		ctx.context = ctx.internal.MulM(ctx.rotation.ToRoMat())
 		ctx.needUpdate = false
 	}
 	return ctx.context
@@ -41,96 +45,95 @@ func (ctx *TransformContext[T]) ModelMatrix() Mat4[T] {
 func (ctx *TransformContext[T]) ResetContext() {
 	ctx.context = Mat4I[T]()
 	ctx.rotation = NewQuaternion[T](1, 0, 0, 0)
-	ctx.scale = Mat4I[T]()
-	ctx.translate = Mat4I[T]()
+	ctx.internal = Mat4I[T]()
 	ctx.needUpdate = false
 }
 
 // Scale sets the scale matrix.
 func (ctx *TransformContext[T]) Scale(sx, sy, sz T) {
-	ctx.scale = NewMat4(
+	ctx.internal = NewMat4(
 		sx, 0, 0, 0,
 		0, sy, 0, 0,
 		0, 0, sz, 0,
 		0, 0, 0, 1,
-	).MulM(ctx.scale)
+	).MulM(ctx.internal)
 	ctx.needUpdate = true
 }
 
 // ScaleX sets the scale matrix on X-axis.
 func (ctx *TransformContext[T]) ScaleX(sx T) {
-	ctx.scale = NewMat4(
+	ctx.internal = NewMat4(
 		sx, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
-	).MulM(ctx.scale)
+	).MulM(ctx.internal)
 	ctx.needUpdate = true
 }
 
 // ScaleY sets the scale matrix on Y-axis.
 func (ctx *TransformContext[T]) ScaleY(sy T) {
-	ctx.scale = NewMat4(
+	ctx.internal = NewMat4(
 		1, 0, 0, 0,
 		0, sy, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
-	).MulM(ctx.scale)
+	).MulM(ctx.internal)
 	ctx.needUpdate = true
 }
 
 // ScaleZ sets the scale matrix on Z-axis.
 func (ctx *TransformContext[T]) ScaleZ(sz T) {
-	ctx.scale = NewMat4(
+	ctx.internal = NewMat4(
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, sz, 0,
 		0, 0, 0, 1,
-	).MulM(ctx.scale)
+	).MulM(ctx.internal)
 	ctx.needUpdate = true
 }
 
 // Translate sets the translate matrix.
 func (ctx *TransformContext[T]) Translate(tx, ty, tz T) {
-	ctx.translate = NewMat4(
+	ctx.internal = NewMat4(
 		1, 0, 0, tx,
 		0, 1, 0, ty,
 		0, 0, 1, tz,
 		0, 0, 0, 1,
-	).MulM(ctx.translate)
+	).MulM(ctx.internal)
 	ctx.needUpdate = true
 }
 
 // TranslateX sets the translate matrix on X-axis.
 func (ctx *TransformContext[T]) TranslateX(tx T) {
-	ctx.translate = NewMat4(
+	ctx.internal = NewMat4(
 		1, 0, 0, tx,
 		0, 1, 0, 0,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
-	).MulM(ctx.translate)
+	).MulM(ctx.internal)
 	ctx.needUpdate = true
 }
 
 // TranslateY sets the translate matrix on Y-axis.
 func (ctx *TransformContext[T]) TranslateY(ty T) {
-	ctx.translate = NewMat4(
+	ctx.internal = NewMat4(
 		1, 0, 0, 0,
 		0, 1, 0, ty,
 		0, 0, 1, 0,
 		0, 0, 0, 1,
-	).MulM(ctx.translate)
+	).MulM(ctx.internal)
 	ctx.needUpdate = true
 }
 
 // TranslateZ sets the translate matrix on Z-axis.
 func (ctx *TransformContext[T]) TranslateZ(tz T) {
-	ctx.translate = NewMat4(
+	ctx.internal = NewMat4(
 		1, 0, 0, 0,
 		0, 1, 0, 0,
 		0, 0, 1, tz,
 		0, 0, 0, 1,
-	).MulM(ctx.translate)
+	).MulM(ctx.internal)
 	ctx.needUpdate = true
 }
 

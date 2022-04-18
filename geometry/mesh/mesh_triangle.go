@@ -81,24 +81,3 @@ func (m *TriangleMesh) Radius() float32 {
 	aabb := m.AABB()
 	return aabb.Max.Sub(aabb.Min).Len() / 2
 }
-
-// Normalize rescales the mesh to the unit sphere centered at the origin.
-func (m *TriangleMesh) Normalize() {
-	aabb := m.AABB()
-	center := aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
-	radius := aabb.Max.Sub(aabb.Min).Len() / 2
-	fac := 1 / radius
-
-	// scale all vertices
-	for i := 0; i < len(m.tris); i++ {
-		f := m.tris[i]
-		f.V1.Pos = f.V1.Pos.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-		f.V2.Pos = f.V2.Pos.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-		f.V3.Pos = f.V3.Pos.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac, 1)
-	}
-
-	// update AABB after scaling
-	min := aabb.Min.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
-	max := aabb.Max.Translate(-center.X, -center.Y, -center.Z).Scale(fac, fac, fac)
-	m.aabb = &primitive.AABB{Min: min, Max: max}
-}

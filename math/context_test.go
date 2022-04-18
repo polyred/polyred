@@ -33,8 +33,8 @@ func TestTransformationContext(t *testing.T) {
 	modMat = ctx.ModelMatrix()
 	want = math.NewMat4[float32](
 		1, 0, 0, 1,
-		0, 4, 0, 2,
-		0, 0, 9, 3,
+		0, 4, 0, 4,
+		0, 0, 9, 9,
 		0, 0, 0, 1,
 	)
 	if !modMat.Eq(want) {

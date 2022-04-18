@@ -170,13 +170,15 @@ func (r *Renderer) passForward() {
 		mvp.ProjInv = mvp.Proj.Inv()
 		mvp.ViewportInv = mvp.Viewport.Inv()
 		tris := g.Triangles()
+		r.sched.Add(len(tris))
 		for i := range tris {
 			t := tris[i]
-			if !t.IsValid() {
-				continue
-			}
-			r.sched.Add(1)
-			r.sched.Run(func() { r.draw(mvp, t) })
+			r.sched.Run(func() {
+				if !t.IsValid() {
+					return
+				}
+				r.draw(mvp, t)
+			})
 		}
 		return true
 	})
@@ -262,21 +264,19 @@ func (r *Renderer) passAntialiasing() {
 
 func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
 	buf := r.CurrBuffer()
-
-	var t1, t2, t3 *primitive.Vertex
-	t1 = &primitive.Vertex{
+	t1 := &primitive.Vertex{
 		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V1.Pos),
 		Col: t.V1.Col,
 		UV:  t.V1.UV,
 		Nor: t.V1.Nor.Apply(mvp.Normal),
 	}
-	t2 = &primitive.Vertex{
+	t2 := &primitive.Vertex{
 		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V2.Pos),
 		Col: t.V2.Col,
 		UV:  t.V2.UV,
 		Nor: t.V2.Nor.Apply(mvp.Normal),
 	}
-	t3 = &primitive.Vertex{
+	t3 := &primitive.Vertex{
 		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V3.Pos),
 		Col: t.V3.Col,
 		UV:  t.V3.UV,
@@ -295,11 +295,26 @@ func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
 	if r.cullBackFace(t1.Pos, t2.Pos, t3.Pos) {
 		return
 	}
-	if r.cullViewFrustum(buf, t1.Pos, t2.Pos, t3.Pos) {
+
+	p1, p2, p3 := t1.Pos.ToVec3(), t2.Pos.ToVec3(), t3.Pos.ToVec3()
+	viewportAABB := primitive.AABB{
+		Min: math.NewVec3[float32](0, 0, -1),
+		Max: math.NewVec3(
+			float32(r.cfg.MSAA*buf.Bounds().Dx()),
+			float32(r.cfg.MSAA*buf.Bounds().Dy()),
+			1,
+		),
+	}
+
+	// Check whether the triangle have an intersection with the current
+	// viewport AABB or not. If there is no intersection, we can return
+	// immediately.
+	if !viewportAABB.Intersect(primitive.NewAABB(p1, p2, p3)) {
 		return
 	}
 
-	if r.inViewport(buf, t1.Pos, t2.Pos, t3.Pos) {
+	// All vertices are inside the viewport, let's rasterize them directly
+	if viewportAABB.Contains(p1, p2, p3) {
 		r.drawClipped(mvp, t1, t2, t3, recipw, t.MaterialID)
 		return
 	}

@@ -16,7 +16,6 @@ import (
 
 type Mesh[T math.Float] interface {
 	AABB() primitive.AABB
-	Normalize()
 
 	IndexBuffer() buffer.IndexBuffer
 	VertexBuffer() buffer.VertexBuffer

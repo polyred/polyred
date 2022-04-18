@@ -15,8 +15,8 @@ import (
 	"poly.red/geometry"
 	"poly.red/geometry/mesh"
 	"poly.red/internal/imageutil"
-	"poly.red/math"
 	"poly.red/render"
+	"poly.red/scene"
 	"poly.red/shader"
 )
 
@@ -26,14 +26,15 @@ func init() {
 
 func prepare(num int) (*render.Renderer, *buffer.FragmentBuffer, shader.Program, buffer.IndexBuffer, buffer.VertexBuffer) {
 	c := camera.NewPerspective(camera.ViewFrustum(50, 1, 0.1, 100))
-	r := render.NewRenderer(render.Size(500, 500), render.Camera(c))
+	r := render.NewRenderer(render.Size(500, 500), render.Camera(c), render.Workers(1))
 	buf := buffer.NewBuffer(image.Rect(0, 0, 500, 500))
 
 	m := geometry.NewWith(mesh.NewRandomAs[*mesh.BufferedMesh](num), nil)
-	m.Normalize()
-	m.TranslateZ(-1)
+	g := scene.NewGroup(m)
+	g.Normalize()
+	g.TranslateZ(-1)
 	return r, buf, &shader.BasicShader{
-		ModelMatrix:      math.Mat4I[float32](),
+		ModelMatrix:      g.ModelMatrix(),
 		ViewMatrix:       c.ViewMatrix(),
 		ProjectionMatrix: c.ProjMatrix(),
 	}, m.IndexBuffer(), m.VertexBuffer()

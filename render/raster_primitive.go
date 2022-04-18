@@ -78,13 +78,25 @@ func (r *Renderer) drawPrimitive(buf *buffer.FragmentBuffer, t1, t2, t3 *primiti
 	if r.cullBackFace(v1.Pos, v2.Pos, v3.Pos) {
 		return
 	}
-	// TODO: deal with window resizing
-	if r.cullViewFrustum(buf, v1.Pos, v2.Pos, v3.Pos) {
+
+	p1, p2, p3 := v1.Pos.ToVec3(), v2.Pos.ToVec3(), v3.Pos.ToVec3()
+	viewportAABB := primitive.AABB{
+		Min: math.NewVec3[float32](0, 0, -1),
+		Max: math.NewVec3(
+			float32(r.cfg.MSAA*buf.Bounds().Dx()),
+			float32(r.cfg.MSAA*buf.Bounds().Dy()),
+			1,
+		),
+	}
+	// Check whether the triangle have an intersection with the current
+	// viewport AABB or not. If there is no intersection, we can return
+	// immediately.
+	if !viewportAABB.Intersect(primitive.NewAABB(p1, p2, p3)) {
 		return
 	}
 
-	// All vertices are inside the viewport, let's rasterize directly
-	if r.inViewport(buf, v1.Pos, v2.Pos, v3.Pos) {
+	// All vertices are inside the viewport, let's rasterize them directly
+	if viewportAABB.Contains(p1, p2, p3) {
 		r.rasterize(buf, v1, v2, v3, recipw)
 		return
 	}
@@ -107,26 +119,6 @@ func (r *Renderer) cullViewFrustum(buf *buffer.FragmentBuffer, v1, v2, v3 math.V
 
 func (r *Renderer) cullBackFace(v1, v2, v3 math.Vec4[float32]) bool {
 	return v2.Sub(v1).Cross(v3.Sub(v1)).Z < 0
-}
-
-func (r *Renderer) inViewport(buf *buffer.FragmentBuffer, v1, v2, v3 math.Vec4[float32]) bool {
-	// TODO: reiview logic here.
-	w := float32(r.cfg.MSAA * buf.Bounds().Dx())
-	h := float32(r.cfg.MSAA * buf.Bounds().Dy())
-
-	v1out := v1.X < 0 || v1.X > w || v1.Y < 0 || v1.Y > h || v1.Z > 1 || v1.Z < -1
-	if v1out {
-		return false
-	}
-	v2out := v2.X < 0 || v2.X > w || v2.Y < 0 || v2.Y > h || v2.Z > 1 || v2.Z < -1
-	if v2out {
-		return false
-	}
-	v3out := v3.X < 0 || v3.X > w || v3.Y < 0 || v3.Y > h || v3.Z > 1 || v3.Z < -1
-	if v3out {
-		return false
-	}
-	return true
 }
 
 func (r *Renderer) drawClip(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.Vertex, recipw [3]float32) {

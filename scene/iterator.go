@@ -17,7 +17,7 @@ type Iterator interface {
 // IterObjects traverses all objects over a given scene graph or a scene group or any type
 // that implements Iterator interface. The user defined iter function receives the model
 // matrix of the previous group transformation. To obtain the correct model matrix of the
-// current object, one must compute o.ModelMatrix().Mul(modelMatrix) as the final matrix.
+// current object, one must compute modelMatrix.MulM(o.ModelMatrix()) as the final matrix.
 func IterObjects[S Iterator, T any](s S, iter func(o T, modelMatrix math.Mat4[float32]) bool) {
 	s.IterObjects(func(o object.Object[float32], modelMatrix math.Mat4[float32]) bool {
 		if oo, ok := o.(T); ok {

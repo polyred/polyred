@@ -63,7 +63,7 @@ func loadObj(path string) (*scene.Group, error) {
 			if mat.MapKd != "" {
 				opts = append(opts, material.Texture[material.BlinnPhong](buffer.NewTexture(
 					buffer.TextureImage(
-						// Note: this might be problematic when the MapKd is a windows \ separated path.
+						// FIXME: this might be problematic when the MapKd is a windows \ separated path.
 						imageutil.MustLoadImage(filepath.Join(filepath.Clean(fi.MtlDir), filepath.Clean(mat.MapKd)),
 							imageutil.GammaCorrect(true),
 						)),

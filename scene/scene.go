@@ -6,7 +6,6 @@ package scene
 
 import (
 	"poly.red/geometry"
-	"poly.red/geometry/primitive"
 	"poly.red/light"
 	"poly.red/math"
 	"poly.red/scene/object"
@@ -47,31 +46,8 @@ func (s *Scene) Lights() ([]light.Source, []light.Environment) {
 }
 
 func (s *Scene) Center() math.Vec3[float32] {
-	aabb := &primitive.AABB{
-		Min: math.NewVec3[float32](0, 0, 0),
-		Max: math.NewVec3[float32](0, 0, 0),
-	}
-	s.IterGeometry(func(m *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
-		aabb.Add(m.AABB())
-		return true
-	})
+	aabb := s.root.AABB()
 	return aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
 }
 
-func (s *Scene) Normalize() {
-	aabb := &primitive.AABB{
-		Min: math.NewVec3[float32](0, 0, 0),
-		Max: math.NewVec3[float32](0, 0, 0),
-	}
-	s.IterObjects(func(m object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		aabb.Add(m.AABB())
-		return true
-	})
-	center := aabb.Min.Add(aabb.Max).Scale(0.5, 0.5, 0.5)
-	radius := aabb.Max.Sub(aabb.Min).Len() / 2
-	s.IterObjects(func(m object.Object[float32], modelMatrix math.Mat4[float32]) bool {
-		m.Translate(-center.X, -center.Y, -center.Z)
-		m.Scale(1/radius, 1/radius, 1/radius)
-		return true
-	})
-}
+func (s *Scene) Normalize() { s.root.Normalize() }
