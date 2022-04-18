@@ -7,22 +7,39 @@ package material
 import (
 	"poly.red/buffer"
 	"poly.red/color"
-	"poly.red/internal/alloc"
+)
+
+var (
+	_ Material = &Standard{}
+	_ Material = &BlinnPhong{}
 )
 
 type Material interface {
-	ID() uint64
+	Name() string
+	Config(...Option)
 }
 
 type Standard struct {
-	id               uint64
 	FlatShading      bool
 	AmbientOcclusion bool
 	ReceiveShadow    bool
 	Texture          *buffer.Texture
+
+	name string
 }
 
-func (m *Standard) ID() uint64 { return m.id }
+func (m *Standard) Name() string {
+	if m.name == "" {
+		return "standard"
+	}
+	return m.name
+}
+
+func (m *Standard) Config(opts ...Option) {
+	for _, opt := range opts {
+		opt(m)
+	}
+}
 
 type BlinnPhong struct {
 	Standard
@@ -34,10 +51,12 @@ type BlinnPhong struct {
 	Opacity   float32
 }
 
-func NewBlinnPhong(opts ...Option[BlinnPhong]) *BlinnPhong {
+// NewBlinnPhong creates a new Blinn-Phong material and returns the material ID.
+// To configure the material, one can use Get to fetch the Material then use
+// Config methods to customize the material.
+func NewBlinnPhong(opts ...Option) ID {
 	t := &BlinnPhong{
 		Standard: Standard{
-			id:               alloc.ID(),
 			FlatShading:      false,
 			ReceiveShadow:    false,
 			AmbientOcclusion: false,
@@ -50,7 +69,19 @@ func NewBlinnPhong(opts ...Option[BlinnPhong]) *BlinnPhong {
 	for _, opt := range opts {
 		opt(t)
 	}
-	return t
+	id, _ := Put(t)
+	return id
 }
 
-func (m *BlinnPhong) ID() uint64 { return m.Standard.ID() }
+func (m *BlinnPhong) Name() string {
+	if m.name == "" {
+		return "blinn_phong"
+	}
+	return m.name
+}
+
+func (m *BlinnPhong) Config(opts ...Option) {
+	for _, opt := range opts {
+		opt(m)
+	}
+}

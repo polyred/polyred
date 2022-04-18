@@ -23,9 +23,9 @@ import (
 
 func NewCorrectScene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene(light.NewAmbient(light.Intensity(1)))
-	g := geometry.NewWith(model.NewPlane(1, 1),
+	g := geometry.New(model.NewPlane(1, 1),
 		material.NewBlinnPhong(
-			material.Texture[material.BlinnPhong](buffer.NewTexture(
+			material.Texture(buffer.NewTexture(
 				buffer.TextureImage(imageutil.MustLoadImage("../testdata/uvgrid2.png")),
 				buffer.TextureIsoMipmap(true),
 			)),

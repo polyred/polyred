@@ -13,7 +13,6 @@ import (
 	"poly.red/geometry"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
-	"poly.red/internal/cache"
 	"poly.red/internal/imageutil"
 	"poly.red/material"
 	"poly.red/math"
@@ -47,21 +46,22 @@ func loadObj(path string) (*scene.Group, error) {
 	g := scene.NewGroup()
 
 	// Create all materials.
-	ms := map[string]material.Material{}
+	allMats := map[string]material.ID{}
 	for name, mat := range fi.Materials {
-		var m material.Material
+		var id material.ID
 		switch mat.Illum {
 		case 0, 2:
-			opts := []material.Option[material.BlinnPhong]{
+			opts := []material.Option{
 				material.Diffuse(mat.Diffuse),
 				material.Specular(mat.Specular),
 				material.Shininess(mat.Shininess),
-				material.FlatShading[material.BlinnPhong](false),
-				material.AmbientOcclusion[material.BlinnPhong](false),
-				material.ReceiveShadow[material.BlinnPhong](false),
+				material.Name(name),
+				material.FlatShading(false),
+				material.AmbientOcclusion(false),
+				material.ReceiveShadow(false),
 			}
 			if mat.MapKd != "" {
-				opts = append(opts, material.Texture[material.BlinnPhong](buffer.NewTexture(
+				opts = append(opts, material.Texture(buffer.NewTexture(
 					buffer.TextureImage(
 						// FIXME: this might be problematic when the MapKd is a windows \ separated path.
 						imageutil.MustLoadImage(filepath.Join(filepath.Clean(fi.MtlDir), filepath.Clean(mat.MapKd)),
@@ -70,19 +70,19 @@ func loadObj(path string) (*scene.Group, error) {
 					buffer.TextureIsoMipmap(true),
 				)))
 			} else {
-				opts = append(opts, material.Texture[material.BlinnPhong](buffer.NewUniformTexture(color.Blue)))
+				opts = append(opts, material.Texture(buffer.NewUniformTexture(color.Blue)))
 			}
 
-			m = material.NewBlinnPhong(opts...)
+			id = material.NewBlinnPhong(opts...)
 		default:
 			panic("unsupported illumination model")
 		}
 
-		cache.Set(m.ID(), m)
-		ms[name] = m
+		allMats[name] = id
 	}
 
 	// Create all mesh objects.
+	activeMats := map[uint64]string{}
 	for i := range fi.Objs {
 		var (
 			tris     []*primitive.Triangle
@@ -92,9 +92,10 @@ func loadObj(path string) (*scene.Group, error) {
 
 		for _, face := range fi.Objs[i].Faces {
 			materialID := uint64(0)
-			if mat, ok := ms[face.Material]; ok {
-				materialID = mat.ID()
+			if mat, ok := allMats[face.Material]; ok {
+				materialID = uint64(mat)
 			}
+			activeMats[materialID] = face.Material
 			switch len(face.Vertices) {
 			case 3:
 				tris = append(tris, newTrianglePrimitive(fi, &face, materialID))
@@ -125,8 +126,19 @@ func loadObj(path string) (*scene.Group, error) {
 			}
 			m = mesh.NewPolygonMesh(faces)
 		}
-		geom := geometry.NewWith(m, nil)
-		g.Add(geom)
+
+		ids := []material.ID{}
+		for id, name := range activeMats {
+			ids = append(ids, material.ID(id))
+			delete(allMats, name)
+		}
+		// The created materials may not match be active for rendering.
+		// Delete all unused materials to prevent memory leak.
+		for _, id := range allMats {
+			material.Del(id)
+		}
+
+		g.Add(geometry.New(m, ids...))
 	}
 	return g, nil
 }

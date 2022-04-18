@@ -29,7 +29,7 @@ func prepare(num int) (*render.Renderer, *buffer.FragmentBuffer, shader.Program,
 	r := render.NewRenderer(render.Size(500, 500), render.Camera(c), render.Workers(1))
 	buf := buffer.NewBuffer(image.Rect(0, 0, 500, 500))
 
-	m := geometry.NewWith(mesh.NewRandomAs[*mesh.BufferedMesh](num), nil)
+	m := geometry.New(mesh.NewRandomAs[*mesh.BufferedMesh](num))
 	g := scene.NewGroup(m)
 	g.Normalize()
 	g.TranslateZ(-1)

@@ -13,7 +13,6 @@ import (
 	"poly.red/camera"
 	"poly.red/geometry"
 	"poly.red/geometry/primitive"
-	"poly.red/internal/cache"
 	"poly.red/internal/imageutil"
 	"poly.red/light"
 	"poly.red/material"
@@ -144,7 +143,7 @@ func (r *Renderer) passShadows(index int) {
 				if !t.IsValid() {
 					return
 				}
-				r.drawDepth(index, t, cache.Get[*material.BlinnPhong](t.MaterialID), mvp)
+				r.drawDepth(index, t, material.Get(material.ID(t.MaterialID)).(*material.BlinnPhong), mvp)
 			})
 		}
 		return true

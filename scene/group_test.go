@@ -18,7 +18,7 @@ import (
 )
 
 func TestGroup_Normalize(t *testing.T) {
-	s := scene.NewScene(geometry.NewWith(model.NewPlane(1, 1), nil))
+	s := scene.NewScene(geometry.New(model.NewPlane(1, 1)))
 	r := render.NewRenderer(
 		render.Camera(camera.NewOrthographic(
 			camera.Position(math.NewVec3[float32](0, 1, 0)),

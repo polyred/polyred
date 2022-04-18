@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"poly.red/camera"
+	"poly.red/geometry"
 	"poly.red/light"
+	"poly.red/material"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
@@ -39,6 +41,14 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	m = model.MustLoad("../testdata/ground.obj")
 	m.Scale(2, 2, 2)
 	s.Add(m)
+
+	scene.IterObjects(s, func(o *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
+		mats := o.Materials()
+		for i := range mats {
+			material.Get(mats[i]).Config(material.ReceiveShadow(true))
+		}
+		return true
+	})
 
 	return s, camera.NewPerspective(
 		camera.Position(math.NewVec3[float32](0, 0.6, 0.9)),

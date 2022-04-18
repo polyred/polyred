@@ -10,15 +10,24 @@ import (
 	"poly.red/buffer"
 )
 
-type materials interface {
-	Standard | BlinnPhong
+type Option func(m Material)
+
+func Name(name string) Option {
+	return func(m Material) {
+		switch x := m.(type) {
+		case *Standard:
+			x.name = name
+		case *BlinnPhong:
+			x.Standard.name = name
+		default:
+			panic("unsupported type")
+		}
+	}
 }
 
-type Option[T materials] func(m *T)
-
-func Texture[T materials](tex *buffer.Texture) Option[T] {
-	return func(m *T) {
-		switch x := any(m).(type) {
+func Texture(tex *buffer.Texture) Option {
+	return func(m Material) {
+		switch x := m.(type) {
 		case *Standard:
 			x.Texture = tex
 		case *BlinnPhong:
@@ -29,9 +38,9 @@ func Texture[T materials](tex *buffer.Texture) Option[T] {
 	}
 }
 
-func Diffuse[T BlinnPhong](col color.RGBA) Option[T] {
-	return func(m *T) {
-		switch x := any(m).(type) {
+func Diffuse(col color.RGBA) Option {
+	return func(m Material) {
+		switch x := m.(type) {
 		case *BlinnPhong:
 			x.Diffuse = col
 		default:
@@ -40,9 +49,9 @@ func Diffuse[T BlinnPhong](col color.RGBA) Option[T] {
 	}
 }
 
-func Specular[T BlinnPhong](col color.RGBA) Option[T] {
-	return func(m *T) {
-		switch x := any(m).(type) {
+func Specular(col color.RGBA) Option {
+	return func(m Material) {
+		switch x := m.(type) {
 		case *BlinnPhong:
 			x.Specular = col
 		default:
@@ -51,9 +60,9 @@ func Specular[T BlinnPhong](col color.RGBA) Option[T] {
 	}
 }
 
-func Shininess[T BlinnPhong](shininess float32) Option[T] {
-	return func(m *T) {
-		switch x := any(m).(type) {
+func Shininess(shininess float32) Option {
+	return func(m Material) {
+		switch x := m.(type) {
 		case *BlinnPhong:
 			x.Shininess = shininess
 		default:
@@ -62,9 +71,9 @@ func Shininess[T BlinnPhong](shininess float32) Option[T] {
 	}
 }
 
-func FlatShading[T materials](enable bool) Option[T] {
-	return func(m *T) {
-		switch x := any(m).(type) {
+func FlatShading(enable bool) Option {
+	return func(m Material) {
+		switch x := m.(type) {
 		case *Standard:
 			x.FlatShading = enable
 		case *BlinnPhong:
@@ -75,8 +84,8 @@ func FlatShading[T materials](enable bool) Option[T] {
 	}
 }
 
-func AmbientOcclusion[T materials](enable bool) Option[T] {
-	return func(m *T) {
+func AmbientOcclusion(enable bool) Option {
+	return func(m Material) {
 		switch x := any(m).(type) {
 		case *Standard:
 			x.AmbientOcclusion = enable
@@ -88,9 +97,9 @@ func AmbientOcclusion[T materials](enable bool) Option[T] {
 	}
 }
 
-func ReceiveShadow[T materials](enable bool) Option[T] {
-	return func(m *T) {
-		switch x := any(m).(type) {
+func ReceiveShadow(enable bool) Option {
+	return func(m Material) {
+		switch x := m.(type) {
 		case *Standard:
 			x.ReceiveShadow = enable
 		case *BlinnPhong:

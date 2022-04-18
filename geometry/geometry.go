@@ -8,7 +8,6 @@ import (
 	"poly.red/buffer"
 	"poly.red/geometry/mesh"
 	"poly.red/geometry/primitive"
-	"poly.red/internal/cache"
 	"poly.red/material"
 	"poly.red/math"
 	"poly.red/scene/object"
@@ -16,49 +15,33 @@ import (
 
 var (
 	_ object.Object[float32] = &Geometry{}
-	_ mesh.Mesh[float32]     = &Geometry{}
+	_ mesh.Mesh[float32]     = &Geometry{} // FIXME: geometry should or should not implements mesh (?)
 )
 
+// Geometry represents a geometric object that can be rendered.
+// A geometry consists of a vertex-based object and a list of materials.
+// The vertices of the object contains an ID that refers the to associated list of materials.
 type Geometry struct {
 	math.TransformContext[float32]
 
-	mesh     mesh.Mesh[float32]
-	material material.Material
+	mesh mesh.Mesh[float32]
+	mats []material.ID
 }
 
-func New() *Geometry {
-	g := &Geometry{}
-	g.ResetContext()
-	return g
-}
-
-func NewWith(mesh mesh.Mesh[float32], material material.Material) *Geometry {
+func New(mesh mesh.Mesh[float32], ids ...material.ID) *Geometry {
 	g := &Geometry{
-		mesh:     mesh,
-		material: material,
-	}
-	if material != nil {
-		for _, t := range mesh.Triangles() {
-			t.MaterialID = material.ID()
-			cache.Set(t.MaterialID, material)
-		}
+		mesh: mesh,
+		mats: ids,
 	}
 	g.ResetContext()
+
+	// FIXME: If a given mesh have no materials for its primitives, what should we do?
+
 	return g
 }
 
-func (g *Geometry) SetMesh(m mesh.Mesh[float32]) {
-	g.mesh = m
-}
-
-func (g *Geometry) SetMaterial(m material.Material) {
-	g.material = m
-	if m != nil {
-		for _, t := range g.mesh.Triangles() {
-			t.MaterialID = m.ID()
-			cache.Set(t.MaterialID, m)
-		}
-	}
+func (g *Geometry) Materials() []material.ID {
+	return g.mats
 }
 
 func (g *Geometry) AABB() primitive.AABB {

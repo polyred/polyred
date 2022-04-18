@@ -66,7 +66,7 @@ func NewArea(opts ...Option) Source {
 	a := &Area{
 		intensity:  0.1,
 		color:      color.White,
-		shape:      geometry.NewWith(plane, nil),
+		shape:      geometry.New(plane),
 		maxBounces: 1024,
 		castShadow: false,
 	}

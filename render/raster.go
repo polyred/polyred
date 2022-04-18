@@ -13,7 +13,6 @@ import (
 	"poly.red/color"
 	"poly.red/geometry"
 	"poly.red/geometry/primitive"
-	"poly.red/internal/cache"
 	"poly.red/internal/imageutil"
 	"poly.red/material"
 	"poly.red/math"
@@ -220,7 +219,7 @@ func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.R
 	}
 
 	col := info.Col
-	mat := cache.Get[*material.BlinnPhong](frag.MaterialID)
+	mat := material.Get(material.ID(frag.MaterialID)).(*material.BlinnPhong)
 	if mat != nil {
 		lightSources, lightEnv := r.cfg.Scene.Lights()
 		col = shader.FragmentShader(mat,
