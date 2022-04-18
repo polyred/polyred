@@ -19,6 +19,11 @@ type Fragment struct {
 	Nor        math.Vec4[float32]
 	Col        color.RGBA
 	MaterialID int64
+
+	// FIXME: figure out how to collaborate with shaders.
+	// Remove these two fields.
+	FaceNor    math.Vec4[float32]
+	WordPos    math.Vec4[float32]
 	AttrSmooth map[AttrName]any
 	AttrFlat   map[AttrName]any
 }

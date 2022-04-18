@@ -6,6 +6,7 @@ package main
 
 import (
 	"image"
+	"runtime"
 
 	"poly.red/app"
 	"poly.red/app/controls"
@@ -46,6 +47,10 @@ func newApp(objPath string) *App {
 		render.PixelFormat(buffer.PixelFormatBGRA),
 		render.Scene(s),
 	)
+	if runtime.GOOS != "darwin" {
+		r.Options(render.PixelFormat(buffer.PixelFormatRGBA))
+	}
+
 	a := &App{w: w, h: h, r: r, c: c, s: s}
 	a.ctrl = controls.NewOrbitControl(a, c)
 

@@ -264,20 +264,21 @@ func (r *Renderer) passAntialiasing() {
 
 func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
 	buf := r.CurrBuffer()
+	trans := mvp.Proj.MulM(mvp.View).MulM(mvp.Model)
 	t1 := &primitive.Vertex{
-		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V1.Pos),
+		Pos: trans.MulV(t.V1.Pos),
 		Col: t.V1.Col,
 		UV:  t.V1.UV,
 		Nor: t.V1.Nor.Apply(mvp.Normal),
 	}
 	t2 := &primitive.Vertex{
-		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V2.Pos),
+		Pos: trans.MulV(t.V2.Pos),
 		Col: t.V2.Col,
 		UV:  t.V2.UV,
 		Nor: t.V2.Nor.Apply(mvp.Normal),
 	}
 	t3 := &primitive.Vertex{
-		Pos: mvp.Proj.MulM(mvp.View).MulM(mvp.Model).MulV(t.V3.Pos),
+		Pos: trans.MulV(t.V3.Pos),
 		Col: t.V3.Col,
 		UV:  t.V3.UV,
 		Nor: t.V3.Nor.Apply(mvp.Normal),
@@ -330,6 +331,8 @@ func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
 func (r *Renderer) drawClipped(mvp *shader.MVP, t1, t2, t3 *primitive.Vertex, recipw [3]float32, materialId int64) {
 	buf := r.CurrBuffer()
 
+	// FIXME: do it better.
+	// Transform back to world space for computing illumination
 	m1 := t1.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
 	m2 := t2.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
 	m3 := t3.Pos.Apply(mvp.ViewportInv).Apply(mvp.ProjInv).Apply(mvp.ViewInv)
@@ -431,12 +434,10 @@ func (r *Renderer) drawClipped(mvp *shader.MVP, t1, t2, t3 *primitive.Vertex, re
 					Du:         du,
 					Dv:         dv,
 					Nor:        n,
+					FaceNor:    fN,
+					WordPos:    pos,
 					Col:        col,
 					MaterialID: materialId,
-					AttrFlat: map[primitive.AttrName]any{
-						"Pos": pos,
-						"fN":  fN,
-					},
 				},
 			})
 		}

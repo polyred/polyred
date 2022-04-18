@@ -27,6 +27,12 @@ func FragmentShader(m *material.BlinnPhong,
 	}
 	col := m.Texture.Query(lod, info.U, 1-info.V)
 
+	// When using blinn-phong, if there are no light sources, we just use
+	// the texture color.
+	if len(ls) == 0 {
+		return col
+	}
+
 	LaR := float32(0.0)
 	LaG := float32(0.0)
 	LaB := float32(0.0)
@@ -47,10 +53,9 @@ func FragmentShader(m *material.BlinnPhong,
 
 	n := info.Nor
 	if m.FlatShading {
-		n = info.AttrFlat["fN"].(math.Vec4[float32])
+		n = info.FaceNor
 	}
-	x := info.AttrFlat["Pos"].(math.Vec4[float32])
-
+	x := info.WordPos
 	for _, l := range ls {
 		var (
 			L math.Vec4[float32]
