@@ -10,7 +10,7 @@ import (
 	"poly.red/math"
 )
 
-var _ Mesh[float32] = &TriangleMesh{}
+var _ Mesh = &TriangleMesh{}
 
 // TriangleMesh implements a triangular mesh.
 type TriangleMesh struct {
@@ -22,9 +22,7 @@ type TriangleMesh struct {
 	aabb *primitive.AABB
 }
 
-func (m *TriangleMesh) Triangles() []*primitive.Triangle  { return m.tris }
-func (m *TriangleMesh) IndexBuffer() buffer.IndexBuffer   { return m.ibo }
-func (m *TriangleMesh) VertexBuffer() buffer.VertexBuffer { return m.vbo }
+func (m *TriangleMesh) Triangles() []*primitive.Triangle { return m.tris }
 
 // NewTriangleMesh returns a triangular soup.
 func NewTriangleMesh(tris []*primitive.Triangle) *TriangleMesh {

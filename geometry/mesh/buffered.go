@@ -12,7 +12,7 @@ import (
 	"poly.red/math"
 )
 
-var _ Mesh[float32] = &BufferedMesh{}
+var _ Mesh = &BufferedMesh{}
 
 type AttribType int
 

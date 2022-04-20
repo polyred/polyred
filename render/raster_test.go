@@ -199,10 +199,10 @@ func BenchmarkDrawCall(b *testing.B) {
 		matVP := math.ViewportMatrix[float32](1920, 1080)
 
 		var (
-			m        mesh.Mesh[float32]
+			m        mesh.Mesh
 			modelMat math.Mat4[float32]
 		)
-		scene.IterObjects(s, func(o mesh.Mesh[float32], modelMatrix math.Mat4[float32]) bool {
+		scene.IterObjects(s, func(o mesh.Mesh, modelMatrix math.Mat4[float32]) bool {
 			m = o
 			modelMat = modelMatrix
 			return false

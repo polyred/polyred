@@ -14,7 +14,7 @@ import (
 
 // NewPlane returns a triangle soup that represents a plane with the
 // given width and height.
-func NewPlane(width, height float32) mesh.Mesh[float32] {
+func NewPlane(width, height float32) mesh.Mesh {
 	v1 := primitive.NewVertex(
 		primitive.Pos(math.NewVec4(-0.5*width, 0, -0.5*height, 1)),
 		primitive.UV(math.NewVec2[float32](0, 1)),

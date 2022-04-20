@@ -9,7 +9,7 @@ import (
 	"poly.red/geometry/primitive"
 )
 
-var _ Mesh[float32] = &EditMesh{}
+var _ Mesh = &EditMesh{}
 
 // EditMesh implements Radial Edge Structure that permits convinient mesh editing.
 //

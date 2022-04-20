@@ -10,7 +10,7 @@ import (
 	"poly.red/math"
 )
 
-func NewRandomAs[T Mesh[float32]](numTri int) (m T) {
+func NewRandomAs[T Mesh](numTri int) (m T) {
 	switch any(m).(type) {
 	case *BufferedMesh:
 		ibo := make([]int, numTri*3)

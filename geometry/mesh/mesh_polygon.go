@@ -9,7 +9,7 @@ import (
 	"poly.red/geometry/primitive"
 )
 
-var _ Mesh[float32] = &PolygonMesh{}
+var _ Mesh = &PolygonMesh{}
 
 // PolygonMesh is a polygon based mesh structure that can contain
 // arbitrary shaped faces, such as triangle and quad mixed mesh.
@@ -70,8 +70,7 @@ func (m *PolygonMesh) AABB() primitive.AABB {
 
 	return primitive.AABB{Min: m.aabb.Min, Max: m.aabb.Max}
 }
-func (m *PolygonMesh) IndexBuffer() buffer.IndexBuffer   { return m.ibo }
-func (m *PolygonMesh) VertexBuffer() buffer.VertexBuffer { return m.vbo }
+
 func (m *PolygonMesh) Triangles() []*primitive.Triangle {
 	tris := []*primitive.Triangle{}
 	for _, poly := range m.polys {

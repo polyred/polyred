@@ -117,7 +117,7 @@ func loadObj(path string) (*scene.Group, error) {
 
 		}
 
-		var m mesh.Mesh[float32]
+		var m mesh.Mesh
 		switch {
 		case len(tris) != 0 && len(quads) == 0: // only with triangles
 			m = mesh.NewTriangleMesh(tris)

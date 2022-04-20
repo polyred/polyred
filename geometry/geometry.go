@@ -15,20 +15,20 @@ import (
 var (
 	_ object.Object[float32] = &Geometry{}
 	// FIXME: geometry should or should not implements mesh (?)
-	// _ mesh.Mesh[float32]     = &Geometry{}
+	// _ mesh.Mesh     = &Geometry{}
 )
 
 // Geometry represents a geometric object that can be rendered.
 // A geometry consists of a vertex-based object and a list of materials.
 // The vertices of the object contains an ID that refers the to associated list of materials.
 type Geometry struct {
-	mesh mesh.Mesh[float32]
+	mesh mesh.Mesh
 	mats []material.ID
 
 	math.TransformContext[float32]
 }
 
-func New(mesh mesh.Mesh[float32], ids ...material.ID) *Geometry {
+func New(mesh mesh.Mesh, ids ...material.ID) *Geometry {
 	g := &Geometry{
 		mesh: mesh,
 		mats: ids,

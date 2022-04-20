@@ -5,7 +5,7 @@ import (
 	"poly.red/geometry/primitive"
 )
 
-var _ Mesh[float32] = &QuadMesh{}
+var _ Mesh = &QuadMesh{}
 
 type QuadMesh struct {
 	ibo buffer.IndexBuffer
@@ -47,8 +47,7 @@ func NewQuadMesh(quads []*primitive.Quad) *QuadMesh {
 		aabb:  &aabb,
 	}
 }
-func (m *QuadMesh) IndexBuffer() buffer.IndexBuffer   { return m.ibo }
-func (m *QuadMesh) VertexBuffer() buffer.VertexBuffer { return m.vbo }
+
 func (m *QuadMesh) Triangles() []*primitive.Triangle {
 	tris := []*primitive.Triangle{}
 	for _, quad := range m.quads {

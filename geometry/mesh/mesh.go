@@ -9,15 +9,10 @@
 package mesh
 
 import (
-	"poly.red/buffer"
 	"poly.red/geometry/primitive"
-	"poly.red/math"
 )
 
-type Mesh[T math.Float] interface {
+type Mesh interface {
 	AABB() primitive.AABB
-
-	IndexBuffer() buffer.IndexBuffer
-	VertexBuffer() buffer.VertexBuffer
 	Triangles() []*primitive.Triangle
 }
