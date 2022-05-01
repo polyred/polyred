@@ -60,6 +60,6 @@ func readGPU[T DataType](b *buffer, data []T) {
 	copy(data, bytes.Convert[T](buf))
 	device.BindBuffer(b.target, b.id)
 	if !device.UnmapBuffer(b.target) {
-		panic("gpu glUnmapBuffer failed")
+		panic("gpu: glUnmapBuffer failed")
 	}
 }

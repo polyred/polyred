@@ -19,9 +19,8 @@ func TestParseObj(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	v, err := json.Marshal(f)
+	_, err = json.Marshal(f)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%s", v)
 }

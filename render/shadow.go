@@ -175,7 +175,7 @@ func (r *Renderer) drawDepth(index int, t *primitive.Triangle, mvp shader.MVP) {
 	t3.Pos = t3.Pos.Apply(mvp.Viewport).Pos()
 
 	// Backface culling
-	if t2.Pos.Sub(t1.Pos).Cross(t3.Pos.Sub(t1.Pos)).Z < 0 {
+	if r.cullBackFace(t1.Pos, t2.Pos, t3.Pos) {
 		return
 	}
 

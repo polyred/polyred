@@ -24,7 +24,7 @@ type Scene struct {
 	Scene *scene.Scene
 }
 
-func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
+func NewMcGuireScene(t *testing.T, w, h int) ([]*Scene, camera.Interface) {
 	models := []string{
 		// "AL05a",
 		// "AL05m",
@@ -152,7 +152,6 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 		// "lost_empire",
 		// "mitsuba",
 		// "mitsuba-sphere",
-		// FIXME: this cannot be rendered.
 		"monkey",
 		// "plane",
 		// "powerplant",
@@ -193,7 +192,11 @@ func NewMcGuireScene(w, h int) ([]*Scene, camera.Interface) {
 			Name: mo,
 		}
 
-		m := model.MustLoad(fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, mo))
+		path := fmt.Sprintf("%s/Dropbox/Data/%s.obj", home, mo)
+		m, err := model.Load(path)
+		if err != nil {
+			t.Skipf("cannot load model %s: %v", path, err)
+		}
 		m.Normalize()
 		s.Scene.Add(m)
 
@@ -228,7 +231,7 @@ func TestMcguire(t *testing.T) {
 
 	for _, test := range tests {
 		t.Logf("%s under settings: %#v", test.Name, test)
-		ss, cam := NewMcGuireScene(test.Width, test.Height)
+		ss, cam := NewMcGuireScene(t, test.Width, test.Height)
 		rendopts := []render.Option{render.Camera(cam)}
 		rendopts = append(rendopts, test.RenderOpts...)
 

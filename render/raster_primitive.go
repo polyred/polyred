@@ -14,15 +14,10 @@ import (
 
 // DrawPrimitives is a pass that executes Draw call concurrently on all
 // given triangle primitives, and draws all geometric and rendering
-// information on the given buffer. This primitive uses supplied shader
-// programs (i.e. currently supports vertex shader and fragment shader)
-//
-// See shader.Program for more information regarding shader programming.
-func (r *Renderer) DrawPrimitives(
-	buf *buffer.FragmentBuffer,
-	tris []*primitive.Triangle,
-	prog ...shader.Vertex,
-) {
+// information on the given buffer. This primitive uses the provided
+// shader programs. See shader.Program for more information regarding
+// "shader programming".
+func (r *Renderer) DrawPrimitives(buf *buffer.FragmentBuffer, tris []*primitive.Triangle, prog ...shader.Vertex) {
 	l := len(tris)
 	r.sched.Add(l)
 	for i := 0; i < l; i++ {

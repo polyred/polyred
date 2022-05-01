@@ -15,7 +15,7 @@ import (
 var (
 	_ object.Object[float32] = &Geometry{}
 	// FIXME: geometry should or should not implements mesh (?)
-	// _ mesh.Mesh     = &Geometry{}
+	_ mesh.Mesh = &Geometry{}
 )
 
 // Geometry represents a geometric object that can be rendered.
