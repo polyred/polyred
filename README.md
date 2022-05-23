@@ -7,7 +7,3 @@ import "poly.red"
 ```
 
 _Warning: under experiment, expect to break at anytime._
-
-## License
-
-Copyright &copy; 2022 [Changkun Ou](https://changkun.de). All rights reserved.
