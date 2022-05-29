@@ -135,7 +135,6 @@ func (r *Renderer) passShadows(index int) {
 		mvp.Normal = mvp.Model.Inv().T()
 
 		tris := g.Triangles()
-		r.sched.Add(len(tris))
 		for i := range tris {
 			t := tris[i]
 			r.sched.Run(func() {

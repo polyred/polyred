@@ -163,10 +163,6 @@ func (r *Renderer) passForward() {
 		),
 	}
 	scene.IterObjects(r.cfg.Scene, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
-		r.sched.Add(len(g.Triangles()))
-		return true
-	})
-	scene.IterObjects(r.cfg.Scene, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
 		mvp.Model = modelMatrix.MulM(g.ModelMatrix())
 		mvp.Normal = mvp.Model.Inv().T()
 		mvp.ViewInv = mvp.View.Inv()

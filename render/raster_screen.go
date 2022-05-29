@@ -33,8 +33,6 @@ func (r *Renderer) DrawFragments(buf *buffer.FragmentBuffer, shaders ...shader.F
 	defer r.sched.Wait()
 
 	if wsteps == 0 && hsteps == 0 {
-		r.sched.Add(1)
-
 		// Note: sadly that the executing function will escape to the
 		// heap which increases the memory allocation. No workaround.
 		r.sched.Run(func() {
@@ -46,7 +44,6 @@ func (r *Renderer) DrawFragments(buf *buffer.FragmentBuffer, shaders ...shader.F
 	}
 
 	numTasks := n / batchSize
-	r.sched.Add(numTasks)
 	for i := 0; i < numTasks; i++ {
 		ii := i
 		r.sched.Run(func() {
@@ -60,7 +57,6 @@ func (r *Renderer) DrawFragments(buf *buffer.FragmentBuffer, shaders ...shader.F
 	}
 
 	if n%batchSize != 0 {
-		r.sched.Add(1)
 		r.sched.Run(func() {
 			for j := numTasks * batchSize; j < n; j++ {
 				x, y := j%w, j/w

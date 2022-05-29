@@ -19,7 +19,6 @@ import (
 // "shader programming".
 func (r *Renderer) DrawPrimitives(buf *buffer.FragmentBuffer, tris []*primitive.Triangle, prog ...shader.Vertex) {
 	l := len(tris)
-	r.sched.Add(l)
 	for i := 0; i < l; i++ {
 		tri := tris[i]
 		r.sched.Run(func() {
