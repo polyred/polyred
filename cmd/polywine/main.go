@@ -57,7 +57,7 @@ func newApp() *App {
 	prog := &shader.TextureShader{
 		ViewMatrix: cam.ViewMatrix(),
 		ProjMatrix: cam.ProjMatrix(),
-		Texture:    buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage("../../testdata/bunny.png"))),
+		Texture:    buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage("../../internal/testdata/bunny.png"))),
 	}
 	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, scene: s}
 	a.ctrl = controls.NewOrbitControl(a.w, a.h, cam)

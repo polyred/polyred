@@ -22,6 +22,7 @@ func init() {
 }
 
 func main() {
-	t.Draw(imageutil.MustLoadImage("../out/shadow.png"))
+	// TODO: make this example interactive with controls.
+	t.Draw(imageutil.MustLoadImage("../../internal/examples/out/shadow.png"))
 	t.Flush()
 }
