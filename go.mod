@@ -1,3 +1,3 @@
 module poly.red
 
-go 1.18
+go 1.20
