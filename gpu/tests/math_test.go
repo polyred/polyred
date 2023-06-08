@@ -56,6 +56,21 @@ func TestSqrt(t *testing.T) {
 	}
 }
 
+func TestMul(t *testing.T) {
+	if !tests.Driver().Available() {
+		t.Skip("no GPU device available")
+	}
+
+	m1 := math.NewRandMat[float32](10, 10)
+	m2 := math.NewRandMat[float32](10, 10)
+	sum1 := tests.Mul(m1, m2)
+	sum2 := m1.Mul(m2)
+
+	if !sum1.Eq(sum2) {
+		t.Fatalf("GPU Mul receives different results compare to CPU: GPU(%v)*CPU(%v)=(%v), m1(%v), m2(%v)", sum1, sum2, sum1.Sub(sum2), m1, m2)
+	}
+}
+
 func BenchmarkAdd(b *testing.B) {
 	if !tests.Driver().Available() {
 		b.Skip("no Metal device available")
@@ -69,10 +84,43 @@ func BenchmarkAdd(b *testing.B) {
 		var outCPU math.Mat[float32]
 
 		b.Run(fmt.Sprintf("GPU(%vx%v)", size, size), func(b *testing.B) {
-			outGPU = tests.Add(m1, m2)
+			for i := 0; i < b.N; i++ {
+				outGPU = tests.Add(m1, m2)
+			}
 		})
 		b.Run(fmt.Sprintf("CPU(%vx%v)", size, size), func(b *testing.B) {
-			outCPU = m1.Add(m2)
+			for i := 0; i < b.N; i++ {
+				outCPU = m1.Add(m2)
+			}
+		})
+
+		if !outCPU.Eq(outGPU) {
+			b.Fatal("inconsistent results")
+		}
+	}
+}
+
+func BenchmarkMul(b *testing.B) {
+	if !tests.Driver().Available() {
+		b.Skip("no Metal device available")
+	}
+
+	for size := 1 << 5; size < 2<<14; size *= 2 {
+		m1 := math.NewRandMat[float32](size, size)
+		m2 := math.NewRandMat[float32](size, size)
+
+		var outGPU math.Mat[float32]
+		var outCPU math.Mat[float32]
+
+		b.Run(fmt.Sprintf("GPU(%vx%v)", size, size), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				outGPU = tests.Mul(m1, m2)
+			}
+		})
+		b.Run(fmt.Sprintf("CPU(%vx%v)", size, size), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				outCPU = m1.Mul(m2)
+			}
 		})
 
 		if !outCPU.Eq(outGPU) {

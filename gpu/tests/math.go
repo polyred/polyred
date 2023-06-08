@@ -24,3 +24,8 @@ func Sub[T DataType](m1, m2 math.Mat[T]) math.Mat[T] {
 func Sqrt[T DataType](m math.Mat[T]) math.Mat[T] {
 	return sqrt(m)
 }
+
+// Mul is a GPU version of math.Mat[float32].Mul method.
+func Mul[T DataType](m1, m2 math.Mat[T]) math.Mat[T] {
+	return mul(m1, m2)
+}

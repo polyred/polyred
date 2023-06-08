@@ -116,7 +116,6 @@ func sub[T DataType](m1, m2 math.Mat[T]) math.Mat[T] {
 }
 
 func sqrt[T DataType](m math.Mat[T]) math.Mat[T] {
-
 	a := device.MakeBuffer(unsafe.Pointer(&m.Data[0]), uintptr(math.TypeSize[T]()*len(m.Data)), mtl.ResourceStorageModeShared)
 	defer a.Release()
 	out := device.MakeBuffer(nil, uintptr(math.TypeSize[T]()*len(m.Data)), mtl.ResourceStorageModeShared)
@@ -152,6 +151,59 @@ func sqrt[T DataType](m math.Mat[T]) math.Mat[T] {
 	}
 }
 
+type params struct {
+	WidthA  int
+	HeightA int
+	WidthB  int
+}
+
+func mul[T DataType](m1, m2 math.Mat[T]) math.Mat[T] {
+	if m1.Col != m2.Row {
+		panic("math: mismatched matrix dimension")
+	}
+
+	a := device.MakeBuffer(unsafe.Pointer(&m1.Data[0]), uintptr(math.TypeSize[T]()*len(m1.Data)), mtl.ResourceStorageModeShared)
+	defer a.Release()
+	b := device.MakeBuffer(unsafe.Pointer(&m2.Data[0]), uintptr(math.TypeSize[T]()*len(m2.Data)), mtl.ResourceStorageModeShared)
+	defer b.Release()
+	out := device.MakeBuffer(nil, uintptr(math.TypeSize[T]()*len(m1.Data)), mtl.ResourceStorageModeShared)
+	defer out.Release()
+
+	cq := device.MakeCommandQueue()
+	defer cq.Release()
+	cb := cq.MakeCommandBuffer()
+	defer cb.Release()
+
+	ce := cb.MakeComputeCommandEncoder()
+	ce.SetComputePipelineState(mathLib.funcMul.cps)
+	ce.SetBuffer(a, 0, 0)
+	ce.SetBuffer(b, 0, 1)
+	ce.SetBuffer(out, 0, 2)
+
+	pp := params{
+		WidthA:  m1.Col,
+		HeightA: m1.Row,
+		WidthB:  m2.Col,
+	}
+	dp := device.MakeBuffer(unsafe.Pointer(&pp), uintptr(unsafe.Sizeof(params{})), mtl.ResourceStorageModeShared)
+	ce.SetBuffer(dp, 0, 3)
+	ce.DispatchThreads(
+		mtl.Size{Width: int(pp.WidthB * pp.HeightA), Height: 1, Depth: 1},
+		mtl.Size{Width: 1, Height: 1, Depth: 1})
+
+	ce.EndEncoding()
+	cb.Commit()
+	cb.WaitUntilCompleted()
+
+	data := make([]T, len(m1.Data))
+	copy(data, unsafe.Slice((*T)(out.Content()), pp.WidthB*pp.HeightA))
+	return math.Mat[T]{
+		Row:  m1.Row,
+		Col:  m1.Col,
+		Data: data,
+	}
+}
+
 type computeFunc struct {
 	fn  mtl.Function
 	cps mtl.ComputePipelineState
@@ -162,6 +214,7 @@ type shaderFn struct {
 	funcAdd  computeFunc
 	funcSub  computeFunc
 	funcSqrt computeFunc
+	funcMul  computeFunc
 }
 
 var (
@@ -194,5 +247,10 @@ func newMathLibrary() (fn Function, err error) {
 	funcSqrt.fn = try(lib.MakeFunction("sqrt0"))
 	funcSqrt.cps = try(device.MakeComputePipelineState(funcSqrt.fn))
 	fn.funcSqrt = funcSqrt
+
+	funcMul := computeFunc{}
+	funcMul.fn = try(lib.MakeFunction("mul0"))
+	funcMul.cps = try(device.MakeComputePipelineState(funcMul.fn))
+	fn.funcMul = funcMul
 	return
 }

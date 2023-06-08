@@ -120,6 +120,8 @@ func sqrt[T DataType](m math.Mat[T]) math.Mat[T] {
 	}
 }
 
+func mul[T DataType](m1, m2 math.Mat[T]) math.Mat[T] { panic("unimplemented") }
+
 type shaderFn struct {
 	programId gles.Program
 	funcAdd   computeFunc

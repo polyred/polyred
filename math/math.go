@@ -51,6 +51,7 @@ func ApproxLess[T Float](v1, v2, epsilon T) bool {
 // Round returns the nearest integer, rounding half away from zero.
 //
 // Special cases are:
+//
 //	Round(±0) = ±0
 //	Round(±Inf) = ±Inf
 //	Round(NaN) = NaN
@@ -66,6 +67,7 @@ func Inf(sign int) float32 {
 // Pow returns x**y, the base-x exponential of y.
 //
 // Special cases are (in order):
+//
 //	Pow(x, ±0) = 1 for any x
 //	Pow(1, y) = 1 for any y
 //	Pow(x, 1) = x for any x
@@ -93,6 +95,7 @@ func Pow[T Float](x, y T) T {
 // Floor returns the greatest integer value less than or equal to x.
 //
 // Special cases are:
+//
 //	Floor(±0) = ±0
 //	Floor(±Inf) = ±Inf
 //	Floor(NaN) = NaN
@@ -104,6 +107,7 @@ func Floor[T Float](x T) T {
 // that sum to f. Both values have the same sign as f.
 //
 // Special cases are:
+//
 //	Modf(±Inf) = ±Inf, NaN
 //	Modf(NaN) = NaN, NaN
 func Modf[T Float](f T) (T, T) {
@@ -120,6 +124,7 @@ func Log2[T Float](x T) T {
 // Abs returns the absolute value of x.
 //
 // Special cases are:
+//
 //	Abs(±Inf) = +Inf
 //	Abs(NaN) = NaN
 func Abs[T Float](x T) T {
@@ -129,6 +134,7 @@ func Abs[T Float](x T) T {
 // Ceil returns the least integer value greater than or equal to x.
 //
 // Special cases are:
+//
 //	Ceil(±0) = ±0
 //	Ceil(±Inf) = ±Inf
 //	Ceil(NaN) = NaN
@@ -139,6 +145,7 @@ func Ceil[T Float](x T) T {
 // Cos returns the cosine of the radian argument x.
 //
 // Special cases are:
+//
 //	Cos(±Inf) = NaN
 //	Cos(NaN) = NaN
 func Cos[T Float](x T) T {
@@ -148,6 +155,7 @@ func Cos[T Float](x T) T {
 // Acos returns the arccosine, in radians, of x.
 //
 // Special case is:
+//
 //	Acos(x) = NaN if x < -1 or x > 1
 func Acos[T Float](x T) T {
 	return T(math.Acos(float64(x)))
@@ -156,6 +164,7 @@ func Acos[T Float](x T) T {
 // Sin returns the sine of the radian argument x.
 //
 // Special cases are:
+//
 //	Sin(±0) = ±0
 //	Sin(±Inf) = NaN
 //	Sin(NaN) = NaN
@@ -166,6 +175,7 @@ func Sin[T Float](x T) T {
 // Tan returns the tangent of the radian argument x.
 //
 // Special cases are:
+//
 //	Tan(±0) = ±0
 //	Tan(±Inf) = NaN
 //	Tan(NaN) = NaN
@@ -176,8 +186,9 @@ func Tan[T Float](x T) T {
 // Atan returns the arctangent, in radians, of x.
 //
 // Special cases are:
-//      Atan(±0) = ±0
-//      Atan(±Inf) = ±Pi/2
+//
+//	Atan(±0) = ±0
+//	Atan(±Inf) = ±Pi/2
 func Atan[T Float](x T) T {
 	return T(math.Atan(float64(x)))
 }
@@ -187,6 +198,7 @@ func Atan[T Float](x T) T {
 // of the return value.
 //
 // Special cases are (in order):
+//
 //	Atan2(y, NaN) = NaN
 //	Atan2(NaN, x) = NaN
 //	Atan2(+0, x>=0) = +0
@@ -211,6 +223,7 @@ func Atan2[T Float](y, x T) T {
 // Sqrt returns the square root of x.
 //
 // Special cases are:
+//
 //	Sqrt(+Inf) = +Inf
 //	Sqrt(±0) = ±0
 //	Sqrt(x < 0) = NaN
