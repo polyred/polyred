@@ -94,7 +94,7 @@ Headless path stays the default for tests.
 - **C4 Headless render proof — DONE** (`gpu/render_darwin_test.go`): a triangle
   renders to an offscreen RGBA texture through the Device API and reads back red
   at center, cgo-free.
-- **C3 Go→shader vertex/fragment — TODO**: this slice uses hand-written MSL.
+- **C3 Go→shader vertex/fragment — DONE** (`gpu/shader`, commit `3f56ffc`): `//gpu:vertex`/`//gpu:fragment` directives, Vec4→float4, value returns; a triangle rendered headless from Go-authored vertex+fragment shaders (`gpu/shader/render_darwin_test.go`).
 - **C5 renderer integration (`passDeferred` on GPU) — TODO**.
 - **C6 windowed present — TODO**.
 
