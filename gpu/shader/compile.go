@@ -156,6 +156,23 @@ func isIntType(t string) bool {
 	return t == "int" || t == "uint" || t == "int32" || t == "uint32"
 }
 
+func isVecType(t string) bool {
+	return t == "float2" || t == "float3" || t == "float4"
+}
+
+// isSwizzle reports whether s is a vector component selector (1-4 of x/y/z/w).
+func isSwizzle(s string) bool {
+	if s == "" || len(s) > 4 {
+		return false
+	}
+	for _, c := range s {
+		if c != 'x' && c != 'y' && c != 'z' && c != 'w' {
+			return false
+		}
+	}
+	return true
+}
+
 func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kernel, error) {
 	stage := stageOf(fn.Doc)
 	params := flattenParams(fn.Type.Params)
@@ -557,6 +574,13 @@ func (c *compiler) expr(e ast.Expr) (string, error) {
 		if err != nil {
 			return "", err
 		}
+		// Vector component access / swizzle: on a float2/3/4, X/Y/Z/W (and
+		// multi-letter swizzles) map to the lowercase MSL components.
+		if bt := c.inferType(ex.X); bt == "float2" || bt == "float3" || bt == "float4" {
+			if sw := strings.ToLower(ex.Sel.Name); isSwizzle(sw) {
+				return base + "." + sw, nil
+			}
+		}
 		return base + "." + ex.Sel.Name, nil
 	case *ast.CallExpr:
 		return c.call(ex)
@@ -706,6 +730,13 @@ func (c *compiler) inferType(e ast.Expr) string {
 	case *ast.BinaryExpr:
 		lt := c.inferType(ex.X)
 		rt := c.inferType(ex.Y)
+		// a vector operand makes the result that vector type (vec op scalar)
+		if isVecType(lt) {
+			return lt
+		}
+		if isVecType(rt) {
+			return rt
+		}
 		if lt == "float" || rt == "float" {
 			return "float"
 		}
@@ -715,6 +746,13 @@ func (c *compiler) inferType(e ast.Expr) string {
 		return lt
 	case *ast.ParenExpr:
 		return c.inferType(ex.X)
+	case *ast.CompositeLit:
+		if tn, ok := identType(ex.Type); ok {
+			if mt, ok := goToMSLType(tn); ok {
+				return mt
+			}
+			return tn // user struct
+		}
 	case *ast.SelectorExpr:
 		// struct field: look up field type
 		if base, ok := ex.X.(*ast.Ident); ok {
