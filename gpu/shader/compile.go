@@ -40,9 +40,10 @@ type Binding struct {
 	Kind  BindingKind
 }
 
-// Kernel is a compiled compute kernel.
+// Kernel is a compiled kernel (compute, vertex, or fragment).
 type Kernel struct {
 	Name     string
+	Stage    Stage
 	Bindings []Binding
 	MSL      string
 }
@@ -55,7 +56,7 @@ var builtins = map[string]string{
 	"float32": "float", "float": "float", "uint": "uint", "int": "int",
 }
 
-// goToMSLType maps a Go scalar type name to its MSL spelling.
+// goToMSLType maps a Go scalar/vector type name to its MSL spelling.
 func goToMSLType(name string) (string, bool) {
 	switch name {
 	case "float32":
@@ -64,8 +65,40 @@ func goToMSLType(name string) (string, bool) {
 		return "uint", true
 	case "int", "int32":
 		return "int", true
+	case "Vec2":
+		return "float2", true
+	case "Vec3":
+		return "float3", true
+	case "Vec4":
+		return "float4", true
 	}
 	return "", false
+}
+
+// Stage is the pipeline stage a kernel targets.
+type Stage int
+
+const (
+	StageCompute Stage = iota
+	StageVertex
+	StageFragment
+)
+
+// stageOf reads a //gpu:vertex / //gpu:fragment directive from a func's doc
+// comment; absent a directive the kernel is compute.
+func stageOf(doc *ast.CommentGroup) Stage {
+	if doc == nil {
+		return StageCompute
+	}
+	for _, c := range doc.List {
+		switch strings.TrimSpace(c.Text) {
+		case "//gpu:vertex":
+			return StageVertex
+		case "//gpu:fragment":
+			return StageFragment
+		}
+	}
+	return StageCompute
 }
 
 // Compile parses src and compiles every kernel function it finds, returning them
@@ -73,7 +106,7 @@ func goToMSLType(name string) (string, bool) {
 // emitted into each kernel's MSL.
 func Compile(src string) (map[string]*Kernel, error) {
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "kernel.go", src, 0)
+	file, err := parser.ParseFile(fset, "kernel.go", src, parser.ParseComments)
 	if err != nil {
 		return nil, fmt.Errorf("shader: parse: %w", err)
 	}
@@ -115,11 +148,13 @@ type compiler struct {
 	buf     strings.Builder
 }
 
+func isIntType(t string) bool {
+	return t == "int" || t == "uint" || t == "int32" || t == "uint32"
+}
+
 func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kernel, error) {
+	stage := stageOf(fn.Doc)
 	params := flattenParams(fn.Type.Params)
-	if len(params) == 0 {
-		return nil, fmt.Errorf("kernel needs a thread-id parameter")
-	}
 
 	c := &compiler{structs: structs, env: map[string]string{}, written: map[string]bool{}}
 
@@ -140,18 +175,30 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 		return true
 	})
 
-	gid := params[0]
-	gidType, ok := identType(gid.typ)
-	if !ok || (gidType != "int" && gidType != "uint" && gidType != "int32" && gidType != "uint32") {
-		return nil, fmt.Errorf("first parameter %q must be the int/uint thread id", gid.name)
+	// compute and vertex kernels take a leading id parameter
+	// (thread_position_in_grid / vertex_id); fragment kernels do not.
+	hasID := stage == StageCompute || stage == StageVertex
+	bufParams := params
+	var idName string
+	if hasID {
+		if len(params) == 0 {
+			return nil, fmt.Errorf("kernel needs a leading id parameter")
+		}
+		gid := params[0]
+		gidType, ok := identType(gid.typ)
+		if !ok || !isIntType(gidType) {
+			return nil, fmt.Errorf("first parameter %q must be the int/uint id", gid.name)
+		}
+		c.env[gid.name] = "uint"
+		idName = gid.name
+		bufParams = params[1:]
 	}
-	c.env[gid.name] = "uint"
 
 	var bindings []Binding
 	var usedStructs []string
 	bufIndex := 0
 	var sig []string
-	for _, p := range params[1:] {
+	for _, p := range bufParams {
 		switch t := p.typ.(type) {
 		case *ast.ArrayType: // []float32 storage buffer
 			if t.Len != nil {
@@ -186,8 +233,14 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 			return nil, fmt.Errorf("parameter %q: unsupported parameter type", p.name)
 		}
 	}
-	// Thread id parameter goes last in MSL.
-	sig = append(sig, fmt.Sprintf("uint %s [[thread_position_in_grid]]", gid.name))
+	// The id parameter goes last in MSL with the stage-appropriate attribute.
+	if hasID {
+		attr := "[[thread_position_in_grid]]"
+		if stage == StageVertex {
+			attr = "[[vertex_id]]"
+		}
+		sig = append(sig, fmt.Sprintf("uint %s %s", idName, attr))
+	}
 
 	var body strings.Builder
 	bc := &compiler{structs: structs, env: c.env, written: c.written, buf: body}
@@ -195,14 +248,34 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 		return nil, err
 	}
 
+	// Function keyword and return type per stage.
+	kw, ret := "kernel", "void"
+	switch stage {
+	case StageVertex, StageFragment:
+		if stage == StageVertex {
+			kw = "vertex"
+		} else {
+			kw = "fragment"
+		}
+		if fn.Type.Results == nil || len(fn.Type.Results.List) != 1 {
+			return nil, fmt.Errorf("%s kernel must return exactly one value", kw)
+		}
+		rt, _ := identType(fn.Type.Results.List[0].Type)
+		mt, ok := goToMSLType(rt)
+		if !ok {
+			return nil, fmt.Errorf("unsupported return type %q", rt)
+		}
+		ret = mt
+	}
+
 	var msl strings.Builder
 	msl.WriteString("#include <metal_stdlib>\nusing namespace metal;\n\n")
 	for _, name := range usedStructs {
 		emitStruct(&msl, name, structs[name])
 	}
-	fmt.Fprintf(&msl, "kernel void %s(%s) {\n%s}\n", fn.Name.Name, strings.Join(sig, ",\n    "), bc.buf.String())
+	fmt.Fprintf(&msl, "%s %s %s(%s) {\n%s}\n", kw, ret, fn.Name.Name, strings.Join(sig, ",\n    "), bc.buf.String())
 
-	return &Kernel{Name: fn.Name.Name, Bindings: bindings, MSL: msl.String()}, nil
+	return &Kernel{Name: fn.Name.Name, Stage: stage, Bindings: bindings, MSL: msl.String()}, nil
 }
 
 func emitStruct(w *strings.Builder, name string, st *ast.StructType) {
@@ -281,7 +354,15 @@ func (c *compiler) stmt(s ast.Stmt, depth int) error {
 		return c.stmts(st.List, depth)
 	case *ast.ReturnStmt:
 		c.indent(depth)
-		c.buf.WriteString("return;\n")
+		if len(st.Results) == 0 {
+			c.buf.WriteString("return;\n")
+			return nil
+		}
+		v, err := c.expr(st.Results[0])
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(&c.buf, "return %s;\n", v)
 		return nil
 	default:
 		return fmt.Errorf("unsupported statement %T", s)
@@ -437,6 +518,25 @@ func (c *compiler) expr(e ast.Expr) (string, error) {
 		return base + "." + ex.Sel.Name, nil
 	case *ast.CallExpr:
 		return c.call(ex)
+	case *ast.CompositeLit:
+		// Vec4{a,b,c,d} -> float4(a, b, c, d)
+		tname, ok := identType(ex.Type)
+		if !ok {
+			return "", fmt.Errorf("unsupported composite literal")
+		}
+		mt, ok := goToMSLType(tname)
+		if !ok {
+			return "", fmt.Errorf("unsupported composite type %q", tname)
+		}
+		var elems []string
+		for _, e := range ex.Elts {
+			v, err := c.expr(e)
+			if err != nil {
+				return "", err
+			}
+			elems = append(elems, v)
+		}
+		return fmt.Sprintf("%s(%s)", mt, strings.Join(elems, ", ")), nil
 	case *ast.UnaryExpr:
 		v, err := c.expr(ex.X)
 		if err != nil {
