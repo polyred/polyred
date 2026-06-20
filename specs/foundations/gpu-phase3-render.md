@@ -121,9 +121,18 @@ Headless path stays the default for tests.
     pure-Go kernel self-check. NOTE: the concurrent forward pass is
     non-deterministic for overlapping objects, so multi-object parity must test
     single-worker.
+  - **Shadow maps** (commit `f4f50c7`): a second compute pass
+    (`render/gpudeferred.go` shadowKernel) projects each fragment to light space
+    (combined `Viewport·lightProj·lightView·ScreenToWorld`, Mat4·vector), looks
+    up the indexed shadow depth map, and darkens occluded fragments by
+    `pow(0.5, occluded)` with the engine's exact round/clamp/truncate. Single
+    casting light + `ReceiveShadow` materials; CPU fallback otherwise. A
+    bunny+ground shadow scene renders CPU vs GPU within ±1
+    (`render/gpudeferred_shadow_test.go`, `Workers(1)`).
   - The GPU deferred offload now covers **point + directional lights + ambient +
-    multiple materials**. Remaining generality: shadow maps, ambient occlusion
-    (need GPU depth-map / neighbour sampling).
+    multiple materials + shadow maps**. Remaining generality: ambient occlusion
+    (SSAO neighbour depth sampling — engine flags its own as "naive and super
+    slow"), and multiple shadow-casting lights.
 - **C6 windowed present — TODO** (needs CAMetalLayer via `gpu/ctx/ca`, cgo).
 
 ## Notes
