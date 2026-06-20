@@ -22,13 +22,13 @@ var errStop = errors.New("iteration stop")
 // of lower-level objects is equal to its model matrix multiplied
 // by higher level parent group model matrix on the left side.
 //
-//             Scene
-//            /  |   \
-//           /   |    \
-//      Group  Object  Object
-//        / \
-//       /   \
-//    Object  Object
+//	         Scene
+//	        /  |   \
+//	       /   |    \
+//	  Group  Object  Object
+//	    / \
+//	   /   \
+//	Object  Object
 type Scene struct {
 	// root group is a single group for accessing
 	// all added objects.

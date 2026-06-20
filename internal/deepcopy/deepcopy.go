@@ -37,10 +37,10 @@ import (
 // There are a few exceptions that may result in a deeply copied value not
 // deeply equal (asserted by DeepEqual(dst, src)) to the source value:
 //
-// 1) Func values are still refer to the same function
-// 2) Chan values are replaced by newly created channels
-// 3) One-way Chan values (receive or read-only) values are still refer
-//    to the same channel
+//  1. Func values are still refer to the same function
+//  2. Chan values are replaced by newly created channels
+//  3. One-way Chan values (receive or read-only) values are still refer
+//     to the same channel
 //
 // Note that while correct uses of Value do exist, they are not rare.
 // The use of Value often indicates the copying object does not contain
