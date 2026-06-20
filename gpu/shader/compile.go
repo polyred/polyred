@@ -21,6 +21,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -221,15 +222,21 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 			bindings = append(bindings, Binding{Index: bufIndex, Name: p.name, Kind: StorageBuffer})
 			c.env[p.name] = mt + "*"
 			bufIndex++
-		case *ast.Ident: // struct-by-value uniform
+		case *ast.Ident: // struct param
 			if _, ok := structs[t.Name]; !ok {
 				return nil, fmt.Errorf("parameter %q: unsupported type %q", p.name, t.Name)
 			}
-			sig = append(sig, fmt.Sprintf("constant %s& %s [[buffer(%d)]]", t.Name, p.name, bufIndex))
-			bindings = append(bindings, Binding{Index: bufIndex, Name: p.name, Kind: UniformBuffer})
 			c.env[p.name] = t.Name
 			usedStructs = append(usedStructs, t.Name)
-			bufIndex++
+			if stage == StageFragment {
+				// interpolated vertex output (varyings) as stage input
+				sig = append(sig, fmt.Sprintf("%s %s [[stage_in]]", t.Name, p.name))
+			} else {
+				// struct-by-value uniform
+				sig = append(sig, fmt.Sprintf("constant %s& %s [[buffer(%d)]]", t.Name, p.name, bufIndex))
+				bindings = append(bindings, Binding{Index: bufIndex, Name: p.name, Kind: UniformBuffer})
+				bufIndex++
+			}
 		default:
 			return nil, fmt.Errorf("parameter %q: unsupported parameter type", p.name)
 		}
@@ -262,11 +269,16 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 			return nil, fmt.Errorf("%s kernel must return exactly one value", kw)
 		}
 		rt, _ := identType(fn.Type.Results.List[0].Type)
-		mt, ok := goToMSLType(rt)
-		if !ok {
+		if mt, ok := goToMSLType(rt); ok {
+			// built-in vector return (e.g. fragment float4)
+			ret = mt
+		} else if _, isStruct := structs[rt]; isStruct {
+			// vertex output struct (varyings + [[position]])
+			ret = rt
+			usedStructs = append(usedStructs, rt)
+		} else {
 			return nil, fmt.Errorf("unsupported return type %q", rt)
 		}
-		ret = mt
 	}
 
 	var msl strings.Builder
@@ -287,8 +299,17 @@ func emitStruct(w *strings.Builder, name string, st *ast.StructType) {
 		if !ok {
 			mt = ft
 		}
+		// A `gpu:"position"` tag marks the clip-space position output.
+		attr := ""
+		if f.Tag != nil {
+			tag := reflect.StructTag(strings.Trim(f.Tag.Value, "`"))
+			switch tag.Get("gpu") {
+			case "position":
+				attr = " [[position]]"
+			}
+		}
 		for _, n := range f.Names {
-			fmt.Fprintf(w, "    %s %s;\n", mt, n.Name)
+			fmt.Fprintf(w, "    %s %s%s;\n", mt, n.Name, attr)
 		}
 	}
 	w.WriteString("};\n\n")
@@ -535,15 +556,28 @@ func (c *compiler) expr(e ast.Expr) (string, error) {
 	case *ast.CallExpr:
 		return c.call(ex)
 	case *ast.CompositeLit:
-		// Vec4{a,b,c,d} -> float4(a, b, c, d)
-		tname, ok := identType(ex.Type)
-		if !ok {
-			return "", fmt.Errorf("unsupported composite literal")
+		return c.compositeLit(ex)
+	case *ast.UnaryExpr:
+		v, err := c.expr(ex.X)
+		if err != nil {
+			return "", err
 		}
-		mt, ok := goToMSLType(tname)
-		if !ok {
-			return "", fmt.Errorf("unsupported composite type %q", tname)
-		}
+		return ex.Op.String() + v, nil
+	}
+	return "", fmt.Errorf("unsupported expression %T", e)
+}
+
+// compositeLit translates Vec4{...} -> float4(...) and a user-struct literal
+// VOut{...} -> VOut{ordered fields}. Keyed and positional forms are supported.
+func (c *compiler) compositeLit(ex *ast.CompositeLit) (string, error) {
+	tname, ok := identType(ex.Type)
+	if !ok {
+		return "", fmt.Errorf("unsupported composite literal")
+	}
+
+	// Built-in vectors (Vec4 -> float4) take priority even if the source also
+	// declares them as a struct for Go's benefit.
+	if mt, ok := goToMSLType(tname); ok {
 		var elems []string
 		for _, e := range ex.Elts {
 			v, err := c.expr(e)
@@ -553,14 +587,62 @@ func (c *compiler) expr(e ast.Expr) (string, error) {
 			elems = append(elems, v)
 		}
 		return fmt.Sprintf("%s(%s)", mt, strings.Join(elems, ", ")), nil
-	case *ast.UnaryExpr:
-		v, err := c.expr(ex.X)
+	}
+
+	if st, isStruct := c.structs[tname]; isStruct {
+		var fieldNames []string
+		for _, f := range st.Fields.List {
+			for _, n := range f.Names {
+				fieldNames = append(fieldNames, n.Name)
+			}
+		}
+		keyed := map[string]string{}
+		var positional []string
+		isKeyed := false
+		for _, e := range ex.Elts {
+			if kv, ok := e.(*ast.KeyValueExpr); ok {
+				isKeyed = true
+				v, err := c.expr(kv.Value)
+				if err != nil {
+					return "", err
+				}
+				keyed[kv.Key.(*ast.Ident).Name] = v
+			} else {
+				v, err := c.expr(e)
+				if err != nil {
+					return "", err
+				}
+				positional = append(positional, v)
+			}
+		}
+		var ordered []string
+		if isKeyed {
+			for _, fn := range fieldNames {
+				if v, ok := keyed[fn]; ok {
+					ordered = append(ordered, v)
+				} else {
+					ordered = append(ordered, "0")
+				}
+			}
+		} else {
+			ordered = positional
+		}
+		return fmt.Sprintf("%s{%s}", tname, strings.Join(ordered, ", ")), nil
+	}
+
+	mt, ok := goToMSLType(tname)
+	if !ok {
+		return "", fmt.Errorf("unsupported composite type %q", tname)
+	}
+	var elems []string
+	for _, e := range ex.Elts {
+		v, err := c.expr(e)
 		if err != nil {
 			return "", err
 		}
-		return ex.Op.String() + v, nil
+		elems = append(elems, v)
 	}
-	return "", fmt.Errorf("unsupported expression %T", e)
+	return fmt.Sprintf("%s(%s)", mt, strings.Join(elems, ", ")), nil
 }
 
 func (c *compiler) call(ex *ast.CallExpr) (string, error) {
