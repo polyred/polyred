@@ -81,6 +81,7 @@ cgo-free build/test of the Metal GPU stack on darwin:
 CGO_ENABLED=0 go test ./gpu ./gpu/mtl ./gpu/shader ./gpu/tests
 ```
 
-CI runs build + vet + tests on macOS, Linux, and Windows. macOS and Linux are
-green; Windows is red on a **pre-existing** windowing issue unrelated to the GPU
-work (see [`specs/README.md`](specs/README.md) → Known issues).
+CI runs build + vet + tests on macOS, Linux, and Windows; all three are green.
+Windows window present was ported to the modern textured-quad GLES blit so it
+builds again; displaying a window there is not yet runtime-verified (see
+[`specs/README.md`](specs/README.md), Known issues).
