@@ -14,6 +14,18 @@ specs live here.
 - **foundations** — core abstraction interfaces the rest of the engine builds on
   (e.g. the GPU `Device` abstraction).
 
+## Known issues
+
+- **Windows `app` windowing is broken (pre-existing).** `app/ctx_gl_windows.go`
+  and `app/window_windows.go` call a defunct package-level immediate-mode GL API
+  (`gl.MakeCurrent`, `gl.DrawBuffer`, `gl.RasterPos2d`, `gl.DrawPixels`,
+  `gl.PixelZoom`, `gl.Viewport`) that the restructured GLES `gpu/gl` (methods on
+  `*Functions`) no longer provides. The Linux present path was modernized to a
+  textured-quad blit (`window_linux.go`: CreateTexture/TexImage2D/VertexAttrib/
+  shader); Windows was never ported. Fix = port the Windows context + present to
+  the modern GLES approach (needs a Windows machine to verify). Unrelated to the
+  GPU abstraction. CI is green on macOS + Linux; Windows fails here.
+
 ## foundations
 
 | Spec | Status | Deliverable |
