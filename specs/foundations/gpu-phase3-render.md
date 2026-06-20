@@ -111,8 +111,19 @@ Headless path stays the default for tests.
   marshaled, the proven Blinn-Phong kernel runs over all fragments, shaded
   colours are written back; CPU fallback otherwise. A 150×150 bunny scene renders
   **bit-identically** on CPU vs GPU (`render/gpudeferred_test.go`, max channel
-  diff 0 over 90000 bytes, GPU path confirmed exercised). Remaining generality:
-  multi-material, directional lights, shadow maps, ambient occlusion.
+  diff 0 over 90000 bytes, GPU path confirmed exercised).
+  - **Directional lights** (commit `502ba5d`): kernel + marshaling handle point
+    AND directional lights (`render/gpudeferred_directional_test.go`, parity ±1).
+  - **Multiple materials** (commit `d54eb53`): per-fragment material index +
+    deduplicated materials table; no-material fragments pass through as
+    `info.Col`. A bunny+gopher scene renders bit-identically CPU vs GPU under
+    `Workers(1)` (`render/gpudeferred_multimat_test.go`). Includes a gated
+    pure-Go kernel self-check. NOTE: the concurrent forward pass is
+    non-deterministic for overlapping objects, so multi-object parity must test
+    single-worker.
+  - The GPU deferred offload now covers **point + directional lights + ambient +
+    multiple materials**. Remaining generality: shadow maps, ambient occlusion
+    (need GPU depth-map / neighbour sampling).
 - **C6 windowed present — TODO** (needs CAMetalLayer via `gpu/ctx/ca`, cgo).
 
 ## Notes
