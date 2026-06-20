@@ -141,6 +141,67 @@ func Shadow(gid uint, fragxyz []float32, recv []float32, depths []float32, mats 
 }
 `
 
+// aoKernel applies screen-space ambient occlusion as a final pass, mirroring
+// material/ao.go: for 8 directions, march the depth buffer and accumulate the
+// max elevation angle, then darken by pow(total, 10000). NOTE: that exponent
+// amplifies any GPU/CPU float difference, so exact parity is not expected.
+const aoKernel = `
+package kernels
+
+type Vec4 struct{ X, Y, Z, W float32 }
+
+type AOU struct {
+	W    float32
+	H    float32
+	Pad1 float32
+	Pad2 float32
+}
+
+func AO(gid uint, fragxyz []float32, aoflag []float32, depthbuf []float32, color []float32, s AOU) {
+	if aoflag[gid] < 0.5 {
+		return
+	}
+	px := fragxyz[gid*4]
+	py := fragxyz[gid*4+1]
+	traceDepth := fragxyz[gid*4+2]
+	width := int(s.W)
+	height := int(s.H)
+	total := float32(0)
+	for d := 0; d < 8; d++ {
+		ang := float32(d) * 0.78539816339744830961
+		dirX := cos(ang)
+		dirY := sin(ang)
+		maxangle := float32(0)
+		for t := 0; t < 100; t++ {
+			ft := float32(t)
+			dx := dirX * ft
+			dy := dirY * ft
+			distance := sqrt(dx*dx + dy*dy)
+			if distance >= 1.0 {
+				ix := int(px + dx)
+				iy := int(py + dy)
+				if ix >= 0 {
+					if ix < width {
+						if iy >= 0 {
+							if iy < height {
+								elevation := depthbuf[iy*width+ix] - traceDepth
+								maxangle = max(maxangle, atan(elevation/distance))
+							}
+						}
+					}
+				}
+			}
+		}
+		total = total + (1.57079632679489661923 - maxangle)
+	}
+	total = total / (1.57079632679489661923 * 8.0)
+	total = pow(total, 10000.0)
+	color[gid*4] = floor(clamp(round(color[gid*4]), 0.0, 255.0) * total)
+	color[gid*4+1] = floor(clamp(round(color[gid*4+1]), 0.0, 255.0) * total)
+	color[gid*4+2] = floor(clamp(round(color[gid*4+2]), 0.0, 255.0) * total)
+}
+`
+
 // gpuShadowData is the marshaled shadow state for N shadow-casting lights:
 // per-light combined matrices (column-major, 16 floats each) and packed depth
 // maps (dlen floats each), matching render/shadow.go:shadingVisibility.
@@ -229,6 +290,9 @@ func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.So
 	passCol := make([]color.RGBA, n)
 	fragxyz := make([]float32, n*4) // screen X,Y,Depth for shadow lookup
 	recv := make([]float32, n)      // per-fragment ReceiveShadow flag
+	aoflag := make([]float32, n)    // per-fragment AmbientOcclusion flag
+	depthbuf := make([]float32, n)  // screen-indexed depth (-1 for non-Ok), for SSAO
+	anyAO := false
 
 	matIndex := map[*material.BlinnPhong]int{}
 	var materials []float32
@@ -237,6 +301,10 @@ func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.So
 		for x := 0; x < w; x++ {
 			idx := y*w + x
 			info := buf.UnsafeGet(x, y)
+			depthbuf[idx] = -1
+			if info.Ok {
+				depthbuf[idx] = info.Depth
+			}
 			if !info.Ok {
 				continue
 			}
@@ -248,8 +316,12 @@ func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.So
 				continue
 			}
 			bp, ok := m.(*material.BlinnPhong)
-			if !ok || bp.AmbientOcclusion {
+			if !ok {
 				return errGPUDeferredUnsupported
+			}
+			if bp.AmbientOcclusion {
+				aoflag[idx] = 1
+				anyAO = true
 			}
 			mIdx, seen := matIndex[bp]
 			if !seen {
@@ -306,6 +378,14 @@ func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.So
 	if shadow != nil {
 		su := []float32{float32(shadow.width), float32(shadow.dlen), float32(shadow.n), 0}
 		if err := runShadowKernel(dev, n, fragxyz, recv, shadow.depths, shadow.mats, shaded, su); err != nil {
+			return err
+		}
+	}
+
+	// Apply SSAO as a final pass.
+	if anyAO {
+		au := []float32{float32(w), float32(h), 0, 0}
+		if err := runAOKernel(dev, n, fragxyz, aoflag, depthbuf, shaded, au); err != nil {
 			return err
 		}
 	}
@@ -462,6 +542,55 @@ func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, mats, color,
 		gpu.BindGroupEntry{Binding: 3, Buffer: mb},
 		gpu.BindGroupEntry{Binding: 4, Buffer: cb},
 		gpu.BindGroupEntry{Binding: 5, Buffer: ub},
+	)
+	enc := dev.NewCommandEncoder()
+	cp := enc.BeginComputePass()
+	cp.SetPipeline(pipe)
+	cp.SetBindGroup(0, bg)
+	cp.Dispatch(n, 1, 1)
+	cp.End()
+	dev.Queue().Submit(enc.Finish())
+	dev.Queue().WaitIdle()
+	copy(color, unsafe.Slice((*float32)(unsafe.Pointer(&cb.Bytes()[0])), len(color)))
+	return nil
+}
+
+func runAOKernel(dev *gpu.Device, n int, fragxyz, aoflag, depthbuf, color, au []float32) error {
+	ks, err := gpushader.Compile(aoKernel)
+	if err != nil {
+		return err
+	}
+	mod, err := dev.NewShaderModule(gpu.ShaderSource{MSL: ks["AO"].MSL})
+	if err != nil {
+		return err
+	}
+	sb := func(i int) gpu.BindGroupLayoutEntry {
+		return gpu.BindGroupLayoutEntry{Binding: i, Visibility: gpu.StageCompute, Kind: gpu.StorageBuffer}
+	}
+	layout := dev.NewBindGroupLayout(
+		sb(0), sb(1), sb(2), sb(3),
+		gpu.BindGroupLayoutEntry{Binding: 4, Visibility: gpu.StageCompute, Kind: gpu.UniformBuffer},
+	)
+	pipe, err := dev.NewComputePipeline(gpu.ComputePipelineDescriptor{Layout: dev.NewPipelineLayout(layout), Module: mod, Entry: "AO"})
+	if err != nil {
+		return err
+	}
+	fb := storageBuf(dev, fragxyz)
+	ab := storageBuf(dev, aoflag)
+	db := storageBuf(dev, depthbuf)
+	cb, err := dev.NewBuffer(gpu.BufferDescriptor{Size: len(color) * 4, Usage: gpu.BufferStorage | gpu.BufferCopyDst | gpu.BufferMapRead, Data: deferredBytes(color)})
+	if err != nil {
+		return err
+	}
+	ub := uniformBuf(dev, au)
+	defer func() { fb.Release(); ab.Release(); db.Release(); cb.Release(); ub.Release() }()
+
+	bg := dev.NewBindGroup(layout,
+		gpu.BindGroupEntry{Binding: 0, Buffer: fb},
+		gpu.BindGroupEntry{Binding: 1, Buffer: ab},
+		gpu.BindGroupEntry{Binding: 2, Buffer: db},
+		gpu.BindGroupEntry{Binding: 3, Buffer: cb},
+		gpu.BindGroupEntry{Binding: 4, Buffer: ub},
 	)
 	enc := dev.NewCommandEncoder()
 	cp := enc.BeginComputePass()
