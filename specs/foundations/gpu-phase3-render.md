@@ -103,9 +103,16 @@ Headless path stays the default for tests.
   diff 0). The renderer now genuinely consumes the `poly.red/gpu` abstraction.
   Also proven standalone: GPU diffuse lighting with a light **uniform** + normal
   **varying** (`gpu/shader/lightuniform_darwin_test.go`) — the structure of the
-  deferred lighting pass. Remaining: offload the full Blinn-Phong shading
-  (multi-light + materials + G-buffer marshaling) — a large multi-package effort
-  whose seam, shading language, and lighting math are now all proven.
+  deferred lighting pass.
+- **C5 FULL deferred offload — DONE** (commit `e6368ea`): `passDeferred` runs the
+  deferred Blinn-Phong shading on the GPU when `render.GPU(dev)` is set and the
+  scene is supported (point lights + ambient, single Blinn-Phong material, no
+  shadow map / AO): the per-fragment G-buffer (normal/world-pos/base-color) is
+  marshaled, the proven Blinn-Phong kernel runs over all fragments, shaded
+  colours are written back; CPU fallback otherwise. A 150×150 bunny scene renders
+  **bit-identically** on CPU vs GPU (`render/gpudeferred_test.go`, max channel
+  diff 0 over 90000 bytes, GPU path confirmed exercised). Remaining generality:
+  multi-material, directional lights, shadow maps, ambient occlusion.
 - **C6 windowed present — TODO** (needs CAMetalLayer via `gpu/ctx/ca`, cgo).
 
 ## Notes

@@ -61,8 +61,8 @@ The design, decisions, and roadmap live in
 | Metal backend (compute + render), cgo-free via purego | working |
 | Go→shader compiler (compute + vertex/fragment, varyings, uniforms, vector math) | working |
 | GPU compute (matrix ops), headless render, GPU lighting math | proven by tests |
-| Renderer pass offload via render.GPU(dev) (gamma, bit-identical) | working |
-| Full deferred-pass (Blinn-Phong) offload, windowed present | in progress |
+| Renderer GPU offload via render.GPU(dev): gamma + full deferred Blinn-Phong pass (bit-identical) | working |
+| Windowed present; GL/Vulkan/DX12 backends | planned |
 | OpenGL / Vulkan / DirectX 12 backends | planned |
 
 cgo-free build/test of the Metal GPU stack on darwin:
