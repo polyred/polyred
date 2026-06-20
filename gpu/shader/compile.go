@@ -77,6 +77,8 @@ func goToMSLType(name string) (string, bool) {
 		return "float3", true
 	case "Vec4":
 		return "float4", true
+	case "Mat4":
+		return "float4x4", true
 	}
 	return "", false
 }
