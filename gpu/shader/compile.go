@@ -57,6 +57,7 @@ var builtins = map[string]string{
 	"floor": "floor", "ceil": "ceil", "sin": "sin", "cos": "cos",
 	"pow": "pow", "clamp": "clamp", "mix": "mix", "exp": "exp", "log": "log",
 	"round": "round", "fract": "fract",
+	"atan": "atan", "asin": "asin", "acos": "acos", "tan": "tan",
 	"dot": "dot", "normalize": "normalize", "length": "length",
 	"cross": "cross", "reflect": "reflect",
 	// type conversions
