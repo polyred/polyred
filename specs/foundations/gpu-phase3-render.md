@@ -81,6 +81,23 @@ Headless path stays the default for tests.
 - Go→shader vertex/fragment: golden MSL + real `NewShaderModule` compile.
 - `CGO_ENABLED=0` build/test gate for the Metal render path.
 
+## Progress
+
+- **C1 Metal render plumbing — DONE** (`gpu/mtl/render_darwin.go`): render
+  pipeline state, render pass descriptor, render command encoder, texture usage,
+  `MTLClearColor` (4×float64 HFA struct-by-value), `MTLRegion` readback —
+  cgo-free, spike-validated before implementation.
+- **C2 Device API render types — DONE** (`gpu/render.go`): `Texture`/
+  `TextureDescriptor`, `RenderPipeline`/`RenderPipelineDescriptor`,
+  `RenderPassDescriptor`, `RenderPass` (SetPipeline/SetBindGroup/SetVertexBuffer/
+  Draw/End), `CommandEncoder.BeginRenderPass`, `Texture.ReadPixels`.
+- **C4 Headless render proof — DONE** (`gpu/render_darwin_test.go`): a triangle
+  renders to an offscreen RGBA texture through the Device API and reads back red
+  at center, cgo-free.
+- **C3 Go→shader vertex/fragment — TODO**: this slice uses hand-written MSL.
+- **C5 renderer integration (`passDeferred` on GPU) — TODO**.
+- **C6 windowed present — TODO**.
+
 ## Notes
 - Largest phase; will likely be broken into tasks (C1 render plumbing is the
   prerequisite and the bulk of new objc surface).

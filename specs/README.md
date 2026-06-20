@@ -32,4 +32,4 @@ specs live here.
 | --- | --- | --- |
 | [gpu-phase1-foundation.md](foundations/gpu-phase1-foundation.md) | Compute slice done | cgo-free Metal compute via purego, the `Device` API, and the matrix demo through it |
 | [gpu-phase2-goshader.md](foundations/gpu-phase2-goshader.md) | Compute→MSL done | Go→shader compute compiler (Go kernels → MSL) feeding the `Device` API |
-| [gpu-phase3-render.md](foundations/gpu-phase3-render.md) | Not started | Render slice: Metal render pipelines, headless triangle, deferred-pass GPU offload |
+| [gpu-phase3-render.md](foundations/gpu-phase3-render.md) | Render plumbing + headless triangle done | Render slice: Metal render pipelines, headless triangle, deferred-pass GPU offload |
