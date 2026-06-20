@@ -253,9 +253,18 @@ func (r *Renderer) passAntialiasing() {
 		defer done()
 	}
 
-	// converts color from linear to sRGB space.
+	// converts color from linear to sRGB space, on the GPU when a device was
+	// provided (render.GPU(dev)), otherwise on the CPU.
 	if r.cfg.GammaCorrect {
-		r.DrawFragments(r.CurrBuffer(), shader.GammaCorrection)
+		if r.cfg.GPUDevice != nil {
+			// Image() aliases the buffer's color storage, so this writes back.
+			if err := gpuGammaCorrect(r.cfg.GPUDevice, r.CurrBuffer().Image()); err != nil {
+				// fall back to the CPU path on any GPU error
+				r.DrawFragments(r.CurrBuffer(), shader.GammaCorrection)
+			}
+		} else {
+			r.DrawFragments(r.CurrBuffer(), shader.GammaCorrection)
+		}
 	}
 	r.outBuf = imageutil.Resize(r.cfg.Width, r.cfg.Height, r.CurrBuffer().Image())
 }

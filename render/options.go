@@ -9,6 +9,7 @@ import (
 
 	"poly.red/buffer"
 	"poly.red/camera"
+	"poly.red/gpu"
 	"poly.red/scene"
 )
 
@@ -26,6 +27,7 @@ type option struct {
 	Camera        camera.Interface
 	Scene         *scene.Scene
 	BlendFunc     BlendFunc
+	GPUDevice     *gpu.Device
 }
 
 // Option represents a rendering option
@@ -66,6 +68,13 @@ func MSAA(n int) Option {
 // ShadowMap is an option that customizes whether to use shadow map or not.
 func ShadowMap(enable bool) Option {
 	return func(o *option) { o.ShadowMap = enable }
+}
+
+// GPU supplies a GPU device so eligible passes (currently gamma correction)
+// run on the GPU through poly.red/gpu instead of the CPU. When nil, the CPU
+// path is used. Pass a device from gpu.Open().
+func GPU(dev *gpu.Device) Option {
+	return func(o *option) { o.GPUDevice = dev }
 }
 
 // GammaCorrection is an option that customizes whether gamma correction
