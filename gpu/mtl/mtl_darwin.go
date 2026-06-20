@@ -8,31 +8,120 @@
 // https://developer.apple.com/documentation/metal
 //
 // This package requires macOS version 10.13 or newer.
+//
+// It is cgo-free: the Objective-C runtime and the Metal framework are
+// reached through github.com/ebitengine/purego instead of an Objective-C
+// bridge, so the package builds with CGO_ENABLED=0.
 package mtl
 
-/*
-// In macOS, in order for the system to provide a default Metal device
-// object, you must link to the Core Graphics framework. You usually
-// need to do this explicitly if you’re writing apps that don’t use
-// graphics by default, such as command line tools.
-
-#cgo CFLAGS: -Werror -fmodules -x objective-c
-#cgo LDFLAGS: -framework Metal -framework CoreGraphics
-#include "mtl.h"
-*/
-import "C"
 import (
 	"errors"
 	"fmt"
-	"sync"
 	"unsafe"
+
+	"github.com/ebitengine/purego"
+	"github.com/ebitengine/purego/objc"
 )
+
+// mtlCreateSystemDefaultDevice is the single C entry point we need from the
+// Metal framework; everything else is Objective-C messaging.
+var mtlCreateSystemDefaultDevice func() uintptr
+
+func init() {
+	for _, fw := range []string{
+		"/System/Library/Frameworks/Foundation.framework/Foundation",
+		"/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics",
+		"/System/Library/Frameworks/Metal.framework/Metal",
+	} {
+		if _, err := purego.Dlopen(fw, purego.RTLD_GLOBAL|purego.RTLD_NOW); err != nil {
+			// Leave mtlCreateSystemDefaultDevice nil; Available() reports false.
+			return
+		}
+	}
+	metal, err := purego.Dlopen("/System/Library/Frameworks/Metal.framework/Metal", purego.RTLD_GLOBAL|purego.RTLD_NOW)
+	if err != nil {
+		return
+	}
+	purego.RegisterLibFunc(&mtlCreateSystemDefaultDevice, metal, "MTLCreateSystemDefaultDevice")
+}
+
+// Cached selectors (objc.RegisterName grabs a global lock, so cache the hot
+// ones once).
+var (
+	selName                  = objc.RegisterName("name")
+	selIsLowPower            = objc.RegisterName("isLowPower")
+	selIsHeadless            = objc.RegisterName("isHeadless")
+	selIsRemovable           = objc.RegisterName("isRemovable")
+	selRegistryID            = objc.RegisterName("registryID")
+	selUTF8String            = objc.RegisterName("UTF8String")
+	selLocalizedDescription  = objc.RegisterName("localizedDescription")
+	selStringWithUTF8String  = objc.RegisterName("stringWithUTF8String:")
+	selAlloc                 = objc.RegisterName("alloc")
+	selInit                  = objc.RegisterName("init")
+	selRelease               = objc.RegisterName("release")
+	selNewCommandQueue       = objc.RegisterName("newCommandQueue")
+	selCommandBuffer         = objc.RegisterName("commandBuffer")
+	selComputeCommandEncoder = objc.RegisterName("computeCommandEncoder")
+	selBlitCommandEncoder    = objc.RegisterName("blitCommandEncoder")
+	selSetComputePipeline    = objc.RegisterName("setComputePipelineState:")
+	selSetBytes              = objc.RegisterName("setBytes:length:atIndex:")
+	selSetBuffer             = objc.RegisterName("setBuffer:offset:atIndex:")
+	selDispatchThreads       = objc.RegisterName("dispatchThreads:threadsPerThreadgroup:")
+	selEndEncoding           = objc.RegisterName("endEncoding")
+	selCommit                = objc.RegisterName("commit")
+	selWaitUntilCompleted    = objc.RegisterName("waitUntilCompleted")
+	selPresentDrawable       = objc.RegisterName("presentDrawable:")
+	selAddCompletedHandler   = objc.RegisterName("addCompletedHandler:")
+	selNewBufferWithBytes    = objc.RegisterName("newBufferWithBytes:length:options:")
+	selNewBufferWithLength   = objc.RegisterName("newBufferWithLength:options:")
+	selContents              = objc.RegisterName("contents")
+	selNewLibraryWithSource  = objc.RegisterName("newLibraryWithSource:options:error:")
+	selNewFunctionWithName   = objc.RegisterName("newFunctionWithName:")
+	selNewComputePipeline    = objc.RegisterName("newComputePipelineStateWithFunction:error:")
+	selThreadExecutionWidth  = objc.RegisterName("threadExecutionWidth")
+	selMaxTotalThreads       = objc.RegisterName("maxTotalThreadsPerThreadgroup")
+	selNewTextureWithDesc    = objc.RegisterName("newTextureWithDescriptor:")
+	selSetPixelFormat        = objc.RegisterName("setPixelFormat:")
+	selSetWidth              = objc.RegisterName("setWidth:")
+	selSetHeight             = objc.RegisterName("setHeight:")
+	selSetStorageMode        = objc.RegisterName("setStorageMode:")
+	selTexWidth              = objc.RegisterName("width")
+	selTexHeight             = objc.RegisterName("height")
+	selReplaceRegion         = objc.RegisterName("replaceRegion:mipmapLevel:withBytes:bytesPerRow:")
+	selCopyFromTexture       = objc.RegisterName("copyFromTexture:sourceSlice:sourceLevel:sourceOrigin:sourceSize:toTexture:destinationSlice:destinationLevel:destinationOrigin:")
+	selSetLanguageVersion    = objc.RegisterName("setLanguageVersion:")
+)
+
+// Metal ABI structs passed by value through objc_msgSend. NSUInteger is 8
+// bytes on the 64-bit platforms we target.
+type mtlSize struct{ width, height, depth uint64 }
+type mtlOrigin struct{ x, y, z uint64 }
+type mtlRegion struct {
+	origin mtlOrigin
+	size   mtlSize
+}
+
+func toID(p unsafe.Pointer) objc.ID { return objc.ID(uintptr(p)) }
+func toPtr(id objc.ID) unsafe.Pointer {
+	return *(*unsafe.Pointer)(unsafe.Pointer(&id))
+}
+
+func nsString(s string) objc.ID {
+	return objc.ID(objc.GetClass("NSString")).Send(selStringWithUTF8String, s)
+}
+
+func nsErrorString(e objc.ID) string {
+	if e == 0 {
+		return "unknown error"
+	}
+	return objc.Send[string](e.Send(selLocalizedDescription), selUTF8String)
+}
 
 // Device is abstract representation of the GPU that
 // serves as the primary interface for a Metal app.
 // https://developer.apple.com/documentation/metal/mtldevice.
 type Device struct {
-	device unsafe.Pointer
+	device objc.ID
 
 	// Headless indicates whether a device is configured as headless.
 	Headless bool
@@ -53,33 +142,35 @@ type Device struct {
 // CreateSystemDefaultDevice returns the preferred system default Metal device.
 // https://developer.apple.com/documentation/metal/1433401-mtlcreatesystemdefaultdevice.
 func CreateSystemDefaultDevice() (Device, error) {
-	d := C.CreateSystemDefaultDevice()
-	if d.Device == nil {
+	if mtlCreateSystemDefaultDevice == nil {
 		return Device{}, errors.New("metal is not supported on this system")
 	}
-
+	d := objc.ID(mtlCreateSystemDefaultDevice())
+	if d == 0 {
+		return Device{}, errors.New("metal is not supported on this system")
+	}
 	return Device{
-		device:     d.Device,
-		Headless:   bool(d.Headless),
-		LowPower:   bool(d.LowPower),
-		Removable:  bool(d.Removable),
-		RegistryID: uint64(d.RegistryID),
-		Name:       C.GoString(d.Name),
+		device:     d,
+		Headless:   objc.Send[bool](d, selIsHeadless),
+		LowPower:   objc.Send[bool](d, selIsLowPower),
+		Removable:  objc.Send[bool](d, selIsRemovable),
+		RegistryID: objc.Send[uint64](d, selRegistryID),
+		Name:       objc.Send[string](d.Send(selName), selUTF8String),
 	}, nil
 }
 
 // Available returns true if the current macOS supports Metal.
 func (d Device) Available() bool {
-	return d.Device() != nil
+	return d.device != 0
 }
 
 // Device returns the underlying id<MTLDevice> pointer.
-func (d Device) Device() unsafe.Pointer { return d.device }
+func (d Device) Device() unsafe.Pointer { return toPtr(d.device) }
 
 // MakeCommandQueue creates a serial command submission queue.
 // https://developer.apple.com/documentation/metal/mtldevice/1433388-makecommandqueue.
 func (d Device) MakeCommandQueue() CommandQueue {
-	return CommandQueue{C.Device_MakeCommandQueue(d.device)}
+	return CommandQueue{d.device.Send(selNewCommandQueue)}
 }
 
 // Region is a rectangular block of pixels in an image or texture,
@@ -100,6 +191,9 @@ type Origin struct{ X, Y, Z int }
 // https://developer.apple.com/documentation/metal/mtlsize.
 type Size struct{ Width, Height, Depth int }
 
+func (s Size) c() mtlSize     { return mtlSize{uint64(s.Width), uint64(s.Height), uint64(s.Depth)} }
+func (o Origin) c() mtlOrigin { return mtlOrigin{uint64(o.X), uint64(o.Y), uint64(o.Z)} }
+
 // RegionMake2D returns a 2D, rectangular region for image or texture data.
 // https://developer.apple.com/documentation/metal/1515675-mtlregionmake2d.
 func RegionMake2D(x, y, width, height int) Region {
@@ -113,17 +207,17 @@ func RegionMake2D(x, y, width, height int) Region {
 // that contains texture state.
 // https://developer.apple.com/documentation/metal/mtldevice/1433425-maketexture.
 func (d Device) MakeTexture(td TextureDescriptor) Texture {
-	descriptor := C.struct_TextureDescriptor{
-		PixelFormat: C.uint16_t(td.PixelFormat),
-		Width:       C.uint_t(td.Width),
-		Height:      C.uint_t(td.Height),
-		StorageMode: C.uint8_t(td.StorageMode),
-	}
-	texture := C.Device_MakeTexture(d.device, descriptor)
+	desc := objc.ID(objc.GetClass("MTLTextureDescriptor")).Send(selAlloc).Send(selInit)
+	desc.Send(selSetPixelFormat, uint64(td.PixelFormat))
+	desc.Send(selSetWidth, uint64(td.Width))
+	desc.Send(selSetHeight, uint64(td.Height))
+	desc.Send(selSetStorageMode, uint64(td.StorageMode))
+	texture := d.device.Send(selNewTextureWithDesc, desc)
+	desc.Send(selRelease)
 	return Texture{
 		texture: texture,
-		width:   int(C.MTLTexture_GetWidth(texture)),
-		height:  int(C.MTLTexture_GetHeight(texture)),
+		width:   int(objc.Send[uint64](texture, selTexWidth)),
+		height:  int(objc.Send[uint64](texture, selTexHeight)),
 	}
 }
 
@@ -180,7 +274,7 @@ type TextureDescriptor struct {
 // image data that is accessible to the GPU.
 // https://developer.apple.com/documentation/metal/mtltexture.
 type Texture struct {
-	texture unsafe.Pointer
+	texture objc.ID
 
 	// width is the width of the texture image for the base level mipmap, in pixels.
 	width int
@@ -190,48 +284,37 @@ type Texture struct {
 
 // NewTexture returns a Texture that wraps an existing id<MTLTexture> pointer.
 func NewTexture(texture unsafe.Pointer) Texture {
-	return Texture{texture: texture}
+	return Texture{texture: toID(texture)}
 }
 
 // Release frees the current texture.
 func (t Texture) Release() {
-	C.Texture_Release(t.texture)
+	t.texture.Send(selRelease)
 }
 
 // ReplaceRegion copies a block of pixels into a section of texture slice 0.
 // https://developer.apple.com/documentation/metal/mtltexture/1515464-replaceregion.
 func (t Texture) ReplaceRegion(region Region, level int, pixelBytes []byte, bytesPerRow uintptr) {
-	r := C.struct_Region{
-		Origin: C.struct_Origin{
-			X: C.uint_t(region.Origin.X),
-			Y: C.uint_t(region.Origin.Y),
-			Z: C.uint_t(region.Origin.Z),
-		},
-		Size: C.struct_Size{
-			Width:  C.uint_t(region.Size.Width),
-			Height: C.uint_t(region.Size.Height),
-			Depth:  C.uint_t(region.Size.Depth),
-		},
-	}
-	C.Texture_ReplaceRegion(t.texture, r, C.uint_t(level), unsafe.Pointer(&pixelBytes[0]), C.size_t(bytesPerRow))
+	r := mtlRegion{origin: region.Origin.c(), size: region.Size.c()}
+	t.texture.Send(selReplaceRegion, r, uint64(level), unsafe.Pointer(&pixelBytes[0]), uint64(bytesPerRow))
 }
 
 // CommandQueue is a queue that organizes the order
 // in which command buffers are executed by the GPU.
 // https://developer.apple.com/documentation/metal/mtlcommandqueue.
 type CommandQueue struct {
-	commandQueue unsafe.Pointer
+	commandQueue objc.ID
 }
 
 // MakeCommandBuffer creates a command buffer.
 // https://developer.apple.com/documentation/metal/mtlcommandqueue/1508686-makecommandbuffer.
 func (cq CommandQueue) MakeCommandBuffer() CommandBuffer {
-	return CommandBuffer{C.CommandQueue_MakeCommandBuffer(cq.commandQueue)}
+	return CommandBuffer{cq.commandQueue.Send(selCommandBuffer)}
 }
 
 // Release frees the command queue.
 func (cq CommandQueue) Release() {
-	C.CommandQueue_Release(cq.commandQueue)
+	cq.commandQueue.Send(selRelease)
 }
 
 // Drawable is a displayable resource that can be rendered or written to.
@@ -245,57 +328,48 @@ type Drawable interface {
 // that are committed to and executed by the GPU.
 // https://developer.apple.com/documentation/metal/mtlcommandbuffer.
 type CommandBuffer struct {
-	commandBuffer unsafe.Pointer
+	commandBuffer objc.ID
 }
 
 // PresentDrawable registers a drawable presentation to occur as soon as possible.
 // https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443029-presentdrawable.
 func (cb CommandBuffer) PresentDrawable(d Drawable) {
-	C.CommandBuffer_PresentDrawable(cb.commandBuffer, d.Drawable())
+	cb.commandBuffer.Send(selPresentDrawable, toID(d.Drawable()))
 }
 
 // Commit commits this command buffer for execution as soon as possible.
 // https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443003-commit.
 func (cb CommandBuffer) Commit() {
-	C.CommandBuffer_Commit(cb.commandBuffer)
+	cb.commandBuffer.Send(selCommit)
 }
 
 // WaitUntilCompleted waits for the execution of this command buffer to complete.
 // https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443039-waituntilcompleted.
 func (cb CommandBuffer) WaitUntilCompleted() {
-	C.CommandBuffer_WaitUntilCompleted(cb.commandBuffer)
+	cb.commandBuffer.Send(selWaitUntilCompleted)
 }
 
-var commandBufferCompletedHandlers = sync.Map{} // map[unsafe.Pointer]func(){}
-
-// AddCompletedHandler registers a block of code that Metal calls immediately after the GPU finishes executing the commands in the command buffer.
+// AddCompletedHandler registers a block of code that Metal calls immediately
+// after the GPU finishes executing the commands in the command buffer.
 //
 // https://developer.apple.com/documentation/metal/mtlcommandbuffer/1442997-addcompletedhandler
 func (cb CommandBuffer) AddCompletedHandler(f func()) {
-	commandBufferCompletedHandlers.Store(cb.commandBuffer, f)
-	C.CommandBuffer_AddCompletedHandler(cb.commandBuffer)
-}
-
-//export commandBufferCompletedCallback
-func commandBufferCompletedCallback(commandBuffer unsafe.Pointer) {
-	f, ok := commandBufferCompletedHandlers.LoadAndDelete(commandBuffer)
-	if !ok {
-		return
-	}
-
-	f.(func())()
+	block := objc.NewBlock(func(block objc.Block, _ objc.ID) {
+		f()
+	})
+	cb.commandBuffer.Send(selAddCompletedHandler, block)
 }
 
 // Release frees the command buffer.
 func (cb CommandBuffer) Release() {
-	C.CommandBuffer_Release(cb.commandBuffer)
+	cb.commandBuffer.Send(selRelease)
 }
 
 // MakeBlitCommandEncoder creates an encoder object that can encode
 // memory operation (blit) commands into this command buffer.
 // https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443001-makeblitcommandencoder.
 func (cb CommandBuffer) MakeBlitCommandEncoder() BlitCommandEncoder {
-	return BlitCommandEncoder{CommandEncoder{C.CommandBuffer_MakeBlitCommandEncoder(cb.commandBuffer)}}
+	return BlitCommandEncoder{CommandEncoder{cb.commandBuffer.Send(selBlitCommandEncoder)}}
 }
 
 // ComputeCommandEncoder is for encoding commands in a compute pass.
@@ -306,56 +380,48 @@ type ComputeCommandEncoder struct {
 }
 
 // MakeComputeCommandEncoder creates an encoder object that can encode
-// memory operation (blit) commands into this command buffer.
-// https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443001-makeblitcommandencoder.
+// compute commands into this command buffer.
+// https://developer.apple.com/documentation/metal/mtlcommandbuffer/1443009-makecomputecommandencoder.
 func (cb CommandBuffer) MakeComputeCommandEncoder() ComputeCommandEncoder {
-	return ComputeCommandEncoder{CommandEncoder{C.CommandBuffer_MakeComputeCommandEncoder(cb.commandBuffer)}}
+	return ComputeCommandEncoder{CommandEncoder{cb.commandBuffer.Send(selComputeCommandEncoder)}}
 }
 
 // SetComputePipelineState sets the current compute pipeline state object.
 //
 // https://developer.apple.com/documentation/metal/mtlcomputecommandencoder/1443140-setcomputepipelinestate.
 func (cce ComputeCommandEncoder) SetComputePipelineState(cps ComputePipelineState) {
-	C.ComputeCommandEncoder_SetComputePipelineState(cce.commandEncoder, cps.computePipelineState)
+	cce.commandEncoder.Send(selSetComputePipeline, cps.computePipelineState)
 }
 
 // SetBytes sets a block of data for the compute shader.
 //
 // https://developer.apple.com/documentation/metal/mtlcomputecommandencoder/1443159-setbytes?language=objc.
 func (cce ComputeCommandEncoder) SetBytes(b []byte, index int) {
-	C.ComputeCommandEncoder_SetBytes(cce.commandEncoder, unsafe.Pointer(&b[0]), C.int(len(b)), C.int(index))
+	cce.commandEncoder.Send(selSetBytes, unsafe.Pointer(&b[0]), uint64(len(b)), uint64(index))
 }
 
 // SetBuffer sets a buffer for the compute function.
 //
 // https://developer.apple.com/documentation/metal/mtlcomputecommandencoder/1443126-setbuffer?language=objc
 func (cce ComputeCommandEncoder) SetBuffer(b Buffer, offset, index int) {
-	C.ComputeCommandEncoder_SetBuffer(cce.commandEncoder, b.buffer, C.int(offset), C.int(index))
+	cce.commandEncoder.Send(selSetBuffer, b.buffer, uint64(offset), uint64(index))
 }
 
 func (cce ComputeCommandEncoder) DispatchThreads(threadsPerGrid, threadsPerThreadgroup Size) {
-	C.ComputeCommandEncoder_DispatchThreads(cce.commandEncoder, C.struct_Size{
-		Width:  C.uint_t(threadsPerGrid.Width),
-		Height: C.uint_t(threadsPerGrid.Height),
-		Depth:  C.uint_t(threadsPerGrid.Depth),
-	}, C.struct_Size{
-		Width:  C.uint_t(threadsPerThreadgroup.Width),
-		Height: C.uint_t(threadsPerThreadgroup.Height),
-		Depth:  C.uint_t(threadsPerThreadgroup.Depth),
-	})
+	cce.commandEncoder.Send(selDispatchThreads, threadsPerGrid.c(), threadsPerThreadgroup.c())
 }
 
 // CommandEncoder is an encoder that writes sequential GPU commands
 // into a command buffer.
 // https://developer.apple.com/documentation/metal/mtlcommandencoder.
 type CommandEncoder struct {
-	commandEncoder unsafe.Pointer
+	commandEncoder objc.ID
 }
 
 // EndEncoding declares that all command generation from this encoder is completed.
 // https://developer.apple.com/documentation/metal/mtlcommandencoder/1458038-endencoding.
 func (ce CommandEncoder) EndEncoding() {
-	C.CommandEncoder_EndEncoding(ce.commandEncoder)
+	ce.commandEncoder.Send(selEndEncoding)
 }
 
 // BlitCommandEncoder is an encoder that specifies resource copy
@@ -372,31 +438,15 @@ func (bce BlitCommandEncoder) CopyFromTexture(
 	src Texture, srcSlice, srcLevel int, srcOrigin Origin, srcSize Size,
 	dst Texture, dstSlice, dstLevel int, dstOrigin Origin,
 ) {
-	C.BlitCommandEncoder_CopyFromTexture(
-		bce.commandEncoder,
-		src.texture, C.uint_t(srcSlice), C.uint_t(srcLevel),
-		C.struct_Origin{
-			X: C.uint_t(srcOrigin.X),
-			Y: C.uint_t(srcOrigin.Y),
-			Z: C.uint_t(srcOrigin.Z),
-		},
-		C.struct_Size{
-			Width:  C.uint_t(srcSize.Width),
-			Height: C.uint_t(srcSize.Height),
-			Depth:  C.uint_t(srcSize.Depth),
-		},
-		dst.texture, C.uint_t(dstSlice), C.uint_t(dstLevel),
-		C.struct_Origin{
-			X: C.uint_t(dstOrigin.X),
-			Y: C.uint_t(dstOrigin.Y),
-			Z: C.uint_t(dstOrigin.Z),
-		},
+	bce.commandEncoder.Send(selCopyFromTexture,
+		src.texture, uint64(srcSlice), uint64(srcLevel), srcOrigin.c(), srcSize.c(),
+		dst.texture, uint64(dstSlice), uint64(dstLevel), dstOrigin.c(),
 	)
 }
 
 // Release frees the blit command encoder.
 func (bce BlitCommandEncoder) Release() {
-	C.BlitCommandEncoder_Release(bce.commandEncoder)
+	bce.commandEncoder.Send(selRelease)
 }
 
 // ResourceOptions defines optional arguments used to create
@@ -468,15 +518,15 @@ const (
 //
 // https://developer.apple.com/documentation/metal/mtlbuffer.
 type Buffer struct {
-	buffer unsafe.Pointer
+	buffer objc.ID
 }
 
 func (b Buffer) Content() unsafe.Pointer {
-	return C.Buffer_Content(b.buffer)
+	return objc.Send[unsafe.Pointer](b.buffer, selContents)
 }
 
 func (b Buffer) Release() {
-	C.Buffer_Release(b.buffer)
+	b.buffer.Send(selRelease)
 }
 
 // MakeBuffer allocates a new buffer of a given length
@@ -486,7 +536,10 @@ func (b Buffer) Release() {
 //
 // https://developer.apple.com/documentation/metal/mtldevice/1433429-makebuffer.
 func (d Device) MakeBuffer(bytes unsafe.Pointer, length uintptr, opt ResourceOptions) Buffer {
-	return Buffer{C.Device_MakeBuffer(d.device, bytes, C.size_t(length), C.uint16_t(opt))}
+	if bytes == nil {
+		return Buffer{d.device.Send(selNewBufferWithLength, uint64(length), uint64(opt))}
+	}
+	return Buffer{d.device.Send(selNewBufferWithBytes, bytes, uint64(length), uint64(opt))}
 }
 
 // CompileOptions specifies optional compilation settings for
@@ -517,7 +570,7 @@ const (
 //
 // https://developer.apple.com/documentation/metal/mtllibrary.
 type Library struct {
-	library unsafe.Pointer
+	library objc.ID
 }
 
 // MakeLibrary creates a new library that contains
@@ -525,37 +578,36 @@ type Library struct {
 //
 // https://developer.apple.com/documentation/metal/mtldevice/1433431-makelibrary.
 func (d Device) MakeLibrary(source string, opt CompileOptions) (Library, error) {
-	src := C.CString(source)
-	defer C.free(unsafe.Pointer(src))
-
-	copt := C.struct_CompileOption{
-		languageVersion: C.uint_t(opt.LanguageVersion),
+	var options objc.ID
+	if opt.LanguageVersion != 0 {
+		options = objc.ID(objc.GetClass("MTLCompileOptions")).Send(selAlloc).Send(selInit)
+		options.Send(selSetLanguageVersion, uint64(opt.LanguageVersion))
+		defer options.Send(selRelease)
 	}
 
-	l := C.Device_MakeLibrary(d.device, src, copt) // TODO: opt.
-	if l.Library == nil {
-		return Library{}, errors.New(C.GoString(l.Error))
+	var err objc.ID
+	lib := d.device.Send(selNewLibraryWithSource, nsString(source), options, unsafe.Pointer(&err))
+	if lib == 0 {
+		return Library{}, errors.New(nsErrorString(err))
 	}
-
-	return Library{l.Library}, nil
+	return Library{lib}, nil
 }
 
 // Function represents a programmable graphics or compute function executed by the GPU.
 //
 // https://developer.apple.com/documentation/metal/mtlfunction.
 type Function struct {
-	function unsafe.Pointer
+	function objc.ID
 }
 
 // MakeFunction returns a pre-compiled, non-specialized function.
 //
 // https://developer.apple.com/documentation/metal/mtllibrary/1515524-makefunction.
 func (l Library) MakeFunction(name string) (Function, error) {
-	f := C.Library_MakeFunction(l.library, C.CString(name))
-	if f == nil {
+	f := l.library.Send(selNewFunctionWithName, nsString(name))
+	if f == 0 {
 		return Function{}, fmt.Errorf("function %q not found", name)
 	}
-
 	return Function{f}, nil
 }
 
@@ -563,25 +615,25 @@ func (l Library) MakeFunction(name string) (Function, error) {
 //
 // https://developer.apple.com/documentation/metal/mtlcomputepipelinestate.
 type ComputePipelineState struct {
-	computePipelineState unsafe.Pointer
+	computePipelineState objc.ID
 }
 
 // MakeComputePipelineState creates a compute pipeline state object.
 //
 // https://developer.apple.com/documentation/metal/mtldevice/1433427-newcomputepipelinestatewithfunct.
 func (d Device) MakeComputePipelineState(fn Function) (ComputePipelineState, error) {
-	cps := C.Device_MakeComputePipelineState(d.device, fn.function)
-	if cps.ComputePipelineState == nil {
-		return ComputePipelineState{}, errors.New(C.GoString(cps.Error))
+	var err objc.ID
+	cps := d.device.Send(selNewComputePipeline, fn.function, unsafe.Pointer(&err))
+	if cps == 0 {
+		return ComputePipelineState{}, errors.New(nsErrorString(err))
 	}
-
-	return ComputePipelineState{cps.ComputePipelineState}, nil
+	return ComputePipelineState{cps}, nil
 }
 
 func (cps ComputePipelineState) ThreadExecutionWidth() int {
-	return int(C.ComputePipelineState_ThreadExecutionWidth(cps.computePipelineState))
+	return int(objc.Send[uint64](cps.computePipelineState, selThreadExecutionWidth))
 }
 
 func (cps ComputePipelineState) MaxTotalThreadsPerThreadgroup() int {
-	return int(C.ComputePipelineState_MaxTotalThreadsPerThreadgroup(cps.computePipelineState))
+	return int(objc.Send[uint64](cps.computePipelineState, selMaxTotalThreads))
 }
