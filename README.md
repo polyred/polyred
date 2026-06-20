@@ -57,16 +57,30 @@ The design, decisions, and roadmap live in
 
 | Capability | State |
 | --- | --- |
-| `Device` API (buffers, bind groups, compute + render pipelines, passes) | working |
+| `Device` API (buffers, bind groups, compute + render pipelines, passes, textures, samplers) | working |
 | Metal backend (compute + render), cgo-free via purego | working |
-| Go→shader compiler (compute + vertex/fragment, varyings, uniforms, vector math, swizzle, texture sampling) | working |
-| GPU compute (matrix ops), headless render, GPU lighting math | proven by tests |
-| Renderer deferred pass fully offloaded (render.GPU): lights, multi-material, shadow maps (N lights), ambient occlusion, gamma | working |
-| Windowed present; GL/Vulkan/DX12 backends | planned |
-| OpenGL / Vulkan / DirectX 12 backends | planned |
+| Go→shader compiler (compute + vertex/fragment, varyings, uniforms, vector + matrix math, swizzle, texture sampling, trig, control flow) | working |
+| **Renderer deferred pass fully offloaded to the GPU** (`render.GPU(dev)`): point + directional lights, multi-material, shadow maps (one and many casting lights), ambient occlusion, gamma | working, CPU-parity verified |
+| OpenGL / Vulkan / DirectX 12 backends, windowed present | planned — gated on Linux/Windows machines + SDKs, not design |
+
+The renderer offloads its full deferred shading pass to the GPU when a device is
+supplied:
+
+```go
+dev, _ := gpu.Open()
+img := render.NewRenderer(
+    render.Camera(cam), render.Size(w, h), render.Scene(s),
+    render.ShadowMap(true),
+    render.GPU(dev), // deferred shading (lights, materials, shadows, AO) runs on the GPU
+).Render()
+```
 
 cgo-free build/test of the Metal GPU stack on darwin:
 
 ```sh
 CGO_ENABLED=0 go test ./gpu ./gpu/mtl ./gpu/shader ./gpu/tests
 ```
+
+CI runs build + vet + tests on macOS, Linux, and Windows. macOS and Linux are
+green; Windows is red on a **pre-existing** windowing issue unrelated to the GPU
+work (see [`specs/README.md`](specs/README.md) → Known issues).

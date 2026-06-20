@@ -30,6 +30,12 @@ specs live here.
 
 | Spec | Status | Deliverable |
 | --- | --- | --- |
-| [gpu-phase1-foundation.md](foundations/gpu-phase1-foundation.md) | Compute slice done | cgo-free Metal compute via purego, the `Device` API, and the matrix demo through it |
-| [gpu-phase2-goshader.md](foundations/gpu-phase2-goshader.md) | Compute→MSL done | Go→shader compute compiler (Go kernels → MSL) feeding the `Device` API |
-| [gpu-phase3-render.md](foundations/gpu-phase3-render.md) | Render plumbing + headless triangle done | Render slice: Metal render pipelines, headless triangle, deferred-pass GPU offload |
+| [gpu-phase1-foundation.md](foundations/gpu-phase1-foundation.md) | **Done** | cgo-free Metal compute via purego, the `Device` API, and the matrix demo through it |
+| [gpu-phase2-goshader.md](foundations/gpu-phase2-goshader.md) | **Done** | Go→shader compiler (compute + vertex/fragment → MSL): varyings, uniforms, swizzle, vector/matrix math, texture sampling, trig |
+| [gpu-phase3-render.md](foundations/gpu-phase3-render.md) | **Done** | Render pipelines + the renderer's full deferred pass offloaded to the GPU: lights, multi-material, shadow maps (N lights), ambient occlusion, gamma — CPU-parity verified |
+
+The GPU abstraction's Metal-backend phases are complete: the renderer's deferred
+shading runs on the GPU, cgo-free, with shaders authored in Go. Remaining work is
+**breadth, not depth** — additional backends (GL/Vulkan/DX12) and windowed
+present, each gated on a Linux/Windows machine, an SDK, or a display rather than
+on design (see the per-spec notes and the project memory for exact recipes).
