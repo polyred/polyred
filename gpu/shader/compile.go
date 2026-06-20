@@ -52,6 +52,7 @@ type Kernel struct {
 var builtins = map[string]string{
 	"sqrt": "sqrt", "abs": "abs", "min": "min", "max": "max",
 	"floor": "floor", "ceil": "ceil", "sin": "sin", "cos": "cos",
+	"pow": "pow", "clamp": "clamp", "mix": "mix", "exp": "exp", "log": "log",
 	// type conversions
 	"float32": "float", "float": "float", "uint": "uint", "int": "int",
 }
@@ -469,12 +470,27 @@ func (c *compiler) ifStmt(st *ast.IfStmt, depth int) error {
 		return err
 	}
 	c.indent(depth)
-	c.buf.WriteString(fmt.Sprintf("if (%s) {\n", cond))
+	fmt.Fprintf(&c.buf, "if (%s) {\n", cond)
 	if err := c.stmts(st.Body.List, depth+1); err != nil {
 		return err
 	}
 	c.indent(depth)
-	c.buf.WriteString("}\n")
+	switch e := st.Else.(type) {
+	case nil:
+		c.buf.WriteString("}\n")
+	case *ast.BlockStmt:
+		c.buf.WriteString("} else {\n")
+		if err := c.stmts(e.List, depth+1); err != nil {
+			return err
+		}
+		c.indent(depth)
+		c.buf.WriteString("}\n")
+	case *ast.IfStmt: // else if
+		c.buf.WriteString("} else ")
+		return c.ifStmt(e, depth)
+	default:
+		return fmt.Errorf("unsupported else clause")
+	}
 	return nil
 }
 
