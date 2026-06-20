@@ -54,6 +54,8 @@ var builtins = map[string]string{
 	"sqrt": "sqrt", "abs": "abs", "min": "min", "max": "max",
 	"floor": "floor", "ceil": "ceil", "sin": "sin", "cos": "cos",
 	"pow": "pow", "clamp": "clamp", "mix": "mix", "exp": "exp", "log": "log",
+	"dot": "dot", "normalize": "normalize", "length": "length",
+	"cross": "cross", "reflect": "reflect",
 	// type conversions
 	"float32": "float", "float": "float", "uint": "uint", "int": "int",
 }
