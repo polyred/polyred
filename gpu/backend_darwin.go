@@ -226,6 +226,45 @@ func (t *metalTexture) readPixels() []byte {
 	return dst
 }
 
+func (t *metalTexture) write(pixels []byte, bytesPerRow int) {
+	t.tex.ReplaceRegion(mtl.RegionMake2D(0, 0, t.w, t.h), 0, pixels, uintptr(bytesPerRow))
+}
+
+type metalSampler struct{ s mtl.SamplerState }
+
+func (*metalSampler) isSampler() {}
+
+func mtlFilter(f FilterMode) mtl.SamplerMinMagFilter {
+	if f == FilterLinear {
+		return mtl.SamplerFilterLinear
+	}
+	return mtl.SamplerFilterNearest
+}
+
+func mtlAddress(a AddressMode) mtl.SamplerAddressMode {
+	if a == AddressRepeat {
+		return mtl.SamplerAddressRepeat
+	}
+	return mtl.SamplerAddressClampToEdge
+}
+
+func (m *metalBackend) newSampler(desc SamplerDescriptor) backendSampler {
+	return &metalSampler{s: m.dev.MakeSamplerState(mtl.SamplerDescriptor{
+		MinFilter:    mtlFilter(desc.MinFilter),
+		MagFilter:    mtlFilter(desc.MagFilter),
+		SAddressMode: mtlAddress(desc.AddressU),
+		TAddressMode: mtlAddress(desc.AddressV),
+	})}
+}
+
+func (c *metalCmd) setComputeTexture(index int, t backendTexture) {
+	c.enc.SetTexture(t.(*metalTexture).tex, index)
+}
+
+func (c *metalCmd) setComputeSampler(index int, s backendSampler) {
+	c.enc.SetSamplerState(s.(*metalSampler).s, index)
+}
+
 type metalRenderPipeline struct{ rps mtl.RenderPipelineState }
 
 func (*metalRenderPipeline) isRenderPipeline() {}

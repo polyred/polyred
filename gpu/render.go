@@ -40,6 +40,54 @@ func (t *Texture) Height() int { return t.h }
 // 4 bytes/pixel for RGBA8Unorm). Used for headless render-to-image.
 func (t *Texture) ReadPixels() []byte { return t.b.readPixels() }
 
+// Write uploads tightly-packed pixel data (4 bytes/pixel for RGBA8Unorm) into
+// the texture.
+func (t *Texture) Write(pixels []byte) { t.b.write(pixels, t.w*4) }
+
+// FilterMode selects texture filtering.
+type FilterMode int
+
+const (
+	FilterNearest FilterMode = iota
+	FilterLinear
+)
+
+// AddressMode selects out-of-range texture-coordinate handling.
+type AddressMode int
+
+const (
+	AddressClampToEdge AddressMode = iota
+	AddressRepeat
+)
+
+// SamplerDescriptor configures a sampler.
+type SamplerDescriptor struct {
+	MinFilter FilterMode
+	MagFilter FilterMode
+	AddressU  AddressMode
+	AddressV  AddressMode
+}
+
+// Sampler describes how a shader reads a texture.
+type Sampler struct {
+	b backendSampler
+}
+
+// NewSampler creates a sampler.
+func (d *Device) NewSampler(desc SamplerDescriptor) *Sampler {
+	return &Sampler{b: d.b.newSampler(desc)}
+}
+
+// SetTexture binds a texture for sampling at the given texture index.
+func (p *ComputePass) SetTexture(index int, t *Texture) {
+	p.e.cmd.setComputeTexture(index, t.b)
+}
+
+// SetSampler binds a sampler at the given sampler index.
+func (p *ComputePass) SetSampler(index int, s *Sampler) {
+	p.e.cmd.setComputeSampler(index, s.b)
+}
+
 // NewTexture allocates a texture.
 func (d *Device) NewTexture(desc TextureDescriptor) (*Texture, error) {
 	if desc.Width <= 0 || desc.Height <= 0 {

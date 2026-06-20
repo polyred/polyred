@@ -32,6 +32,8 @@ type BindingKind int
 const (
 	StorageBuffer BindingKind = iota
 	UniformBuffer
+	SampledTexture
+	SamplerBinding
 )
 
 // Binding describes one kernel parameter's GPU binding.
@@ -218,6 +220,8 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 	var bindings []Binding
 	var usedStructs []string
 	bufIndex := 0
+	texIndex := 0
+	samplerIndex := 0
 	stageInUsed := false
 	var sig []string
 	for _, p := range bufParams {
@@ -242,7 +246,23 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 			bindings = append(bindings, Binding{Index: bufIndex, Name: p.name, Kind: StorageBuffer})
 			c.env[p.name] = mt + "*"
 			bufIndex++
-		case *ast.Ident: // struct param
+		case *ast.Ident:
+			// Texture / sampler params use separate MSL index spaces.
+			switch t.Name {
+			case "Texture2D":
+				sig = append(sig, fmt.Sprintf("texture2d<float> %s [[texture(%d)]]", p.name, texIndex))
+				bindings = append(bindings, Binding{Index: texIndex, Name: p.name, Kind: SampledTexture})
+				c.env[p.name] = "texture2d"
+				texIndex++
+				continue
+			case "Sampler":
+				sig = append(sig, fmt.Sprintf("sampler %s [[sampler(%d)]]", p.name, samplerIndex))
+				bindings = append(bindings, Binding{Index: samplerIndex, Name: p.name, Kind: SamplerBinding})
+				c.env[p.name] = "sampler"
+				samplerIndex++
+				continue
+			}
+			// struct param
 			if _, ok := structs[t.Name]; !ok {
 				return nil, fmt.Errorf("parameter %q: unsupported type %q", p.name, t.Name)
 			}
@@ -675,6 +695,26 @@ func (c *compiler) compositeLit(ex *ast.CompositeLit) (string, error) {
 }
 
 func (c *compiler) call(ex *ast.CallExpr) (string, error) {
+	// Method call: texture sampling, e.g. tex.Sample(samp, uv) -> tex.sample(...)
+	if sel, ok := ex.Fun.(*ast.SelectorExpr); ok {
+		if sel.Sel.Name != "Sample" {
+			return "", fmt.Errorf("unsupported method %q (only Texture2D.Sample)", sel.Sel.Name)
+		}
+		base, err := c.expr(sel.X)
+		if err != nil {
+			return "", err
+		}
+		var args []string
+		for _, a := range ex.Args {
+			v, err := c.expr(a)
+			if err != nil {
+				return "", err
+			}
+			args = append(args, v)
+		}
+		return fmt.Sprintf("%s.sample(%s)", base, strings.Join(args, ", ")), nil
+	}
+
 	id, ok := ex.Fun.(*ast.Ident)
 	if !ok {
 		return "", fmt.Errorf("unsupported call target")
@@ -707,6 +747,9 @@ func (c *compiler) inferType(e ast.Expr) string {
 			return strings.TrimSuffix(t, "*")
 		}
 	case *ast.CallExpr:
+		if sel, ok := ex.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Sample" {
+			return "float4" // Texture2D.Sample returns a float4
+		}
 		if id, ok := ex.Fun.(*ast.Ident); ok {
 			if mt, ok := goToMSLType(id.Name); ok {
 				return mt

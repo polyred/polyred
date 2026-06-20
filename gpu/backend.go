@@ -12,6 +12,7 @@ type backend interface {
 	newShaderModule(src ShaderSource) (backendShaderModule, error)
 	newComputePipeline(mod backendShaderModule, entry string) (backendComputePipeline, error)
 	newTexture(format TextureFormat, w, h int, renderTarget bool) (backendTexture, error)
+	newSampler(desc SamplerDescriptor) backendSampler
 	newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat) (backendRenderPipeline, error)
 	newCommandBuffer() backendCommandBuffer
 	waitIdle()
@@ -20,7 +21,10 @@ type backend interface {
 
 type backendTexture interface {
 	readPixels() []byte
+	write(pixels []byte, bytesPerRow int)
 }
+
+type backendSampler interface{ isSampler() }
 
 type backendRenderPipeline interface{ isRenderPipeline() }
 
@@ -47,6 +51,8 @@ type backendCommandBuffer interface {
 	beginCompute()
 	setComputePipeline(backendComputePipeline)
 	setBuffer(b backendBuffer, offset, index int)
+	setComputeTexture(index int, t backendTexture)
+	setComputeSampler(index int, s backendSampler)
 	dispatch(x, y, z int)
 	endCompute()
 
