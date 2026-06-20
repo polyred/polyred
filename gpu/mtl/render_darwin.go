@@ -1,0 +1,184 @@
+// Copyright 2026 The Polyred Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+//go:build darwin
+
+// Render-pass support for the Metal backend (cgo-free via purego), companion to
+// the compute support in mtl_darwin.go. Validated headless: clear + triangle +
+// texture readback.
+package mtl
+
+import (
+	"errors"
+	"unsafe"
+
+	"github.com/ebitengine/purego/objc"
+)
+
+var (
+	selNewRenderPipeline   = objc.RegisterName("newRenderPipelineStateWithDescriptor:error:")
+	selSetVertexFunction   = objc.RegisterName("setVertexFunction:")
+	selSetFragmentFunction = objc.RegisterName("setFragmentFunction:")
+	selColorAttachments    = objc.RegisterName("colorAttachments")
+	selObjectAtIndexed     = objc.RegisterName("objectAtIndexedSubscript:")
+	selRenderPassDesc      = objc.RegisterName("renderPassDescriptor")
+	selSetTexture          = objc.RegisterName("setTexture:")
+	selSetLoadAction       = objc.RegisterName("setLoadAction:")
+	selSetStoreAction      = objc.RegisterName("setStoreAction:")
+	selSetClearColor       = objc.RegisterName("setClearColor:")
+	selRenderEncoder       = objc.RegisterName("renderCommandEncoderWithDescriptor:")
+	selSetRenderPipeline   = objc.RegisterName("setRenderPipelineState:")
+	selSetVertexBuffer     = objc.RegisterName("setVertexBuffer:offset:atIndex:")
+	selSetFragmentBuffer   = objc.RegisterName("setFragmentBuffer:offset:atIndex:")
+	selSetVertexBytes      = objc.RegisterName("setVertexBytes:length:atIndex:")
+	selDrawPrimitives      = objc.RegisterName("drawPrimitives:vertexStart:vertexCount:")
+	selSetUsage            = objc.RegisterName("setUsage:")
+	selGetBytes            = objc.RegisterName("getBytes:bytesPerRow:fromRegion:mipmapLevel:")
+)
+
+// mtlClearColor matches MTLClearColor (4 doubles).
+type mtlClearColor struct{ red, green, blue, alpha float64 }
+
+// TextureUsage describes how a texture may be used.
+// https://developer.apple.com/documentation/metal/mtltextureusage.
+type TextureUsage uint8
+
+const (
+	TextureUsageShaderRead   TextureUsage = 1 << 0
+	TextureUsageShaderWrite  TextureUsage = 1 << 1
+	TextureUsageRenderTarget TextureUsage = 1 << 2
+)
+
+// LoadAction is what a render pass does with an attachment at the start.
+// https://developer.apple.com/documentation/metal/mtlloadaction.
+type LoadAction uint8
+
+const (
+	LoadActionDontCare LoadAction = 0
+	LoadActionLoad     LoadAction = 1
+	LoadActionClear    LoadAction = 2
+)
+
+// StoreAction is what a render pass does with an attachment at the end.
+// https://developer.apple.com/documentation/metal/mtlstoreaction.
+type StoreAction uint8
+
+const (
+	StoreActionDontCare StoreAction = 0
+	StoreActionStore    StoreAction = 1
+)
+
+// PrimitiveType is the geometry primitive a draw call assembles.
+// https://developer.apple.com/documentation/metal/mtlprimitivetype.
+type PrimitiveType uint8
+
+const (
+	PrimitiveTypePoint         PrimitiveType = 0
+	PrimitiveTypeLine          PrimitiveType = 1
+	PrimitiveTypeLineStrip     PrimitiveType = 2
+	PrimitiveTypeTriangle      PrimitiveType = 3
+	PrimitiveTypeTriangleStrip PrimitiveType = 4
+)
+
+// ClearColor is the value an attachment is cleared to.
+type ClearColor struct{ Red, Green, Blue, Alpha float64 }
+
+// RenderPipelineState is a compiled render pipeline.
+// https://developer.apple.com/documentation/metal/mtlrenderpipelinestate.
+type RenderPipelineState struct {
+	renderPipelineState objc.ID
+}
+
+// RenderPipelineDescriptor configures a render pipeline.
+type RenderPipelineDescriptor struct {
+	VertexFunction   Function
+	FragmentFunction Function
+	ColorPixelFormat PixelFormat
+}
+
+// MakeRenderPipelineState creates a render pipeline state object.
+// https://developer.apple.com/documentation/metal/mtldevice/1433369-makerenderpipelinestate.
+func (d Device) MakeRenderPipelineState(desc RenderPipelineDescriptor) (RenderPipelineState, error) {
+	rpd := objc.ID(objc.GetClass("MTLRenderPipelineDescriptor")).Send(selAlloc).Send(selInit)
+	defer rpd.Send(selRelease)
+	rpd.Send(selSetVertexFunction, desc.VertexFunction.function)
+	rpd.Send(selSetFragmentFunction, desc.FragmentFunction.function)
+	att := rpd.Send(selColorAttachments).Send(selObjectAtIndexed, uint64(0))
+	att.Send(selSetPixelFormat, uint64(desc.ColorPixelFormat))
+
+	var err objc.ID
+	pso := d.device.Send(selNewRenderPipeline, rpd, unsafe.Pointer(&err))
+	if pso == 0 {
+		return RenderPipelineState{}, errors.New(nsErrorString(err))
+	}
+	return RenderPipelineState{pso}, nil
+}
+
+// ColorAttachment configures a single render-pass color attachment.
+type ColorAttachment struct {
+	Texture     Texture
+	LoadAction  LoadAction
+	StoreAction StoreAction
+	ClearColor  ClearColor
+}
+
+// RenderPassDescriptor describes a render pass's attachments.
+type RenderPassDescriptor struct {
+	ColorAttachment0 ColorAttachment
+}
+
+// objc builds the MTLRenderPassDescriptor.
+func (rp RenderPassDescriptor) objc() objc.ID {
+	d := objc.ID(objc.GetClass("MTLRenderPassDescriptor")).Send(selRenderPassDesc)
+	att := d.Send(selColorAttachments).Send(selObjectAtIndexed, uint64(0))
+	c := rp.ColorAttachment0
+	att.Send(selSetTexture, c.Texture.texture)
+	att.Send(selSetLoadAction, uint64(c.LoadAction))
+	att.Send(selSetStoreAction, uint64(c.StoreAction))
+	att.Send(selSetClearColor, mtlClearColor{c.ClearColor.Red, c.ClearColor.Green, c.ClearColor.Blue, c.ClearColor.Alpha})
+	return d
+}
+
+// RenderCommandEncoder encodes a render pass.
+// https://developer.apple.com/documentation/metal/mtlrendercommandencoder.
+type RenderCommandEncoder struct {
+	CommandEncoder
+}
+
+// MakeRenderCommandEncoder creates a render command encoder for the pass.
+func (cb CommandBuffer) MakeRenderCommandEncoder(desc RenderPassDescriptor) RenderCommandEncoder {
+	enc := cb.commandBuffer.Send(selRenderEncoder, desc.objc())
+	return RenderCommandEncoder{CommandEncoder{enc}}
+}
+
+// SetRenderPipelineState sets the current render pipeline state.
+func (rce RenderCommandEncoder) SetRenderPipelineState(rps RenderPipelineState) {
+	rce.commandEncoder.Send(selSetRenderPipeline, rps.renderPipelineState)
+}
+
+// SetVertexBuffer binds a buffer for the vertex function.
+func (rce RenderCommandEncoder) SetVertexBuffer(b Buffer, offset, index int) {
+	rce.commandEncoder.Send(selSetVertexBuffer, b.buffer, uint64(offset), uint64(index))
+}
+
+// SetFragmentBuffer binds a buffer for the fragment function.
+func (rce RenderCommandEncoder) SetFragmentBuffer(b Buffer, offset, index int) {
+	rce.commandEncoder.Send(selSetFragmentBuffer, b.buffer, uint64(offset), uint64(index))
+}
+
+// SetVertexBytes sets inline data for the vertex function.
+func (rce RenderCommandEncoder) SetVertexBytes(b []byte, index int) {
+	rce.commandEncoder.Send(selSetVertexBytes, unsafe.Pointer(&b[0]), uint64(len(b)), uint64(index))
+}
+
+// DrawPrimitives draws vertexCount vertices starting at vertexStart.
+func (rce RenderCommandEncoder) DrawPrimitives(typ PrimitiveType, vertexStart, vertexCount int) {
+	rce.commandEncoder.Send(selDrawPrimitives, uint64(typ), uint64(vertexStart), uint64(vertexCount))
+}
+
+// GetBytes reads texture pixels back into dst (e.g. for headless readback).
+func (t Texture) GetBytes(dst []byte, bytesPerRow int, region Region, level int) {
+	r := mtlRegion{origin: region.Origin.c(), size: region.Size.c()}
+	t.texture.Send(selGetBytes, unsafe.Pointer(&dst[0]), uint64(bytesPerRow), r, uint64(level))
+}

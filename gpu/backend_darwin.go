@@ -108,10 +108,11 @@ type metalPipeline struct {
 func (p *metalPipeline) maxThreads() int { return p.max }
 
 type metalCmd struct {
-	m   *metalBackend
-	cb  mtl.CommandBuffer
-	enc mtl.ComputeCommandEncoder
-	cur *metalPipeline
+	m    *metalBackend
+	cb   mtl.CommandBuffer
+	enc  mtl.ComputeCommandEncoder
+	renc mtl.RenderCommandEncoder
+	cur  *metalPipeline
 }
 
 func (c *metalCmd) beginCompute() { c.enc = c.cb.MakeComputeCommandEncoder() }
@@ -154,3 +155,110 @@ func (c *metalCmd) commit() {
 	c.m.last = c.cb
 	c.m.hasLast = true
 }
+
+// --- render support ---
+
+func mtlFormat(f TextureFormat) mtl.PixelFormat {
+	switch f {
+	case RGBA8Unorm:
+		return mtl.PixelFormatRGBA8UNorm
+	default:
+		return mtl.PixelFormatRGBA8UNorm
+	}
+}
+
+func mtlPrim(p Primitive) mtl.PrimitiveType {
+	switch p {
+	case TriangleStrip:
+		return mtl.PrimitiveTypeTriangleStrip
+	case LineList:
+		return mtl.PrimitiveTypeLine
+	case PointList:
+		return mtl.PrimitiveTypePoint
+	default:
+		return mtl.PrimitiveTypeTriangle
+	}
+}
+
+func (m *metalBackend) newTexture(format TextureFormat, w, h int, renderTarget bool) (backendTexture, error) {
+	usage := mtl.TextureUsageShaderRead
+	if renderTarget {
+		usage |= mtl.TextureUsageRenderTarget
+	}
+	tex := m.dev.MakeTexture(mtl.TextureDescriptor{
+		PixelFormat: mtlFormat(format),
+		Width:       w,
+		Height:      h,
+		StorageMode: mtl.StorageModeShared,
+		Usage:       usage,
+	})
+	return &metalTexture{tex: tex, w: w, h: h}, nil
+}
+
+func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat) (backendRenderPipeline, error) {
+	vfn, err := vmod.(*metalModule).lib.MakeFunction(ventry)
+	if err != nil {
+		return nil, err
+	}
+	ffn, err := fmod.(*metalModule).lib.MakeFunction(fentry)
+	if err != nil {
+		return nil, err
+	}
+	rps, err := m.dev.MakeRenderPipelineState(mtl.RenderPipelineDescriptor{
+		VertexFunction:   vfn,
+		FragmentFunction: ffn,
+		ColorPixelFormat: mtlFormat(color),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &metalRenderPipeline{rps: rps}, nil
+}
+
+type metalTexture struct {
+	tex  mtl.Texture
+	w, h int
+}
+
+func (t *metalTexture) readPixels() []byte {
+	dst := make([]byte, t.w*t.h*4)
+	t.tex.GetBytes(dst, t.w*4, mtl.RegionMake2D(0, 0, t.w, t.h), 0)
+	return dst
+}
+
+type metalRenderPipeline struct{ rps mtl.RenderPipelineState }
+
+func (*metalRenderPipeline) isRenderPipeline() {}
+
+func (c *metalCmd) beginRender(info renderPassInfo) {
+	load := mtl.LoadActionLoad
+	if info.load == LoadClear {
+		load = mtl.LoadActionClear
+	}
+	c.renc = c.cb.MakeRenderCommandEncoder(mtl.RenderPassDescriptor{
+		ColorAttachment0: mtl.ColorAttachment{
+			Texture:     info.color.(*metalTexture).tex,
+			LoadAction:  load,
+			StoreAction: mtl.StoreActionStore,
+			ClearColor:  mtl.ClearColor{Red: info.clearColor[0], Green: info.clearColor[1], Blue: info.clearColor[2], Alpha: info.clearColor[3]},
+		},
+	})
+}
+
+func (c *metalCmd) setRenderPipeline(p backendRenderPipeline) {
+	c.renc.SetRenderPipelineState(p.(*metalRenderPipeline).rps)
+}
+
+func (c *metalCmd) setRenderBuffer(b backendBuffer, offset, index int) {
+	c.renc.SetFragmentBuffer(b.(*metalBuffer).buf, offset, index)
+}
+
+func (c *metalCmd) setVertexBuffer(b backendBuffer, index int) {
+	c.renc.SetVertexBuffer(b.(*metalBuffer).buf, 0, index)
+}
+
+func (c *metalCmd) draw(prim Primitive, start, count int) {
+	c.renc.DrawPrimitives(mtlPrim(prim), start, count)
+}
+
+func (c *metalCmd) endRender() { c.renc.EndEncoding() }

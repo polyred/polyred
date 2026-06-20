@@ -212,6 +212,9 @@ func (d Device) MakeTexture(td TextureDescriptor) Texture {
 	desc.Send(selSetWidth, uint64(td.Width))
 	desc.Send(selSetHeight, uint64(td.Height))
 	desc.Send(selSetStorageMode, uint64(td.StorageMode))
+	if td.Usage != 0 {
+		desc.Send(selSetUsage, uint64(td.Usage))
+	}
 	texture := d.device.Send(selNewTextureWithDesc, desc)
 	desc.Send(selRelease)
 	return Texture{
@@ -268,6 +271,7 @@ type TextureDescriptor struct {
 	Width       int
 	Height      int
 	StorageMode StorageMode
+	Usage       TextureUsage
 }
 
 // Texture is a memory allocation for storing formatted
