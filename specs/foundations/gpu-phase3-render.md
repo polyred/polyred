@@ -95,8 +95,13 @@ Headless path stays the default for tests.
   renders to an offscreen RGBA texture through the Device API and reads back red
   at center, cgo-free.
 - **C3 Go→shader vertex/fragment — DONE** (`gpu/shader`, commit `3f56ffc`): `//gpu:vertex`/`//gpu:fragment` directives, Vec4→float4, value returns; a triangle rendered headless from Go-authored vertex+fragment shaders (`gpu/shader/render_darwin_test.go`).
-- **C5 renderer integration (`passDeferred` on GPU) — TODO**.
-- **C6 windowed present — TODO**.
+- **C5 renderer integration — STARTED** (commit `57c151b`): the engine's sRGB
+  gamma-correction pass authored as a Go GPU kernel matches `color.FromLinear2sRGB`
+  across all 256 levels through the Device API (`gpu/shader/gamma_darwin_test.go`)
+  — one real renderer pass offloaded, exercising new compiler `if/else` + `pow`.
+  Full `passDeferred` (Blinn-Phong + lights + materials + G-buffer marshaling)
+  remains — a large multi-increment effort.
+- **C6 windowed present — TODO** (needs CAMetalLayer via `gpu/ctx/ca`, cgo).
 
 ## Notes
 - Largest phase; will likely be broken into tasks (C1 render plumbing is the
