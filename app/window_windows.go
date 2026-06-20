@@ -7,6 +7,7 @@ package app
 import (
 	"fmt"
 	"image"
+	"reflect"
 	"runtime"
 	"sync"
 	"syscall"
@@ -21,7 +22,7 @@ import (
 type osWindow struct {
 	hwnd syscall.Handle
 	hdc  syscall.Handle
-	ctx  glContext
+	ctx  *winContext
 
 	viewScale int
 	config    *config
@@ -110,15 +111,10 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 	if err != nil {
 		panic(fmt.Errorf("app: failed to create a window: %w", err))
 	}
-	ctx, err := newGLContext(hdc)
-	if err != nil {
-		panic(fmt.Errorf("app: failed to create a window: %w", err))
-	}
 
 	w.win = &osWindow{
 		hwnd:      hwnd,
 		hdc:       hdc,
-		ctx:       ctx,
 		viewScale: viewScale,
 		config:    &cfg,
 	}
@@ -129,6 +125,22 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 	windows.ShowWindow(w.win.hwnd, windows.SW_SHOWDEFAULT)
 	windows.SetForegroundWindow(w.win.hwnd)
 	windows.SetFocus(w.win.hwnd)
+
+	// The EGL (ANGLE) context is created after the window is shown, mirroring
+	// the X11 path which builds the context after the window is mapped.
+	w.win.ctx, err = newWinContext(w.win)
+	if err != nil {
+		panic(fmt.Errorf("egl: cannot create context for window: %w", err))
+	}
+	if err := w.win.ctx.Refresh(); err != nil {
+		panic(fmt.Errorf("egl: cannot create surface: %w", err))
+	}
+
+	// A single background goroutine owns rendering; the Win32 message pump runs
+	// here on the locked thread. This mirrors the Linux model (go w.draw(app) +
+	// event loop) instead of driving draw synchronously from WM_PAINT, which
+	// would block the pump.
+	go w.draw(app)
 
 	w.event()
 	dead <- struct{}{}
@@ -169,6 +181,45 @@ loop:
 }
 
 func (w *window) draw(app Window) {
+	// GL calls must stay on a single thread; the EGL context is made current
+	// here. Mirrors the X11 draw goroutine.
+	runtime.LockOSThread()
+	if err := w.win.ctx.Lock(); err != nil {
+		panic(fmt.Errorf("egl: cannot make context current: %w", err))
+	}
+	defer w.win.ctx.Unlock()
+
+	g := w.win.ctx.gl
+
+	vertices := slice2bytes([]float32{
+		-1, +1, 0, 0,
+		+1, +1, 1, 0,
+		-1, -1, 0, 1,
+		+1, -1, 1, 1,
+	})
+	vbo := g.CreateBuffer()
+	g.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	g.BufferData(gl.ARRAY_BUFFER, len(vertices), gl.STATIC_DRAW, vertices)
+	defer g.DeleteBuffer(vbo)
+
+	program, err := gl.CreateProgram(g, vert, frag, []string{"position", "uvcoord"})
+	if err != nil {
+		panic(fmt.Sprintf("gles: cannot create shader program: %v", err))
+	}
+	g.UseProgram(program)
+	defer g.DeleteProgram(program)
+
+	position := g.GetAttribLocation(program, "position")
+	uvcoord := g.GetAttribLocation(program, "uvcoord")
+	g.EnableVertexAttribArray(position)
+	g.EnableVertexAttribArray(uvcoord)
+	g.VertexAttribPointer(position, 2, gl.FLOAT, false, 4*4, 0)
+	g.VertexAttribPointer(uvcoord, 2, gl.FLOAT, false, 4*4, 2*4)
+
+	tex := g.CreateTexture()
+	g.BindTexture(gl.TEXTURE_2D, tex)
+	defer g.DeleteTexture(tex)
+
 	last := time.Now()
 	tPerFrame := time.Second / 240 // 120 fps
 	tk := time.NewTicker(tPerFrame)
@@ -205,33 +256,58 @@ func (w *window) draw(app Window) {
 			}
 
 			w.flush(img)
+			if err := w.win.ctx.Present(); err != nil {
+				panic(fmt.Errorf("egl: swap buffer failed: %v", err))
+			}
 		}
 	}
 }
 
-// flush flushes the containing pixel buffer of the given image to the
-// hardware frame buffer for display prupose. The given image is assumed
-// to be non-nil pointer.
+// flush uploads the rendered image to a texture and draws it as a full-screen
+// quad. The given image is assumed to be a non-nil pointer.
 func (w *window) flush(img *image.RGBA) {
-	dx, dy := int32(img.Bounds().Dx()), int32(img.Bounds().Dy())
-	gl.RasterPos2d(-1, 1)
-	gl.Viewport(0, 0, dx, dy)
-	gl.DrawPixels(dx, dy, gl.RGBA, gl.UNSIGNED_BYTE, img.Pix)
-
-	// We need a synchornization here. Similar to commandBuffer.WaitUntilCompleted.
-	// See a general discussion about CPU, GPU and display synchornization here:
-	//
-	// Working with Metal: Fundamentals, 21:28
-	// https://developer.apple.com/videos/play/wwdc2014/604/
-	//
-	// The difference of gl.Finish and gl.Flush can be found here:
-	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFlush.xml
-	// https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glFinish.xml
-	//
-	// We may not need such an wait, if we are doing perfect timing.
-	// See: https://golang.design/research/ultimate-channel/
-	gl.Finish()
+	g := w.win.ctx.gl
+	g.Viewport(0, 0, w.win.config.size.X, w.win.config.size.Y)
+	g.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, img.Bounds().Dx(), img.Bounds().Dy(), gl.RGBA, gl.UNSIGNED_BYTE, img.Pix)
+	g.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	g.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+	g.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	g.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	g.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
+	g.Finish()
 }
+
+func slice2bytes(s any) []byte {
+	v := reflect.ValueOf(s)
+	first := v.Index(0)
+	sz := int(first.Type().Size())
+	res := unsafe.Slice((*byte)(unsafe.Pointer(v.Pointer())), sz*v.Cap())
+	return res[:sz*v.Len()]
+}
+
+const (
+	vert = `#version 100
+precision highp float;
+
+attribute vec2 position;
+attribute vec2 uvcoord;
+
+varying vec2 outUV;
+
+void main() {
+	outUV = uvcoord;
+	gl_Position = vec4(position, 0.0, 1.0);
+}`
+	frag = `#version 100
+precision highp float;
+
+varying vec2 outUV;
+uniform sampler2D tex;
+
+void main() {
+	gl_FragColor = texture2D(tex, outUV);
+}`
+)
 
 func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr {
 	win, exists := winMap.Load(hwnd)
@@ -241,7 +317,6 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 
 	ww := win.(winapp)
 	w := ww.win
-	app := ww.app
 
 	switch msg {
 	case windows.WM_UNICHAR:
@@ -295,7 +370,9 @@ func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr
 		w.win.hwnd = 0 // The system destroys the HWND for us.
 		windows.PostQuitMessage(0)
 	case windows.WM_PAINT:
-		w.draw(app)
+		// Rendering is driven by the background draw goroutine started in run().
+		// Fall through to DefWindowProc, which validates the update region so
+		// Windows stops re-posting WM_PAINT.
 
 	case windows.WM_SIZE:
 		println("WM_SIZE")
