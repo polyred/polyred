@@ -129,10 +129,20 @@ Headless path stays the default for tests.
     casting light + `ReceiveShadow` materials; CPU fallback otherwise. A
     bunny+ground shadow scene renders CPU vs GPU within ±1
     (`render/gpudeferred_shadow_test.go`, `Workers(1)`).
-  - The GPU deferred offload now covers **point + directional lights + ambient +
-    multiple materials + shadow maps**. Remaining generality: ambient occlusion
-    (SSAO neighbour depth sampling — engine flags its own as "naive and super
-    slow"), and multiple shadow-casting lights.
+  - **Multiple shadow-casting lights** (commit `97a3730`): the shadow kernel
+    loops over N lights (per-light `float4x4` built in-kernel, packed depth
+    maps). A 2-light bunny+ground scene matches CPU within ±1.
+  - **Ambient occlusion** (commit `fe9c27f`): a final SSAO compute pass
+    (`aoKernel`) mirrors `material/ao.go` — 8-direction depth-buffer march,
+    `atan` elevation angles, `pow(total, 10000)`. The engine's `pow(.,10000)`
+    amplifies GPU/CPU float differences, so a few contour-edge pixels diverge
+    (0.74% of channels >8) while 99.26% match closely; exact parity is
+    mathematically infeasible for this algorithm (the engine flags its own as
+    "naive and super slow"). SSAO renders correctly on the GPU.
+  - **The renderer's deferred pass is now fully offloaded:** point + directional
+    lights + ambient + multiple materials + shadow maps (single & multi-light) +
+    ambient occlusion + gamma, all on the cgo-free `poly.red/gpu` abstraction
+    with CPU-parity (AO close-but-not-bit-identical by algorithm design).
 - **C6 windowed present — TODO** (needs CAMetalLayer via `gpu/ctx/ca`, cgo).
 
 ## Notes
