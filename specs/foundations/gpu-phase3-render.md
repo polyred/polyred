@@ -95,12 +95,17 @@ Headless path stays the default for tests.
   renders to an offscreen RGBA texture through the Device API and reads back red
   at center, cgo-free.
 - **C3 Go→shader vertex/fragment — DONE** (`gpu/shader`, commit `3f56ffc`): `//gpu:vertex`/`//gpu:fragment` directives, Vec4→float4, value returns; a triangle rendered headless from Go-authored vertex+fragment shaders (`gpu/shader/render_darwin_test.go`).
-- **C5 renderer integration — STARTED** (commit `57c151b`): the engine's sRGB
-  gamma-correction pass authored as a Go GPU kernel matches `color.FromLinear2sRGB`
-  across all 256 levels through the Device API (`gpu/shader/gamma_darwin_test.go`)
-  — one real renderer pass offloaded, exercising new compiler `if/else` + `pow`.
-  Full `passDeferred` (Blinn-Phong + lights + materials + G-buffer marshaling)
-  remains — a large multi-increment effort.
+- **C5 renderer integration — gamma pass DONE** (commits `57c151b`, `45c9658`):
+  `render.GPU(dev)` routes the renderer's gamma-correction pass through a GPU
+  compute kernel (the engine's analytic sRGB, authored in Go) instead of the CPU
+  fragment shader, with CPU fallback on error. A real bunny scene rendered with
+  CPU vs GPU gamma is **bit-identical** (`render/gpugamma_test.go`, max channel
+  diff 0). The renderer now genuinely consumes the `poly.red/gpu` abstraction.
+  Also proven standalone: GPU diffuse lighting with a light **uniform** + normal
+  **varying** (`gpu/shader/lightuniform_darwin_test.go`) — the structure of the
+  deferred lighting pass. Remaining: offload the full Blinn-Phong shading
+  (multi-light + materials + G-buffer marshaling) — a large multi-package effort
+  whose seam, shading language, and lighting math are now all proven.
 - **C6 windowed present — TODO** (needs CAMetalLayer via `gpu/ctx/ca`, cgo).
 
 ## Notes
