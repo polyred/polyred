@@ -65,6 +65,7 @@ var (
 	_glFramebufferRenderbuffer             = LibGLESv2.NewProc("glFramebufferRenderbuffer")
 	_glFramebufferTexture2D                = LibGLESv2.NewProc("glFramebufferTexture2D")
 	_glGenQueries                          = LibGLESv2.NewProc("glGenQueries")
+	_glGetAttribLocation                   = LibGLESv2.NewProc("glGetAttribLocation")
 	_glGetError                            = LibGLESv2.NewProc("glGetError")
 	_glGetRenderbufferParameteriv          = LibGLESv2.NewProc("glGetRenderbufferParameteriv")
 	_glGetFloatv                           = LibGLESv2.NewProc("glGetFloatv")
@@ -388,6 +389,13 @@ func bytePtrToString(p *uint8) string {
 	return string(a[:i])
 }
 
+func (c *Functions) GetAttribLocation(p Program, name string) Attrib {
+	cname := cString(name)
+	c0 := &cname[0]
+	a, _, _ := syscall.Syscall(_glGetAttribLocation.Addr(), 2, uintptr(p.V), uintptr(unsafe.Pointer(c0)), 0)
+	issue34474KeepAlive(c0)
+	return Attrib(a)
+}
 func (c *Functions) GetUniformLocation(p Program, name string) Uniform {
 	cname := cString(name)
 	c0 := &cname[0]
@@ -449,8 +457,13 @@ func (c *Functions) ShaderSource(s Shader, src string) {
 	syscall.Syscall6(_glShaderSource.Addr(), 4, uintptr(s.V), 1, uintptr(unsafe.Pointer(psrc)), uintptr(unsafe.Pointer(&n)), 0, 0)
 	issue34474KeepAlive(psrc)
 }
-func (f *Functions) TexImage2D(target Enum, level int, internalFormat Enum, width int, height int, format Enum, ty Enum) {
-	syscall.Syscall9(_glTexImage2D.Addr(), 9, uintptr(target), uintptr(level), uintptr(internalFormat), uintptr(width), uintptr(height), 0, uintptr(format), uintptr(ty), 0)
+func (f *Functions) TexImage2D(target Enum, level int, internalFormat Enum, width int, height int, format Enum, ty Enum, data []byte) {
+	var p unsafe.Pointer
+	if len(data) > 0 {
+		p = unsafe.Pointer(&data[0])
+	}
+	syscall.Syscall9(_glTexImage2D.Addr(), 9, uintptr(target), uintptr(level), uintptr(internalFormat), uintptr(width), uintptr(height), 0, uintptr(format), uintptr(ty), uintptr(p))
+	issue34474KeepAlive(f)
 }
 func (f *Functions) TexStorage2D(target Enum, levels int, internalFormat Enum, width, height int) {
 	syscall.Syscall6(_glTexStorage2D.Addr(), 5, uintptr(target), uintptr(levels), uintptr(internalFormat), uintptr(width), uintptr(height), 0)
