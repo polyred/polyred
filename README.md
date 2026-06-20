@@ -61,7 +61,7 @@ The design, decisions, and roadmap live in
 | Metal backend (compute + render), cgo-free via purego | working |
 | Go→shader compiler (compute + vertex/fragment, varyings, uniforms, vector math, swizzle, texture sampling) | working |
 | GPU compute (matrix ops), headless render, GPU lighting math | proven by tests |
-| Renderer GPU offload (render.GPU): gamma + deferred Blinn-Phong (point+directional lights, multi-material, shadow maps) | working |
+| Renderer GPU offload (render.GPU): gamma + deferred Blinn-Phong (point+directional lights, multi-material, single+multi-light shadow maps) | working |
 | Windowed present; GL/Vulkan/DX12 backends | planned |
 | OpenGL / Vulkan / DirectX 12 backends | planned |
 
