@@ -58,23 +58,7 @@ func TestGPUDeferredAO(t *testing.T) {
 		t.Fatal("GPU deferred path not exercised (AO)")
 	}
 
-	maxDiff, nBig := 0, 0
-	for i := range cpu.Pix {
-		d := int(cpu.Pix[i]) - int(gpuImg.Pix[i])
-		if d < 0 {
-			d = -d
-		}
-		if d > maxDiff {
-			maxDiff = d
-		}
-		if d > 8 {
-			nBig++
-		}
-	}
-	t.Logf("GPU SSAO vs CPU: max channel diff = %d, channels differing by >8 = %d/%d", maxDiff, nBig, len(cpu.Pix))
-	// SSAO's pow(.,10000) makes a handful of edge pixels diverge; require the
-	// vast majority to be close.
-	if frac := float64(nBig) / float64(len(cpu.Pix)); frac > 0.02 {
-		t.Fatalf("too many large SSAO differences: %.2f%% of channels differ by >8", frac*100)
-	}
+	// SSAO's pow(.,10000) makes a handful of contour pixels diverge; the helper
+	// tolerates a tiny fraction of large diffs.
+	assertDeferredClose(t, cpu.Pix, gpuImg.Pix, "SSAO")
 }

@@ -65,18 +65,5 @@ func TestGPUDeferredShadowTwoLights(t *testing.T) {
 		t.Fatal("GPU deferred path not exercised (two-light shadow)")
 	}
 
-	maxDiff := 0
-	for i := range cpu.Pix {
-		d := int(cpu.Pix[i]) - int(gpuImg.Pix[i])
-		if d < 0 {
-			d = -d
-		}
-		if d > maxDiff {
-			maxDiff = d
-		}
-	}
-	if maxDiff > 2 {
-		t.Fatalf("CPU vs GPU deferred (2-light shadow): max channel diff = %d", maxDiff)
-	}
-	t.Logf("GPU deferred two-light shadow parity: max channel diff = %d", maxDiff)
+	assertDeferredClose(t, cpu.Pix, gpuImg.Pix, "two-light shadow")
 }
