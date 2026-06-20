@@ -165,18 +165,43 @@ type ShaderSource struct {
 
 type ComputePipelineDescriptor struct {
 	Label  string
+	Layout *PipelineLayout
 	Module *ShaderModule
 	Entry  string
 }
 
-// Binding model: start with a flat "bindings = ordered resources" scheme
-// (matches the demo's SetBuffer(index) and GL BindBufferBase(index)).
-// Bind-group *layouts* are deferred until a backend needs them (Vulkan/DX12).
-type Binding struct {
-	Index  int
-	Buffer *Buffer // exactly one of Buffer/Texture set
-	Texture *Texture
+// Binding model (locked): full WebGPU bind-group layouts, up front. A
+// BindGroupLayout declares the shape (binding index, resource kind, visible
+// stages); a BindGroup is a concrete set of resources matching a layout; a
+// PipelineLayout is the ordered list of group layouts a pipeline expects.
+// Investing here now avoids a churn-y migration when Vulkan/DX12 (which require
+// descriptor-set / root-signature layouts) land. Metal maps groups to argument
+// buffers / index ranges; GL maps them to binding-point ranges.
+type BindGroupLayout struct{ /* ... */ }
+
+type BindGroupLayoutEntry struct {
+	Binding    int
+	Visibility ShaderStage // Vertex | Fragment | Compute (bitwise)
+	Kind       BindingKind // UniformBuffer | StorageBuffer | SampledTexture | StorageTexture | Sampler
 }
+
+func (d *Device) NewBindGroupLayout(entries ...BindGroupLayoutEntry) *BindGroupLayout
+
+type BindGroup struct{ /* ... */ }
+
+type BindGroupEntry struct {
+	Binding int
+	Buffer  *Buffer  // exactly one resource field set, matching the layout Kind
+	Texture *Texture
+	Sampler *Sampler
+}
+
+func (d *Device) NewBindGroup(layout *BindGroupLayout, entries ...BindGroupEntry) *BindGroup
+
+// PipelineLayout: ordered bind-group layouts (group 0, 1, ...) a pipeline binds.
+type PipelineLayout struct{ /* ... */ }
+
+func (d *Device) NewPipelineLayout(groups ...*BindGroupLayout) *PipelineLayout
 
 // CommandEncoder records GPU work. Encodes into pass encoders, then Finish()
 // produces a CommandBuffer handed to Queue.Submit. Mirrors WebGPU/Metal; the
@@ -191,7 +216,7 @@ func (e *CommandEncoder) Finish() *CommandBuffer
 type ComputePass struct{ /* ... */ }
 
 func (p *ComputePass) SetPipeline(cp *ComputePipeline)
-func (p *ComputePass) SetBindings(b ...Binding)
+func (p *ComputePass) SetBindGroup(group int, bg *BindGroup)
 func (p *ComputePass) Dispatch(x, y, z int) // workgroup counts
 func (p *ComputePass) End()
 
@@ -203,7 +228,7 @@ type RenderPassDescriptor struct {
 type RenderPass struct{ /* ... */ }
 
 func (p *RenderPass) SetPipeline(rp *RenderPipeline)
-func (p *RenderPass) SetBindings(b ...Binding)
+func (p *RenderPass) SetBindGroup(group int, bg *BindGroup)
 func (p *RenderPass) SetVertexBuffer(slot int, b *Buffer)
 func (p *RenderPass) SetIndexBuffer(b *Buffer, fmt IndexFormat)
 func (p *RenderPass) DrawIndexed(indexCount, instanceCount int)
@@ -218,9 +243,10 @@ func (q *Queue) WaitIdle() // blocks until submitted work completes
 Notes:
 - This is the WebGPU object graph with the negotiation machinery trimmed. Every
   method above has a near-literal Metal counterpart in today's `mtl` package.
-- `ShaderSource` deliberately punts cross-language shader translation. Polyred's
-  shaders are Go funcs today (§7); a later milestone can generate MSL/GLSL from a
-  restricted Go subset or a small DSL. Not in scope here.
+- `ShaderSource` is normally produced by the **Go→shader compiler** (§6b), not
+  hand-written. The per-language fields exist so a module can carry the variant
+  for whichever driver is live (and so hand-authored shaders remain possible for
+  escape hatches).
 
 ## 5. Two slices that validate the types
 
@@ -232,17 +258,30 @@ commit → wait → read back. Re-expressed through the abstraction:
 
 ```go
 dev, _ := gpu.Open()                      // picks Metal on darwin, GL elsewhere
-mod, _ := dev.NewShaderModule(addSource)  // addSource.MSL + addSource.GLSL
-pipe, _ := dev.NewComputePipeline(gpu.ComputePipelineDescriptor{Module: mod, Entry: "add"})
+mod, _ := dev.NewShaderModule(addSource)  // from the Go->shader compiler, §6b
+
+layout := dev.NewBindGroupLayout(
+	gpu.BindGroupLayoutEntry{Binding: 0, Visibility: gpu.StageCompute, Kind: gpu.StorageBuffer},
+	gpu.BindGroupLayoutEntry{Binding: 1, Visibility: gpu.StageCompute, Kind: gpu.StorageBuffer},
+	gpu.BindGroupLayoutEntry{Binding: 2, Visibility: gpu.StageCompute, Kind: gpu.StorageBuffer},
+)
+pl := dev.NewPipelineLayout(layout)
+pipe, _ := dev.NewComputePipeline(gpu.ComputePipelineDescriptor{Layout: pl, Module: mod, Entry: "add"})
 
 a := must(dev.NewBuffer(gpu.BufferDescriptor{Size: n*4, Usage: gpu.BufferStorage | gpu.BufferCopyDst, Data: bytesOf(m1)}))
 b := must(dev.NewBuffer(gpu.BufferDescriptor{Size: n*4, Usage: gpu.BufferStorage | gpu.BufferCopyDst, Data: bytesOf(m2)}))
 out := must(dev.NewBuffer(gpu.BufferDescriptor{Size: n*4, Usage: gpu.BufferStorage | gpu.BufferMapRead}))
 
+bg := dev.NewBindGroup(layout,
+	gpu.BindGroupEntry{Binding: 0, Buffer: a},
+	gpu.BindGroupEntry{Binding: 1, Buffer: b},
+	gpu.BindGroupEntry{Binding: 2, Buffer: out},
+)
+
 enc := dev.NewCommandEncoder()
 cp := enc.BeginComputePass()
 cp.SetPipeline(pipe)
-cp.SetBindings(gpu.Binding{Index: 0, Buffer: a}, gpu.Binding{Index: 1, Buffer: b}, gpu.Binding{Index: 2, Buffer: out})
+cp.SetBindGroup(0, bg)
 cp.Dispatch(ceilDiv(n, 256), 1, 1)
 cp.End()
 dev.Queue().Submit(enc.Finish())
@@ -251,12 +290,13 @@ dev.Queue().WaitIdle()
 result := unsafe.Slice((*float32)(...), n) // from out.Map()
 ```
 
-- **Metal** satisfies this 1:1 with the current bindings.
-- **GL** satisfies it by recording the 8 calls and replaying them on its context
-  thread; `SetBindings` → `BindBufferBase(index)`, `Dispatch` → `DispatchCompute`,
-  `WaitIdle` → `MemoryBarrier` + `Finish`. Where GL strains: it needs the locked
-  thread and an explicit `MemoryBarrier` the others express as submit semantics —
-  exactly the emulation cost §3 assigns to GL.
+- **Metal** satisfies this 1:1 with the current bindings (group → buffer index
+  range).
+- **GL** satisfies it by recording the calls and replaying them on its context
+  thread; the bind group → `BindBufferBase(index)` per entry, `Dispatch` →
+  `DispatchCompute`, `WaitIdle` → `MemoryBarrier` + `Finish`. Where GL strains: it
+  needs the locked thread and an explicit `MemoryBarrier` the others express as
+  submit semantics — exactly the emulation cost §3 assigns to GL.
 
 This slice is the first implementation milestone: it deletes the duplicated
 `add/sub/sqrt/mul` per-backend code in favor of one path.
@@ -291,28 +331,65 @@ State today: Metal **and** GL both use cgo; only `internal/dl` (hand-rolled asm
 `dlopen`/`dlsym` trampolines) is cgo-free, and it is broken. Hand-rolling
 per-arch assembly trampolines is reinventing **purego**.
 
-Two framings:
+**Decision (locked): cgo-free is a hard requirement.** No `import "C"` in any
+backend; every backend routes symbol loading through a purego-style loader from
+day one. Consequences:
 
-- **(A) Hard requirement.** Every backend routes its symbol loading through a
-  purego-style loader; no `import "C"`. Cost: a per-platform/arch dynamic-call
-  effort. Recommendation if chosen: **adopt `github.com/ebitengine/purego`**
-  rather than maintain `internal/dl`'s assembly. Metal then loads
-  Objective-C/`objc_msgSend` via purego (as Ebitengine does), GL via
-  `dlopen`/`GetProcAddress`. Highest payoff (pure-Go builds, trivial
-  cross-compile) but most up-front work and the riskiest surface (objc_msgSend
-  ABI per arch).
-- **(B) Aspiration / phased.** Define every backend behind a `loader` interface;
-  ship **cgo-first** now (reuse the working `mtl`/`gl` cgo bindings), and slot a
-  purego loader in later without changing the `Device` API. Lower risk, unblocks
-  the abstraction immediately, keeps the cgo-free option open.
+- **Adopt `github.com/ebitengine/purego`** (pure Go) instead of maintaining the
+  hand-rolled `internal/dl` assembly trampolines. `internal/dl` is **retired**.
+- **Metal** is rewritten to call the Objective-C runtime (`objc_msgSend`,
+  `objc_getClass`, `sel_registerName`) via purego — the existing `mtl.m`/`mtl.h`
+  cgo bridge is deleted. This is the largest single piece of work and the
+  riskiest surface (the `objc_msgSend` calling convention differs per arch:
+  arm64 vs amd64, and struct-return/float variants). Ebitengine's `purego/objc`
+  is the reference and can be used directly.
+- **GL/GLES** loads entry points via `dlopen`/`eglGetProcAddress` /
+  `GetProcAddress` through purego — no cgo.
+- **Vulkan/DX12** load their loaders (`vulkan-1`, `d3d12.dll`) the same way.
 
-**Recommendation: (B) now, (A) as a tracked milestone.** The valuable,
-reviewable work is the `Device` API and the renderer consuming it (§5, §7); that
-work is identical regardless of loader. Gate the abstraction on cgo-first
-bindings, and make "swap Metal+GL onto purego" a later milestone that adopts
-purego instead of repairing `internal/dl`. This also lets CI stay green on day
-one. (User decision: confirm A-vs-B and whether `internal/dl` is retired in
-favor of purego.)
+Because cgo-free is foundational, the purego migration is **Phase 1**, not a
+later milestone: we do not move the cgo bindings into polyred and then rip cgo
+out — we land the cgo-free backends directly. Cost is accepted up front in
+exchange for pure-Go builds and trivial cross-compilation. Risk is contained by
+doing Metal-on-purego first on the dev platform (darwin/arm64) behind the
+compute slice (§5a) before touching other backends.
+
+## 6b. Go→shader compiler (locked: in scope now)
+
+Shaders are authored in Go and compiled to each backend's language. This is a
+core component, not a later milestone. polyred's shaders are already Go funcs
+(`shader.Vertex`/`shader.Fragment`, `shader/program.go`), so this also makes the
+GPU path source-compatible with the CPU path at the shader level.
+
+Approach:
+
+- **Input:** a restricted Go subset — a function with a known signature
+  (compute: `func(gid uint3, bindings...)`, vertex/fragment matching
+  `shader.Program`), using `poly.red/math` vector/matrix types, fixed-size
+  arrays, `for`, `if`, arithmetic, and a whitelisted builtin set (dot, cross,
+  normalize, texture sample, etc.). No channels, goroutines, interfaces, maps,
+  heap allocation, or recursion.
+- **Front end:** parse with `go/parser` + type-check with `go/types` (we get Go's
+  own type checker for free), then lower the typed AST to a small SSA-ish IR.
+  `golang.org/x/tools/go/ssa` is an option for the lowering.
+- **Back ends:** IR → MSL, IR → GLSL (`#version 310 es` compute / GLSL ES for
+  raster), IR → HLSL, IR → SPIR-V (Vulkan; SPIR-V can also feed DX12 via
+  translation). One emitter per target language; the IR keeps them small.
+- **Binding mapping:** the Go function's resource parameters map to
+  `BindGroupLayout` entries (§4) by position/group annotations, so the compiler
+  emits both the shader text **and** the layout, keeping them in sync.
+- **Validation:** since we type-check with `go/types`, illegal constructs are
+  rejected at compile time with real Go positions, not at GPU pipeline creation.
+
+Reuse over reinvention: study `tinygo`'s and `gpu.js`/`Kompute`-style lowering,
+and existing Go-shader experiments (e.g. `shader`-in-Go projects) before fixing
+the IR. Start with the **compute** profile (smaller surface: no rasterizer
+fixed-function state) to power the matrix slice (§5a), then add the
+vertex/fragment profile for the render slice (§5b).
+
+Milestone shape: (1) compute Go→MSL for the matrix kernels; (2) compute
+Go→GLSL; (3) vertex/fragment Go→MSL+GLSL for the deferred pass; (4) SPIR-V/HLSL
+for Vulkan/DX12.
 
 ## 7. Folding into polyred + renderer consumption
 
@@ -344,30 +421,40 @@ Renderer consumption (the directive's real test — the renderer must *use* it):
 
 ## 8. Phased roadmap
 
-1. **Unblock + fold in.** Fix the `../gpu` build (truncated asm / go.sum), move
-   the real backends into `polyred/gpu`, delete stubs, retire the side repo.
-   Keep cgo-first (§6 option B). Exit: `go build ./... && go vet ./...` green,
-   matrix demo still passes.
-2. **Compute slice (§5a).** Land the `Device`/`Buffer`/`ComputePipeline`/
-   `CommandEncoder` API; reimplement matrix `Add/Sub/Sqrt/Mul` through it on
-   Metal **and** GL (GL via the context-thread emulation, §3). Delete the
-   duplicated per-backend math. Exit: one code path, both backends green.
-3. **Render slice (§5b).** Add `RenderPipeline`/`RenderPass`; port `passDeferred`
-   to the GPU behind `render.Backend(GPU(...))`. Exit: a scene renders to an
-   identical (within tolerance) `*image.RGBA` via CPU and GPU.
-4. **cgo-free (§6 option A).** Adopt purego; move Metal + GL symbol loading off
-   cgo behind the loader interface. Exit: pure-Go build on darwin+linux.
-5. **New backends.** Implement `vk/` then `dx12/` against the now-proven
-   `Device` API (SPIR-V path already in `ShaderSource`).
-6. **Shader story.** Decide MSL/GLSL/HLSL authoring vs. generating from a Go
-   subset; until then, ship hand-written per-backend shader variants.
+Sequenced for the locked decisions: cgo-free is foundational (Metal-on-purego in
+Phase 1), the Go→shader compiler is early, and both headless and windowed
+presentation are in scope.
 
-## 9. Open questions (for the reviewer)
+1. **Unblock + fold in, cgo-free from the start.** Fix the `../gpu` build, move
+   the real backends into `polyred/gpu`, delete stubs and the side repo. Adopt
+   `ebitengine/purego`; rewrite the Metal backend onto `objc_msgSend` via purego
+   (delete `mtl.m`/`mtl.h`); retire `internal/dl`. Exit:
+   `CGO_ENABLED=0 go build ./...` green on darwin/arm64, raw-Metal matrix demo
+   passes with **no cgo**.
+2. **Go→shader (compute) + compute slice (§5a, §6b).** Land
+   `Device`/`Buffer`/`BindGroup*`/`ComputePipeline`/`CommandEncoder`; build the
+   Go→MSL compute compiler; reimplement matrix `Add/Sub/Sqrt/Mul` as Go kernels
+   through the `Device` API on Metal. Add the cgo-free **GL** backend (purego +
+   context-thread emulation, §3) and the Go→GLSL emitter so the same kernels run
+   on GL. Exit: one Go-authored kernel, both backends green, cgo-free.
+3. **Render slice + Go→shader (vertex/fragment), headless and windowed (§5b).**
+   Add `RenderPipeline`/`RenderPass` and the vertex/fragment Go→MSL+GLSL path;
+   port `passDeferred` behind `render.Backend(GPU(...))`. Support **both**
+   offscreen render-to-`*image.RGBA` (CI-testable) and windowed present via
+   `ctx` drawables. Exit: a scene renders identically (within tolerance) on CPU
+   and GPU, headless and on screen.
+4. **New backends.** Implement `vk/` then `dx12/` against the proven `Device`
+   API; add the SPIR-V and HLSL emitters to the Go→shader compiler.
+5. **Hardening.** Expand the renderer's GPU coverage beyond the deferred pass
+   (forward raster, shadow maps), perf parity, validation layers.
 
-- cgo-free **A vs B** and the fate of `internal/dl` vs adopting purego (§6).
-- Binding model: flat ordered bindings now, or invest in bind-group layouts up
-  front for Vulkan/DX12 (§4)?
-- Shader authoring: hand-written per-backend variants vs. a Go→shader path (§4,
-  §8.6) — acceptable to require MSL/GLSL by hand initially?
-- Headless vs. windowed: prioritize offscreen render-to-image (CI-testable) over
-  swapchain/present for the first render slice?
+## 9. Resolved decisions
+
+- **cgo-free: hard requirement** — purego from day one, `internal/dl` retired,
+  Metal/GL/Vulkan/DX12 all cgo-free (§6).
+- **Bindings: full bind-group layouts up front** — `BindGroupLayout` /
+  `BindGroup` / `PipelineLayout`, no flat-ordered interim (§4).
+- **Go→shader: in scope now** — shaders authored in Go and compiled per backend;
+  a core component, not deferred (§6b).
+- **Presentation: both** headless render-to-image and windowed present are in
+  scope for the render slice (§8.3).
