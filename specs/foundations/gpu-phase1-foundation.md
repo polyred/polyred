@@ -215,5 +215,16 @@ is mechanical selector-by-selector translation, not a research problem.
   trivial cleanup deferred until the slice is fully proven. Loose end: the
   `!darwin` GL demo (`gpu/tests/math_gl.go`) still imports pre-restructure paths
   (`poly.red/internal/driver/egl|gles`) — pre-existing, fixed in Phase 2 (GL).
-- **T3/T4 — next:** stand up `gpu/device.go` and route the matrix demo through
-  the `Device` API.
+- **T3 (Device API skeleton) — DONE** (commit `1e2b457`). `gpu/device.go` +
+  `gpu/backend.go` + `gpu/backend_darwin.go`: the WebGPU-style compute API
+  (Device/Queue/Buffer/BindGroupLayout/BindGroup/PipelineLayout/ComputePipeline/
+  CommandEncoder/ComputePass) behind a private `backend` interface, with the
+  Metal backend over `gpu/mtl`. Render-path types deferred to Phase 3.
+- **T4 (matrix demo through the Device API) — DONE** (commit `1e2b457`).
+  `gpu/compute_darwin_test.go` runs Add/Sub/Sqrt/Mul through the `Device` API and
+  matches the CPU `math.Mat` results (`EqEps`, 1e-5), cgo-free. The §5a compute
+  slice is proven end-to-end.
+
+**Status: Phase 1 compute slice COMPLETE.** Remaining Phase 1 cleanup: retire the
+unpublished `../gpu` repo (T1), fix the pre-existing stale GL imports in
+`gpu/tests/math_gl.go`. Then Phase 2 (cgo-free GL backend + Go→shader compiler).
