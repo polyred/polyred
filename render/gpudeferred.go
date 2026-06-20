@@ -96,27 +96,40 @@ package kernels
 type Vec4 struct{ X, Y, Z, W float32 }
 
 type ShadowU struct {
-	M        Mat4
 	W        float32
 	DepthLen float32
-	Pad1     float32
-	Pad2     float32
+	N        float32
+	Pad      float32
 }
 
-func Shadow(gid uint, fragxyz []float32, recv []float32, depths []float32, color []float32, s ShadowU) {
+func Shadow(gid uint, fragxyz []float32, recv []float32, depths []float32, mats []float32, color []float32, s ShadowU) {
 	if recv[gid] < 0.5 {
 		return
 	}
-	clip := s.M * Vec4{fragxyz[gid*4], fragxyz[gid*4+1], fragxyz[gid*4+2], 1}
-	sx := clip.X / clip.W
-	sy := clip.Y / clip.W
-	sz := clip.Z / clip.W
-	idx := int(sx) + int(sy)*int(s.W)
+	fx := fragxyz[gid*4]
+	fy := fragxyz[gid*4+1]
+	fz := fragxyz[gid*4+2]
 	occ := float32(0)
-	if idx > 0 {
-		if idx < int(s.DepthLen) {
-			if sz < depths[idx]-0.03 {
-				occ = 1
+	n := int(s.N)
+	dl := int(s.DepthLen)
+	width := int(s.W)
+	for k := 0; k < n; k++ {
+		M := Mat4{
+			Vec4{mats[k*16], mats[k*16+1], mats[k*16+2], mats[k*16+3]},
+			Vec4{mats[k*16+4], mats[k*16+5], mats[k*16+6], mats[k*16+7]},
+			Vec4{mats[k*16+8], mats[k*16+9], mats[k*16+10], mats[k*16+11]},
+			Vec4{mats[k*16+12], mats[k*16+13], mats[k*16+14], mats[k*16+15]},
+		}
+		clip := M * Vec4{fx, fy, fz, 1}
+		sx := clip.X / clip.W
+		sy := clip.Y / clip.W
+		sz := clip.Z / clip.W
+		idx := int(sx) + int(sy)*width
+		if idx > 0 {
+			if idx < dl {
+				if sz < depths[k*dl+idx]-0.03 {
+					occ = occ + 1
+				}
 			}
 		}
 	}
@@ -128,28 +141,49 @@ func Shadow(gid uint, fragxyz []float32, recv []float32, depths []float32, color
 }
 `
 
-// gpuShadowData is the marshaled shadow state for a single casting light.
+// gpuShadowData is the marshaled shadow state for N shadow-casting lights:
+// per-light combined matrices (column-major, 16 floats each) and packed depth
+// maps (dlen floats each), matching render/shadow.go:shadingVisibility.
 type gpuShadowData struct {
-	m      math.Mat4[float32] // Viewport · lightProj · lightView · ScreenToWorld
-	depths []float32
+	mats   []float32 // n*16
+	depths []float32 // n*dlen
 	width  int
+	dlen   int
+	n      int
 }
 
-// gpuShadowData builds the shadow state for the GPU path, supporting a single
-// shadow-casting light. Returns (nil, false) when unsupported (the caller then
-// falls back to the CPU shader). Combined matrix matches shadingVisibility:
+// gpuShadowData builds the shadow state for the GPU path. All source lights
+// must cast shadow (the engine's non-casting-light darkening is not modeled
+// here); otherwise returns (nil, false) and the caller falls back to the CPU.
+// Combined matrix matches shadingVisibility:
 // v.Apply(ScreenToWorld).Apply(lightView).Apply(lightProj).Apply(Viewport).
 func (r *Renderer) gpuShadowData(uniforms *shader.MVP) (*gpuShadowData, bool) {
 	ls, _ := r.cfg.Scene.Lights()
-	if len(r.shadowBufs) != 1 || len(ls) < 1 || !ls[0].CastShadow() {
+	if len(r.shadowBufs) == 0 {
 		return nil, false
 	}
-	sb := &r.shadowBufs[0]
-	m := uniforms.Viewport.
-		MulM(sb.camera.ProjMatrix()).
-		MulM(sb.camera.ViewMatrix()).
-		MulM(uniforms.ViewportToWorld)
-	return &gpuShadowData{m: m, depths: sb.depths, width: r.bufs[0].Bounds().Dx()}, true
+	for i := range r.shadowBufs {
+		if i >= len(ls) || !ls[i].CastShadow() {
+			return nil, false
+		}
+	}
+	width := r.bufs[0].Bounds().Dx()
+	dlen := len(r.shadowBufs[0].depths)
+	var mats, depths []float32
+	for i := range r.shadowBufs {
+		sb := &r.shadowBufs[i]
+		m := uniforms.Viewport.
+			MulM(sb.camera.ProjMatrix()).
+			MulM(sb.camera.ViewMatrix()).
+			MulM(uniforms.ViewportToWorld)
+		for j := 0; j < 4; j++ { // column-major
+			for k := 0; k < 4; k++ {
+				mats = append(mats, m.Get(k, j))
+			}
+		}
+		depths = append(depths, sb.depths...)
+	}
+	return &gpuShadowData{mats: mats, depths: depths, width: width, dlen: dlen, n: len(r.shadowBufs)}, true
 }
 
 // gpuDeferredShade runs the deferred Blinn-Phong shading on the GPU and writes
@@ -270,15 +304,8 @@ func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.So
 
 	// Apply shadows as a second pass over the shaded float buffer.
 	if shadow != nil {
-		su := make([]float32, 20)
-		for j := 0; j < 4; j++ {
-			for i := 0; i < 4; i++ {
-				su[j*4+i] = shadow.m.Get(i, j) // column-major
-			}
-		}
-		su[16] = float32(shadow.width)
-		su[17] = float32(len(shadow.depths))
-		if err := runShadowKernel(dev, n, fragxyz, recv, shadow.depths, shaded, su); err != nil {
+		su := []float32{float32(shadow.width), float32(shadow.dlen), float32(shadow.n), 0}
+		if err := runShadowKernel(dev, n, fragxyz, recv, shadow.depths, shadow.mats, shaded, su); err != nil {
 			return err
 		}
 	}
@@ -384,7 +411,7 @@ func runDeferredKernel(dev *gpu.Device, n int, normals, worldpos, basecol, light
 	return res, nil
 }
 
-func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, color, su []float32) error {
+func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, mats, color, su []float32) error {
 	ks, err := gpushader.Compile(shadowKernel)
 	if err != nil {
 		return err
@@ -397,8 +424,8 @@ func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, color, su []
 		return gpu.BindGroupLayoutEntry{Binding: i, Visibility: gpu.StageCompute, Kind: gpu.StorageBuffer}
 	}
 	layout := dev.NewBindGroupLayout(
-		sb(0), sb(1), sb(2), sb(3),
-		gpu.BindGroupLayoutEntry{Binding: 4, Visibility: gpu.StageCompute, Kind: gpu.UniformBuffer},
+		sb(0), sb(1), sb(2), sb(3), sb(4),
+		gpu.BindGroupLayoutEntry{Binding: 5, Visibility: gpu.StageCompute, Kind: gpu.UniformBuffer},
 	)
 	pipe, err := dev.NewComputePipeline(gpu.ComputePipelineDescriptor{Layout: dev.NewPipelineLayout(layout), Module: mod, Entry: "Shadow"})
 	if err != nil {
@@ -407,22 +434,34 @@ func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, color, su []
 	if len(depths) == 0 {
 		depths = []float32{0}
 	}
+	if len(mats) == 0 {
+		mats = []float32{0}
+	}
 	fb := storageBuf(dev, fragxyz)
 	rb := storageBuf(dev, recv)
 	db := storageBuf(dev, depths)
+	mb := storageBuf(dev, mats)
 	cb, err := dev.NewBuffer(gpu.BufferDescriptor{Size: len(color) * 4, Usage: gpu.BufferStorage | gpu.BufferCopyDst | gpu.BufferMapRead, Data: deferredBytes(color)})
 	if err != nil {
 		return err
 	}
 	ub := uniformBuf(dev, su)
-	defer func() { fb.Release(); rb.Release(); db.Release(); cb.Release(); ub.Release() }()
+	defer func() {
+		fb.Release()
+		rb.Release()
+		db.Release()
+		mb.Release()
+		cb.Release()
+		ub.Release()
+	}()
 
 	bg := dev.NewBindGroup(layout,
 		gpu.BindGroupEntry{Binding: 0, Buffer: fb},
 		gpu.BindGroupEntry{Binding: 1, Buffer: rb},
 		gpu.BindGroupEntry{Binding: 2, Buffer: db},
-		gpu.BindGroupEntry{Binding: 3, Buffer: cb},
-		gpu.BindGroupEntry{Binding: 4, Buffer: ub},
+		gpu.BindGroupEntry{Binding: 3, Buffer: mb},
+		gpu.BindGroupEntry{Binding: 4, Buffer: cb},
+		gpu.BindGroupEntry{Binding: 5, Buffer: ub},
 	)
 	enc := dev.NewCommandEncoder()
 	cp := enc.BeginComputePass()
