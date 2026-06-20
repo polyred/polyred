@@ -14,6 +14,13 @@
 // whose remaining parameters are []float32 storage buffers or a struct-by-value
 // uniform. Bodies may use arithmetic, indexing, short/var declarations, for/if,
 // type conversions (uint/int/float32) and a whitelist of math builtins.
+//
+// Validation: bare identifiers in value position are resolved against the
+// kernel's parameter/local environment, so a typo or undefined reference is
+// reported ("undefined identifier") rather than silently emitted into the
+// generated MSL. Full go/types checking is deliberately not used: the DSL
+// overloads operators on vector/matrix struct types (e.g. m * v with m a Mat4),
+// which is not valid Go, so stock go/types would reject most real kernels.
 package shader
 
 import (
@@ -445,20 +452,25 @@ func (c *compiler) assign(st *ast.AssignStmt, depth int) error {
 	if err != nil {
 		return err
 	}
+	if st.Tok == token.DEFINE {
+		// The LHS of := declares a new variable; register it (so it resolves on
+		// later use, and so the undefined-ident check does not flag the
+		// declaration itself) before translating, then infer its type from RHS.
+		id, ok := st.Lhs[0].(*ast.Ident)
+		if !ok {
+			return fmt.Errorf("only identifiers may be declared with :=")
+		}
+		typ := c.inferType(st.Rhs[0])
+		c.env[id.Name] = typ
+		c.indent(depth)
+		c.buf.WriteString(fmt.Sprintf("%s %s = %s;\n", typ, id.Name, rhs))
+		return nil
+	}
 	lhs, err := c.expr(st.Lhs[0])
 	if err != nil {
 		return err
 	}
 	c.indent(depth)
-	if st.Tok == token.DEFINE {
-		// infer the declared type of a new variable from the RHS
-		typ := c.inferType(st.Rhs[0])
-		if id, ok := st.Lhs[0].(*ast.Ident); ok {
-			c.env[id.Name] = typ
-		}
-		c.buf.WriteString(fmt.Sprintf("%s %s = %s;\n", typ, lhs, rhs))
-		return nil
-	}
 	c.buf.WriteString(fmt.Sprintf("%s %s %s;\n", lhs, st.Tok.String(), rhs))
 	return nil
 }
@@ -564,6 +576,17 @@ func (c *compiler) ifStmt(st *ast.IfStmt, depth int) error {
 func (c *compiler) expr(e ast.Expr) (string, error) {
 	switch ex := e.(type) {
 	case *ast.Ident:
+		// A bare identifier in value position must resolve to a kernel
+		// parameter or a local declared earlier (both tracked in env). Anything
+		// else is a typo or an unsupported reference; reject it here instead of
+		// emitting an undefined name into the generated MSL. Builtin calls,
+		// composite type names, and struct field selectors are handled by their
+		// own AST cases and never reach here as bare idents.
+		if ex.Name != "true" && ex.Name != "false" {
+			if _, ok := c.env[ex.Name]; !ok {
+				return "", fmt.Errorf("undefined identifier %q", ex.Name)
+			}
+		}
 		return ex.Name, nil
 	case *ast.BasicLit:
 		return ex.Value, nil

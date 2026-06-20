@@ -127,9 +127,14 @@ unchanged.
 **Honest simplifications (hardening follow-ups):**
 - C3: used a direct typed-AST walker, not a full SSA IR. Fine for the current
   subset; revisit if control flow grows.
-- C2: validation is via `go/parser` + a lightweight signature/type environment,
-  not full `go/types` checking. Adding `go/types` would catch more misuse with
-  precise positions — tracked, not yet done.
+- C2: validation is via `go/parser` + a lightweight signature/type environment
+  plus a bare-identifier reference check (undefined references are rejected with
+  an "undefined identifier" error rather than emitted into MSL; see
+  `gpu/shader/validate_test.go`). Full `go/types` checking was evaluated and is
+  not viable: the DSL overloads operators on vector/matrix struct types (e.g.
+  `m * v` with `m` a `Mat4`), which is not valid Go, so stock `go/types` rejects
+  most real kernels. Catching deeper type misuse would need a custom checker over
+  the DSL's own type model, not `go/types`.
 
 ## Notes
 
