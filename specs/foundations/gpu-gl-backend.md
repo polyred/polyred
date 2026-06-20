@@ -128,7 +128,11 @@ conformance test.
 
 ## Sequencing
 
-1. GLSL compute emitter in `gpu/shader` (pure Go, unit-testable offline).
+1. **Done.** GLSL compute emitter in `gpu/shader` (`CompileGLSL`, pure Go,
+   unit-tested offline in `gpu/shader/glsl_test.go`): emits GLES 3.10 compute
+   with std430 SSBO + std140 UBO layouts, `gl_GlobalInvocationID` thread id,
+   vec/mat spellings, and reserved-word (`out`) mangling. The MSL path is
+   unchanged (byte-identical: the target only affects emission).
 2. `glBackend` compute path + context-thread runtime (build-verifiable now).
 3. Linux runtime conformance run (gated on hardware).
 4. Render pipeline (textures, render pass) as a follow-up.

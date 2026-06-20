@@ -50,12 +50,16 @@ type Binding struct {
 	Kind  BindingKind
 }
 
-// Kernel is a compiled kernel (compute, vertex, or fragment).
+// Kernel is a compiled kernel (compute, vertex, or fragment). MSL is set by
+// Compile; GLSL is set by CompileGLSL. Bindings are per-target: the GLSL compute
+// emitter numbers storage buffers (SSBO) and uniform blocks (UBO) in separate
+// binding spaces, matching how a GL backend binds them.
 type Kernel struct {
 	Name     string
 	Stage    Stage
 	Bindings []Binding
 	MSL      string
+	GLSL     string
 }
 
 // builtins maps allowed Go call targets to their MSL spelling.
@@ -118,10 +122,22 @@ func stageOf(doc *ast.CommentGroup) Stage {
 	return StageCompute
 }
 
-// Compile parses src and compiles every kernel function it finds, returning them
-// keyed by function name. Struct types referenced as uniform parameters are
-// emitted into each kernel's MSL.
+// Compile parses src and compiles every kernel function it finds to MSL,
+// returning them keyed by function name. Struct types referenced as uniform
+// parameters are emitted into each kernel's MSL.
 func Compile(src string) (map[string]*Kernel, error) {
+	return compileAll(src, false)
+}
+
+// CompileGLSL is like Compile but emits GLSL ES 3.10 compute source (Kernel.GLSL)
+// for the OpenGL ES backend. It supports compute kernels with []float32 storage
+// buffers and struct-by-value uniforms; vertex/fragment and texture/sampler
+// kernels are not yet supported and return an error.
+func CompileGLSL(src string) (map[string]*Kernel, error) {
+	return compileAll(src, true)
+}
+
+func compileAll(src string, glsl bool) (map[string]*Kernel, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, "kernel.go", src, parser.ParseComments)
 	if err != nil {
@@ -149,7 +165,13 @@ func Compile(src string) (map[string]*Kernel, error) {
 
 	out := map[string]*Kernel{}
 	for _, fn := range funcs {
-		k, err := compileKernel(fn, structs)
+		var k *Kernel
+		var err error
+		if glsl {
+			k, err = compileKernelGLSL(fn, structs)
+		} else {
+			k, err = compileKernel(fn, structs)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("shader: kernel %s: %w", fn.Name.Name, err)
 		}
@@ -160,9 +182,55 @@ func Compile(src string) (map[string]*Kernel, error) {
 
 type compiler struct {
 	structs map[string]*ast.StructType
-	env     map[string]string // var name -> MSL type
+	env     map[string]string // var name -> canonical (MSL-spelled) type
 	written map[string]bool   // buffer params written to (=> non-const)
+	glsl    bool              // emit GLSL type spellings instead of MSL
 	buf     strings.Builder
+}
+
+// glslReserved are GLSL keywords that may collide with Go kernel identifiers
+// (notably `out`, the conventional output-buffer name). When emitting GLSL such
+// names are suffixed with "_" so the generated shader compiles.
+var glslReserved = map[string]bool{
+	"in": true, "out": true, "inout": true, "uniform": true, "buffer": true,
+	"varying": true, "attribute": true, "layout": true, "sampler": true,
+	"const": true, "void": true, "float": true, "int": true, "uint": true,
+	"bool": true, "vec2": true, "vec3": true, "vec4": true, "mat2": true,
+	"mat3": true, "mat4": true, "sampler2D": true, "highp": true, "lowp": true,
+	"mediump": true, "precision": true, "discard": true, "struct": true,
+}
+
+// name returns an identifier's spelling in the target language: identity for MSL
+// (so Metal output is byte-identical), reserved-word-mangled for GLSL. env keys
+// always use the original Go name; only emitted text is mangled.
+func (c *compiler) name(n string) string {
+	if c.glsl && glslReserved[n] {
+		return n + "_"
+	}
+	return n
+}
+
+// typ maps a canonical (MSL-spelled) type to the target language's spelling. For
+// the MSL target it is the identity, so the Metal output stays byte-identical;
+// for GLSL it rewrites the vector/matrix/texture spellings.
+func (c *compiler) typ(t string) string {
+	if !c.glsl {
+		return t
+	}
+	switch t {
+	case "float2":
+		return "vec2"
+	case "float3":
+		return "vec3"
+	case "float4":
+		return "vec4"
+	case "float4x4":
+		return "mat4"
+	case "texture2d":
+		return "sampler2D"
+	default:
+		return t // float, int, uint, and struct names are spelled the same
+	}
 }
 
 func isIntType(t string) bool {
@@ -344,6 +412,119 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 	return &Kernel{Name: fn.Name.Name, Stage: stage, Bindings: bindings, MSL: msl.String()}, nil
 }
 
+// compileKernelGLSL emits a GLSL ES 3.10 compute shader for fn. It reuses the
+// shared body translation (compiler with glsl=true) but lays out resources the
+// GL way: storage buffers as std430 SSBO blocks, the uniform struct as a std140
+// UBO block, and the thread id from gl_GlobalInvocationID. The id is bound to an
+// int local (GLSL forbids mixing uint with int literals, which the kernels use
+// pervasively as in gid*4); explicit uint() conversions in the source still work.
+func compileKernelGLSL(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kernel, error) {
+	if stage := stageOf(fn.Doc); stage != StageCompute {
+		return nil, fmt.Errorf("GLSL backend supports compute kernels only (no vertex/fragment yet)")
+	}
+	params := flattenParams(fn.Type.Params)
+	c := &compiler{structs: structs, env: map[string]string{}, written: map[string]bool{}, glsl: true}
+
+	// First pass: which buffer params are written (so reads stay readonly).
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		as, ok := n.(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+		for _, lhs := range as.Lhs {
+			if ix, ok := lhs.(*ast.IndexExpr); ok {
+				if id, ok := ix.X.(*ast.Ident); ok {
+					c.written[id.Name] = true
+				}
+			}
+		}
+		return true
+	})
+
+	if len(params) == 0 {
+		return nil, fmt.Errorf("kernel needs a leading id parameter")
+	}
+	gid := params[0]
+	gidType, ok := identType(gid.typ)
+	if !ok || !isIntType(gidType) {
+		return nil, fmt.Errorf("first parameter %q must be the int/uint id", gid.name)
+	}
+	idName := gid.name
+	c.env[idName] = "int"
+
+	var bindings []Binding
+	var decls []string
+	ssboIndex, uboIndex := 0, 0
+	for _, p := range params[1:] {
+		switch t := p.typ.(type) {
+		case *ast.ArrayType: // []float32 -> std430 SSBO
+			if t.Len != nil {
+				return nil, fmt.Errorf("parameter %q: only slices ([]float32) are supported as buffers", p.name)
+			}
+			elt, ok := identType(t.Elt)
+			if !ok {
+				return nil, fmt.Errorf("parameter %q: unsupported slice element", p.name)
+			}
+			mt, ok := goToMSLType(elt)
+			if !ok {
+				return nil, fmt.Errorf("parameter %q: unsupported slice element %q", p.name, elt)
+			}
+			qual := ""
+			if !c.written[p.name] {
+				qual = "readonly "
+			}
+			decls = append(decls, fmt.Sprintf("layout(std430, binding = %d) %sbuffer _ssbo%d { %s %s[]; };", ssboIndex, qual, ssboIndex, c.typ(mt), c.name(p.name)))
+			bindings = append(bindings, Binding{Index: ssboIndex, Name: p.name, Kind: StorageBuffer})
+			c.env[p.name] = mt + "*"
+			ssboIndex++
+		case *ast.Ident:
+			switch t.Name {
+			case "Texture2D", "Sampler":
+				return nil, fmt.Errorf("parameter %q: GLSL backend does not support textures/samplers yet", p.name)
+			}
+			st, ok := structs[t.Name]
+			if !ok {
+				return nil, fmt.Errorf("parameter %q: unsupported type %q", p.name, t.Name)
+			}
+			var fields []string
+			for _, f := range st.Fields.List {
+				ft, _ := identType(f.Type)
+				fm, ok := goToMSLType(ft)
+				if !ok {
+					fm = ft
+				}
+				for _, n := range f.Names {
+					fields = append(fields, fmt.Sprintf("%s %s;", c.typ(fm), n.Name))
+				}
+			}
+			decls = append(decls, fmt.Sprintf("layout(std140, binding = %d) uniform _ubo%d { %s } %s;", uboIndex, uboIndex, strings.Join(fields, " "), c.name(p.name)))
+			bindings = append(bindings, Binding{Index: uboIndex, Name: p.name, Kind: UniformBuffer})
+			c.env[p.name] = t.Name
+			uboIndex++
+		default:
+			return nil, fmt.Errorf("parameter %q: unsupported parameter type", p.name)
+		}
+	}
+
+	var body strings.Builder
+	bc := &compiler{structs: structs, env: c.env, written: c.written, glsl: true, buf: body}
+	if err := bc.stmts(fn.Body.List, 1); err != nil {
+		return nil, err
+	}
+
+	var src strings.Builder
+	src.WriteString("#version 310 es\nprecision highp float;\nlayout(local_size_x = 1) in;\n\n")
+	for _, d := range decls {
+		src.WriteString(d + "\n")
+	}
+	src.WriteString("\nvoid main() {\n")
+	fmt.Fprintf(&src, "    int %s = int(gl_GlobalInvocationID.x);\n", c.name(idName))
+	src.WriteString(bc.buf.String())
+	src.WriteString("}\n")
+
+	return &Kernel{Name: fn.Name.Name, Stage: StageCompute, Bindings: bindings, GLSL: src.String()}, nil
+}
+
 func emitStruct(w *strings.Builder, name string, st *ast.StructType) {
 	fmt.Fprintf(w, "struct %s {\n", name)
 	for _, f := range st.Fields.List {
@@ -463,7 +644,7 @@ func (c *compiler) assign(st *ast.AssignStmt, depth int) error {
 		typ := c.inferType(st.Rhs[0])
 		c.env[id.Name] = typ
 		c.indent(depth)
-		c.buf.WriteString(fmt.Sprintf("%s %s = %s;\n", typ, id.Name, rhs))
+		c.buf.WriteString(fmt.Sprintf("%s %s = %s;\n", c.typ(typ), c.name(id.Name), rhs))
 		return nil
 	}
 	lhs, err := c.expr(st.Lhs[0])
@@ -498,9 +679,9 @@ func (c *compiler) declStmt(st *ast.DeclStmt, depth int) error {
 				if err != nil {
 					return err
 				}
-				c.buf.WriteString(fmt.Sprintf("%s %s = %s;\n", mt, name.Name, v))
+				c.buf.WriteString(fmt.Sprintf("%s %s = %s;\n", c.typ(mt), c.name(name.Name), v))
 			} else {
-				c.buf.WriteString(fmt.Sprintf("%s %s = 0;\n", mt, name.Name))
+				c.buf.WriteString(fmt.Sprintf("%s %s = 0;\n", c.typ(mt), c.name(name.Name)))
 			}
 		}
 	}
@@ -517,7 +698,7 @@ func (c *compiler) forStmt(st *ast.ForStmt, depth int) error {
 		if err != nil {
 			return err
 		}
-		init = fmt.Sprintf("%s %s = %s", typ, id.Name, v)
+		init = fmt.Sprintf("%s %s = %s", c.typ(typ), c.name(id.Name), v)
 	}
 	if st.Cond != nil {
 		v, err := c.expr(st.Cond)
@@ -587,7 +768,7 @@ func (c *compiler) expr(e ast.Expr) (string, error) {
 				return "", fmt.Errorf("undefined identifier %q", ex.Name)
 			}
 		}
-		return ex.Name, nil
+		return c.name(ex.Name), nil
 	case *ast.BasicLit:
 		return ex.Value, nil
 	case *ast.ParenExpr:
@@ -662,7 +843,7 @@ func (c *compiler) compositeLit(ex *ast.CompositeLit) (string, error) {
 			}
 			elems = append(elems, v)
 		}
-		return fmt.Sprintf("%s(%s)", mt, strings.Join(elems, ", ")), nil
+		return fmt.Sprintf("%s(%s)", c.typ(mt), strings.Join(elems, ", ")), nil
 	}
 
 	if st, isStruct := c.structs[tname]; isStruct {
@@ -703,6 +884,11 @@ func (c *compiler) compositeLit(ex *ast.CompositeLit) (string, error) {
 		} else {
 			ordered = positional
 		}
+		// MSL builds a struct value with brace syntax (Name{...}); GLSL uses a
+		// constructor call (Name(...)).
+		if c.glsl {
+			return fmt.Sprintf("%s(%s)", tname, strings.Join(ordered, ", ")), nil
+		}
 		return fmt.Sprintf("%s{%s}", tname, strings.Join(ordered, ", ")), nil
 	}
 
@@ -718,7 +904,7 @@ func (c *compiler) compositeLit(ex *ast.CompositeLit) (string, error) {
 		}
 		elems = append(elems, v)
 	}
-	return fmt.Sprintf("%s(%s)", mt, strings.Join(elems, ", ")), nil
+	return fmt.Sprintf("%s(%s)", c.typ(mt), strings.Join(elems, ", ")), nil
 }
 
 func (c *compiler) call(ex *ast.CallExpr) (string, error) {
