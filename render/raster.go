@@ -204,6 +204,17 @@ func (r *Renderer) passDeferred() {
 		ViewportToWorld: matScreenToWorld,
 	}
 
+	// Offload deferred shading to the GPU when a device is provided and the
+	// scene is supported; otherwise shade on the CPU. Shadow mapping is not yet
+	// handled by the GPU path.
+	if r.cfg.GPUDevice != nil && !r.cfg.ShadowMap {
+		ls, es := r.cfg.Scene.Lights()
+		if err := gpuDeferredShade(r.cfg.GPUDevice, buf, ls, es, r.cfg.Camera.Position(), r.cfg.Background); err == nil {
+			gpuDeferredUsed = true
+			return
+		}
+	}
+
 	r.DrawFragments(buf, func(frag *primitive.Fragment) color.RGBA {
 		return r.shade(frag, uniforms)
 	})
