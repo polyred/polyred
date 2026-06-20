@@ -111,10 +111,30 @@ unchanged.
   compile error with a Go position.
 - **Determinism:** same input → identical MSL output.
 
+## Progress
+
+**Compute→MSL compiler — DONE** (commit `2f6c1c0`). `gpu/shader`:
+- C1 authoring model, C2 front end (`go/parser`), C4 MSL emitter, C5 layout
+  synthesis, C6 public `Compile` — implemented.
+- The four matrix kernels are authored in Go (`Add`/`Sub`/`Sqrt`/`Mul`),
+  compiled to MSL, and run through the `Device` API on Metal matching the CPU
+  `math.Mat` results within `1e-5`, cgo-free (`gpu/shader/run_darwin_test.go`).
+  Unit + negative tests in `gpu/shader/compile_test.go`.
+- Read-only vs read-write buffers are detected (const vs device); struct uniforms
+  and the `Params` constant buffer work; goroutines/unsupported calls are
+  rejected.
+
+**Honest simplifications (hardening follow-ups):**
+- C3: used a direct typed-AST walker, not a full SSA IR. Fine for the current
+  subset; revisit if control flow grows.
+- C2: validation is via `go/parser` + a lightweight signature/type environment,
+  not full `go/types` checking. Adding `go/types` would catch more misuse with
+  precise positions — tracked, not yet done.
+
 ## Notes
 
 - GLSL/SPIR-V/HLSL emitters and the vertex/fragment profile are later milestones
   (Phase 3+). This phase is compute→MSL only, to keep the first Go→shader slice
-  testable on darwin.
+  testable on darwin. GLSL needs the cgo-free GL backend (and Linux to verify).
 - Reuse over reinvention: study tinygo's lowering and existing Go-shader
   experiments before fixing the IR (docs/gpu-abstraction.md §6b).
