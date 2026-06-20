@@ -183,6 +183,17 @@ Matrix `Add(m1, m2)` through the abstraction:
 - **Edge cases:** dimension-mismatch panics preserved; empty matrices; readback
   correctness for non-power-of-two sizes; device-absent path (headless CI).
 
+## Validation (spike, 2026-06-20)
+
+The cgo-free Metal approach is **proven**. A throwaway purego spike built with
+`CGO_ENABLED=0` and at runtime: created a Metal device via
+`MTLCreateSystemDefaultDevice` (loaded with `purego.Dlopen` of
+`/System/Library/Frameworks/Metal.framework/Metal` + `RegisterLibFunc`),
+messaged an object-returning selector (`name` → NSString → `UTF8String` →
+"Apple M2"), and a scalar-returning selector (`recommendedMaxWorkingSetSize` →
+uint64) via `objc.ID.Send` / `objc.Send[T]`. So the C2 rewrite is de-risked: it
+is mechanical selector-by-selector translation, not a research problem.
+
 ## Notes / Decisions deferred to later phases
 
 - Go→shader compiler (Phase 2): this phase uses hand-written MSL.
@@ -192,3 +203,17 @@ Matrix `Add(m1, m2)` through the abstraction:
 - This spec is **xlarge** and may be broken into tasks: (T1) fold-in + build
   green, (T2) purego Metal backend, (T3) Device API skeleton, (T4) matrix demo +
   tests. T1→T2→T3→T4 is the natural order; T2 is the highest-risk.
+
+## Progress
+
+- **T2 (cgo-free Metal backend) — DONE** (commit `5c37519`). `gpu/mtl` rewritten
+  onto `purego/objc`, `mtl.m`/`mtl.h` deleted; `CGO_ENABLED=0 go test ./gpu/mtl/`
+  and the `gpu/tests` matrix Add/Sub/Sqrt/Mul pass cgo-free. The exported `mtl`
+  API is unchanged, so `app`/`gpu/ctx/ca` (still cgo) keep compiling.
+- **T1 (fold-in) — adjusted:** per review, work in place on the in-repo `gpu/`
+  rather than a destructive move; retiring the unpublished `../gpu` repo is a
+  trivial cleanup deferred until the slice is fully proven. Loose end: the
+  `!darwin` GL demo (`gpu/tests/math_gl.go`) still imports pre-restructure paths
+  (`poly.red/internal/driver/egl|gles`) — pre-existing, fixed in Phase 2 (GL).
+- **T3/T4 — next:** stand up `gpu/device.go` and route the matrix demo through
+  the `Device` API.
