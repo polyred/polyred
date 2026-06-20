@@ -35,7 +35,66 @@ var (
 	selDrawPrimitives      = objc.RegisterName("drawPrimitives:vertexStart:vertexCount:")
 	selSetUsage            = objc.RegisterName("setUsage:")
 	selGetBytes            = objc.RegisterName("getBytes:bytesPerRow:fromRegion:mipmapLevel:")
+
+	selNewSamplerState   = objc.RegisterName("newSamplerStateWithDescriptor:")
+	selSetMinFilter      = objc.RegisterName("setMinFilter:")
+	selSetMagFilter      = objc.RegisterName("setMagFilter:")
+	selSetSAddressMode   = objc.RegisterName("setSAddressMode:")
+	selSetTAddressMode   = objc.RegisterName("setTAddressMode:")
+	selSetComputeTexture = objc.RegisterName("setTexture:atIndex:")
+	selSetComputeSampler = objc.RegisterName("setSamplerState:atIndex:")
 )
+
+// SamplerMinMagFilter selects nearest or linear filtering.
+type SamplerMinMagFilter uint8
+
+const (
+	SamplerFilterNearest SamplerMinMagFilter = 0
+	SamplerFilterLinear  SamplerMinMagFilter = 1
+)
+
+// SamplerAddressMode selects how out-of-range texture coordinates are handled.
+type SamplerAddressMode uint8
+
+const (
+	SamplerAddressClampToEdge SamplerAddressMode = 0
+	SamplerAddressRepeat      SamplerAddressMode = 2
+)
+
+// SamplerDescriptor configures a sampler.
+type SamplerDescriptor struct {
+	MinFilter    SamplerMinMagFilter
+	MagFilter    SamplerMinMagFilter
+	SAddressMode SamplerAddressMode
+	TAddressMode SamplerAddressMode
+}
+
+// SamplerState is a compiled texture sampler.
+type SamplerState struct {
+	samplerState objc.ID
+}
+
+// MakeSamplerState creates a sampler state object.
+func (d Device) MakeSamplerState(sd SamplerDescriptor) SamplerState {
+	desc := objc.ID(objc.GetClass("MTLSamplerDescriptor")).Send(selAlloc).Send(selInit)
+	desc.Send(selSetMinFilter, uint64(sd.MinFilter))
+	desc.Send(selSetMagFilter, uint64(sd.MagFilter))
+	desc.Send(selSetSAddressMode, uint64(sd.SAddressMode))
+	desc.Send(selSetTAddressMode, uint64(sd.TAddressMode))
+	s := d.device.Send(selNewSamplerState, desc)
+	desc.Send(selRelease)
+	return SamplerState{s}
+}
+
+// SetTexture binds a texture for the compute function.
+func (cce ComputeCommandEncoder) SetTexture(t Texture, index int) {
+	cce.commandEncoder.Send(selSetComputeTexture, t.texture, uint64(index))
+}
+
+// SetSamplerState binds a sampler for the compute function.
+func (cce ComputeCommandEncoder) SetSamplerState(s SamplerState, index int) {
+	cce.commandEncoder.Send(selSetComputeSampler, s.samplerState, uint64(index))
+}
 
 // mtlClearColor matches MTLClearColor (4 doubles).
 type mtlClearColor struct{ red, green, blue, alpha float64 }
