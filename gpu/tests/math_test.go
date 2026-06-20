@@ -12,6 +12,12 @@ import (
 	"poly.red/math"
 )
 
+// gpuEps is a float32-appropriate tolerance for comparing GPU and CPU
+// results. The two backends evaluate float32 arithmetic in different
+// orders, so results legitimately differ by a few ULP, which exceeds the
+// default math.Epsilon (1e-7, below float32 machine epsilon ~1.19e-7).
+const gpuEps = 1e-5
+
 func TestAdd(t *testing.T) {
 	if !tests.Driver().Available() {
 		t.Skip("no GPU device available")
@@ -22,7 +28,7 @@ func TestAdd(t *testing.T) {
 	sum1 := tests.Add(m1, m2)
 	sum2 := m1.Add(m2)
 
-	if !sum1.Eq(sum2) {
+	if !sum1.EqEps(sum2, gpuEps) {
 		t.Fatalf("GPU Add receives different results compare to CPU: GPU(%v)-CPU(%v)=(%v), m1(%v), m2(%v)", sum1, sum2, sum1.Sub(sum2), m1, m2)
 	}
 }
@@ -37,7 +43,7 @@ func TestSub(t *testing.T) {
 	sum1 := tests.Sub(m1, m2)
 	sum2 := m1.Sub(m2)
 
-	if !sum1.Eq(sum2) {
+	if !sum1.EqEps(sum2, gpuEps) {
 		t.Fatalf("GPU Sub receives different results compare to CPU: GPU(%v)-CPU(%v)=(%v), m1(%v), m2(%v)", sum1, sum2, sum1.Sub(sum2), m1, m2)
 	}
 }
@@ -51,7 +57,7 @@ func TestSqrt(t *testing.T) {
 	r1 := tests.Sqrt(m1)
 	r2 := m1.Sqrt()
 
-	if !r1.Eq(r2) {
+	if !r1.EqEps(r2, gpuEps) {
 		t.Fatalf("GPU Sqrt receives different results compare to CPU: GPU(%v)-CPU(%v)=(%v)", r1, r2, r1.Sub(r2))
 	}
 }
@@ -66,7 +72,7 @@ func TestMul(t *testing.T) {
 	sum1 := tests.Mul(m1, m2)
 	sum2 := m1.Mul(m2)
 
-	if !sum1.Eq(sum2) {
+	if !sum1.EqEps(sum2, gpuEps) {
 		t.Fatalf("GPU Mul receives different results compare to CPU: GPU(%v)*CPU(%v)=(%v), m1(%v), m2(%v)", sum1, sum2, sum1.Sub(sum2), m1, m2)
 	}
 }
@@ -94,7 +100,7 @@ func BenchmarkAdd(b *testing.B) {
 			}
 		})
 
-		if !outCPU.Eq(outGPU) {
+		if !outCPU.EqEps(outGPU, gpuEps) {
 			b.Fatal("inconsistent results")
 		}
 	}
@@ -123,7 +129,7 @@ func BenchmarkMul(b *testing.B) {
 			}
 		})
 
-		if !outCPU.Eq(outGPU) {
+		if !outCPU.EqEps(outGPU, gpuEps) {
 			b.Fatal("inconsistent results")
 		}
 	}

@@ -5,6 +5,7 @@
 package math_test
 
 import (
+	stdmath "math"
 	"strings"
 	"testing"
 
@@ -85,6 +86,35 @@ func TestMat(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestMat_EqEps is a regression test for the flaky GPU/CPU matrix
+// comparison. The default Epsilon (1e-7) is smaller than float32 machine
+// epsilon (~1.19e-7), so two float32 values that differ by a single ULP
+// — exactly what happens when the same computation runs on the GPU and
+// the CPU in different orders — were reported as unequal by Eq. EqEps
+// with a float32-appropriate tolerance fixes it.
+func TestMat_EqEps(t *testing.T) {
+	a := float32(1.0)
+	b := stdmath.Nextafter32(a, 2) // one ULP above 1.0
+
+	if diff := b - a; diff <= float32(math.Epsilon) {
+		t.Fatalf("test precondition broken: one-ULP diff %v should exceed Epsilon %v", diff, math.Epsilon)
+	}
+
+	m1 := math.NewMat[float32](1, 1, a)
+	m2 := math.NewMat[float32](1, 1, b)
+
+	// Eq uses the too-tight default Epsilon and reports them unequal.
+	if m1.Eq(m2) {
+		t.Fatal("Eq unexpectedly treated a one-ULP float32 difference as equal")
+	}
+
+	// EqEps with a float32-appropriate tolerance treats them as equal,
+	// which is what the GPU comparison tests rely on.
+	if !m1.EqEps(m2, 1e-5) {
+		t.Fatal("EqEps(1e-5) should treat a one-ULP float32 difference as equal")
+	}
 }
 
 func assert[T comparable](t *testing.T, want T, got T) {

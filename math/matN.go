@@ -102,14 +102,24 @@ func (m Mat[T]) Set(i, j int, v T) {
 	m.Data[m.Index(i, j)] = v
 }
 
-// Eq returns true if two matrices are equal.
+// Eq returns true if two matrices are equal within the default Epsilon.
+//
+// Note that Epsilon (1e-7) is smaller than float32 machine epsilon
+// (~1.19e-7), so for float32 matrices whose entries are produced by
+// different computation orders (e.g. comparing GPU and CPU results) use
+// EqEps with a float32-appropriate tolerance instead.
 func (m Mat[T]) Eq(n Mat[T]) bool {
+	return m.EqEps(n, Epsilon)
+}
+
+// EqEps returns true if two matrices are equal within the given epsilon.
+func (m Mat[T]) EqEps(n Mat[T], epsilon float64) bool {
 	if m.Row != n.Row || m.Col != n.Col {
 		return false
 	}
 
 	for i := range m.Data {
-		if !ApproxEq(float64(m.Data[i]), float64(n.Data[i]), Epsilon) {
+		if !ApproxEq(float64(m.Data[i]), float64(n.Data[i]), epsilon) {
 			return false
 		}
 	}
