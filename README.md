@@ -10,7 +10,7 @@ _Warning: under experiment, expect to break at anytime._
 
 ## GPU compute and rendering, in Go
 
-`poly.red/gpu` is a backend-agnostic GPU abstraction — a WebGPU-style
+`poly.red/gpu` is a backend-agnostic GPU abstraction, a WebGPU-style
 `Device`/`Queue`/`Buffer`/`Pipeline`/`CommandEncoder` API for running **compute**
 and **rendering** pipelines, with a driver (Metal today) underneath. It is
 **cgo-free**: the Metal/Objective-C runtime is reached through
@@ -18,7 +18,7 @@ and **rendering** pipelines, with a driver (Metal today) underneath. It is
 `CGO_ENABLED=0`.
 
 Shaders are written **in Go** and compiled to the backend's shading language by
-`poly.red/gpu/shader` — compute, vertex, and fragment kernels, with varyings,
+`poly.red/gpu/shader`: compute, vertex, and fragment kernels, with varyings,
 uniforms, vector math, and control flow.
 
 ```go
@@ -61,7 +61,7 @@ The design, decisions, and roadmap live in
 | Metal backend (compute + render), cgo-free via purego | working |
 | Go→shader compiler (compute + vertex/fragment, varyings, uniforms, vector + matrix math, swizzle, texture sampling, trig, control flow) | working |
 | **Renderer deferred pass fully offloaded to the GPU** (`render.GPU(dev)`): point + directional lights, multi-material, shadow maps (one and many casting lights), ambient occlusion, gamma | working, CPU-parity verified |
-| OpenGL / Vulkan / DirectX 12 backends, windowed present | planned — gated on Linux/Windows machines + SDKs, not design |
+| OpenGL / Vulkan / DirectX 12 backends, windowed present | planned, gated on Linux/Windows machines + SDKs, not design |
 
 The renderer offloads its full deferred shading pass to the GPU when a device is
 supplied:

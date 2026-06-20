@@ -11,20 +11,18 @@ specs live here.
 
 ## Tracks
 
-- **foundations** — core abstraction interfaces the rest of the engine builds on
+- **foundations**: core abstraction interfaces the rest of the engine builds on
   (e.g. the GPU `Device` abstraction).
 
 ## Known issues
 
-- **Windows `app` windowing is broken (pre-existing).** `app/ctx_gl_windows.go`
-  and `app/window_windows.go` call a defunct package-level immediate-mode GL API
-  (`gl.MakeCurrent`, `gl.DrawBuffer`, `gl.RasterPos2d`, `gl.DrawPixels`,
-  `gl.PixelZoom`, `gl.Viewport`) that the restructured GLES `gpu/gl` (methods on
-  `*Functions`) no longer provides. The Linux present path was modernized to a
-  textured-quad blit (`window_linux.go`: CreateTexture/TexImage2D/VertexAttrib/
-  shader); Windows was never ported. Fix = port the Windows context + present to
-  the modern GLES approach (needs a Windows machine to verify). Unrelated to the
-  GPU abstraction. CI is green on macOS + Linux; Windows fails here.
+- **Windows runtime windowing is unverified.** The Windows present path was
+  ported from the defunct immediate-mode GL API to the modern textured-quad GLES
+  blit the Linux path uses (see
+  [windows-present-port.md](foundations/windows-present-port.md)), so the module
+  builds on Windows again (verified by `GOOS=windows go build ./...` and the
+  Windows CI job). Actually displaying a window and pumping Win32 messages still
+  needs a Windows desktop session to verify; that runtime check is deferred.
 
 ## foundations
 
@@ -32,10 +30,11 @@ specs live here.
 | --- | --- | --- |
 | [gpu-phase1-foundation.md](foundations/gpu-phase1-foundation.md) | **Done** | cgo-free Metal compute via purego, the `Device` API, and the matrix demo through it |
 | [gpu-phase2-goshader.md](foundations/gpu-phase2-goshader.md) | **Done** | Go→shader compiler (compute + vertex/fragment → MSL): varyings, uniforms, swizzle, vector/matrix math, texture sampling, trig |
-| [gpu-phase3-render.md](foundations/gpu-phase3-render.md) | **Done** | Render pipelines + the renderer's full deferred pass offloaded to the GPU: lights, multi-material, shadow maps (N lights), ambient occlusion, gamma — CPU-parity verified |
+| [gpu-phase3-render.md](foundations/gpu-phase3-render.md) | **Done** | Render pipelines + the renderer's full deferred pass offloaded to the GPU: lights, multi-material, shadow maps (N lights), ambient occlusion, gamma; CPU-parity verified |
+| [windows-present-port.md](foundations/windows-present-port.md) | **Build done, runtime deferred** | Windows window present ported to the modern textured-quad GLES blit; builds on Windows, runtime needs a Windows desktop |
 
 The GPU abstraction's Metal-backend phases are complete: the renderer's deferred
 shading runs on the GPU, cgo-free, with shaders authored in Go. Remaining work is
-**breadth, not depth** — additional backends (GL/Vulkan/DX12) and windowed
+**breadth, not depth**: additional backends (GL/Vulkan/DX12) and windowed
 present, each gated on a Linux/Windows machine, an SDK, or a display rather than
 on design (see the per-spec notes and the project memory for exact recipes).
