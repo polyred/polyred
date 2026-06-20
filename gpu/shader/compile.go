@@ -201,6 +201,7 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 	var bindings []Binding
 	var usedStructs []string
 	bufIndex := 0
+	stageInUsed := false
 	var sig []string
 	for _, p := range bufParams {
 		switch t := p.typ.(type) {
@@ -230,9 +231,11 @@ func compileKernel(fn *ast.FuncDecl, structs map[string]*ast.StructType) (*Kerne
 			}
 			c.env[p.name] = t.Name
 			usedStructs = append(usedStructs, t.Name)
-			if stage == StageFragment {
-				// interpolated vertex output (varyings) as stage input
+			if stage == StageFragment && !stageInUsed {
+				// the first struct param of a fragment is the interpolated
+				// vertex output (varyings) delivered via stage_in
 				sig = append(sig, fmt.Sprintf("%s %s [[stage_in]]", t.Name, p.name))
+				stageInUsed = true
 			} else {
 				// struct-by-value uniform
 				sig = append(sig, fmt.Sprintf("constant %s& %s [[buffer(%d)]]", t.Name, p.name, bufIndex))
@@ -684,11 +687,14 @@ func (c *compiler) inferType(e ast.Expr) string {
 			if mt, ok := goToMSLType(id.Name); ok {
 				return mt
 			}
-			if id.Name == "uint" || id.Name == "int" || id.Name == "float32" {
-				m, _ := goToMSLType(id.Name)
-				return m
+			// vector-preserving builtins return their argument's type
+			switch id.Name {
+			case "normalize", "cross", "reflect", "min", "max", "clamp", "abs":
+				if len(ex.Args) > 0 {
+					return c.inferType(ex.Args[0])
+				}
 			}
-			// builtin like sqrt returns float
+			// builtins like sqrt/dot/length return float (scalar)
 			return "float"
 		}
 	case *ast.IndexExpr:
