@@ -25,15 +25,14 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	l := []light.Source{
 		light.NewPoint(
 			light.Intensity(20),
-			light.Color(color.RGBA{
-				uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), 255}),
+			light.Color(color.RGBA{R: uint8(rand.Int()), G: uint8(rand.Int()), B: uint8(rand.Int()), A: 255}),
 			light.Position(math.NewRandVec3[float32]()),
 		),
 	}
 	a := []light.Environment{
 		light.NewAmbient(
 			light.Intensity(20),
-			light.Color(color.RGBA{uint8(rand.Int()), uint8(rand.Int()), uint8(rand.Int()), 255}),
+			light.Color(color.RGBA{R: uint8(rand.Int()), G: uint8(rand.Int()), B: uint8(rand.Int()), A: 255}),
 		),
 	}
 

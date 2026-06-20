@@ -20,8 +20,8 @@ import (
 )
 
 func BenchmarkAlphaBlend(b *testing.B) {
-	c1 := color.RGBA{128, 128, 128, 128}
-	c2 := color.RGBA{128, 128, 128, 128}
+	c1 := color.RGBA{R: 128, G: 128, B: 128, A: 128}
+	c2 := color.RGBA{R: 128, G: 128, B: 128, A: 128}
 	var c color.RGBA
 	for i := 0; i < b.N; i++ {
 		c = render.AlphaBlend(c1, c2)
@@ -116,7 +116,7 @@ func BenchmarkDrawFragments_Size(b *testing.B) {
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				r.DrawFragments(buf, func(frag *primitive.Fragment) color.RGBA {
-					return color.RGBA{uint8(frag.X), uint8(frag.X), uint8(frag.Y), uint8(frag.Y)}
+					return color.RGBA{R: uint8(frag.X), G: uint8(frag.X), B: uint8(frag.Y), A: uint8(frag.Y)}
 				})
 			}
 		})

@@ -37,7 +37,10 @@ jobs:
       run: go build ./...
 
     - name: Vet
-      run: go vet ./...
+      # -unsafeptr is disabled: the cgo bridge in gpu/ctx/ca and app
+      # intentionally converts C.CFTypeRef handles to unsafe.Pointer,
+      # which the analyzer flags as a possible misuse.
+      run: go vet -unsafeptr=false ./...
 
     - name: Test (Linux)
       if: runner.os == 'Linux'

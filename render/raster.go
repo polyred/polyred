@@ -238,7 +238,7 @@ func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.R
 			r := uint8(float32(col.R) * w)
 			g := uint8(float32(col.G) * w)
 			b := uint8(float32(col.B) * w)
-			col = color.RGBA{r, g, b, col.A}
+			col = color.RGBA{R: r, G: g, B: b, A: col.A}
 		}
 	}
 

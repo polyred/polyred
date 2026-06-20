@@ -39,17 +39,17 @@ var (
 		lod  float32
 		want color.RGBA
 	}{
-		{"1x1", buffer.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", buffer.NewTexture(), 1, 1, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", buffer.NewTexture(), 0.5, 0.5, 0, color.RGBA{255, 255, 255, 255}},
-		{"1x1", buffer.NewTexture(), 0, 0, 0, color.RGBA{255, 255, 255, 255}},
+		{"1x1", buffer.NewTexture(), 0, 0, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255}},
+		{"1x1", buffer.NewTexture(), 1, 1, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255}},
+		{"1x1", buffer.NewTexture(), 0.5, 0.5, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255}},
+		{"1x1", buffer.NewTexture(), 0, 0, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255}},
 		{
 			"2x2",
 			buffer.NewTexture(
 				buffer.TextureImage(data),
 				buffer.TextureIsoMipmap(true),
 			),
-			0, 0, 0, color.RGBA{255, 255, 255, 255},
+			0, 0, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255},
 		},
 		{
 			"2x2",
@@ -57,7 +57,7 @@ var (
 				buffer.TextureImage(data),
 				buffer.TextureIsoMipmap(true),
 			),
-			0, 1, 0, color.RGBA{0, 0, 0, 0},
+			0, 1, 0, color.RGBA{R: 0, G: 0, B: 0, A: 0},
 		},
 		{
 			"2x2",
@@ -65,7 +65,7 @@ var (
 				buffer.TextureImage(data),
 				buffer.TextureIsoMipmap(true),
 			),
-			1, 0, 0, color.RGBA{0, 0, 0, 0},
+			1, 0, 0, color.RGBA{R: 0, G: 0, B: 0, A: 0},
 		},
 		{
 			"2x2",
@@ -73,7 +73,7 @@ var (
 				buffer.TextureImage(data),
 				buffer.TextureIsoMipmap(true),
 			),
-			1, 1, 0, color.RGBA{255, 255, 255, 255},
+			1, 1, 0, color.RGBA{R: 255, G: 255, B: 255, A: 255},
 		},
 		{
 			"2x2",
@@ -81,7 +81,7 @@ var (
 				buffer.TextureImage(data),
 				buffer.TextureIsoMipmap(true),
 			),
-			1, 1, 1.5, color.RGBA{191, 191, 191, 191},
+			1, 1, 1.5, color.RGBA{R: 191, G: 191, B: 191, A: 191},
 		},
 		{
 			"2x2",
@@ -89,17 +89,17 @@ var (
 				buffer.TextureImage(data),
 				buffer.TextureIsoMipmap(true),
 			),
-			0.5, 0.5, 0, color.RGBA{127, 127, 127, 127},
+			0.5, 0.5, 0, color.RGBA{R: 127, G: 127, B: 127, A: 127},
 		},
 		{
 			"1024x1024",
 			mustLoadTexture("../internal/testdata/ground.png"),
-			0.5, 0.5, 0, color.RGBA{99, 142, 9, 255},
+			0.5, 0.5, 0, color.RGBA{R: 99, G: 142, B: 9, A: 255},
 		},
 		{
 			"1024x1024",
 			mustLoadTexture("../internal/testdata/ground.png"),
-			0.5, 0.5, 1, color.RGBA{99, 142, 9, 255},
+			0.5, 0.5, 1, color.RGBA{R: 99, G: 142, B: 9, A: 255},
 		},
 		{
 			"1024x1024",

@@ -14,5 +14,5 @@ func GammaCorrection(frag *primitive.Fragment) color.RGBA {
 	r := uint8(color.FromLinear2sRGB(float32(frag.Col.R)/0xff)*0xff + 0.5)
 	g := uint8(color.FromLinear2sRGB(float32(frag.Col.G)/0xff)*0xff + 0.5)
 	b := uint8(color.FromLinear2sRGB(float32(frag.Col.B)/0xff)*0xff + 0.5)
-	return color.RGBA{r, g, b, frag.Col.A}
+	return color.RGBA{R: r, G: g, B: b, A: frag.Col.A}
 }
