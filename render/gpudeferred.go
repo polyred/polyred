@@ -54,12 +54,22 @@ func Shade(gid uint, normals []float32, worldpos []float32, basecol []float32, l
 	acc := col * s.AmbientI
 	count := int(s.NumLights)
 	for i := 0; i < count; i++ {
-		lp := Vec4{lights[i*9], lights[i*9+1], lights[i*9+2], lights[i*9+3]}
-		lc := Vec4{lights[i*9+4], lights[i*9+5], lights[i*9+6], lights[i*9+7]}
-		li := lights[i*9+8]
-		Ldir := lp - wpos
-		L := normalize(Ldir)
-		I := li / length(Ldir)
+		lt := lights[i*10]
+		lp := Vec4{lights[i*10+1], lights[i*10+2], lights[i*10+3], lights[i*10+4]}
+		lc := Vec4{lights[i*10+5], lights[i*10+6], lights[i*10+7], lights[i*10+8]}
+		li := lights[i*10+9]
+		var L Vec4
+		var I float32
+		if lt < 0.5 {
+			// point light: direction toward the light, distance attenuation
+			Ldir := lp - wpos
+			L = normalize(Ldir)
+			I = li / length(Ldir)
+		} else {
+			// directional light: L = -dir, constant intensity
+			L = Vec4{-lp.X, -lp.Y, -lp.Z, 0}
+			I = li
+		}
 		V := normalize(s.CamPos - wpos)
 		H := normalize(L + V)
 		Ld := clamp(dot(N, L), 0.0, 1.0)
@@ -78,19 +88,29 @@ func Shade(gid uint, normals []float32, worldpos []float32, basecol []float32, l
 // ambient, a single Blinn-Phong material with ambient-occlusion off);
 // otherwise it returns errGPUDeferredUnsupported and the caller uses the CPU.
 func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.Source, es []light.Environment, camPos math.Vec3[float32], bg color.RGBA) error {
-	// Validate the light set: point lights only (plus ambient environments).
+	// Validate the light set: point and directional lights (plus ambient
+	// environments). Each light is marshaled as
+	// [type, x,y,z,w, r,g,b,a, intensity] (type 0 = point, 1 = directional).
 	var lightData []float32
 	for _, l := range ls {
-		p, ok := l.(*light.Point)
-		if !ok {
+		switch lt := l.(type) {
+		case *light.Point:
+			pos := lt.Position()
+			c := lt.Color()
+			lightData = append(lightData, 0,
+				pos.X, pos.Y, pos.Z, 1,
+				float32(c.R), float32(c.G), float32(c.B), float32(c.A),
+				lt.Intensity())
+		case *light.Directional:
+			d := lt.Dir()
+			c := lt.Color()
+			lightData = append(lightData, 1,
+				d.X, d.Y, d.Z, 0,
+				float32(c.R), float32(c.G), float32(c.B), float32(c.A),
+				lt.Intensity())
+		default:
 			return errGPUDeferredUnsupported
 		}
-		pos := p.Position()
-		c := p.Color()
-		lightData = append(lightData,
-			pos.X, pos.Y, pos.Z, 1,
-			float32(c.R), float32(c.G), float32(c.B), float32(c.A),
-			p.Intensity())
 	}
 	if len(ls) == 0 {
 		return errGPUDeferredUnsupported // engine returns base colour; not handled here
