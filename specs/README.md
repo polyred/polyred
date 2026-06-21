@@ -38,6 +38,7 @@ specs live here.
 | [gpu-dx12-backend.md](foundations/gpu-dx12-backend.md) | **Viability proven (probe green), backend not built** | cgo-free D3D12 device created in CI on windows-latest via WARP/Basic Render Driver (syscall, no cgo). Remaining: COM command/pipeline/dispatch (HLSL via D3DCompile), then wire behind the interface |
 | [unified-renderer.md](foundations/unified-renderer.md) | **Drafted (xlarge)** | unify CPU + GPU renderers: author passes once as Go kernels (run as Go on CPU, compiled to MSL/GLSL/SPIR-V on GPU), GPU by default with CPU fallback; phased path. Break down before implementing |
 | [author-once-kernels.md](foundations/author-once-kernels.md) | **Drafted (medium)** | first bounded slice of unified-renderer: a `gpumath` library + compiler lowering of method/free-func form so one Go kernel runs as Go on CPU and compiles to GPU; proven on one kernel via parity |
+| [render-pass-runner.md](foundations/render-pass-runner.md) | **Drafted (small)** | bounded: a `runPass(name, gpu, cpu)` helper + per-pass path record; refactor render's two ad-hoc GPU offloads onto it. Behavior-preserving, no API change |
 
 The GPU abstraction's Metal-backend phases are complete: the renderer's deferred
 shading runs on the GPU, cgo-free, with shaders authored in Go. Remaining work is
