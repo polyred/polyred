@@ -66,6 +66,13 @@ before implementation.
 ## Sequencing
 
 1. **Done.** Viability probe (instance + compute device), green in CI.
-2. Settle the SPIR-V story (Go to SPIR-V vs offline-compiled GLSL).
-3. Device/queue/buffer/pipeline/dispatch/readback for compute; conformance.
-4. Render pipeline; then Windows (same purego loader, `vulkan-1.dll`).
+2. **Done.** Logical device + compute queue + host-visible storage buffer memory
+   roundtrip, cgo-free, green in CI (`gpu/vkdevice_linux_test.go`). The create-info
+   struct layouts marshal correctly through purego, so the device/memory
+   foundation is proven.
+3. Settle the SPIR-V story (Go to SPIR-V vs glslang-compiled GLSL in CI); the
+   latter is the pragmatic path to a verified dispatch without a SPIR-V emitter.
+4. Descriptor set + compute pipeline + command buffer + `vkCmdDispatch` +
+   readback; reuse the backend-agnostic compute conformance.
+5. Wire it behind the `backend` interface; then render pipeline; then Windows
+   (same purego loader, `vulkan-1.dll`).
