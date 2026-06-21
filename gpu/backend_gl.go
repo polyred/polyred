@@ -46,6 +46,21 @@ const (
 	glMapReadBit                     = 0x0001
 	glAllBarrierBits                 = 0xFFFFFFFF
 	glMaxComputeWorkGroupInvocations = 0x90EB
+
+	glFramebuffer       = 0x8D40
+	glColorAttachment0  = 0x8CE0
+	glTexture2D         = 0x0DE1
+	glRGBA              = 0x1908
+	glRGBA8             = 0x8058
+	glUnsignedByte      = 0x1401
+	glNearest           = 0x2600
+	glTexMinFilter      = 0x2801
+	glTexMagFilter      = 0x2800
+	glPoints            = 0x0000
+	glLines             = 0x0001
+	glTriangles         = 0x0004
+	glTriangleStripEnum = 0x0005
+	glColor             = 0x1800 // GL_COLOR, for glClearBufferfv
 )
 
 // glFns holds the resolved EGL/GLES entry points (purego function pointers).
@@ -59,6 +74,11 @@ type glFns struct {
 	genBuffers, deleteBuffers, bindBuffer, bufferData, bindBufferBase        uintptr
 	dispatchCompute, memoryBarrier, mapBufferRange, unmapBuffer              uintptr
 	finish, getIntegerv                                                      uintptr
+
+	genTextures, bindTexture, texImage2D, texParameteri                      uintptr
+	genFramebuffers, bindFramebuffer, framebufferTexture2D, checkFramebuffer uintptr
+	genVertexArrays, bindVertexArray                                         uintptr
+	viewport, clearBufferfv, drawArrays, readPixels                          uintptr
 }
 
 type glBackend struct {
@@ -152,6 +172,20 @@ func (b *glBackend) init() error {
 	f.unmapBuffer = sym(gles, "glUnmapBuffer")
 	f.finish = sym(gles, "glFinish")
 	f.getIntegerv = sym(gles, "glGetIntegerv")
+	f.genTextures = sym(gles, "glGenTextures")
+	f.bindTexture = sym(gles, "glBindTexture")
+	f.texImage2D = sym(gles, "glTexImage2D")
+	f.texParameteri = sym(gles, "glTexParameteri")
+	f.genFramebuffers = sym(gles, "glGenFramebuffers")
+	f.bindFramebuffer = sym(gles, "glBindFramebuffer")
+	f.framebufferTexture2D = sym(gles, "glFramebufferTexture2D")
+	f.checkFramebuffer = sym(gles, "glCheckFramebufferStatus")
+	f.genVertexArrays = sym(gles, "glGenVertexArrays")
+	f.bindVertexArray = sym(gles, "glBindVertexArray")
+	f.viewport = sym(gles, "glViewport")
+	f.clearBufferfv = sym(gles, "glClearBufferfv")
+	f.drawArrays = sym(gles, "glDrawArrays")
+	f.readPixels = sym(gles, "glReadPixels")
 	if loadErr != nil {
 		return loadErr
 	}
@@ -179,6 +213,12 @@ func (b *glBackend) init() error {
 	if r, _, _ := purego.SyscallN(f.eglMakeCurrent, dpy, uintptr(eglNoSurface), uintptr(eglNoSurface), ctx); r == 0 {
 		return fmt.Errorf("gpu/gl: eglMakeCurrent failed")
 	}
+	// GLES requires a bound vertex array object for draw calls; the vertex data
+	// itself comes from a storage buffer indexed by gl_VertexID (matching the
+	// Metal model), so this VAO carries no attributes.
+	var vao uint32
+	purego.SyscallN(f.genVertexArrays, 1, uintptr(unsafe.Pointer(&vao)))
+	purego.SyscallN(f.bindVertexArray, uintptr(vao))
 	b.dpy, b.ctx = dpy, ctx
 	return nil
 }
@@ -326,65 +366,222 @@ func (b *glBackend) close() error {
 
 // --- command buffer (record then replay on commit) ---
 
-type glBufferBind struct {
-	buf   *glBuffer
-	index int
-}
-
+// glCmd records GL operations as closures and replays them on the context thread
+// at commit. This serves both compute passes and render passes uniformly.
 type glCmd struct {
-	b     *glBackend
-	prog  uint32
-	binds []glBufferBind
-	gx    int
+	b    *glBackend
+	ops  []func()
+	prog uint32 // current compute pipeline program
+	gx   int    // current dispatch x
 }
 
 func (b *glBackend) newCommandBuffer() backendCommandBuffer { return &glCmd{b: b} }
 
-func (c *glCmd) beginCompute() {}
-
-func (c *glCmd) setComputePipeline(p backendComputePipeline) {
-	c.prog = p.(glComputePipeline).program
-}
-
-func (c *glCmd) setBuffer(buf backendBuffer, offset, index int) {
-	c.binds = append(c.binds, glBufferBind{buf: buf.(*glBuffer), index: index})
-}
-
-func (c *glCmd) dispatch(x, y, z int) { c.gx = x }
-
-func (c *glCmd) endCompute() {}
+func (c *glCmd) record(fn func()) { c.ops = append(c.ops, fn) }
 
 func (c *glCmd) commit() {
 	c.b.do(func() {
-		f := &c.b.fns
-		purego.SyscallN(f.useProgram, uintptr(c.prog))
-		for _, bd := range c.binds {
-			purego.SyscallN(f.bindBufferBase, bd.buf.target, uintptr(bd.index), uintptr(bd.buf.id))
+		for _, op := range c.ops {
+			op()
 		}
-		purego.SyscallN(f.dispatchCompute, uintptr(c.gx), 1, 1)
-		purego.SyscallN(f.memoryBarrier, uintptr(uint32(glAllBarrierBits)))
-		purego.SyscallN(f.finish)
+		purego.SyscallN(c.b.fns.finish)
 	})
 }
 
-// --- not yet implemented on GL (compute-only milestone) ---
+// --- compute pass ---
+
+func (c *glCmd) beginCompute() {}
+
+func (c *glCmd) setComputePipeline(p backendComputePipeline) {
+	prog := p.(glComputePipeline).program
+	c.record(func() { purego.SyscallN(c.b.fns.useProgram, uintptr(prog)) })
+}
+
+func (c *glCmd) setBuffer(buf backendBuffer, offset, index int) {
+	gb := buf.(*glBuffer)
+	c.record(func() { purego.SyscallN(c.b.fns.bindBufferBase, gb.target, uintptr(index), uintptr(gb.id)) })
+}
+
+func (c *glCmd) dispatch(x, y, z int) {
+	c.record(func() {
+		f := &c.b.fns
+		purego.SyscallN(f.dispatchCompute, uintptr(x), 1, 1)
+		purego.SyscallN(f.memoryBarrier, uintptr(uint32(glAllBarrierBits)))
+	})
+}
+
+func (c *glCmd) endCompute() {}
+
+// --- render support ---
+
+func glPrim(p Primitive) uintptr {
+	switch p {
+	case TriangleStrip:
+		return glTriangleStripEnum
+	case LineList:
+		return glLines
+	case PointList:
+		return glPoints
+	default:
+		return glTriangles
+	}
+}
+
+type glTexture struct {
+	b    *glBackend
+	id   uint32
+	fbo  uint32
+	w, h int
+}
 
 func (b *glBackend) newTexture(format TextureFormat, w, h int, renderTarget bool) (backendTexture, error) {
-	return nil, fmt.Errorf("gpu/gl: textures not yet implemented")
+	t := &glTexture{b: b, w: w, h: h}
+	b.do(func() {
+		f := &b.fns
+		purego.SyscallN(f.genTextures, 1, uintptr(unsafe.Pointer(&t.id)))
+		purego.SyscallN(f.bindTexture, uintptr(glTexture2D), uintptr(t.id))
+		purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glRGBA8), uintptr(w), uintptr(h), 0, uintptr(glRGBA), uintptr(glUnsignedByte), 0)
+		purego.SyscallN(f.texParameteri, uintptr(glTexture2D), uintptr(glTexMinFilter), uintptr(glNearest))
+		purego.SyscallN(f.texParameteri, uintptr(glTexture2D), uintptr(glTexMagFilter), uintptr(glNearest))
+		if renderTarget {
+			purego.SyscallN(f.genFramebuffers, 1, uintptr(unsafe.Pointer(&t.fbo)))
+			purego.SyscallN(f.bindFramebuffer, uintptr(glFramebuffer), uintptr(t.fbo))
+			purego.SyscallN(f.framebufferTexture2D, uintptr(glFramebuffer), uintptr(glColorAttachment0), uintptr(glTexture2D), uintptr(t.id), 0)
+		}
+	})
+	return t, nil
+}
+
+func (t *glTexture) readPixels() []byte {
+	dst := make([]byte, t.w*t.h*4)
+	t.b.do(func() {
+		f := &t.b.fns
+		purego.SyscallN(f.bindFramebuffer, uintptr(glFramebuffer), uintptr(t.fbo))
+		purego.SyscallN(f.readPixels, 0, 0, uintptr(t.w), uintptr(t.h), uintptr(glRGBA), uintptr(glUnsignedByte), uintptr(unsafe.Pointer(&dst[0])))
+	})
+	// GL's framebuffer origin is bottom-left; flip rows so the result is
+	// top-down, matching the Metal backend and image.RGBA.
+	row := t.w * 4
+	flipped := make([]byte, len(dst))
+	for y := 0; y < t.h; y++ {
+		copy(flipped[y*row:(y+1)*row], dst[(t.h-1-y)*row:(t.h-y)*row])
+	}
+	return flipped
+}
+
+func (t *glTexture) write(pixels []byte, bytesPerRow int) {
+	t.b.do(func() {
+		f := &t.b.fns
+		purego.SyscallN(f.bindTexture, uintptr(glTexture2D), uintptr(t.id))
+		purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glRGBA8), uintptr(t.w), uintptr(t.h), 0, uintptr(glRGBA), uintptr(glUnsignedByte), uintptr(unsafe.Pointer(&pixels[0])))
+		runtime.KeepAlive(pixels)
+	})
+}
+
+type glRenderPipeline struct{ program uint32 }
+
+func (glRenderPipeline) isRenderPipeline() {}
+
+func (b *glBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat) (backendRenderPipeline, error) {
+	vs, ok1 := vmod.(glShaderModule)
+	fs, ok2 := fmod.(glShaderModule)
+	if !ok1 || !ok2 {
+		return nil, fmt.Errorf("gpu/gl: render pipeline needs GL shader modules")
+	}
+	var prog uint32
+	var perr error
+	b.do(func() { prog, perr = b.linkRender(vs.glsl, fs.glsl) })
+	if perr != nil {
+		return nil, perr
+	}
+	return glRenderPipeline{program: prog}, nil
+}
+
+// linkRender compiles a vertex+fragment program; must run on the context thread.
+func (b *glBackend) linkRender(vsrc, fsrc string) (uint32, error) {
+	f := &b.fns
+	const glVertexShader = 0x8B31
+	const glFragmentShader = 0x8B30
+	compile := func(kind uintptr, src string) (uintptr, error) {
+		sh, _, _ := purego.SyscallN(f.createShader, kind)
+		psrc := &src
+		slen := int32(len(src))
+		purego.SyscallN(f.shaderSource, sh, 1, uintptr(unsafe.Pointer(psrc)), uintptr(unsafe.Pointer(&slen)))
+		runtime.KeepAlive(psrc)
+		purego.SyscallN(f.compileShader, sh)
+		var status int32
+		purego.SyscallN(f.getShaderiv, sh, glCompileStatus, uintptr(unsafe.Pointer(&status)))
+		if status == 0 {
+			return 0, fmt.Errorf("gpu/gl: shader compile failed: %s", b.shaderLog(sh))
+		}
+		return sh, nil
+	}
+	vs, err := compile(glVertexShader, vsrc)
+	if err != nil {
+		return 0, err
+	}
+	fsh, err := compile(glFragmentShader, fsrc)
+	if err != nil {
+		return 0, err
+	}
+	p, _, _ := purego.SyscallN(f.createProgram)
+	purego.SyscallN(f.attachShader, p, vs)
+	purego.SyscallN(f.attachShader, p, fsh)
+	purego.SyscallN(f.linkProgram, p)
+	purego.SyscallN(f.deleteShader, vs)
+	purego.SyscallN(f.deleteShader, fsh)
+	var status int32
+	purego.SyscallN(f.getProgramiv, p, glLinkStatus, uintptr(unsafe.Pointer(&status)))
+	if status == 0 {
+		purego.SyscallN(f.deleteProgram, p)
+		return 0, fmt.Errorf("gpu/gl: render program link failed")
+	}
+	return uint32(p), nil
 }
 
 func (b *glBackend) newSampler(desc SamplerDescriptor) backendSampler { return nil }
 
-func (b *glBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat) (backendRenderPipeline, error) {
-	return nil, fmt.Errorf("gpu/gl: render pipelines not yet implemented")
+func (c *glCmd) beginRender(info renderPassInfo) {
+	t := info.color.(*glTexture)
+	clear := info.load == LoadClear
+	cc := info.clearColor
+	c.record(func() {
+		f := &c.b.fns
+		purego.SyscallN(f.bindFramebuffer, uintptr(glFramebuffer), uintptr(t.fbo))
+		purego.SyscallN(f.viewport, 0, 0, uintptr(t.w), uintptr(t.h))
+		if clear {
+			// glClearBufferfv takes a *GLfloat (an integer-register pointer arg),
+			// so it is safe through SyscallN, unlike glClearColor's float args.
+			vals := [4]float32{float32(cc[0]), float32(cc[1]), float32(cc[2]), float32(cc[3])}
+			purego.SyscallN(f.clearBufferfv, uintptr(glColor), 0, uintptr(unsafe.Pointer(&vals[0])))
+		}
+	})
 }
 
-func (c *glCmd) beginRender(info renderPassInfo)               {}
-func (c *glCmd) setRenderPipeline(backendRenderPipeline)       {}
-func (c *glCmd) setRenderBuffer(backendBuffer, int, int)       {}
-func (c *glCmd) setVertexBuffer(backendBuffer, int)            {}
-func (c *glCmd) draw(prim Primitive, start, count int)         {}
-func (c *glCmd) endRender()                                    {}
+func (c *glCmd) setRenderPipeline(p backendRenderPipeline) {
+	prog := p.(glRenderPipeline).program
+	c.record(func() { purego.SyscallN(c.b.fns.useProgram, uintptr(prog)) })
+}
+
+func (c *glCmd) setRenderBuffer(buf backendBuffer, offset, index int) {
+	gb := buf.(*glBuffer)
+	c.record(func() { purego.SyscallN(c.b.fns.bindBufferBase, gb.target, uintptr(index), uintptr(gb.id)) })
+}
+
+func (c *glCmd) setVertexBuffer(buf backendBuffer, index int) {
+	gb := buf.(*glBuffer)
+	c.record(func() {
+		purego.SyscallN(c.b.fns.bindBufferBase, uintptr(glShaderStorageBuffer), uintptr(index), uintptr(gb.id))
+	})
+}
+
+func (c *glCmd) draw(prim Primitive, start, count int) {
+	mode := glPrim(prim)
+	c.record(func() { purego.SyscallN(c.b.fns.drawArrays, mode, uintptr(start), uintptr(count)) })
+}
+
+func (c *glCmd) endRender() {}
+
 func (c *glCmd) setComputeTexture(index int, t backendTexture) {}
 func (c *glCmd) setComputeSampler(index int, s backendSampler) {}
 
