@@ -22,3 +22,8 @@ var SRGBSrc string
 //
 //go:embed shadow.go
 var ShadowSrc string
+
+// AOSrc is the source of ao.go (the screen-space ambient occlusion pass).
+//
+//go:embed ao.go
+var AOSrc string
