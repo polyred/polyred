@@ -13,6 +13,14 @@ import (
 	"poly.red/math"
 )
 
+// FragmentShader is the live CPU deferred fragment shader: per-fragment
+// Blinn-Phong (ambient + point/directional diffuse and specular, texture and
+// LOD, no-lights early return). It is the renderer's CPU shading path
+// (render/raster.go). It is intentionally separate from the GPU author-once
+// kernel gpu/shader/gpumath/kernels.Shade, not legacy: the two are locked
+// equivalent within 1 LSB (see specs/foundations/render-shading-equivalence.md),
+// because the per-fragment CPU path and the slice-based GPU kernel want
+// different data shapes.
 func FragmentShader(m *material.BlinnPhong,
 	info buffer.Fragment, c math.Vec3[float32],
 	ls []light.Source, es []light.Environment,
