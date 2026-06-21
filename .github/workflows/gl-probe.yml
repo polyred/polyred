@@ -43,7 +43,7 @@ jobs:
         echo "--- eglinfo (surfaceless, brief) ---"
         eglinfo -B 2>&1 | head -100 || true
 
-    - name: Probe + end-to-end compute (cgo-free purego GLES)
+    - name: GL backend conformance (cgo-free, through the Device API)
       env:
         CGO_ENABLED: '0'
-      run: go test -v -run 'TestEGLSurfacelessGLESCompute|TestGLComputeEndToEnd' ./gpu/
+      run: go test -v -run TestGLBackendCompute ./gpu/
