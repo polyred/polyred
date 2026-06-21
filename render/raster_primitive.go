@@ -312,88 +312,10 @@ func (r *Renderer) rasterize(buf *buffer.FragmentBuffer, v1, v2, v3 *primitive.V
 				}
 			}
 
-			// Interpolate custom varying
-			if len(v1.AttrSmooth) > 0 {
-				r.interpoVaryings(v1.AttrSmooth, v2.AttrSmooth, v3.AttrSmooth, frag.AttrSmooth, recipw, bc)
-			}
-
 			buf.Set(x, y, buffer.Fragment{
 				Ok:       true,
 				Fragment: frag,
 			})
-		}
-	}
-}
-
-// interpoVaryings perspective correct interpolates
-func (r *Renderer) interpoVaryings(v1, v2, v3, frag map[primitive.AttrName]any,
-	recipw, bc [3]float32) {
-	l := len(frag)
-	for name := range v1 {
-		switch val1 := v1[name].(type) {
-		case float32:
-			if l > 0 {
-				frag[name] = r.interpolate([3]float32{
-					val1, v2[name].(float32), v3[name].(float32),
-				}, recipw, bc)
-			}
-		case math.Vec2[float32]:
-			x := r.interpolate([3]float32{
-				val1.X,
-				v2[name].(math.Vec4[float32]).X,
-				v3[name].(math.Vec4[float32]).X,
-			}, recipw, bc)
-			y := r.interpolate([3]float32{
-				val1.Y,
-				v2[name].(math.Vec4[float32]).Y,
-				v3[name].(math.Vec4[float32]).Y,
-			}, recipw, bc)
-			if l > 0 {
-				frag[name] = math.NewVec2(x, y)
-			}
-		case math.Vec3[float32]:
-			x := r.interpolate([3]float32{
-				val1.X,
-				v2[name].(math.Vec4[float32]).X,
-				v3[name].(math.Vec4[float32]).X,
-			}, recipw, bc)
-			y := r.interpolate([3]float32{
-				val1.Y,
-				v2[name].(math.Vec4[float32]).Y,
-				v3[name].(math.Vec4[float32]).Y,
-			}, recipw, bc)
-			z := r.interpolate([3]float32{
-				val1.Z,
-				v2[name].(math.Vec4[float32]).Z,
-				v3[name].(math.Vec4[float32]).Z,
-			}, recipw, bc)
-			if l > 0 {
-				frag[name] = math.NewVec3(x, y, z)
-			}
-		case math.Vec4[float32]:
-			x := r.interpolate([3]float32{
-				val1.X,
-				v2[name].(math.Vec4[float32]).X,
-				v3[name].(math.Vec4[float32]).X,
-			}, recipw, bc)
-			y := r.interpolate([3]float32{
-				val1.Y,
-				v2[name].(math.Vec4[float32]).Y,
-				v3[name].(math.Vec4[float32]).Y,
-			}, recipw, bc)
-			z := r.interpolate([3]float32{
-				val1.Z,
-				v2[name].(math.Vec4[float32]).Z,
-				v3[name].(math.Vec4[float32]).Z,
-			}, recipw, bc)
-			w := r.interpolate([3]float32{
-				val1.W,
-				v2[name].(math.Vec4[float32]).W,
-				v3[name].(math.Vec4[float32]).W,
-			}, recipw, bc)
-			if l > 0 {
-				frag[name] = math.NewVec4(x, y, z, w)
-			}
 		}
 	}
 }

@@ -10,7 +10,7 @@ import (
 	"poly.red/math"
 )
 
-// Fragment represents a pixel that conveys varied attributes.
+// Fragment represents a shaded pixel and its interpolated attributes.
 type Fragment struct {
 	X, Y       int
 	Depth      float32
@@ -19,11 +19,6 @@ type Fragment struct {
 	Nor        math.Vec4[float32]
 	Col        color.RGBA
 	MaterialID int64
-
-	// FIXME: figure out how to collaborate with shaders.
-	// Remove these two fields.
 	FaceNor    math.Vec4[float32]
 	WordPos    math.Vec4[float32]
-	AttrSmooth map[AttrName]any
-	AttrFlat   map[AttrName]any
 }

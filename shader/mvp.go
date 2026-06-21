@@ -1,11 +1,8 @@
 package shader
 
 import (
-	"poly.red/geometry/primitive"
 	"poly.red/math"
 )
-
-var MVPAttr primitive.AttrName = "MVP"
 
 type MVP struct {
 	Model       math.Mat4[float32]

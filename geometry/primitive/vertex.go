@@ -8,41 +8,21 @@ import (
 	"image/color"
 	"math/rand"
 
-	"poly.red/internal/deepcopy"
 	"poly.red/math"
 )
 
-// AttrName is a string that represents the name of the attribute.
-type AttrName string
-
-var (
-	AttrPosition AttrName = "pos"
-	AttrNormal   AttrName = "nor"
-	AttrColor    AttrName = "col"
-	AttrUV       AttrName = "uv"
-	AttrMVP      AttrName = "mvp"
-)
-
-// Vertex represents a vertex that conveys attributes.
+// Vertex represents a vertex with its rendering attributes.
 type Vertex struct {
 	Idx int
 	Pos math.Vec4[float32] // Position is the vertex position
 	Nor math.Vec4[float32] // Nor is the vertex normal
 	Col color.RGBA         // Col is the vertex color
 	UV  math.Vec2[float32] // UV is the vertex UV coordinates
-
-	// AttrSmooth is interpolated between vertex and fragment shaders.
-	AttrSmooth map[AttrName]any
-	// AttrFlat is not interpolated between vertex and fragment shaders.
-	AttrFlat map[AttrName]any
 }
 
 // NewVertex creates a new Vertex and have an unset index.
 func NewVertex(opts ...VertOpt) *Vertex {
-	v := &Vertex{
-		AttrFlat:   map[AttrName]any{},
-		AttrSmooth: map[AttrName]any{},
-	}
+	v := &Vertex{}
 	for _, opt := range opts {
 		opt(v)
 	}
@@ -90,21 +70,13 @@ func NewRandomVertex() *Vertex {
 
 // Copy returns a deep copy of the current vertex.
 func (v *Vertex) Copy() *Vertex {
-	u := NewVertex(
+	return NewVertex(
 		Idx(v.Idx),
 		Pos(v.Pos),
 		Nor(v.Nor),
 		Col(v.Col),
 		UV(v.UV),
 	)
-
-	for k, attr := range v.AttrSmooth {
-		u.AttrSmooth[k] = deepcopy.Value(attr)
-	}
-	for k, attr := range v.AttrFlat {
-		u.AttrFlat[k] = deepcopy.Value(attr)
-	}
-	return u
 }
 
 func (v *Vertex) AABB() AABB {

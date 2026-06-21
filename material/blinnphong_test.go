@@ -44,15 +44,14 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	)
 
 	frag := primitive.Fragment{
-		U:        1,
-		V:        1,
-		Du:       1,
-		Dv:       1,
-		Nor:      n,
-		AttrFlat: map[primitive.AttrName]any{},
+		U:       1,
+		V:       1,
+		Du:      1,
+		Dv:      1,
+		Nor:     n,
+		FaceNor: fn,
+		WordPos: x,
 	}
-	frag.AttrFlat["fN"] = fn
-	frag.AttrFlat["Pos"] = x
 	info := buffer.Fragment{Ok: true, Fragment: frag}
 	b.ReportAllocs()
 	b.ResetTimer()
