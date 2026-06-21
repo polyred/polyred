@@ -158,9 +158,13 @@ the Metal backend is on macOS.
    Y-flipped pixel readback. `TestGLBackendRender` draws a triangle into a texture
    through the Device API and checks the readback, green in CI. This is the
    headless render path windowed present (gpu-windowed-present.md) builds on.
-6. Engine integration: run the actual deferred Blinn-Phong kernel on GL by
-   marshaling its `Scene` uniform in std140 and selecting GL in the renderer; and
-   a Go to GLSL vertex/fragment emitter so render shaders are authored in Go too
-   (today the render path accepts hand-written GLSL via the escape hatch).
+6. **Verified.** The renderer's actual deferred Blinn-Phong compute kernel runs
+   on GL: `TestGLBackendDeferredKernel` compiles it with `CompileGLSL`, marshals
+   its `Scene` uniform in std140, runs it through the Device API, and matches the
+   hand-computed value. (Running a real driver hardened the emitter: GLSL needs
+   `vec4(0.0)` / `0.0` zero-inits, not MSL's scalar `0`.) Remaining integration:
+   select GL in the renderer on Linux, and a Go to GLSL vertex/fragment emitter so
+   render shaders are authored in Go too (today the render path accepts
+   hand-written GLSL via the escape hatch).
 7. Vulkan (MoltenVK/SDK) and DX12 reuse the same `backend` interface and the
    SPIR-V/HLSL emitters; out of scope here, tracked separately.
