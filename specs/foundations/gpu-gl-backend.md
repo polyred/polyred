@@ -140,8 +140,14 @@ the Metal backend is on macOS.
    with std430 SSBO + std140 UBO layouts, `gl_GlobalInvocationID` thread id,
    vec/mat spellings, and reserved-word (`out`) mangling. The MSL path is
    unchanged (byte-identical: the target only affects emission).
-2. `glBackend` compute path + context-thread runtime (build-verifiable now).
-3. Linux runtime conformance run (gated on hardware).
-4. Render pipeline (textures, render pass) as a follow-up.
+2. **Done.** `glBackend` (`gpu/backend_gl.go`): cgo-free EGL/GLES via purego, a
+   surfaceless context on a locked context thread, and the storage-buffer compute
+   path (SSBO create/upload/readback, compile+link, bind, dispatch, barrier).
+   `openBackend` selects GL on Linux.
+3. **Done.** Conformance run, green in CI on Mesa llvmpipe (software, surfaceless):
+   `TestGLBackendCompute` runs Go Add/Sub/Sqrt kernels through `CompileGLSL` and
+   the public Device API and matches the CPU (`.github/workflows/gl-probe.yml`).
+4. Render pipeline (textures, render pass) as a follow-up; uniform-buffer (UBO)
+   bindings for struct uniforms are the next compute increment.
 5. Vulkan (MoltenVK/SDK) and DX12 reuse the same `backend` interface and the
    SPIR-V/HLSL emitters; out of scope here, tracked separately.

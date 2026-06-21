@@ -61,7 +61,8 @@ The design, decisions, and roadmap live in
 | Metal backend (compute + render), cgo-free via purego | working |
 | Go→shader compiler (compute + vertex/fragment, varyings, uniforms, vector + matrix math, swizzle, texture sampling, trig, control flow) | working |
 | **Renderer deferred pass fully offloaded to the GPU** (`render.GPU(dev)`): point + directional lights, multi-material, shadow maps (one and many casting lights), ambient occlusion, gamma | working, CPU-parity verified |
-| OpenGL / Vulkan / DirectX 12 backends, windowed present | planned, gated on Linux/Windows machines + SDKs, not design |
+| **OpenGL ES compute backend** (cgo-free, via purego): Go kernels through the Device API, verified in CI on Mesa llvmpipe (software, headless) | working (compute); render pipeline is a follow-up |
+| Vulkan / DirectX 12 backends, windowed present | planned, gated on SDKs / a display, not design |
 
 The renderer offloads its full deferred shading pass to the GPU when a device is
 supplied:
