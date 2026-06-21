@@ -81,7 +81,11 @@ var builtins = map[string]string{
 	"Atan": "atan", "Asin": "asin", "Acos": "acos", "Exp": "exp", "Log": "log",
 	"Floor": "floor", "Ceil": "ceil", "Round": "round", "Fract": "fract",
 	"Clampf": "clamp", "Minf": "min", "Maxf": "max", "Absf": "abs",
-	// gpumath vector/matrix constructors -> shader constructors.
+}
+
+// gpumath constructors map to a canonical (MSL-spelled) vector/matrix type; the
+// emitter routes them through c.typ so GLSL gets vec4/mat4 (not float4).
+var vecCtor = map[string]string{
 	"V2": "float2", "V3": "float3", "V4": "float4", "M4": "float4x4",
 }
 
@@ -981,6 +985,19 @@ func (c *compiler) call(ex *ast.CallExpr) (string, error) {
 	id, ok := ex.Fun.(*ast.Ident)
 	if !ok {
 		return "", fmt.Errorf("unsupported call target")
+	}
+	// gpumath vector/matrix constructors: emit the target type's constructor
+	// (V4 -> float4 on MSL, vec4 on GLSL) via c.typ.
+	if mt, ok := vecCtor[id.Name]; ok {
+		var args []string
+		for _, a := range ex.Args {
+			v, err := c.expr(a)
+			if err != nil {
+				return "", err
+			}
+			args = append(args, v)
+		}
+		return fmt.Sprintf("%s(%s)", c.typ(mt), strings.Join(args, ", ")), nil
 	}
 	msl, ok := builtins[id.Name]
 	if !ok {
