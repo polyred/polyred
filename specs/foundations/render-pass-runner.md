@@ -80,7 +80,7 @@ assert it.
 - The full `[]Pass` pipeline / reorderable passes.
 - GPU-by-default device acquisition (`gpu.Open()` in `NewRenderer`, `render.CPU()`).
 - Wiring the author-once `kernels.Shade` into the deferred pass (CPU+GPU from one
-  source) — its own bounded spec on top of this and author-once-kernels.
+  source): its own bounded spec on top of this and author-once-kernels.
 - New GPU passes (forward raster, shadow, AO on GPU).
 
 ## Deliverable
