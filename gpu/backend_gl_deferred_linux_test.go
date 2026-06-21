@@ -24,8 +24,14 @@ import (
 	"poly.red/gpu/shader"
 )
 
-// deferredShadeKernel is a verbatim copy of render/gpudeferred.go's deferred
-// Blinn-Phong kernel (see gpu/shader/validate_test.go's deferredKernelSrc).
+// deferredShadeKernel is a Blinn-Phong deferred kernel that takes its scene as a
+// std140 uniform struct. It is the fixture for exercising UNIFORM-buffer (UBO)
+// marshaling and execution on a real GL device end to end (with value checks),
+// which the engine's storage-scene path does not cover. The engine's real
+// deferred shader is the author-once kernels.Shade (storage-buffer scene),
+// covered on GL by render's TestGLDeferredRender; this fixture keeps the uniform
+// path on purpose. Mirrors the std140 layout in gpu/shader/glsl_test.go's
+// uniformSceneKernelSrc.
 const deferredShadeKernel = `
 package kernels
 
