@@ -1,6 +1,6 @@
 ---
 title: "Multi-backend render kernels: compile per device driver"
-status: drafted
+status: implemented (CI-pending)
 depends_on:
   - foundations/render-deferred-author-once.md
   - foundations/gpu-gl-backend.md
