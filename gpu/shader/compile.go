@@ -81,6 +81,8 @@ var builtins = map[string]string{
 	"Atan": "atan", "Asin": "asin", "Acos": "acos", "Exp": "exp", "Log": "log",
 	"Floor": "floor", "Ceil": "ceil", "Round": "round", "Fract": "fract",
 	"Clampf": "clamp", "Minf": "min", "Maxf": "max", "Absf": "abs",
+	// gpumath vector/matrix constructors -> shader constructors.
+	"V2": "float2", "V3": "float3", "V4": "float4", "M4": "float4x4",
 }
 
 // vecMethodOp maps a gpumath vector/matrix method to the binary operator the
@@ -1023,6 +1025,17 @@ func (c *compiler) inferType(e ast.Expr) string {
 		if id, ok := ex.Fun.(*ast.Ident); ok {
 			if mt, ok := goToMSLType(id.Name); ok {
 				return mt
+			}
+			// gpumath constructors return their vector/matrix type.
+			switch id.Name {
+			case "V2":
+				return "float2"
+			case "V3":
+				return "float3"
+			case "V4":
+				return "float4"
+			case "M4":
+				return "float4x4"
 			}
 			// vector-preserving builtins return their argument's type
 			switch id.Name {
