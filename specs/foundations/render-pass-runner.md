@@ -1,6 +1,6 @@
 ---
 title: Render pass runner: uniform GPU-or-CPU dispatch for a pass
-status: drafted
+status: implemented (CI-verified)
 depends_on:
   - foundations/unified-renderer.md
 affects:
