@@ -7,12 +7,25 @@ import (
 	"poly.red/color"
 )
 
-// ID represents the ID of a material.
+// ID identifies a material in the process-wide pool.
 //
-// Design Decision (at the moment): This ID may be negative to hint
-// the renderer to use vertex color directly.
+// ID semantics:
+//   - 0 is always the default material (seeded in init, cannot be deleted).
+//   - Positive IDs are assigned by Put, incrementally.
+//   - A negative ID is intentionally never in the pool: Get returns nil for it,
+//     which the renderer reads as "use vertex color directly". Producers set it
+//     explicitly (e.g. model/plane.go and geometry/primitive/polygon.go use -1);
+//     consumers are render/raster.go and render/gpudeferred.go via Get.
 type ID int64
 
+// pool is the process-wide material registry. It is global mutable state:
+// material IDs are shared across all renderers and scenes, and a material lives
+// until Del removes it (creation is at asset-load time, not per frame, so it does
+// not grow per frame, but it is never auto-freed). The GPU deferred path
+// additionally builds its own per-frame materials table keyed by *BlinnPhong
+// (render/gpudeferred.go), so two indexing schemes coexist. De-globalizing this
+// into scene-owned materials is a design change with real blast radius (every
+// material.Get in render); see specs/foundations/material-ownership.md.
 var pool struct {
 	mu      sync.RWMutex
 	allocID int64 // incremental
