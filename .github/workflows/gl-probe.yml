@@ -1,0 +1,49 @@
+name: gl-probe
+
+# Proves the GitHub-hosted ubuntu runner can create a headless OpenGL ES 3.1
+# context with compute-shader support via Mesa's software rasterizer (llvmpipe)
+# and the surfaceless EGL platform, cgo-free (purego). If this is green, the
+# cgo-free GL compute backend (item #2) is CI-verifiable, not hardware-gated.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gles-surfaceless:
+    name: headless GLES 3.1 compute (Mesa llvmpipe)
+    runs-on: ubuntu-latest
+    env:
+      EGL_PLATFORM: surfaceless
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      GALLIUM_DRIVER: llvmpipe
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.x'
+        check-latest: true
+
+    - name: Install Mesa (EGL + GLES runtime + llvmpipe + eglinfo)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libegl1 libgles2 libgbm1 libgl1-mesa-dri mesa-utils-extra
+
+    - name: Diagnostics
+      continue-on-error: true
+      run: |
+        echo "--- ldconfig: EGL / GLESv2 ---"
+        ldconfig -p | grep -Ei 'libEGL|libGLESv2' || true
+        echo "--- eglinfo (surfaceless, brief) ---"
+        eglinfo -B 2>&1 | head -100 || true
+
+    - name: Probe (cgo-free purego EGL surfaceless GLES compute)
+      env:
+        CGO_ENABLED: '0'
+      run: go test -v -run TestEGLSurfacelessGLESCompute ./gpu/
