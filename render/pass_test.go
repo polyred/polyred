@@ -28,9 +28,11 @@ func TestRunPassNoDevice(t *testing.T) {
 // TestRunPassWithDevice: with a device, a failing GPU closure falls back to CPU
 // (records CPU); a succeeding one records GPU. Skips when no device is available.
 func TestRunPassWithDevice(t *testing.T) {
-	dev, err := gpu.Open()
+	// The render GPU offload is Metal-only today; request Metal so this does not
+	// touch a broken headless GL on CI (which segfaults).
+	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverMetal))
 	if err != nil {
-		t.Skipf("no GPU device: %v", err)
+		t.Skipf("no Metal device: %v", err)
 	}
 	defer dev.Close()
 	r := NewRenderer(GPU(dev))
