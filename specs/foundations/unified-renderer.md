@@ -1,5 +1,5 @@
 ---
-title: Unified CPU/GPU renderer — one abstraction, GPU by default, CPU fallback
+title: Unified CPU/GPU renderer: one abstraction, GPU by default, CPU fallback
 status: drafted
 depends_on:
   - foundations/gpu-phase3-render.md
@@ -74,7 +74,7 @@ The unification happens at **two seams**, both already half-present:
    a small builtin library (`normalize`, `dot`, `pow`, …). Provide those builtins
    as a Go package (`gpu/shader/gpumath` or similar) so the identical kernel file
    imports them and runs on CPU, while the compiler maps them to shader builtins
-   for the GPU. One source, two execution targets — and the parity harness proves
+   for the GPU. One source, two execution targets, and the parity harness proves
    they match.
 
 2. **A pass runs on GPU-if-available, else CPU.** Generalize the existing
@@ -106,7 +106,7 @@ path for tests/benchmarks. This flips today's default (CPU, opt-in GPU) to
 
 ## Components
 
-### `render` — the unified renderer (orchestrator)
+### `render`: the unified renderer (orchestrator)
 
 - Keep the public `Renderer`/`NewRenderer`/`Option`/`Render()` surface.
 - Replace the hardcoded pass sequence with a `[]Pass` pipeline. Each `Pass`
@@ -118,7 +118,7 @@ path for tests/benchmarks. This flips today's default (CPU, opt-in GPU) to
 - Device acquisition: `NewRenderer` calls `gpu.Open()` unless `render.CPU()` is
   set; stores `*gpu.Device` (nil ⇒ all-CPU).
 
-### `gpu/shader` + `gpumath` — author-once kernels
+### `gpu/shader` + `gpumath`: author-once kernels
 
 - `gpu/shader` (the compiler) is unchanged.
 - Add `gpumath`: Go implementations of the kernel builtins (`normalize`, `length`,
@@ -130,7 +130,7 @@ path for tests/benchmarks. This flips today's default (CPU, opt-in GPU) to
 - Migration is incremental: one pass at a time moves from "CPU code in `shader/`
   + separate GPU kernel" to "one kernel run both ways", guarded by parity tests.
 
-### `scene` and the frontend — mostly unchanged
+### `scene` and the frontend (mostly unchanged)
 
 Already renderer-agnostic. Minor work: ensure the G-buffer attributes a pass
 needs (normals, world position, base colour, material indices, light/material
@@ -162,11 +162,11 @@ Minimal-disruption reorg; the renderer-agnostic frontend keeps its layout.
 | --- | --- | --- |
 | Scene contract | scene, geometry, material, light, camera, math, color, buffer | unchanged |
 | Low-level GPU | gpu, gpu/{mtl,gl,vk,ctx}, gpu/shader | unchanged |
-| Kernel builtins (CPU exec) | — | new `gpumath` (or `gpu/shader/gpumath`) |
+| Kernel builtins (CPU exec) | (none) | new `gpumath` (or `gpu/shader/gpumath`) |
 | Shading kernels | split: `shader/` (CPU) + `render/gpudeferred.go` (GPU) | converge to author-once kernels (a `kernels/` set) |
 | Renderer | `render/` (CPU + ad-hoc GPU offload) | `render/` = pass pipeline + GPU-default/CPU-fallback runner |
 | Apps | cmd (5), ../cmd (stale) | cmd; ../cmd retired |
-| Ray tracing | — | `accel/` (BVH) + ray kernels, later |
+| Ray tracing | (none) | `accel/` (BVH) + ray kernels, later |
 
 ## Data Flow
 
@@ -179,7 +179,7 @@ path uses `buffer.FragmentBuffer`. Both end at an `*image.RGBA`.
 ## Error Handling / Fallback
 
 Per-pass: attempt GPU, and on *any* error (device lost, unsupported feature,
-compile failure) log and fall back to that pass's CPU executor — the existing
+compile failure) log and fall back to that pass's CPU executor, the existing
 `passDeferred` behaviour, made uniform. A renderer with no device runs all-CPU.
 Fallbacks must be observable in tests (today's `gpuDeferredUsed` flag generalized
 to a per-pass record) so CI can assert which path ran.
@@ -208,7 +208,7 @@ to a per-pass record) so CI can assert which path ran.
 3. **GPU-by-default.** `NewRenderer` auto-opens a device; add `render.CPU()`.
    Existing tests pin paths explicitly; default flips to GPU+fallback.
 4. **Grow GPU coverage pass by pass.** Shadow pass kernel (already have
-   `shadowKernel`), then AO, then forward/raster on GPU — each author-once, each
+   `shadowKernel`), then AO, then forward/raster on GPU, each author-once, each
    parity-gated.
 5. **Frontend tidy + retire `../cmd`.**
 6. **Ray tracing mode** (`accel/` BVH + ray kernels) once the pass/kernel
@@ -224,7 +224,7 @@ backends, and the parity suite green.
   CPU executor batches over the goroutine pool; author-once is about *correctness
   and single-source*, with the GPU path carrying the performance. Keep a
   hand-optimized CPU path option where it matters.
-- **std140/MSL uniform layout drift** across CPU/GPU — already handled for the
+- **std140/MSL uniform layout drift** across CPU/GPU, already handled for the
   storage-buffer parity kernels; uniforms need the documented 16-byte rules.
 - **Scope.** This is xlarge; the phased path keeps each step small and verified.
   Break this spec down (`/wf-spec-breakdown`) before implementing.
