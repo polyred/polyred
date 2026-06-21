@@ -7,6 +7,8 @@ package shader
 import (
 	"strings"
 	"testing"
+
+	kernelpkg "poly.red/gpu/shader/gpumath/kernels"
 )
 
 // TestCompileRejectsUndefinedIdent is the regression test for the reference
@@ -69,7 +71,7 @@ func K(gid uint, out []float32) {
 // pure-Go test is the offline regression guard for the corpus.
 func TestCompileAcceptsRealKernels(t *testing.T) {
 	corpus := map[string]string{
-		"deferred": deferredKernelSrc,
+		"deferred": kernelpkg.ShadeSrc,
 		"shadow":   shadowKernelSrc,
 		"ao":       aoKernelSrc,
 		"vertfrag": vertFragKernelSrc,
@@ -87,63 +89,13 @@ func TestCompileAcceptsRealKernels(t *testing.T) {
 	}
 }
 
-// The following are verbatim copies of the engine kernels in
-// render/gpudeferred.go. Keeping copies here lets the pure-Go compiler tests run
-// offline (the render package pulls in cgo-free-but-network-fetched deps). If the
-// originals change, update these.
-
-const deferredKernelSrc = `
-package kernels
-
-type Vec4 struct{ X, Y, Z, W float32 }
-
-type Scene struct {
-	CamPos    Vec4
-	AmbientI  float32
-	NumLights float32
-	Pad1      float32
-	Pad2      float32
-}
-
-func Shade(gid uint, normals []float32, worldpos []float32, basecol []float32, lights []float32, matidx []float32, materials []float32, s Scene, out []float32) {
-	N := Vec4{normals[gid*4], normals[gid*4+1], normals[gid*4+2], normals[gid*4+3]}
-	wpos := Vec4{worldpos[gid*4], worldpos[gid*4+1], worldpos[gid*4+2], worldpos[gid*4+3]}
-	col := Vec4{basecol[gid*4], basecol[gid*4+1], basecol[gid*4+2], basecol[gid*4+3]}
-
-	mi := int(matidx[gid])
-	diffuse := Vec4{materials[mi*9], materials[mi*9+1], materials[mi*9+2], materials[mi*9+3]}
-	specular := Vec4{materials[mi*9+4], materials[mi*9+5], materials[mi*9+6], materials[mi*9+7]}
-	shininess := materials[mi*9+8]
-
-	acc := col * s.AmbientI
-	count := int(s.NumLights)
-	for i := 0; i < count; i++ {
-		lt := lights[i*10]
-		lp := Vec4{lights[i*10+1], lights[i*10+2], lights[i*10+3], lights[i*10+4]}
-		lc := Vec4{lights[i*10+5], lights[i*10+6], lights[i*10+7], lights[i*10+8]}
-		li := lights[i*10+9]
-		var L Vec4
-		var I float32
-		if lt < 0.5 {
-			Ldir := lp - wpos
-			L = normalize(Ldir)
-			I = li / length(Ldir)
-		} else {
-			L = Vec4{-lp.X, -lp.Y, -lp.Z, 0}
-			I = li
-		}
-		V := normalize(s.CamPos - wpos)
-		H := normalize(L + V)
-		Ld := clamp(dot(N, L), 0.0, 1.0)
-		Ls := pow(clamp(dot(N, H), 0.0, 1.0), shininess)
-		acc = acc + diffuse*(col*(Ld*I))/255.0 + specular*(lc*(Ls*I))/255.0
-	}
-	out[gid*4] = acc.X
-	out[gid*4+1] = acc.Y
-	out[gid*4+2] = acc.Z
-	out[gid*4+3] = col.W
-}
-`
+// The deferred kernel comes from the canonical author-once source
+// (kernels.ShadeSrc) so this corpus cannot drift from the engine. The shadow,
+// ao, and vertfrag entries below are still local copies of the kernels inline in
+// render/ (shadowKernel, aoKernel) and an example vertex/fragment pair; keeping
+// copies here lets the pure-Go compiler tests run offline. Migrate them to the
+// kernels package (and reference them here) when those kernels become
+// author-once. If the originals change, update these.
 
 const shadowKernelSrc = `
 package kernels
