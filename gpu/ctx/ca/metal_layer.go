@@ -4,123 +4,102 @@
 
 //go:build darwin
 
+// Package ca provides cgo-free access to CAMetalLayer (the present surface for
+// windowed Metal), through purego/objc -- the same approach as poly.red/gpu/mtl.
+// The layer itself is obtained from a native view (still created by the platform
+// window layer); this package only messages it.
+// https://developer.apple.com/documentation/quartzcore/cametallayer
 package ca
 
 import (
 	"errors"
 	"unsafe"
 
+	"github.com/ebitengine/purego/objc"
+
 	"poly.red/gpu/mtl"
 )
 
-// This file provides access to CAMetalLayer.
-// https://developer.apple.com/documentation/quartzcore
-// https://developer.apple.com/documentation/appkit
+var (
+	selSetDevice             = objc.RegisterName("setDevice:")
+	selSetPixelFormat        = objc.RegisterName("setPixelFormat:")
+	selPixelFormat           = objc.RegisterName("pixelFormat")
+	selSetMaxDrawableCount   = objc.RegisterName("setMaximumDrawableCount:")
+	selSetDisplaySyncEnabled = objc.RegisterName("setDisplaySyncEnabled:")
+	selSetDrawableSize       = objc.RegisterName("setDrawableSize:")
+	selNextDrawable          = objc.RegisterName("nextDrawable")
+	selDrawableTexture       = objc.RegisterName("texture")
+)
 
-/*
-#cgo CFLAGS: -Werror -fmodules -fobjc-arc -x objective-c
+// cgSize matches CGSize (two CGFloat == two float64 on 64-bit), passed by value.
+type cgSize struct{ width, height float64 }
 
-#include <AppKit/AppKit.h>
-#include <stdbool.h>
-
-typedef unsigned long uint_t;
-typedef unsigned short uint16_t;
-
-__attribute__ ((visibility ("hidden"))) CFTypeRef MetalDrawable_Texture(CFTypeRef metalDrawable);
-__attribute__ ((visibility ("hidden"))) CFTypeRef MetalLayer_NextDrawable(CFTypeRef metalLayer);
-__attribute__ ((visibility ("hidden"))) uint16_t MetalLayer_PixelFormat(CFTypeRef metalLayer);
-__attribute__ ((visibility ("hidden"))) void MetalLayer_SetDevice(CFTypeRef metalLayer, CFTypeRef device);
-__attribute__ ((visibility ("hidden"))) void MetalLayer_SetDisplaySyncEnabled(CFTypeRef metalLayer, bool displaySyncEnabled);
-__attribute__ ((visibility ("hidden"))) void MetalLayer_SetDrawableSize(CFTypeRef metalLayer, double width, double height);
-__attribute__ ((visibility ("hidden"))) const char * MetalLayer_SetMaximumDrawableCount(CFTypeRef metalLayer, uint_t maximumDrawableCount);
-__attribute__ ((visibility ("hidden"))) const char * MetalLayer_SetPixelFormat(CFTypeRef metalLayer, uint16_t pixelFormat);
-*/
-import "C"
-
-// MetalLayer is a Core Animation Metal layer, a layer that manages a pool of Metal drawables.
-// https://developer.apple.com/documentation/quartzcore/cametallayer.
+// MetalLayer is a Core Animation Metal layer: a pool of presentable drawables.
 type MetalLayer struct {
-	metalLayer C.CFTypeRef
+	layer objc.ID
 }
 
-// NewMetalLayer sets a new Core Animation Metal layer.
-// https://developer.apple.com/documentation/quartzcore/cametallayer.
+// NewMetalLayer wraps a CAMetalLayer pointer obtained from a native view.
 func NewMetalLayer(layer unsafe.Pointer) MetalLayer {
-	return MetalLayer{metalLayer: C.CFTypeRef(layer)}
+	return MetalLayer{layer: objc.ID(uintptr(layer))}
 }
 
-// PixelFormat returns the pixel format of textures for rendering layer content.
-// https://developer.apple.com/documentation/quartzcore/cametallayer/1478155-pixelformat.
+// PixelFormat returns the layer's drawable pixel format.
 func (ml MetalLayer) PixelFormat() mtl.PixelFormat {
-	return mtl.PixelFormat(uint8(C.MetalLayer_PixelFormat(ml.metalLayer)))
+	return mtl.PixelFormat(uint8(objc.Send[uint64](ml.layer, selPixelFormat)))
 }
 
-// SetDevice sets the Metal device responsible for the layer's drawable resources.
-// https://developer.apple.com/documentation/quartzcore/cametallayer/1478163-device.
+// SetDevice sets the Metal device responsible for the layer's drawables.
 func (ml MetalLayer) SetDevice(device mtl.Device) {
-	C.MetalLayer_SetDevice(ml.metalLayer, C.CFTypeRef(device.Device()))
+	ml.layer.Send(selSetDevice, objc.ID(uintptr(device.Device())))
 }
 
-// SetPixelFormat controls the pixel format of textures for rendering layer content.
-// The pixel format for a Metal layer must be PixelFormatBGRA8UNorm, PixelFormatBGRA8UNormSRGB,
-// PixelFormatRGBA16Float, PixelFormatBGRA10XR, or PixelFormatBGRA10XRSRGB.
-// SetPixelFormat panics for other values.
-// https://developer.apple.com/documentation/quartzcore/cametallayer/1478155-pixelformat.
+// SetPixelFormat sets the layer's drawable pixel format (BGRA8UNorm and a few
+// others are valid for a Metal layer).
 func (ml MetalLayer) SetPixelFormat(pf mtl.PixelFormat) {
-	e := C.MetalLayer_SetPixelFormat(ml.metalLayer, C.uint16_t(pf))
-	if e != nil {
-		panic(C.GoString(e))
-	}
+	ml.layer.Send(selSetPixelFormat, uint64(pf))
 }
 
-// SetMaximumDrawableCount controls the number of Metal drawables in the resource pool
-// managed by Core Animation.
-// It can set to 2 or 3 only. SetMaximumDrawableCount panics for other values.
-// https://developer.apple.com/documentation/quartzcore/cametallayer/2938720-maximumdrawablecount.
+// SetMaximumDrawableCount sets the drawable pool size (2 or 3).
 func (ml MetalLayer) SetMaximumDrawableCount(count int) {
-	e := C.MetalLayer_SetMaximumDrawableCount(ml.metalLayer, C.uint_t(count))
-	if e != nil {
-		panic(C.GoString(e))
-	}
+	ml.layer.Send(selSetMaxDrawableCount, uint64(count))
 }
 
-// SetDisplaySyncEnabled controls whether the Metal layer and its drawables
-// are synchronized with the display's refresh rate.
-// https://developer.apple.com/documentation/quartzcore/cametallayer/2887087-displaysyncenabled.
+// SetDisplaySyncEnabled controls vsync for the layer's drawables.
 func (ml MetalLayer) SetDisplaySyncEnabled(enabled bool) {
-	C.MetalLayer_SetDisplaySyncEnabled(ml.metalLayer, C.bool(enabled))
-}
-
-// SetDrawableSize sets the size, in pixels, of textures for rendering layer content.
-// https://developer.apple.com/documentation/quartzcore/cametallayer/1478174-drawablesize.
-func (ml MetalLayer) SetDrawableSize(width, height int) {
-	C.MetalLayer_SetDrawableSize(ml.metalLayer, C.double(width), C.double(height))
-}
-
-// NextDrawable returns a Metal drawable.
-// https://developer.apple.com/documentation/quartzcore/cametallayer/1478172-nextdrawable.
-func (ml MetalLayer) NextDrawable() (caMetalDrawable, error) {
-	md := C.MetalLayer_NextDrawable(ml.metalLayer)
-	if md == 0 {
-		return caMetalDrawable{}, errors.New("nextDrawable returned nil")
+	var b uint64
+	if enabled {
+		b = 1
 	}
+	ml.layer.Send(selSetDisplaySyncEnabled, b)
+}
 
+// SetDrawableSize sets the size, in pixels, of the layer's drawables.
+func (ml MetalLayer) SetDrawableSize(width, height int) {
+	ml.layer.Send(selSetDrawableSize, cgSize{float64(width), float64(height)})
+}
+
+// NextDrawable returns the next presentable drawable, or an error if none is
+// available (for example an off-screen layer not attached to a view).
+func (ml MetalLayer) NextDrawable() (caMetalDrawable, error) {
+	md := ml.layer.Send(selNextDrawable)
+	if md == 0 {
+		return caMetalDrawable{}, errors.New("ca: nextDrawable returned nil")
+	}
 	return caMetalDrawable{md}, nil
 }
 
-// MetalDrawable is a displayable resource that can be rendered or written to by Metal.
-// https://developer.apple.com/documentation/quartzcore/cametaldrawable.
+// caMetalDrawable is a displayable resource Metal can render into.
 type caMetalDrawable struct {
-	metalDrawable C.CFTypeRef
+	drawable objc.ID
 }
 
-// Drawable implements the Drawable interface.
+// Drawable implements the Drawable interface (the raw CAMetalDrawable pointer).
 func (md caMetalDrawable) Drawable() unsafe.Pointer {
-	return unsafe.Pointer(md.metalDrawable)
+	return unsafe.Pointer(md.drawable)
 }
 
-// Texture returns a Metal texture object representing the drawable object's content.
-// https://developer.apple.com/documentation/quartzcore/cametaldrawable/1478159-texture.
+// Texture returns the drawable's backing Metal texture.
 func (md caMetalDrawable) Texture() mtl.Texture {
-	return mtl.NewTexture(unsafe.Pointer(C.MetalDrawable_Texture(C.CFTypeRef(md.metalDrawable))))
+	return mtl.NewTexture(unsafe.Pointer(md.drawable.Send(selDrawableTexture)))
 }
