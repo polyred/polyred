@@ -1,0 +1,47 @@
+name: vk-probe
+
+# Proves the GitHub-hosted ubuntu runner can run headless Vulkan via Mesa's
+# lavapipe software ICD, reached cgo-free through purego: create an instance,
+# enumerate devices, and confirm a compute-capable queue. If green, a future
+# cgo-free Vulkan compute backend (item #2, "then Vulkan") is CI-verifiable in
+# software, the same way the GL backend is.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vulkan-lavapipe:
+    name: headless Vulkan compute (Mesa lavapipe)
+    runs-on: ubuntu-latest
+    env:
+      POLYRED_VK_PROBE: '1'
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.x'
+        check-latest: true
+
+    - name: Install Vulkan (Mesa lavapipe software ICD)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools
+
+    - name: Diagnostics
+      continue-on-error: true
+      run: |
+        echo "--- vulkan ICDs ---"
+        ls /usr/share/vulkan/icd.d/ 2>/dev/null || true
+        echo "--- vulkaninfo summary ---"
+        vulkaninfo --summary 2>&1 | head -50 || true
+
+    - name: Probe (cgo-free purego Vulkan compute capability)
+      env:
+        CGO_ENABLED: '0'
+      run: go test -v -run TestVulkanComputeProbe ./gpu/
