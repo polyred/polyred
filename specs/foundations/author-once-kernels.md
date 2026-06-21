@@ -1,6 +1,6 @@
 ---
 title: Author-once kernels: gpumath + compiler method lowering, one source for CPU and GPU
-status: drafted
+status: implemented (CI-verified)
 depends_on:
   - foundations/unified-renderer.md
   - foundations/gpu-phase2-goshader.md
