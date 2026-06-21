@@ -53,6 +53,19 @@ func Get(id ID) Material {
 	return m
 }
 
+// Resolve is the single material-resolution path for the renderer (CPU and GPU).
+// It returns the BlinnPhong material for id, or nil when id resolves to no usable
+// material: a negative ID (the "use vertex color" hint), an absent ID, or a
+// non-BlinnPhong material. Callers treat nil as "no material" (vertex color).
+func Resolve(id ID) *BlinnPhong {
+	m := Get(id)
+	if m == nil {
+		return nil
+	}
+	bp, _ := m.(*BlinnPhong)
+	return bp
+}
+
 // Put puts the given material to the centralized material pool.
 func Put(m Material) (id ID, ok bool) {
 	pool.mu.Lock()

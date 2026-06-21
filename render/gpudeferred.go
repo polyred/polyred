@@ -129,16 +129,12 @@ func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.So
 			if !info.Ok {
 				continue
 			}
-			m := material.Get(material.ID(info.MaterialID))
-			if m == nil {
+			bp := material.Resolve(material.ID(info.MaterialID))
+			if bp == nil {
 				okMask[idx] = true
 				passthrough[idx] = true
 				passCol[idx] = info.Col
 				continue
-			}
-			bp, ok := m.(*material.BlinnPhong)
-			if !ok {
-				return errGPUDeferredUnsupported
 			}
 			if bp.AmbientOcclusion {
 				aoflag[idx] = 1

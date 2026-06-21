@@ -283,9 +283,8 @@ func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.R
 	}
 
 	col := info.Col
-	m := material.Get(material.ID(frag.MaterialID))
-	if m != nil {
-		mat := m.(*material.BlinnPhong)
+	mat := material.Resolve(material.ID(frag.MaterialID))
+	if mat != nil {
 		lightSources, lightEnv := r.cfg.Scene.Lights()
 		col = shader.FragmentShader(mat,
 			info,

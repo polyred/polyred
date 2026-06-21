@@ -17,12 +17,8 @@ type AmbientOcclusionPass struct{ Buf *buffer.FragmentBuffer }
 func AmbientOcclusionShade(buf *buffer.FragmentBuffer, info *primitive.Fragment) color.RGBA {
 	// FIXME: naive and super slow SSAO implementation. Optimize
 	// when denoiser is available.
-	m := Get(ID(info.MaterialID))
-	if m == nil {
-		return info.Col
-	}
-	mat := m.(*BlinnPhong)
-	if !mat.AmbientOcclusion {
+	mat := Resolve(ID(info.MaterialID))
+	if mat == nil || !mat.AmbientOcclusion {
 		return info.Col
 	}
 
