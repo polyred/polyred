@@ -1,6 +1,6 @@
 ---
 title: "Author-once shadow / AO / sRGB kernels"
-status: implemented (CI-pending)
+status: implemented (CI-verified)
 depends_on:
   - foundations/render-deferred-author-once.md
   - foundations/render-multibackend-kernels.md
