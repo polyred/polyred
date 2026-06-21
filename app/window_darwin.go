@@ -119,7 +119,18 @@ var (
 	selWindow                = objc.RegisterName("window")
 	selObject                = objc.RegisterName("object")
 	selContentView           = objc.RegisterName("contentView")
+	selLocationInWindow      = objc.RegisterName("locationInWindow")
+	selModifierFlags         = objc.RegisterName("modifierFlags")
+	selPressedMouseButtons   = objc.RegisterName("pressedMouseButtons")
+	selScrollingDeltaX       = objc.RegisterName("scrollingDeltaX")
+	selScrollingDeltaY       = objc.RegisterName("scrollingDeltaY")
+	selKeyCode               = objc.RegisterName("keyCode")
+	selCharsNoMods           = objc.RegisterName("charactersIgnoringModifiers")
+	selUTF8String            = objc.RegisterName("UTF8String")
 )
+
+// modifierFlagsMask is NSEventModifierFlagDeviceIndependentFlagsMask.
+const modifierFlagsMask = 0xFFFF0000
 
 // Objective-C struct types passed by value (HFA: doubles in FP registers).
 type cgPoint struct{ x, y float64 }
@@ -167,6 +178,25 @@ func registerClasses() {
 				layer.Send(selSetContentsScale, scale)
 				viewOnDraw(self)
 			}},
+			// Keyboard focus: a plain NSView rejects first-responder by default,
+			// so key events would never reach keyDown:/keyUp:.
+			{Cmd: objc.RegisterName("acceptsFirstResponder"), Fn: func(_ objc.ID, _ objc.SEL) bool { return true }},
+			// Mouse + keyboard events -> Go handlers (the channels the event
+			// goroutine consumes).
+			{Cmd: objc.RegisterName("mouseDown:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseDown, 0, 0) }},
+			{Cmd: objc.RegisterName("mouseUp:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseUp, 0, 0) }},
+			{Cmd: objc.RegisterName("rightMouseDown:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseDown, 0, 0) }},
+			{Cmd: objc.RegisterName("rightMouseUp:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseUp, 0, 0) }},
+			{Cmd: objc.RegisterName("otherMouseDown:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseDown, 0, 0) }},
+			{Cmd: objc.RegisterName("otherMouseUp:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseUp, 0, 0) }},
+			{Cmd: objc.RegisterName("mouseMoved:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseMove, 0, 0) }},
+			{Cmd: objc.RegisterName("mouseDragged:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseMove, 0, 0) }},
+			{Cmd: objc.RegisterName("rightMouseDragged:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseMove, 0, 0) }},
+			{Cmd: objc.RegisterName("scrollWheel:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) {
+				handleMouse(self, e, MouseScroll, objc.Send[float64](e, selScrollingDeltaX), objc.Send[float64](e, selScrollingDeltaY))
+			}},
+			{Cmd: objc.RegisterName("keyDown:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleKeys(self, e, true) }},
+			{Cmd: objc.RegisterName("keyUp:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleKeys(self, e, false) }},
 		},
 	)
 	if err != nil {
@@ -215,6 +245,59 @@ func viewOnDraw(view objc.ID) {
 	// goroutine. A skipped resize just defers the size update one frame.
 	select {
 	case w.resize <- resizeEvent{w.win.config.size.X, w.win.config.size.Y}:
+	default:
+	}
+}
+
+// handleMouse extracts an NSEvent's mouse state and forwards it to the window's
+// mouse channel. dx/dy are scroll deltas (0 for non-scroll). Runs on the main
+// thread (from the NSView event IMPs).
+func handleMouse(self, event objc.ID, action MouseAction, dx, dy float64) {
+	mu.Lock()
+	w := windows[self]
+	mu.Unlock()
+	if w == nil {
+		return
+	}
+	loc := objc.Send[cgPoint](event, selLocationInWindow)
+	height := float64(w.win.config.size.Y)
+	pressed := objc.Send[uint64](objc.ID(objc.GetClass("NSEvent")), selPressedMouseButtons)
+	mods := objc.Send[uint64](event, selModifierFlags) & modifierFlagsMask
+	select {
+	case w.mouse <- MouseEvent{
+		Action:  action,
+		Button:  MouseButton(pressed),
+		Mods:    ModifierKey(mods),
+		Xpos:    float32(loc.x),
+		Ypos:    float32(height - loc.y), // origin lower-left -> upper-left
+		Xoffset: float32(dx),
+		Yoffset: float32(dy),
+	}:
+	default:
+	}
+}
+
+// handleKeys extracts an NSEvent's keyboard state and forwards it to the window's
+// keyboard channel. Runs on the main thread (from the NSView event IMPs).
+func handleKeys(self, event objc.ID, pressed bool) {
+	mu.Lock()
+	w := windows[self]
+	mu.Unlock()
+	if w == nil {
+		return
+	}
+	code := uint32(objc.Send[uint64](event, selKeyCode))
+	mods := objc.Send[uint64](event, selModifierFlags) & modifierFlagsMask
+	var s string
+	if chars := event.Send(selCharsNoMods); chars != 0 {
+		s = objc.Send[string](chars, selUTF8String)
+	}
+	select {
+	case w.keyboard <- KeyEvent{
+		Keycode: Key{code: code, char: s},
+		Mods:    ModifierKey(mods),
+		Pressed: pressed,
+	}:
 	default:
 	}
 }
@@ -281,6 +364,9 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 		w.win.window = createWindow(w.win.view, canResize)
 		w.configs(opts...)
 		w.win.window.Send(selMakeKeyAndOrderFront, objc.ID(0))
+		// Bring the app (launched from a terminal, not a bundle) to the front and
+		// give the window key focus so input goes to it immediately.
+		nsApp.Send(selActivateIgnoringOther, uint64(1))
 
 		layerPtr := unsafe.Pointer(w.win.view.Send(selLayer))
 		var err error
