@@ -28,10 +28,10 @@ jobs:
         go-version: '1.26.x'
         check-latest: true
 
-    - name: Install Vulkan (Mesa lavapipe software ICD) + glslang
+    - name: Install Vulkan (Mesa lavapipe software ICD) + glslang + validation
       run: |
         sudo apt-get update
-        sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools glslang-tools
+        sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools glslang-tools vulkan-validationlayers
 
     - name: Diagnostics
       continue-on-error: true
@@ -44,4 +44,6 @@ jobs:
     - name: Probe (cgo-free purego Vulkan compute capability)
       env:
         CGO_ENABLED: '0'
+        VK_INSTANCE_LAYERS: VK_LAYER_KHRONOS_validation
+        VK_LOADER_LAYERS_ENABLE: '*validation'
       run: go test -v -run 'TestVulkan|TestShadingParity' ./gpu/
