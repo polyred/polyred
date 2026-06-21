@@ -22,15 +22,18 @@ A third driver behind the same private `backend` interface: a cgo-free Vulkan
 compute backend, after Metal and GL. Vulkan is the most portable modern API
 (Linux/Windows/Android, and macOS via MoltenVK), so it widens reach the most.
 
-## Status: viability proven, backend not yet built
+## Status: cgo-free Vulkan compute works end-to-end (CI-verified)
 
-The cgo-free Vulkan path is **proven in CI** (`gpu/vkprobe_linux_test.go`,
-`.github/workflows/vk-probe.yml`): via purego (no cgo) the probe creates a Vulkan
-instance, enumerates physical devices, and confirms a compute-capable queue
-family. On the stock `ubuntu-latest` runner this is served by Mesa's **lavapipe**
-software ICD (`llvmpipe`, device type CPU), so the full backend will be
-CI-verifiable in software, exactly as the GL backend is. This de-risks the work;
-the backend itself is the large remaining piece.
+The full cgo-free Vulkan **compute path is proven in CI** on Mesa lavapipe
+(`gpu/vk*_linux_test.go`, `.github/workflows/vk-probe.yml`): via purego (no cgo)
+`TestVulkanComputeDispatch` builds an instance, logical device, host-visible
+storage buffers, a shader module (GLSL compiled to SPIR-V by glslang), descriptor
+set, compute pipeline, command buffer, `vkCmdDispatch`, queue submit, and reads
+the doubled result back, matching the CPU. About 14 Vulkan structs marshal
+correctly through purego. So the hard question ("does cgo-free Vulkan compute
+work?") is answered: yes. What remains is wiring it behind the `backend`
+interface and a Go to SPIR-V path so kernels are authored in Go (today via
+glslang).
 
 ## The hard part: shader input is SPIR-V, not text
 
@@ -70,9 +73,10 @@ before implementation.
    roundtrip, cgo-free, green in CI (`gpu/vkdevice_linux_test.go`). The create-info
    struct layouts marshal correctly through purego, so the device/memory
    foundation is proven.
-3. Settle the SPIR-V story (Go to SPIR-V vs glslang-compiled GLSL in CI); the
-   latter is the pragmatic path to a verified dispatch without a SPIR-V emitter.
-4. Descriptor set + compute pipeline + command buffer + `vkCmdDispatch` +
-   readback; reuse the backend-agnostic compute conformance.
-5. Wire it behind the `backend` interface; then render pipeline; then Windows
-   (same purego loader, `vulkan-1.dll`).
+3. **Done (via glslang).** SPIR-V is produced by compiling the kernel's GLSL with
+   glslang in CI; a Go to SPIR-V emitter remains the principled follow-up.
+4. **Done.** Descriptor set + compute pipeline + command buffer + `vkCmdDispatch`
+   + readback: `TestVulkanComputeDispatch` doubles a buffer and matches the CPU,
+   green in CI.
+5. Wire it behind the `backend` interface (so the Device API drives Vulkan like
+   it drives GL/Metal); then render pipeline; then Windows (`vulkan-1.dll`).
