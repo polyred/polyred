@@ -1,6 +1,6 @@
 ---
 title: "Material ownership: de-globalize the material pool"
-status: drafted (design, not scheduled)
+status: scheduled (Option A, staged, index-based)
 depends_on: []
 affects:
   - material/pool.go
@@ -8,6 +8,7 @@ affects:
   - render/gpudeferred.go
   - geometry/primitive
   - scene
+  - model
 effort: large
 created: 2026-06-21
 updated: 2026-06-21
@@ -19,12 +20,38 @@ dispatched_task_id: null
 
 ## Overview
 
-This is a DESIGN spec, not scheduled work. It captures the real fix for the
-"suboptimal abstraction" the cleanup audit flagged: `material/pool.go` is a
-process-wide mutable registry (`Get`/`Put`/`Del` over a global map). Documenting
-the contract (done) does not remove the smell; de-globalizing it is an
-architecture change with real blast radius, so it is written up here for a
-deliberate decision rather than folded into a tidy-up.
+The real fix for the "suboptimal abstraction" the cleanup audit flagged:
+`material/pool.go` is a process-wide mutable registry (`Get`/`Put`/`Del` over a
+global map). The user chose Option A (scene-owned materials, remove the global
+pool) with full knowledge of the corrected scope.
+
+## Chosen approach (decided 2026-06-21): index, staged
+
+- **Index, not pointer.** A `material.Material` field on `primitive.Triangle`/
+  `Fragment` is IMPOSSIBLE: `material` already depends on `primitive` (via
+  `buffer` -- `material.Standard` holds `*buffer.Texture`; `material/ao.go` reads
+  `MaterialID`), so a primitive -> material field is an import cycle. Primitives
+  keep an integer; it just becomes scene-scoped instead of process-global.
+- **Staged C -> A** (each slice golden/behavior-gated, committed separately):
+  - **Slice 1 (C, behavior-preserving):** one material-resolution path. Today the
+    CPU path is `material.Get(ID)` and the GPU path resolves `Get(ID)` then keys a
+    per-frame table by `*BlinnPhong`. Introduce a single `resolveMaterial(id)`
+    used by CPU shade (render/raster.go), GPU marshaling (render/gpudeferred.go),
+    and `material/ao.go`. Still pool-backed. No output change.
+  - **Slice 2 (A):** lift the registry from the global `pool` to scene ownership;
+    rework `model.Load` for the load-before-scene ordering; delete the global pool.
+
+## Verification (non-negotiable)
+
+- The negative-ID -> vertex-color path (`-1` from model/plane.go, geometry/
+  primitive/polygon.go; consumed via resolution -> nil) is pinned by a test BEFORE
+  resolution is touched: `resolveMaterial(-1) == nil`, `resolveMaterial(0) ==
+  default`, and a render smoke that a `-1` plane shows vertex color, not the
+  default material.
+- The repo has NO byte-exact render golden (TestRender only writes), and a
+  byte-exact golden would be cross-platform flaky (rasterization float diffs).
+  Parity is guarded by: the resolution unit tests, the existing GPU-vs-CPU
+  multi-material test, and logical per-region pixel assertions, not a golden image.
 
 ## Current State (verified)
 
