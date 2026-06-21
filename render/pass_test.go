@@ -51,8 +51,14 @@ func TestRunPassWithDevice(t *testing.T) {
 // TestGPUByDefault: without an explicit device, NewRenderer acquires one when
 // available and the deferred pass runs on the GPU; CPU() forces the CPU path.
 func TestGPUByDefault(t *testing.T) {
-	if _, err := gpu.Open(); err != nil {
+	dev, err := gpu.Open()
+	if err != nil {
 		t.Skipf("no GPU device: %v", err)
+	}
+	metal := dev.Driver() == gpu.DriverMetal
+	dev.Close()
+	if !metal {
+		t.Skip("render GPU offload is MSL/Metal-only today; skip on other drivers")
 	}
 	s, c := newscene(64, 64)
 	NewRenderer(Scene(s), Camera(c), Size(64, 64)).Render() // auto-acquire path

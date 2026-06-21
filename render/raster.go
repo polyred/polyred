@@ -103,8 +103,17 @@ func NewRenderer(opts ...Option) *Renderer {
 	// caller-supplied device is left untouched.
 	if r.cfg.GPUDevice == nil && !r.cfg.forceCPU {
 		if dev, err := gpu.Open(); err == nil {
-			r.cfg.GPUDevice = dev
-			r.ownDevice = dev
+			// The renderer's GPU offload (gpudeferred.go / gpugamma.go) is MSL
+			// today, so only a Metal device is usable; on other drivers fall back
+			// to CPU until the passes are authored once for all backends (see
+			// specs/foundations/unified-renderer.md). A caller can still force a
+			// specific device with render.GPU(dev).
+			if dev.Driver() == gpu.DriverMetal {
+				r.cfg.GPUDevice = dev
+				r.ownDevice = dev
+			} else {
+				dev.Close()
+			}
 		}
 	}
 
