@@ -204,7 +204,7 @@ func (m *metalBackend) newTexture(format TextureFormat, w, h int, renderTarget b
 	return &metalTexture{tex: tex, w: w, h: h}, nil
 }
 
-func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color, depth TextureFormat) (backendRenderPipeline, error) {
+func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat, extraColor []TextureFormat, depth TextureFormat) (backendRenderPipeline, error) {
 	vfn, err := vmod.(*metalModule).lib.MakeFunction(ventry)
 	if err != nil {
 		return nil, err
@@ -217,6 +217,9 @@ func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string
 		VertexFunction:   vfn,
 		FragmentFunction: ffn,
 		ColorPixelFormat: mtlFormat(color),
+	}
+	for _, f := range extraColor {
+		pdesc.ExtraColorPixelFormats = append(pdesc.ExtraColorPixelFormats, mtlFormat(f))
 	}
 	p := &metalRenderPipeline{}
 	if depth != FormatNone {
@@ -306,6 +309,14 @@ func (c *metalCmd) beginRender(info renderPassInfo) {
 			StoreAction: mtl.StoreActionStore,
 			ClearColor:  mtl.ClearColor{Red: info.clearColor[0], Green: info.clearColor[1], Blue: info.clearColor[2], Alpha: info.clearColor[3]},
 		},
+	}
+	for _, t := range info.extraColor {
+		desc.ExtraColorAttachments = append(desc.ExtraColorAttachments, mtl.ColorAttachment{
+			Texture:     t.tex.(*metalTexture).tex,
+			LoadAction:  load,
+			StoreAction: mtl.StoreActionStore,
+			ClearColor:  mtl.ClearColor{Red: t.clear[0], Green: t.clear[1], Blue: t.clear[2], Alpha: t.clear[3]},
+		})
 	}
 	if info.depth != nil {
 		desc.Depth = mtl.DepthAttachment{

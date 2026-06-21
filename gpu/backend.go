@@ -13,7 +13,7 @@ type backend interface {
 	newComputePipeline(mod backendShaderModule, entry string) (backendComputePipeline, error)
 	newTexture(format TextureFormat, w, h int, renderTarget bool) (backendTexture, error)
 	newSampler(desc SamplerDescriptor) backendSampler
-	newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color, depth TextureFormat) (backendRenderPipeline, error)
+	newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat, extraColor []TextureFormat, depth TextureFormat) (backendRenderPipeline, error)
 	newCommandBuffer() backendCommandBuffer
 	waitIdle()
 	close() error
@@ -28,12 +28,19 @@ type backendSampler interface{ isSampler() }
 
 type backendRenderPipeline interface{ isRenderPipeline() }
 
+// renderColorTarget is one extra color attachment (1..N) of a render pass.
+type renderColorTarget struct {
+	tex   backendTexture
+	clear [4]float64
+}
+
 // renderPassInfo is the backend-facing description of a render pass.
 type renderPassInfo struct {
 	color      backendTexture
 	load       LoadOp
 	clearColor [4]float64
-	depth      backendTexture // optional depth attachment
+	extraColor []renderColorTarget // color attachments 1..N
+	depth      backendTexture      // optional depth attachment
 	clearDepth float64
 }
 

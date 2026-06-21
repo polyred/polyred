@@ -512,7 +512,7 @@ func (b *vkBackend) newTexture(format TextureFormat, w, h int, renderTarget bool
 	return nil, fmt.Errorf("gpu/vk: textures not yet implemented")
 }
 func (b *vkBackend) newSampler(desc SamplerDescriptor) backendSampler { return nil }
-func (b *vkBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color, depth TextureFormat) (backendRenderPipeline, error) {
+func (b *vkBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat, extraColor []TextureFormat, depth TextureFormat) (backendRenderPipeline, error) {
 	return nil, fmt.Errorf("gpu/vk: render pipelines not yet implemented")
 }
 

@@ -115,6 +115,9 @@ type RenderPipelineDescriptor struct {
 	FragmentModule *ShaderModule
 	FragmentEntry  string
 	ColorFormat    TextureFormat
+	// ExtraColorFormats are the formats of color attachments 1..N (attachment 0 is
+	// ColorFormat). Empty for a single color target. Used for a G-buffer (MRT).
+	ExtraColorFormats []TextureFormat
 	// DepthFormat is the depth attachment format (FormatNone for no depth test).
 	// When set, the pipeline depth-tests with "less" and writes depth.
 	DepthFormat TextureFormat
@@ -130,7 +133,7 @@ func (d *Device) NewRenderPipeline(desc RenderPipelineDescriptor) (*RenderPipeli
 	if desc.VertexModule == nil || desc.FragmentModule == nil {
 		return nil, errors.New("gpu: render pipeline requires vertex and fragment modules")
 	}
-	bp, err := d.b.newRenderPipeline(desc.VertexModule.b, desc.VertexEntry, desc.FragmentModule.b, desc.FragmentEntry, desc.ColorFormat, desc.DepthFormat)
+	bp, err := d.b.newRenderPipeline(desc.VertexModule.b, desc.VertexEntry, desc.FragmentModule.b, desc.FragmentEntry, desc.ColorFormat, desc.ExtraColorFormats, desc.DepthFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -163,10 +166,19 @@ type RenderPassDescriptor struct {
 	ColorTexture *Texture
 	Load         LoadOp
 	ClearColor   [4]float64 // RGBA, used when Load == LoadClear
+	// ExtraColorTargets are color attachments 1..N (attachment 0 is ColorTexture).
+	// Each is cleared to its ClearColor when Load == LoadClear. Used for a G-buffer.
+	ExtraColorTargets []ColorTarget
 	// DepthTexture is the optional depth attachment (cleared to ClearDepth, which
 	// defaults to 1.0 when zero). Nil for no depth.
 	DepthTexture *Texture
 	ClearDepth   float64
+}
+
+// ColorTarget is one color attachment of a render pass.
+type ColorTarget struct {
+	Texture    *Texture
+	ClearColor [4]float64
 }
 
 // RenderPass encodes draw commands.
@@ -180,6 +192,9 @@ func (e *CommandEncoder) BeginRenderPass(desc RenderPassDescriptor) *RenderPass 
 		color:      desc.ColorTexture.b,
 		load:       desc.Load,
 		clearColor: desc.ClearColor,
+	}
+	for _, t := range desc.ExtraColorTargets {
+		info.extraColor = append(info.extraColor, renderColorTarget{tex: t.Texture.b, clear: t.ClearColor})
 	}
 	if desc.DepthTexture != nil {
 		info.depth = desc.DepthTexture.b

@@ -200,6 +200,9 @@ type RenderPipelineDescriptor struct {
 	VertexFunction   Function
 	FragmentFunction Function
 	ColorPixelFormat PixelFormat
+	// ExtraColorPixelFormats are the formats of color attachments 1..N (attachment
+	// 0 is ColorPixelFormat).
+	ExtraColorPixelFormats []PixelFormat
 	// DepthPixelFormat is the depth attachment format, or 0 (Invalid) for none.
 	DepthPixelFormat PixelFormat
 }
@@ -213,6 +216,10 @@ func (d Device) MakeRenderPipelineState(desc RenderPipelineDescriptor) (RenderPi
 	rpd.Send(selSetFragmentFunction, desc.FragmentFunction.function)
 	att := rpd.Send(selColorAttachments).Send(selObjectAtIndexed, uint64(0))
 	att.Send(selSetPixelFormat, uint64(desc.ColorPixelFormat))
+	for i, f := range desc.ExtraColorPixelFormats {
+		a := rpd.Send(selColorAttachments).Send(selObjectAtIndexed, uint64(i+1))
+		a.Send(selSetPixelFormat, uint64(f))
+	}
 	rpd.Send(selSetDepthAttachPixFmt, uint64(desc.DepthPixelFormat))
 
 	var err objc.ID
@@ -242,6 +249,9 @@ type DepthAttachment struct {
 // RenderPassDescriptor describes a render pass's attachments.
 type RenderPassDescriptor struct {
 	ColorAttachment0 ColorAttachment
+	// ExtraColorAttachments are color attachments 1..N (attachment 0 is
+	// ColorAttachment0).
+	ExtraColorAttachments []ColorAttachment
 	// Depth is the optional depth attachment. It is used when its Texture is set
 	// (a non-zero texture id).
 	Depth DepthAttachment
@@ -250,12 +260,17 @@ type RenderPassDescriptor struct {
 // objc builds the MTLRenderPassDescriptor.
 func (rp RenderPassDescriptor) objc() objc.ID {
 	d := objc.ID(objc.GetClass("MTLRenderPassDescriptor")).Send(selRenderPassDesc)
-	att := d.Send(selColorAttachments).Send(selObjectAtIndexed, uint64(0))
-	c := rp.ColorAttachment0
-	att.Send(selSetTexture, c.Texture.texture)
-	att.Send(selSetLoadAction, uint64(c.LoadAction))
-	att.Send(selSetStoreAction, uint64(c.StoreAction))
-	att.Send(selSetClearColor, mtlClearColor{c.ClearColor.Red, c.ClearColor.Green, c.ClearColor.Blue, c.ClearColor.Alpha})
+	setColor := func(idx int, c ColorAttachment) {
+		att := d.Send(selColorAttachments).Send(selObjectAtIndexed, uint64(idx))
+		att.Send(selSetTexture, c.Texture.texture)
+		att.Send(selSetLoadAction, uint64(c.LoadAction))
+		att.Send(selSetStoreAction, uint64(c.StoreAction))
+		att.Send(selSetClearColor, mtlClearColor{c.ClearColor.Red, c.ClearColor.Green, c.ClearColor.Blue, c.ClearColor.Alpha})
+	}
+	setColor(0, rp.ColorAttachment0)
+	for i, c := range rp.ExtraColorAttachments {
+		setColor(i+1, c)
+	}
 	if rp.Depth.Texture.texture != 0 {
 		da := d.Send(selDepthAttachment)
 		da.Send(selSetTexture, rp.Depth.Texture.texture)
