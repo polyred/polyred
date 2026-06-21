@@ -127,6 +127,7 @@ var (
 	selKeyCode               = objc.RegisterName("keyCode")
 	selCharsNoMods           = objc.RegisterName("charactersIgnoringModifiers")
 	selUTF8String            = objc.RegisterName("UTF8String")
+	selHasPreciseScrolling   = objc.RegisterName("hasPreciseScrollingDeltas")
 )
 
 // modifierFlagsMask is NSEventModifierFlagDeviceIndependentFlagsMask.
@@ -193,7 +194,15 @@ func registerClasses() {
 			{Cmd: objc.RegisterName("mouseDragged:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseMove, 0, 0) }},
 			{Cmd: objc.RegisterName("rightMouseDragged:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleMouse(self, e, MouseMove, 0, 0) }},
 			{Cmd: objc.RegisterName("scrollWheel:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) {
-				handleMouse(self, e, MouseScroll, objc.Send[float64](e, selScrollingDeltaX), objc.Send[float64](e, selScrollingDeltaY))
+				dx := objc.Send[float64](e, selScrollingDeltaX)
+				dy := objc.Send[float64](e, selScrollingDeltaY)
+				// Precise (trackpad) deltas are ~10x finer than wheel lines; scale
+				// them down to match the wheel step (the engine's original ratio).
+				if objc.Send[bool](e, selHasPreciseScrolling) {
+					dx /= 10
+					dy /= 10
+				}
+				handleMouse(self, e, MouseScroll, dx, dy)
 			}},
 			{Cmd: objc.RegisterName("keyDown:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleKeys(self, e, true) }},
 			{Cmd: objc.RegisterName("keyUp:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleKeys(self, e, false) }},

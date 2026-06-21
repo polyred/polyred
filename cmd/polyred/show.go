@@ -6,6 +6,7 @@ package main
 
 import (
 	"image"
+	"log"
 	"runtime"
 
 	"poly.red/app"
@@ -86,4 +87,10 @@ func (a *App) OnMouse(mo app.MouseEvent) {
 	}
 
 	a.cache = nil
+}
+
+// OnKey logs key events so keyboard delivery can be verified. Any key works:
+// pressing it prints the keycode + character to the terminal.
+func (a *App) OnKey(key app.KeyEvent) {
+	log.Printf("key: %v", key)
 }
