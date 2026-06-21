@@ -112,7 +112,7 @@ conformance test.
 
 ## Testing Strategy
 
-**Runtime is CI-verifiable in software — no GPU hardware needed (proven).** The
+**Runtime is CI-verifiable in software, no GPU hardware needed (proven).** The
 `gl-probe` workflow demonstrated that the stock GitHub `ubuntu-latest` runner,
 with Mesa installed (`libegl1 libgles2 libgl1-mesa-dri`) and
 `EGL_PLATFORM=surfaceless`, provides a headless **OpenGL ES 3.2** context
