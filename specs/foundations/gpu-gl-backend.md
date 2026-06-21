@@ -147,7 +147,14 @@ the Metal backend is on macOS.
 3. **Done.** Conformance run, green in CI on Mesa llvmpipe (software, surfaceless):
    `TestGLBackendCompute` runs Go Add/Sub/Sqrt kernels through `CompileGLSL` and
    the public Device API and matches the CPU (`.github/workflows/gl-probe.yml`).
-4. Render pipeline (textures, render pass) as a follow-up; uniform-buffer (UBO)
-   bindings for struct uniforms are the next compute increment.
-5. Vulkan (MoltenVK/SDK) and DX12 reuse the same `backend` interface and the
+4. **Done.** Uniform-buffer (UBO) bindings: buffers carry their GL target from
+   `BufferUsage`, so std140 struct uniforms bind as `GL_UNIFORM_BUFFER` alongside
+   SSBOs. `TestGLBackendUniform` (a struct-uniform Scale kernel) is green in CI.
+   The compute backend now covers every binding the engine's compute kernels use
+   (storage + uniform; no textures).
+5. Render pipeline (textures, FBO render-to-texture) as a follow-up. This also
+   unblocks the headless half of windowed present (gpu-windowed-present.md).
+6. Engine integration: run the actual deferred Blinn-Phong kernel on GL by
+   marshaling its `Scene` uniform in std140 and selecting GL in the renderer.
+7. Vulkan (MoltenVK/SDK) and DX12 reuse the same `backend` interface and the
    SPIR-V/HLSL emitters; out of scope here, tracked separately.
