@@ -89,6 +89,13 @@ type glBackend struct {
 }
 
 func openBackend(d Driver) (backend, Driver, error) {
+	if d == DriverVulkan {
+		vb, err := newVKBackend()
+		if err != nil {
+			return nil, DriverAuto, err
+		}
+		return vb, DriverVulkan, nil
+	}
 	if d != DriverAuto && d != DriverGL {
 		return nil, DriverAuto, ErrUnsupported
 	}
