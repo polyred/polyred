@@ -36,6 +36,7 @@ specs live here.
 | [gpu-windowed-present.md](foundations/gpu-windowed-present.md) | **Surface API done (headless), CI-verified** | backend-agnostic swapchain (`gpu/surface.go`): acquire/present/resize, render-through-swapchain verified headless on the GL backend. Remaining: on-screen attachment (needs a display) |
 | [gpu-vulkan-backend.md](foundations/gpu-vulkan-backend.md) | **Compute backend done, CI-verified** | cgo-free Vulkan compute wired behind the `backend` interface: `gpu.Open(DriverVulkan)` runs kernels through the Device API on Mesa lavapipe (SPIR-V via glslang), matched to CPU. Remaining: render, Go-to-SPIR-V, Windows; DX12 separate |
 | [gpu-dx12-backend.md](foundations/gpu-dx12-backend.md) | **Viability proven (probe green), backend not built** | cgo-free D3D12 device created in CI on windows-latest via WARP/Basic Render Driver (syscall, no cgo). Remaining: COM command/pipeline/dispatch (HLSL via D3DCompile), then wire behind the interface |
+| [unified-renderer.md](foundations/unified-renderer.md) | **Drafted (xlarge)** | unify CPU + GPU renderers: author passes once as Go kernels (run as Go on CPU, compiled to MSL/GLSL/SPIR-V on GPU), GPU by default with CPU fallback; phased path. Break down before implementing |
 
 The GPU abstraction's Metal-backend phases are complete: the renderer's deferred
 shading runs on the GPU, cgo-free, with shaders authored in Go. Remaining work is
