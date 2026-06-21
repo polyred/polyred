@@ -211,13 +211,21 @@ func (c *compiler) name(n string) string {
 }
 
 // zero is the zero-initializer for a canonical (MSL-spelled) type. MSL accepts a
-// scalar 0 broadcast into vectors/matrices (`float4 v = 0;`), but GLSL does not,
-// so GLSL emits a constructor (`vec4(0.0)`). Scalars use `0` in both.
+// scalar 0 everywhere (`float4 v = 0;`, `float x = 0;`), but GLSL is strict: a
+// vector/matrix needs a constructor (`vec4(0.0)`) and a float needs a float
+// literal (`0.0`). Integers use `0` in both.
 func (c *compiler) zero(mt string) string {
-	if c.glsl && (isVecType(mt) || mt == "float4x4") {
-		return c.typ(mt) + "(0.0)"
+	if !c.glsl {
+		return "0"
 	}
-	return "0"
+	switch {
+	case isVecType(mt) || mt == "float4x4":
+		return c.typ(mt) + "(0.0)"
+	case mt == "float":
+		return "0.0"
+	default:
+		return "0"
+	}
 }
 
 // typ maps a canonical (MSL-spelled) type to the target language's spelling. For
