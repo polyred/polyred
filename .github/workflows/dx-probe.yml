@@ -1,0 +1,34 @@
+name: dx-probe
+
+# Proves the GitHub-hosted windows runner can create a D3D12 device in software
+# (WARP / Basic Render Driver), reached cgo-free through the syscall package. If
+# green, a future cgo-free DX12 compute backend (item #2, "and DX12") is
+# CI-verifiable in software, the same way GL (Mesa llvmpipe) and Vulkan (lavapipe)
+# are on Linux.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  d3d12-warp:
+    name: headless D3D12 device (WARP software)
+    runs-on: windows-latest
+    env:
+      POLYRED_DX_PROBE: '1'
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.x'
+        check-latest: true
+
+    - name: Probe (cgo-free D3D12 device via syscall)
+      env:
+        CGO_ENABLED: '0'
+      run: go test -v -run TestDX12DeviceProbe ./gpu/
