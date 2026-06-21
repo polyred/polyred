@@ -202,8 +202,14 @@ func (oc *OrbitControl) OnMouse(ev app.MouseEvent) (updated bool) {
 	switch ev.Action {
 	case app.MouseDown:
 		switch ev.Button {
-		case app.MouseBtnLeft: // Rotate
-			if oc.enabled&OrbitRot != 0 {
+		case app.MouseBtnLeft:
+			// Shift+left drag pans (trackpad-friendly, since right-drag is
+			// impractical there); plain left drag rotates.
+			if ev.Mods.Contain(app.ModShift) && oc.enabled&OrbitPan != 0 {
+				oc.state = statePan
+				oc.panStart.X = ev.Xpos
+				oc.panStart.Y = ev.Ypos
+			} else if oc.enabled&OrbitRot != 0 {
 				oc.state = stateRotate
 				oc.rotStart.X = ev.Xpos
 				oc.rotStart.Y = ev.Ypos

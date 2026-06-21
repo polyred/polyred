@@ -82,9 +82,6 @@ func (a *App) Draw() (*image.RGBA, bool) {
 }
 
 func (a *App) OnMouse(mo app.MouseEvent) {
-	if mo.Action == app.MouseDown {
-		log.Printf("mouse down: button=%v mods=%v", mo.Button, mo.Mods)
-	}
 	if !a.ctrl.OnMouse(mo) {
 		return
 	}
