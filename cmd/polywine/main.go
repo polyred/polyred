@@ -13,13 +13,11 @@ import (
 	"poly.red/app/controls"
 	"poly.red/buffer"
 	"poly.red/camera"
-	"poly.red/geometry"
-	"poly.red/internal/imageutil"
+	"poly.red/light"
 	"poly.red/math"
 	"poly.red/model"
 	"poly.red/render"
 	"poly.red/scene"
-	"poly.red/shader"
 )
 
 type App struct {
@@ -27,8 +25,6 @@ type App struct {
 
 	ctrl  *controls.OrbitControl
 	r     *render.Renderer
-	prog  *shader.TextureShader
-	scene *scene.Group
 	cam   camera.Interface
 	cache *image.RGBA
 }
@@ -36,15 +32,25 @@ type App struct {
 func newApp() *App {
 	w, h := 800, 600
 
-	// camera and renderer
 	cam := camera.NewPerspective(
 		camera.Position(math.NewVec3[float32](0, 3, 3)),
 		camera.ViewFrustum(45, float32(w)/float32(h), 0.1, 10),
 	)
 
+	// The Stanford bunny lit by a point light + ambient, rendered through the
+	// standard scene renderer (the engine's deferred path), orbit-controllable.
+	bunny := model.StanfordBunny()
+	bunny.Normalize()
+	s := scene.NewScene(
+		light.NewPoint(light.Intensity(3), light.Position(math.NewVec3[float32](2, 3, 4))),
+		light.NewAmbient(light.Intensity(0.5)),
+	)
+	s.Add(bunny)
+
 	r := render.NewRenderer(
 		render.Size(w, h),
 		render.Camera(cam),
+		render.Scene(s),
 		render.Workers(2),
 		render.PixelFormat(buffer.PixelFormatBGRA),
 	)
@@ -52,16 +58,8 @@ func newApp() *App {
 		r.Options(render.PixelFormat(buffer.PixelFormatRGBA))
 	}
 
-	s := model.StanfordBunny()
-	s.Normalize()
-	prog := &shader.TextureShader{
-		ViewMatrix: cam.ViewMatrix(),
-		ProjMatrix: cam.ProjMatrix(),
-		Texture:    buffer.NewTexture(buffer.TextureImage(imageutil.MustLoadImage("../../internal/testdata/bunny.png"))),
-	}
-	a := &App{w: w, h: h, r: r, prog: prog, cam: cam, scene: s}
+	a := &App{w: w, h: h, r: r, cam: cam}
 	a.ctrl = controls.NewOrbitControl(a.w, a.h, cam)
-
 	return a
 }
 
@@ -80,18 +78,9 @@ func (a *App) Draw() (*image.RGBA, bool) {
 	if a.cache != nil {
 		return a.cache, false
 	}
-	a.prog.ViewMatrix = a.cam.ViewMatrix()
-	a.prog.ProjMatrix = a.cam.ProjMatrix()
-
-	buf := a.r.NextBuffer()
-	scene.IterObjects(a.scene, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
-		// Update model matrix before drawing primitives.
-		a.prog.ModelMatrix = modelMatrix.MulM(g.ModelMatrix())
-		a.r.DrawPrimitives(buf, g.Triangles(), a.prog.Vertex)
-		return true
-	})
-	a.r.DrawFragments(buf, a.prog.Fragment)
-	a.cache = buf.Image()
+	// The orbit control mutates a.cam in place; the renderer holds the same
+	// camera and reads it each frame, so a plain Render() reflects the new view.
+	a.cache = a.r.Render()
 	return a.cache, true
 }
 

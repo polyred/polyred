@@ -5,7 +5,6 @@
 package render
 
 import (
-	"poly.red/buffer"
 	"poly.red/geometry/primitive"
 	"poly.red/shader"
 )
@@ -22,8 +21,5 @@ var (
 	}
 	PassAntiAliasing = func(r *Renderer) {
 		r.passAntialiasing()
-	}
-	DrawPrimitive = func(r *Renderer, buf *buffer.FragmentBuffer, tri *primitive.Triangle, p ...shader.Vertex) {
-		r.drawPrimitive(buf, tri, p...)
 	}
 )
