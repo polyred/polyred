@@ -20,7 +20,7 @@ func Shade(gid uint, normals []float32, worldpos []float32, basecol []float32, l
 	diffuse := V4(materials[mi*9], materials[mi*9+1], materials[mi*9+2], materials[mi*9+3])
 	specular := V4(materials[mi*9+4], materials[mi*9+5], materials[mi*9+6], materials[mi*9+7])
 	shininess := materials[mi*9+8]
-	camPos := V4(scene[0], scene[1], scene[2], 0)
+	camPos := V4(scene[0], scene[1], scene[2], scene[3])
 	ambientI := scene[4]
 	count := int(scene[5])
 	acc := col.Scale(ambientI)

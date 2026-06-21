@@ -12,6 +12,7 @@ import (
 	"poly.red/color"
 	"poly.red/gpu"
 	gpushader "poly.red/gpu/shader"
+	"poly.red/gpu/shader/gpumath/kernels"
 	"poly.red/light"
 	"poly.red/material"
 	"poly.red/math"
@@ -21,65 +22,6 @@ import (
 // errGPUDeferredUnsupported signals the GPU deferred path cannot handle this
 // scene; the caller falls back to the CPU shader.
 var errGPUDeferredUnsupported = errors.New("render: scene not supported by GPU deferred path")
-
-// deferredKernel re-expresses shade()/shader.FragmentShader's Blinn-Phong path
-// (ambient + point/directional diffuse + specular) as a Go GPU kernel,
-// generalized over a per-fragment G-buffer, N lights, and a materials table.
-// The base colour (texture query) and per-fragment normal are computed on the
-// CPU and supplied; the per-light shading runs on the GPU. Verified against the
-// engine in gpu/shader/blinnphong_parity_darwin_test.go.
-const deferredKernel = `
-package kernels
-
-type Vec4 struct{ X, Y, Z, W float32 }
-
-type Scene struct {
-	CamPos    Vec4
-	AmbientI  float32
-	NumLights float32
-	Pad1      float32
-	Pad2      float32
-}
-
-func Shade(gid uint, normals []float32, worldpos []float32, basecol []float32, lights []float32, matidx []float32, materials []float32, s Scene, out []float32) {
-	N := Vec4{normals[gid*4], normals[gid*4+1], normals[gid*4+2], normals[gid*4+3]}
-	wpos := Vec4{worldpos[gid*4], worldpos[gid*4+1], worldpos[gid*4+2], worldpos[gid*4+3]}
-	col := Vec4{basecol[gid*4], basecol[gid*4+1], basecol[gid*4+2], basecol[gid*4+3]}
-
-	mi := int(matidx[gid])
-	diffuse := Vec4{materials[mi*9], materials[mi*9+1], materials[mi*9+2], materials[mi*9+3]}
-	specular := Vec4{materials[mi*9+4], materials[mi*9+5], materials[mi*9+6], materials[mi*9+7]}
-	shininess := materials[mi*9+8]
-
-	acc := col * s.AmbientI
-	count := int(s.NumLights)
-	for i := 0; i < count; i++ {
-		lt := lights[i*10]
-		lp := Vec4{lights[i*10+1], lights[i*10+2], lights[i*10+3], lights[i*10+4]}
-		lc := Vec4{lights[i*10+5], lights[i*10+6], lights[i*10+7], lights[i*10+8]}
-		li := lights[i*10+9]
-		var L Vec4
-		var I float32
-		if lt < 0.5 {
-			Ldir := lp - wpos
-			L = normalize(Ldir)
-			I = li / length(Ldir)
-		} else {
-			L = Vec4{-lp.X, -lp.Y, -lp.Z, 0}
-			I = li
-		}
-		V := normalize(s.CamPos - wpos)
-		H := normalize(L + V)
-		Ld := clamp(dot(N, L), 0.0, 1.0)
-		Ls := pow(clamp(dot(N, H), 0.0, 1.0), shininess)
-		acc = acc + diffuse*(col*(Ld*I))/255.0 + specular*(lc*(Ls*I))/255.0
-	}
-	out[gid*4] = acc.X
-	out[gid*4+1] = acc.Y
-	out[gid*4+2] = acc.Z
-	out[gid*4+3] = col.W
-}
-`
 
 // shadowKernel multiplies the shaded colour by the shadow factor for a single
 // shadow-casting light. It runs after the Blinn-Phong kernel on the shaded
@@ -414,7 +356,7 @@ func toByte(v float32) uint8 {
 }
 
 func runDeferredKernel(dev *gpu.Device, n int, normals, worldpos, basecol, lights, matidx, materials, scene []float32) ([]float32, error) {
-	ks, err := gpushader.Compile(deferredKernel)
+	ks, err := gpushader.Compile(kernels.ShadeSrc)
 	if err != nil {
 		return nil, err
 	}
@@ -426,9 +368,7 @@ func runDeferredKernel(dev *gpu.Device, n int, normals, worldpos, basecol, light
 		return gpu.BindGroupLayoutEntry{Binding: i, Visibility: gpu.StageCompute, Kind: gpu.StorageBuffer}
 	}
 	layout := dev.NewBindGroupLayout(
-		sb(0), sb(1), sb(2), sb(3), sb(4), sb(5),
-		gpu.BindGroupLayoutEntry{Binding: 6, Visibility: gpu.StageCompute, Kind: gpu.UniformBuffer},
-		sb(7),
+		sb(0), sb(1), sb(2), sb(3), sb(4), sb(5), sb(6), sb(7),
 	)
 	pipe, err := dev.NewComputePipeline(gpu.ComputePipelineDescriptor{Layout: dev.NewPipelineLayout(layout), Module: mod, Entry: "Shade"})
 	if err != nil {
@@ -447,7 +387,7 @@ func runDeferredKernel(dev *gpu.Device, n int, normals, worldpos, basecol, light
 	lb := storageBuf(dev, lights)
 	mib := storageBuf(dev, matidx)
 	mtb := storageBuf(dev, materials)
-	scb := uniformBuf(dev, scene)
+	scb := storageBuf(dev, scene)
 	out, err := dev.NewBuffer(gpu.BufferDescriptor{Size: n * 4 * 4, Usage: gpu.BufferStorage | gpu.BufferMapRead})
 	if err != nil {
 		return nil, err
