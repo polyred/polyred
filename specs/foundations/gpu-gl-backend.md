@@ -112,19 +112,26 @@ conformance test.
 
 ## Testing Strategy
 
-- **Build gate (CI, available now):** `GOOS=linux go build` of `./gpu/...` must
-  pass; the Windows path already cross-builds. This is the same loop that
-  verified the Windows present port.
-- **Runtime conformance (needs a Linux box + EGL/GLES 3.1):** reuse the Metal
-  compute tests as backend-agnostic conformance tests: run the matrix
-  `add/sub/sqrt/mul` and a Blinn-Phong kernel through the GL backend and assert
-  parity with the CPU reference (not necessarily bit-identical with Metal). Gate
-  these behind a build tag / `Open()` skip when no GL device is present, exactly
-  as the darwin GPU tests skip when no Metal device is present.
-- **Honest gate:** macOS caps OpenGL at 4.1 (no compute shaders), so this backend
-  cannot be runtime-verified on darwin; CI build + a Linux runner are the
-  verification path. Do not mark "working" until a Linux run is green; "builds"
-  and "runtime-verified" are tracked as separate states (see `specs/README.md`).
+**Runtime is CI-verifiable in software — no GPU hardware needed (proven).** The
+`gl-probe` workflow demonstrated that the stock GitHub `ubuntu-latest` runner,
+with Mesa installed (`libegl1 libgles2 libgl1-mesa-dri`) and
+`EGL_PLATFORM=surfaceless`, provides a headless **OpenGL ES 3.2** context
+(llvmpipe, GLSL ES 3.20) with `GL_MAX_COMPUTE_WORK_GROUP_INVOCATIONS = 1024`,
+reached cgo-free through purego (`gpu/eglprobe_linux_test.go`). So compute
+shaders run in software on the runner; the GL backend is verified the same way
+the Metal backend is on macOS.
+
+- **Conformance (CI, software):** reuse the Metal compute tests as
+  backend-agnostic conformance tests: run the matrix `add/sub/sqrt/mul` and a
+  Blinn-Phong kernel through the GL backend and assert parity with the CPU
+  reference (not necessarily bit-identical with Metal). Run them in a CI job that
+  installs Mesa and sets `EGL_PLATFORM=surfaceless`; `Open()` skips when no GL
+  device is present so the tests are a no-op on a dev box without Mesa.
+- **Build gate:** `GOOS=linux CGO_ENABLED=0 go build ./gpu/...` (the backend is
+  cgo-free, purego-loaded), same loop that verified the Windows present port.
+- **macOS note:** Apple's OpenGL caps at 4.1 (no compute), so this backend is not
+  exercised on darwin; the Linux software runner is the verification path. macOS
+  keeps using Metal.
 
 ## Sequencing
 
