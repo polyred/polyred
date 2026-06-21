@@ -26,6 +26,14 @@ type Vec4 struct{ X, Y, Z, W float32 }
 // GLSL mat4 construction order.
 type Mat4 struct{ C0, C1, C2, C3 Vec4 }
 
+// V2/V3/V4/M4 construct vectors and matrices. Kernels use these constructors
+// rather than struct literals so the Go file is `go vet` clean (no unkeyed
+// imported-struct literals); the compiler maps V4->float4, M4->float4x4, etc.
+func V2(x, y float32) Vec2        { return Vec2{x, y} }
+func V3(x, y, z float32) Vec3     { return Vec3{x, y, z} }
+func V4(x, y, z, w float32) Vec4  { return Vec4{x, y, z, w} }
+func M4(c0, c1, c2, c3 Vec4) Mat4 { return Mat4{c0, c1, c2, c3} }
+
 // --- Vec4 methods (the compiler lowers these to operators/builtins) ---
 
 func (a Vec4) Add(b Vec4) Vec4      { return Vec4{a.X + b.X, a.Y + b.Y, a.Z + b.Z, a.W + b.W} }

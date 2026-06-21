@@ -19,6 +19,7 @@ import (
 
 	"poly.red/gpu"
 	"poly.red/gpu/shader"
+	"poly.red/gpu/shader/gpumath/kernels"
 )
 
 func parityBytes(d []float32) []byte {
@@ -258,6 +259,35 @@ func compareParity(t *testing.T, dev *gpu.Device, name string, got, want []float
 func runParity(t *testing.T, dev *gpu.Device, mk mkFunc) {
 	runShadingParity(t, dev, mk)
 	runTrigParity(t, dev, mk)
+	runAuthorOnceParity(t, dev, mk)
+}
+
+// runAuthorOnceParity proves the unified-renderer thesis: the *same* kernel
+// source (gpu/shader/gpumath/kernels) run as Go on the CPU equals the same source
+// compiled and run on the GPU, both matching the reference oracle. See
+// specs/foundations/author-once-kernels.md.
+func runAuthorOnceParity(t *testing.T, dev *gpu.Device, mk mkFunc) {
+	t.Helper()
+	const n = 64
+	sc := makeParityScene(n)
+	ref := cpuShade(sc)
+
+	// Run the author-once kernel as ordinary Go on the CPU.
+	cpuGo := make([]float32, n*4)
+	for i := 0; i < n; i++ {
+		kernels.Shade(uint(i), sc.normals, sc.worldpos, sc.basecol, sc.lights, sc.matidx, sc.materials, sc.scene, cpuGo)
+	}
+	// Compile the *same source* and run it on the GPU.
+	inputs := map[string][]float32{
+		"normals": sc.normals, "worldpos": sc.worldpos, "basecol": sc.basecol,
+		"lights": sc.lights, "matidx": sc.matidx, "materials": sc.materials,
+		"scene": sc.scene, "out": make([]float32, n*4),
+	}
+	gpuOut := runCompute(t, dev, mk, kernels.ShadeSrc, "Shade", inputs, "out", n)
+
+	compareParity(t, dev, "author-once CPU-as-Go vs ref", cpuGo, ref, 1e-3)
+	compareParity(t, dev, "author-once GPU vs ref", gpuOut, ref, 0.05)
+	compareParity(t, dev, "author-once GPU vs CPU-as-Go", gpuOut, cpuGo, 0.05)
 }
 
 // runShadingParity: the Blinn-Phong deferred shading scene.
