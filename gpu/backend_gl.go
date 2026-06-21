@@ -489,7 +489,7 @@ type glRenderPipeline struct{ program uint32 }
 
 func (glRenderPipeline) isRenderPipeline() {}
 
-func (b *glBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat) (backendRenderPipeline, error) {
+func (b *glBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color, depth TextureFormat) (backendRenderPipeline, error) {
 	vs, ok1 := vmod.(glShaderModule)
 	fs, ok2 := fmod.(glShaderModule)
 	if !ok1 || !ok2 {

@@ -43,6 +43,15 @@ var (
 	selSetTAddressMode   = objc.RegisterName("setTAddressMode:")
 	selSetComputeTexture = objc.RegisterName("setTexture:atIndex:")
 	selSetComputeSampler = objc.RegisterName("setSamplerState:atIndex:")
+
+	// Depth-stencil support.
+	selSetDepthAttachPixFmt = objc.RegisterName("setDepthAttachmentPixelFormat:")
+	selDepthAttachment      = objc.RegisterName("depthAttachment")
+	selSetClearDepth        = objc.RegisterName("setClearDepth:")
+	selNewDepthStencilState = objc.RegisterName("newDepthStencilStateWithDescriptor:")
+	selSetDepthCompareFunc  = objc.RegisterName("setDepthCompareFunction:")
+	selSetDepthWriteEnabled = objc.RegisterName("setDepthWriteEnabled:")
+	selSetDepthStencilState = objc.RegisterName("setDepthStencilState:")
 )
 
 // SamplerMinMagFilter selects nearest or linear filtering.
@@ -149,11 +158,50 @@ type RenderPipelineState struct {
 	renderPipelineState objc.ID
 }
 
+// CompareFunction is the depth comparison test.
+// https://developer.apple.com/documentation/metal/mtlcomparefunction.
+type CompareFunction uint8
+
+const (
+	CompareFunctionNever     CompareFunction = 0
+	CompareFunctionLess      CompareFunction = 1
+	CompareFunctionLessEqual CompareFunction = 3
+	CompareFunctionGreater   CompareFunction = 4
+	CompareFunctionAlways    CompareFunction = 7
+)
+
+// DepthStencilState is a compiled depth/stencil state.
+// https://developer.apple.com/documentation/metal/mtldepthstencilstate.
+type DepthStencilState struct {
+	depthStencilState objc.ID
+}
+
+// DepthStencilDescriptor configures a depth/stencil state.
+type DepthStencilDescriptor struct {
+	DepthCompareFunction CompareFunction
+	DepthWriteEnabled    bool
+}
+
+// MakeDepthStencilState creates a depth/stencil state object.
+func (d Device) MakeDepthStencilState(desc DepthStencilDescriptor) DepthStencilState {
+	dsd := objc.ID(objc.GetClass("MTLDepthStencilDescriptor")).Send(selAlloc).Send(selInit)
+	defer dsd.Send(selRelease)
+	dsd.Send(selSetDepthCompareFunc, uint64(desc.DepthCompareFunction))
+	var write uint64
+	if desc.DepthWriteEnabled {
+		write = 1
+	}
+	dsd.Send(selSetDepthWriteEnabled, write)
+	return DepthStencilState{d.device.Send(selNewDepthStencilState, dsd)}
+}
+
 // RenderPipelineDescriptor configures a render pipeline.
 type RenderPipelineDescriptor struct {
 	VertexFunction   Function
 	FragmentFunction Function
 	ColorPixelFormat PixelFormat
+	// DepthPixelFormat is the depth attachment format, or 0 (Invalid) for none.
+	DepthPixelFormat PixelFormat
 }
 
 // MakeRenderPipelineState creates a render pipeline state object.
@@ -165,6 +213,7 @@ func (d Device) MakeRenderPipelineState(desc RenderPipelineDescriptor) (RenderPi
 	rpd.Send(selSetFragmentFunction, desc.FragmentFunction.function)
 	att := rpd.Send(selColorAttachments).Send(selObjectAtIndexed, uint64(0))
 	att.Send(selSetPixelFormat, uint64(desc.ColorPixelFormat))
+	rpd.Send(selSetDepthAttachPixFmt, uint64(desc.DepthPixelFormat))
 
 	var err objc.ID
 	pso := d.device.Send(selNewRenderPipeline, rpd, unsafe.Pointer(&err))
@@ -182,9 +231,20 @@ type ColorAttachment struct {
 	ClearColor  ClearColor
 }
 
+// DepthAttachment configures a render-pass depth attachment.
+type DepthAttachment struct {
+	Texture     Texture
+	LoadAction  LoadAction
+	StoreAction StoreAction
+	ClearDepth  float64
+}
+
 // RenderPassDescriptor describes a render pass's attachments.
 type RenderPassDescriptor struct {
 	ColorAttachment0 ColorAttachment
+	// Depth is the optional depth attachment. It is used when its Texture is set
+	// (a non-zero texture id).
+	Depth DepthAttachment
 }
 
 // objc builds the MTLRenderPassDescriptor.
@@ -196,6 +256,13 @@ func (rp RenderPassDescriptor) objc() objc.ID {
 	att.Send(selSetLoadAction, uint64(c.LoadAction))
 	att.Send(selSetStoreAction, uint64(c.StoreAction))
 	att.Send(selSetClearColor, mtlClearColor{c.ClearColor.Red, c.ClearColor.Green, c.ClearColor.Blue, c.ClearColor.Alpha})
+	if rp.Depth.Texture.texture != 0 {
+		da := d.Send(selDepthAttachment)
+		da.Send(selSetTexture, rp.Depth.Texture.texture)
+		da.Send(selSetLoadAction, uint64(rp.Depth.LoadAction))
+		da.Send(selSetStoreAction, uint64(rp.Depth.StoreAction))
+		da.Send(selSetClearDepth, rp.Depth.ClearDepth)
+	}
 	return d
 }
 
@@ -214,6 +281,11 @@ func (cb CommandBuffer) MakeRenderCommandEncoder(desc RenderPassDescriptor) Rend
 // SetRenderPipelineState sets the current render pipeline state.
 func (rce RenderCommandEncoder) SetRenderPipelineState(rps RenderPipelineState) {
 	rce.commandEncoder.Send(selSetRenderPipeline, rps.renderPipelineState)
+}
+
+// SetDepthStencilState sets the depth/stencil state for subsequent draws.
+func (rce RenderCommandEncoder) SetDepthStencilState(s DepthStencilState) {
+	rce.commandEncoder.Send(selSetDepthStencilState, s.depthStencilState)
 }
 
 // SetVertexBuffer binds a buffer for the vertex function.

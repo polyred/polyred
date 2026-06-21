@@ -10,8 +10,13 @@ import "errors"
 type TextureFormat int
 
 const (
+	// FormatNone is the zero value: no/unspecified format (e.g. a render pipeline
+	// with no depth attachment).
+	FormatNone TextureFormat = iota
 	// RGBA8Unorm is 8-bit normalized unsigned RGBA.
-	RGBA8Unorm TextureFormat = iota
+	RGBA8Unorm
+	// Depth32Float is a 32-bit float depth format, for a depth render target.
+	Depth32Float
 )
 
 // TextureDescriptor describes a texture to create.
@@ -110,6 +115,9 @@ type RenderPipelineDescriptor struct {
 	FragmentModule *ShaderModule
 	FragmentEntry  string
 	ColorFormat    TextureFormat
+	// DepthFormat is the depth attachment format (FormatNone for no depth test).
+	// When set, the pipeline depth-tests with "less" and writes depth.
+	DepthFormat TextureFormat
 }
 
 // RenderPipeline is a compiled render pipeline.
@@ -122,7 +130,7 @@ func (d *Device) NewRenderPipeline(desc RenderPipelineDescriptor) (*RenderPipeli
 	if desc.VertexModule == nil || desc.FragmentModule == nil {
 		return nil, errors.New("gpu: render pipeline requires vertex and fragment modules")
 	}
-	bp, err := d.b.newRenderPipeline(desc.VertexModule.b, desc.VertexEntry, desc.FragmentModule.b, desc.FragmentEntry, desc.ColorFormat)
+	bp, err := d.b.newRenderPipeline(desc.VertexModule.b, desc.VertexEntry, desc.FragmentModule.b, desc.FragmentEntry, desc.ColorFormat, desc.DepthFormat)
 	if err != nil {
 		return nil, err
 	}
@@ -149,11 +157,16 @@ const (
 	PointList
 )
 
-// RenderPassDescriptor describes a render pass (single color attachment).
+// RenderPassDescriptor describes a render pass (single color attachment, optional
+// depth attachment).
 type RenderPassDescriptor struct {
 	ColorTexture *Texture
 	Load         LoadOp
 	ClearColor   [4]float64 // RGBA, used when Load == LoadClear
+	// DepthTexture is the optional depth attachment (cleared to ClearDepth, which
+	// defaults to 1.0 when zero). Nil for no depth.
+	DepthTexture *Texture
+	ClearDepth   float64
 }
 
 // RenderPass encodes draw commands.
@@ -163,11 +176,19 @@ type RenderPass struct {
 
 // BeginRenderPass starts a render pass.
 func (e *CommandEncoder) BeginRenderPass(desc RenderPassDescriptor) *RenderPass {
-	e.cmd.beginRender(renderPassInfo{
+	info := renderPassInfo{
 		color:      desc.ColorTexture.b,
 		load:       desc.Load,
 		clearColor: desc.ClearColor,
-	})
+	}
+	if desc.DepthTexture != nil {
+		info.depth = desc.DepthTexture.b
+		info.clearDepth = desc.ClearDepth
+		if info.clearDepth == 0 {
+			info.clearDepth = 1
+		}
+	}
+	e.cmd.beginRender(info)
 	return &RenderPass{e: e}
 }
 

@@ -162,6 +162,8 @@ func mtlFormat(f TextureFormat) mtl.PixelFormat {
 	switch f {
 	case RGBA8Unorm:
 		return mtl.PixelFormatRGBA8UNorm
+	case Depth32Float:
+		return mtl.PixelFormatDepth32Float
 	default:
 		return mtl.PixelFormatRGBA8UNorm
 	}
@@ -185,17 +187,24 @@ func (m *metalBackend) newTexture(format TextureFormat, w, h int, renderTarget b
 	if renderTarget {
 		usage |= mtl.TextureUsageRenderTarget
 	}
+	// A depth texture cannot use Shared storage on macOS; it is a private
+	// render-target attachment that is never read back to the CPU.
+	storage := mtl.StorageModeShared
+	if format == Depth32Float {
+		storage = mtl.StorageModePrivate
+		usage = mtl.TextureUsageRenderTarget
+	}
 	tex := m.dev.MakeTexture(mtl.TextureDescriptor{
 		PixelFormat: mtlFormat(format),
 		Width:       w,
 		Height:      h,
-		StorageMode: mtl.StorageModeShared,
+		StorageMode: storage,
 		Usage:       usage,
 	})
 	return &metalTexture{tex: tex, w: w, h: h}, nil
 }
 
-func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat) (backendRenderPipeline, error) {
+func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color, depth TextureFormat) (backendRenderPipeline, error) {
 	vfn, err := vmod.(*metalModule).lib.MakeFunction(ventry)
 	if err != nil {
 		return nil, err
@@ -204,15 +213,27 @@ func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string
 	if err != nil {
 		return nil, err
 	}
-	rps, err := m.dev.MakeRenderPipelineState(mtl.RenderPipelineDescriptor{
+	pdesc := mtl.RenderPipelineDescriptor{
 		VertexFunction:   vfn,
 		FragmentFunction: ffn,
 		ColorPixelFormat: mtlFormat(color),
-	})
+	}
+	p := &metalRenderPipeline{}
+	if depth != FormatNone {
+		pdesc.DepthPixelFormat = mtlFormat(depth)
+		// Standard 3D depth test: keep the nearer fragment and write its depth.
+		p.depthState = m.dev.MakeDepthStencilState(mtl.DepthStencilDescriptor{
+			DepthCompareFunction: mtl.CompareFunctionLess,
+			DepthWriteEnabled:    true,
+		})
+		p.hasDepth = true
+	}
+	rps, err := m.dev.MakeRenderPipelineState(pdesc)
 	if err != nil {
 		return nil, err
 	}
-	return &metalRenderPipeline{rps: rps}, nil
+	p.rps = rps
+	return p, nil
 }
 
 type metalTexture struct {
@@ -265,7 +286,11 @@ func (c *metalCmd) setComputeSampler(index int, s backendSampler) {
 	c.enc.SetSamplerState(s.(*metalSampler).s, index)
 }
 
-type metalRenderPipeline struct{ rps mtl.RenderPipelineState }
+type metalRenderPipeline struct {
+	rps        mtl.RenderPipelineState
+	depthState mtl.DepthStencilState
+	hasDepth   bool
+}
 
 func (*metalRenderPipeline) isRenderPipeline() {}
 
@@ -274,18 +299,31 @@ func (c *metalCmd) beginRender(info renderPassInfo) {
 	if info.load == LoadClear {
 		load = mtl.LoadActionClear
 	}
-	c.renc = c.cb.MakeRenderCommandEncoder(mtl.RenderPassDescriptor{
+	desc := mtl.RenderPassDescriptor{
 		ColorAttachment0: mtl.ColorAttachment{
 			Texture:     info.color.(*metalTexture).tex,
 			LoadAction:  load,
 			StoreAction: mtl.StoreActionStore,
 			ClearColor:  mtl.ClearColor{Red: info.clearColor[0], Green: info.clearColor[1], Blue: info.clearColor[2], Alpha: info.clearColor[3]},
 		},
-	})
+	}
+	if info.depth != nil {
+		desc.Depth = mtl.DepthAttachment{
+			Texture:     info.depth.(*metalTexture).tex,
+			LoadAction:  mtl.LoadActionClear,
+			StoreAction: mtl.StoreActionDontCare,
+			ClearDepth:  info.clearDepth,
+		}
+	}
+	c.renc = c.cb.MakeRenderCommandEncoder(desc)
 }
 
 func (c *metalCmd) setRenderPipeline(p backendRenderPipeline) {
-	c.renc.SetRenderPipelineState(p.(*metalRenderPipeline).rps)
+	mp := p.(*metalRenderPipeline)
+	c.renc.SetRenderPipelineState(mp.rps)
+	if mp.hasDepth {
+		c.renc.SetDepthStencilState(mp.depthState)
+	}
 }
 
 func (c *metalCmd) setRenderBuffer(b backendBuffer, offset, index int) {

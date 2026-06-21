@@ -13,7 +13,7 @@ type backend interface {
 	newComputePipeline(mod backendShaderModule, entry string) (backendComputePipeline, error)
 	newTexture(format TextureFormat, w, h int, renderTarget bool) (backendTexture, error)
 	newSampler(desc SamplerDescriptor) backendSampler
-	newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat) (backendRenderPipeline, error)
+	newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color, depth TextureFormat) (backendRenderPipeline, error)
 	newCommandBuffer() backendCommandBuffer
 	waitIdle()
 	close() error
@@ -33,6 +33,8 @@ type renderPassInfo struct {
 	color      backendTexture
 	load       LoadOp
 	clearColor [4]float64
+	depth      backendTexture // optional depth attachment
+	clearDepth float64
 }
 
 type backendBuffer interface {
