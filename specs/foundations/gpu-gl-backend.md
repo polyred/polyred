@@ -152,9 +152,15 @@ the Metal backend is on macOS.
    SSBOs. `TestGLBackendUniform` (a struct-uniform Scale kernel) is green in CI.
    The compute backend now covers every binding the engine's compute kernels use
    (storage + uniform; no textures).
-5. Render pipeline (textures, FBO render-to-texture) as a follow-up. This also
-   unblocks the headless half of windowed present (gpu-windowed-present.md).
+5. **Done.** Render-to-texture path: render-target textures backed by an FBO,
+   vertex+fragment program linking, render pass (bind/viewport/clear), vertex
+   buffers as SSBOs indexed by `gl_VertexID` (the Metal vertex model), draw, and
+   Y-flipped pixel readback. `TestGLBackendRender` draws a triangle into a texture
+   through the Device API and checks the readback, green in CI. This is the
+   headless render path windowed present (gpu-windowed-present.md) builds on.
 6. Engine integration: run the actual deferred Blinn-Phong kernel on GL by
-   marshaling its `Scene` uniform in std140 and selecting GL in the renderer.
+   marshaling its `Scene` uniform in std140 and selecting GL in the renderer; and
+   a Go to GLSL vertex/fragment emitter so render shaders are authored in Go too
+   (today the render path accepts hand-written GLSL via the escape hatch).
 7. Vulkan (MoltenVK/SDK) and DX12 reuse the same `backend` interface and the
    SPIR-V/HLSL emitters; out of scope here, tracked separately.
