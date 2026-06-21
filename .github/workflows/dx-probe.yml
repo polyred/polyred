@@ -28,7 +28,13 @@ jobs:
         go-version: '1.26.x'
         check-latest: true
 
-    - name: Probe (cgo-free D3D12 device via syscall)
+    - name: Probe (cgo-free D3D12 device + COM vtable call)
       env:
         CGO_ENABLED: '0'
-      run: go test -v -run TestDX12 ./gpu/
+      run: go test -v -run 'TestDX12DeviceProbe|TestDX12COMVtableCall' ./gpu/
+
+    - name: Diagnose CreateCommittedResource via the debug layer
+      continue-on-error: true
+      env:
+        CGO_ENABLED: '0'
+      run: go test -v -run TestDX12DebugResource ./gpu/

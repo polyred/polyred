@@ -34,7 +34,62 @@ var iidID3D12Device = dxGUID{0x189819f1, 0x1db6, 0x4b57, [8]byte{0xbe, 0x54, 0x1
 var iidIDXGIFactory4 = dxGUID{0x1bc6ea02, 0xef36, 0x464f, [8]byte{0xbf, 0x0c, 0x21, 0xca, 0x39, 0xe5, 0x16, 0x8a}}
 var iidIDXGIAdapter = dxGUID{0x2411e7e1, 0x12ac, 0x4ccf, [8]byte{0x8d, 0x2c, 0x59, 0x76, 0x9e, 0x84, 0xd2, 0xc7}}
 
+// IID_ID3D12Debug and IID_ID3D12Resource.
+var iidID3D12Debug = dxGUID{0x344488b7, 0x6846, 0x474b, [8]byte{0xb9, 0x89, 0xf0, 0x27, 0x44, 0x82, 0x45, 0xe0}}
+var iidID3D12Resource = dxGUID{0x696442be, 0xa72e, 0x4059, [8]byte{0xbc, 0x79, 0x5b, 0x5c, 0x98, 0x04, 0x0f, 0xad}}
+
 const dxFeatureLevel11_0 = 0xb000
+
+type d3d12HeapProperties struct {
+	Type, CPUPageProperty, MemoryPoolPreference, CreationNodeMask, VisibleNodeMask uint32
+}
+
+type d3d12ResourceDesc struct {
+	Dimension                          uint32
+	Alignment                          uint64
+	Width                              uint64
+	Height                             uint32
+	DepthOrArraySize, MipLevels        uint16
+	Format, SampleCount, SampleQuality uint32
+	Layout, Flags                      uint32
+}
+
+// TestDX12DebugResource diagnoses the CreateCommittedResource path. It enables
+// the D3D12 debug layer first: its parameter validation reports misuse as a
+// clean HRESULT instead of the opaque access violation seen without it (the same
+// trick the Vulkan validation layer enabled). If the debug layer is unavailable
+// on the runner, it skips (resource diagnosis then needs a real Windows machine).
+func TestDX12DebugResource(t *testing.T) {
+	if os.Getenv("POLYRED_DX_PROBE") != "1" {
+		t.Skip("set POLYRED_DX_PROBE=1 to run the D3D12 resource diagnosis")
+	}
+	d3d12 := syscall.NewLazyDLL("d3d12.dll")
+	if err := d3d12.Load(); err != nil {
+		t.Skipf("d3d12.dll not available: %v", err)
+	}
+	var dbg uintptr
+	hr, _, _ := d3d12.NewProc("D3D12GetDebugInterface").Call(uintptr(unsafe.Pointer(&iidID3D12Debug)), uintptr(unsafe.Pointer(&dbg)))
+	if int32(hr) != 0 || dbg == 0 {
+		t.Skipf("D3D12 debug layer unavailable (HRESULT=0x%x); resource diagnosis needs a Windows machine", uint32(hr))
+	}
+	comCall(dbg, 3) // ID3D12Debug::EnableDebugLayer
+	t.Log("D3D12 debug layer enabled")
+
+	device := dx12CreateDevice(t)
+	hp := d3d12HeapProperties{Type: 2 /*UPLOAD*/}
+	desc := d3d12ResourceDesc{Dimension: 1 /*BUFFER*/, Width: 1024, Height: 1, DepthOrArraySize: 1, MipLevels: 1, SampleCount: 1, Layout: 1 /*ROW_MAJOR*/}
+	var res uintptr
+	// ID3D12Device::CreateCommittedResource (vtable index 25).
+	hr = comCall(device, 25,
+		uintptr(unsafe.Pointer(&hp)), 0, uintptr(unsafe.Pointer(&desc)),
+		0xAC3 /*GENERIC_READ*/, 0,
+		uintptr(unsafe.Pointer(&iidID3D12Resource)), uintptr(unsafe.Pointer(&res)))
+	t.Logf("CreateCommittedResource HRESULT=0x%x (res created: %v)", uint32(hr), res != 0)
+	if int32(hr) != 0 {
+		t.Fatalf("CreateCommittedResource returned error 0x%x", uint32(hr))
+	}
+	t.Log("D3D12 committed resource created successfully")
+}
 
 // comCall invokes COM method `index` on `obj` (obj->vtbl[index](obj, args...)).
 func comCall(obj uintptr, index int, args ...uintptr) uintptr {
