@@ -73,6 +73,20 @@ var builtins = map[string]string{
 	"cross": "cross", "reflect": "reflect",
 	// type conversions
 	"float32": "float", "float": "float", "uint": "uint", "int": "int",
+	// gpumath capitalized free functions (author-once kernels): same shader
+	// builtins, spelled to be valid exported Go. See gpu/shader/gpumath.
+	"Normalize": "normalize", "Dot": "dot", "Length": "length",
+	"Cross": "cross", "Reflect": "reflect", "Mix": "mix",
+	"Pow": "pow", "Sqrt": "sqrt", "Sin": "sin", "Cos": "cos", "Tan": "tan",
+	"Atan": "atan", "Asin": "asin", "Acos": "acos", "Exp": "exp", "Log": "log",
+	"Floor": "floor", "Ceil": "ceil", "Round": "round", "Fract": "fract",
+	"Clampf": "clamp", "Minf": "min", "Maxf": "max", "Absf": "abs",
+}
+
+// vecMethodOp maps a gpumath vector/matrix method to the binary operator the
+// compiler lowers it to (a.Sub(b) -> (a - b), m.MulV(v) -> (m * v)).
+var vecMethodOp = map[string]string{
+	"Add": "+", "Sub": "-", "Mul": "*", "Scale": "*", "Div": "/", "MulV": "*",
 }
 
 // goToMSLType maps a Go scalar/vector type name to its MSL spelling.
@@ -926,11 +940,8 @@ func (c *compiler) compositeLit(ex *ast.CompositeLit) (string, error) {
 }
 
 func (c *compiler) call(ex *ast.CallExpr) (string, error) {
-	// Method call: texture sampling, e.g. tex.Sample(samp, uv) -> tex.sample(...)
+	// Method call: gpumath vector/matrix ops and texture sampling.
 	if sel, ok := ex.Fun.(*ast.SelectorExpr); ok {
-		if sel.Sel.Name != "Sample" {
-			return "", fmt.Errorf("unsupported method %q (only Texture2D.Sample)", sel.Sel.Name)
-		}
 		base, err := c.expr(sel.X)
 		if err != nil {
 			return "", err
@@ -943,7 +954,26 @@ func (c *compiler) call(ex *ast.CallExpr) (string, error) {
 			}
 			args = append(args, v)
 		}
-		return fmt.Sprintf("%s.sample(%s)", base, strings.Join(args, ", ")), nil
+		name := sel.Sel.Name
+		// gpumath ops lower to operators/builtins (a.Sub(b) -> (a - b)).
+		if op, ok := vecMethodOp[name]; ok {
+			if len(args) != 1 {
+				return "", fmt.Errorf("method %q takes one argument", name)
+			}
+			return fmt.Sprintf("(%s %s %s)", base, op, args[0]), nil
+		}
+		switch name {
+		case "Dot":
+			return fmt.Sprintf("dot(%s, %s)", base, args[0]), nil
+		case "Length":
+			return fmt.Sprintf("length(%s)", base), nil
+		case "Normalize":
+			return fmt.Sprintf("normalize(%s)", base), nil
+		case "Sample":
+			// Texture2D.Sample(samp, uv) -> tex.sample(...)
+			return fmt.Sprintf("%s.sample(%s)", base, strings.Join(args, ", ")), nil
+		}
+		return "", fmt.Errorf("unsupported method %q", name)
 	}
 
 	id, ok := ex.Fun.(*ast.Ident)
@@ -978,8 +1008,17 @@ func (c *compiler) inferType(e ast.Expr) string {
 			return strings.TrimSuffix(t, "*")
 		}
 	case *ast.CallExpr:
-		if sel, ok := ex.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "Sample" {
-			return "float4" // Texture2D.Sample returns a float4
+		if sel, ok := ex.Fun.(*ast.SelectorExpr); ok {
+			switch sel.Sel.Name {
+			case "Sample":
+				return "float4" // Texture2D.Sample returns a float4
+			case "Add", "Sub", "Mul", "Scale", "Div", "Normalize":
+				return c.inferType(sel.X) // vector-preserving: receiver's type
+			case "MulV":
+				return c.inferType(ex.Args[0]) // matrix*vector -> the vector type
+			case "Dot", "Length":
+				return "float"
+			}
 		}
 		if id, ok := ex.Fun.(*ast.Ident); ok {
 			if mt, ok := goToMSLType(id.Name); ok {
@@ -987,7 +1026,8 @@ func (c *compiler) inferType(e ast.Expr) string {
 			}
 			// vector-preserving builtins return their argument's type
 			switch id.Name {
-			case "normalize", "cross", "reflect", "min", "max", "clamp", "abs":
+			case "normalize", "cross", "reflect", "min", "max", "clamp", "abs",
+				"Normalize", "Cross", "Reflect", "Mix":
 				if len(ex.Args) > 0 {
 					return c.inferType(ex.Args[0])
 				}
