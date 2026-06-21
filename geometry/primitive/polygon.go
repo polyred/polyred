@@ -57,10 +57,10 @@ func (p *Polygon) AABB() AABB {
 
 		for i := 0; i < len(p.Verts); i++ {
 			min.X = math.Min(min.X, p.Verts[i].Pos.X)
-			min.Y = math.Min(min.Y, p.Verts[i].Pos.X)
-			min.Z = math.Min(min.Z, p.Verts[i].Pos.Y)
-			max.X = math.Max(max.X, p.Verts[i].Pos.Y)
-			max.Y = math.Max(max.Y, p.Verts[i].Pos.Z)
+			min.Y = math.Min(min.Y, p.Verts[i].Pos.Y)
+			min.Z = math.Min(min.Z, p.Verts[i].Pos.Z)
+			max.X = math.Max(max.X, p.Verts[i].Pos.X)
+			max.Y = math.Max(max.Y, p.Verts[i].Pos.Y)
 			max.Z = math.Max(max.Z, p.Verts[i].Pos.Z)
 		}
 		p.aabb = &AABB{min, max}
