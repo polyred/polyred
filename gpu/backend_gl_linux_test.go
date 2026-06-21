@@ -12,6 +12,7 @@
 package gpu_test
 
 import (
+	"encoding/binary"
 	"math"
 	"os"
 	"testing"
@@ -138,4 +139,87 @@ func Sqrt(gid uint, a []float32, out []float32)              { out[gid] = sqrt(a
 			}
 		}
 	})
+}
+
+// TestGLBackendUniform exercises a struct-by-value uniform (a std140 UBO), the
+// binding kind the deferred Blinn-Phong kernel needs. The GLSL emitter places
+// the uniform in the UBO namespace; the backend binds it as GL_UNIFORM_BUFFER
+// (distinct from the storage buffers) because the buffer carries its target.
+func TestGLBackendUniform(t *testing.T) {
+	if os.Getenv("EGL_PLATFORM") != "surfaceless" {
+		t.Skip("set EGL_PLATFORM=surfaceless to run the GL backend conformance test")
+	}
+	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL))
+	if err != nil {
+		t.Skipf("no GL device: %v", err)
+	}
+	defer dev.Close()
+
+	const src = `package kernels
+type U struct{ Factor float32 }
+func Scale(gid uint, a []float32, out []float32, u U) { out[gid] = a[gid] * u.Factor }`
+	ks, err := shader.CompileGLSL(src)
+	if err != nil {
+		t.Fatalf("CompileGLSL: %v", err)
+	}
+	k := ks["Scale"]
+	mod, err := dev.NewShaderModule(gpu.ShaderSource{GLSL: k.GLSL})
+	if err != nil {
+		t.Fatalf("NewShaderModule: %v", err)
+	}
+
+	// Build the layout from the kernel's bindings, honoring SSBO vs UBO kind.
+	var le []gpu.BindGroupLayoutEntry
+	for _, bd := range k.Bindings {
+		kind := gpu.StorageBuffer
+		if bd.Kind == shader.UniformBuffer {
+			kind = gpu.UniformBuffer
+		}
+		le = append(le, gpu.BindGroupLayoutEntry{Binding: bd.Index, Visibility: gpu.StageCompute, Kind: kind})
+	}
+	layout := dev.NewBindGroupLayout(le...)
+	pipe, err := dev.NewComputePipeline(gpu.ComputePipelineDescriptor{
+		Layout: dev.NewPipelineLayout(layout), Module: mod, Entry: "Scale",
+	})
+	if err != nil {
+		t.Fatalf("NewComputePipeline: %v", err)
+	}
+
+	const n = 512
+	const factor float32 = 2.5
+	a := make([]float32, n)
+	for i := range a {
+		a[i] = float32(i)
+	}
+	// std140: a lone float sits at offset 0; the block rounds up to 16 bytes.
+	ub := make([]byte, 16)
+	binary.LittleEndian.PutUint32(ub[0:], math.Float32bits(factor))
+
+	aBuf, _ := dev.NewBuffer(gpu.BufferDescriptor{Data: glBytesOf(a), Usage: gpu.BufferStorage})
+	outBuf, _ := dev.NewBuffer(gpu.BufferDescriptor{Size: n * 4, Usage: gpu.BufferStorage})
+	uBuf, _ := dev.NewBuffer(gpu.BufferDescriptor{Data: ub, Usage: gpu.BufferUniform})
+	bufByName := map[string]*gpu.Buffer{"a": aBuf, "out": outBuf, "u": uBuf}
+
+	var bge []gpu.BindGroupEntry
+	for _, bd := range k.Bindings {
+		bge = append(bge, gpu.BindGroupEntry{Binding: bd.Index, Buffer: bufByName[bd.Name]})
+	}
+	bg := dev.NewBindGroup(layout, bge...)
+
+	enc := dev.NewCommandEncoder()
+	pass := enc.BeginComputePass()
+	pass.SetPipeline(pipe)
+	pass.SetBindGroup(0, bg)
+	pass.Dispatch(n, 1, 1)
+	pass.End()
+	dev.Queue().Submit(enc.Finish())
+	dev.Queue().WaitIdle()
+
+	got := glFloatsOf(outBuf.Bytes(), n)
+	for i := range got {
+		want := a[i] * factor
+		if d := got[i] - want; d > 1e-3 || d < -1e-3 {
+			t.Fatalf("Scale[%d] = %v, want %v", i, got[i], want)
+		}
+	}
 }

@@ -38,6 +38,7 @@ const (
 
 	glComputeShader                  = 0x91B9
 	glShaderStorageBuffer            = 0x90D2
+	glUniformBuffer                  = 0x8A11
 	glDynamicRead                    = 0x88E9
 	glCompileStatus                  = 0x8B81
 	glLinkStatus                     = 0x8B82
@@ -185,22 +186,30 @@ func (b *glBackend) init() error {
 // --- backend interface ---
 
 type glBuffer struct {
-	b    *glBackend
-	id   uint32
-	size int
+	b      *glBackend
+	id     uint32
+	size   int
+	target uintptr // GL_SHADER_STORAGE_BUFFER or GL_UNIFORM_BUFFER
 }
 
 func (b *glBackend) newBuffer(size int, usage BufferUsage, data []byte) (backendBuffer, error) {
-	buf := &glBuffer{b: b, size: size}
+	// SSBO vs UBO follows the buffer's usage. GL keeps these in separate binding
+	// namespaces, so the buffer carries its target and the command buffer binds
+	// each one accordingly (see commit).
+	target := uintptr(glShaderStorageBuffer)
+	if usage&BufferUniform != 0 {
+		target = uintptr(glUniformBuffer)
+	}
+	buf := &glBuffer{b: b, size: size, target: target}
 	b.do(func() {
 		f := &b.fns
 		purego.SyscallN(f.genBuffers, 1, uintptr(unsafe.Pointer(&buf.id)))
-		purego.SyscallN(f.bindBuffer, uintptr(glShaderStorageBuffer), uintptr(buf.id))
+		purego.SyscallN(f.bindBuffer, buf.target, uintptr(buf.id))
 		var p unsafe.Pointer
 		if len(data) > 0 {
 			p = unsafe.Pointer(&data[0])
 		}
-		purego.SyscallN(f.bufferData, uintptr(glShaderStorageBuffer), uintptr(size), uintptr(p), uintptr(glDynamicRead))
+		purego.SyscallN(f.bufferData, buf.target, uintptr(size), uintptr(p), uintptr(glDynamicRead))
 		runtime.KeepAlive(data)
 	})
 	return buf, nil
@@ -210,11 +219,11 @@ func (b *glBuffer) bytes() []byte {
 	out := make([]byte, b.size)
 	b.b.do(func() {
 		f := &b.b.fns
-		purego.SyscallN(f.bindBuffer, uintptr(glShaderStorageBuffer), uintptr(b.id))
-		p, _, _ := purego.SyscallN(f.mapBufferRange, uintptr(glShaderStorageBuffer), 0, uintptr(b.size), uintptr(glMapReadBit))
+		purego.SyscallN(f.bindBuffer, b.target, uintptr(b.id))
+		p, _, _ := purego.SyscallN(f.mapBufferRange, b.target, 0, uintptr(b.size), uintptr(glMapReadBit))
 		if p != 0 {
 			copy(out, unsafe.Slice((*byte)(unsafe.Pointer(p)), b.size))
-			purego.SyscallN(f.unmapBuffer, uintptr(glShaderStorageBuffer))
+			purego.SyscallN(f.unmapBuffer, b.target)
 		}
 	})
 	return out
@@ -350,7 +359,7 @@ func (c *glCmd) commit() {
 		f := &c.b.fns
 		purego.SyscallN(f.useProgram, uintptr(c.prog))
 		for _, bd := range c.binds {
-			purego.SyscallN(f.bindBufferBase, uintptr(glShaderStorageBuffer), uintptr(bd.index), uintptr(bd.buf.id))
+			purego.SyscallN(f.bindBufferBase, bd.buf.target, uintptr(bd.index), uintptr(bd.buf.id))
 		}
 		purego.SyscallN(f.dispatchCompute, uintptr(c.gx), 1, 1)
 		purego.SyscallN(f.memoryBarrier, uintptr(uint32(glAllBarrierBits)))
