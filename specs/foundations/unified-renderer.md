@@ -198,14 +198,14 @@ to a per-pass record) so CI can assert which path ran.
 
 ## Migration Path (phased, CI-green throughout)
 
-1. **`gpumath` + author-once deferred kernel.** Provide the builtin library; make
+1. **Done (author-once-kernels.md).** `gpumath` + author-once kernel proof. Provide the builtin library; make
    `render/gpudeferred.go`'s deferred kernel run on the CPU as Go too; assert
    CPU-as-Go == GPU == current CPU `shader/` Blinn-Phong via parity. (Proves the
    author-once mechanism on a real pass.)
-2. **`Pass` abstraction + runner.** Refactor `passDeferred`/`passAntialiasing`
+2. **Done (render-pass-runner.md).** `runPass` GPU/CPU dispatch + path record. Refactor `passDeferred`/`passAntialiasing`
    into the uniform pass/runner; behaviour-preserving. Generalize `gpuDeferredUsed`
    to a per-pass path record.
-3. **GPU-by-default.** `NewRenderer` auto-opens a device; add `render.CPU()`.
+3. **Done (gpu-by-default.md).** `NewRenderer` auto-acquires Metal; `render.CPU()`. `NewRenderer` auto-opens a device; add `render.CPU()`.
    Existing tests pin paths explicitly; default flips to GPU+fallback.
 4. **Grow GPU coverage pass by pass.** Shadow pass kernel (already have
    `shadowKernel`), then AO, then forward/raster on GPU, each author-once, each

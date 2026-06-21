@@ -1,6 +1,6 @@
 ---
 title: GPU by default: auto-acquire a device, fall back to CPU
-status: drafted
+status: implemented (CI-verified)
 depends_on:
   - foundations/render-pass-runner.md
 affects:
