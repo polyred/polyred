@@ -8,6 +8,7 @@ package gpu_test
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"poly.red/gpu"
@@ -55,7 +56,11 @@ func TestShadingParityVulkan(t *testing.T) {
 		if err != nil {
 			return nil, nil, err
 		}
-		spv := glslToSPIRV(t, ks[entry].GLSL)
+		// CompileGLSL targets GLES (#version 310 es) for the GL backend; glslang
+		// compiles desktop/Vulkan GLSL (#version 450) for SPIR-V. The body is
+		// identical, so retarget the version header for the Vulkan path.
+		glsl := strings.Replace(ks[entry].GLSL, "#version 310 es", "#version 450", 1)
+		spv := glslToSPIRV(t, glsl)
 		mod, err := dev.NewShaderModule(gpu.ShaderSource{SPIRV: spv})
 		if err != nil {
 			return nil, nil, err
