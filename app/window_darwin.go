@@ -34,6 +34,22 @@ func init() {
 	runtime.LockOSThread()
 }
 
+// init loads the Cocoa frameworks so their classes (NSApplication, NSWindow,
+// NSView, CAMetalLayer) are registered with the Objective-C runtime. With cgo
+// gone, nothing else links them, so objc.GetClass would return a nil class and
+// subclassing (RegisterClass) would produce a class with no real superclass.
+func init() {
+	for _, fw := range []string{
+		"/System/Library/Frameworks/AppKit.framework/AppKit",
+		"/System/Library/Frameworks/QuartzCore.framework/QuartzCore",
+		"/System/Library/Frameworks/Metal.framework/Metal",
+	} {
+		if _, err := purego.Dlopen(fw, purego.RTLD_NOW|purego.RTLD_GLOBAL); err != nil {
+			panic(fmt.Errorf("app: dlopen %s: %w", fw, err))
+		}
+	}
+}
+
 // --- libdispatch (main-queue pump) --------------------------------------------
 
 var (
@@ -79,6 +95,10 @@ var (
 	selActivateIgnoringOther = objc.RegisterName("activateIgnoringOtherApps:")
 	selSetDelegate           = objc.RegisterName("setDelegate:")
 	selRun                   = objc.RegisterName("run")
+	selFinishLaunching       = objc.RegisterName("finishLaunching")
+	selNextEvent             = objc.RegisterName("nextEventMatchingMask:untilDate:inMode:dequeue:")
+	selSendEvent             = objc.RegisterName("sendEvent:")
+	selDateWithInterval      = objc.RegisterName("dateWithTimeIntervalSinceNow:")
 	selStringWithUTF8        = objc.RegisterName("stringWithUTF8String:")
 	selInitWithContentRect   = objc.RegisterName("initWithContentRect:styleMask:backing:defer:")
 	selSetContentView        = objc.RegisterName("setContentView:")
@@ -156,14 +176,10 @@ func registerClasses() {
 	classAppDelegate, err = objc.RegisterClass(
 		"PolyredAppDelegate", objc.GetClass("NSObject"), nil, nil,
 		[]objc.MethodDef{
+			// No-op: the launch handshake + activation is driven explicitly from
+			// polyredMain (finishLaunching), so this only exists for the
+			// NSApplicationDelegate protocol.
 			{Cmd: objc.RegisterName("applicationDidFinishLaunching:"), Fn: func(_ objc.ID, _ objc.SEL, _ objc.ID) {
-				nsApp.Send(selSetActivationPolicy, uint64(nsActivationPolicyRegular))
-				nsApp.Send(selActivateIgnoringOther, uint64(1))
-				select {
-				case <-launched:
-				default:
-					close(launched)
-				}
 			}},
 		},
 	)
@@ -328,10 +344,31 @@ func (w *window) main(app Window) {
 func polyredMain() {
 	registerClassesOnce.Do(registerClasses)
 	nsApp = objc.ID(objc.GetClass("NSApplication")).Send(selSharedApplication)
+	nsApp.Send(selSetActivationPolicy, uint64(nsActivationPolicyRegular))
 	del := objc.ID(classAppDelegate).Send(selNew)
 	nsApp.Send(selSetDelegate, del)
 	globalWindowDel = objc.ID(classWindowDelegate).Send(selNew)
-	nsApp.Send(selRun)
+	nsApp.Send(selFinishLaunching)
+	nsApp.Send(selActivateIgnoringOther, uint64(1))
+	close(launched)
+
+	// A manual Cocoa event loop. [NSApp run] does not block reliably when driven
+	// from Go via purego (it returns immediately). We pump events ourselves and,
+	// each pass, drain funcQ (the main-thread work queue that window creation and
+	// present are scheduled on) so we do not depend on the dispatch wake. The
+	// short timeout keeps it polling (~500 Hz). This is the on-screen-load-bearing
+	// piece.
+	const nsEventMaskAny = ^uint64(0)
+	defaultMode := nsString("kCFRunLoopDefaultMode")
+	nsDate := objc.GetClass("NSDate")
+	for {
+		polyredDispatchMainFuncs()
+		until := objc.ID(nsDate).Send(selDateWithInterval, float64(0.002))
+		ev := nsApp.Send(selNextEvent, nsEventMaskAny, until, defaultMode, uint64(1))
+		if ev != 0 {
+			nsApp.Send(selSendEvent, ev)
+		}
+	}
 }
 
 // The Event Thread
