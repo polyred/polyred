@@ -1,6 +1,6 @@
 ---
 title: "Shading-path cleanup: remove dead code, de-drift kernel copies"
-status: implemented (CI-pending)
+status: implemented (CI-verified)
 depends_on:
   - foundations/render-deferred-author-once.md
 affects:
