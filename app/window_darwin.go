@@ -206,6 +206,9 @@ func registerClasses() {
 			}},
 			{Cmd: objc.RegisterName("keyDown:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleKeys(self, e, true) }},
 			{Cmd: objc.RegisterName("keyUp:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleKeys(self, e, false) }},
+			// Modifier keys (Shift/Ctrl/Cmd/Option) alone fire flagsChanged:, not
+			// keyDown:; report them too so they are not invisible.
+			{Cmd: objc.RegisterName("flagsChanged:"), Fn: func(self objc.ID, _ objc.SEL, e objc.ID) { handleFlags(self, e) }},
 		},
 	)
 	if err != nil {
@@ -306,6 +309,27 @@ func handleKeys(self, event objc.ID, pressed bool) {
 		Keycode: Key{code: code, char: s},
 		Mods:    ModifierKey(mods),
 		Pressed: pressed,
+	}:
+	default:
+	}
+}
+
+// handleFlags reports a modifier-key change (Shift/Ctrl/Cmd/Option pressed or
+// released alone), which arrives as flagsChanged: rather than keyDown:.
+func handleFlags(self, event objc.ID) {
+	mu.Lock()
+	w := windows[self]
+	mu.Unlock()
+	if w == nil {
+		return
+	}
+	code := uint32(objc.Send[uint64](event, selKeyCode))
+	mods := objc.Send[uint64](event, selModifierFlags) & modifierFlagsMask
+	select {
+	case w.keyboard <- KeyEvent{
+		Keycode: Key{code: code},
+		Mods:    ModifierKey(mods),
+		Pressed: mods != 0, // a modifier became active vs. all released
 	}:
 	default:
 	}
