@@ -12,7 +12,6 @@ import (
 	"poly.red/buffer"
 	"poly.red/color"
 	"poly.red/gpu"
-	gpushader "poly.red/gpu/shader"
 	"poly.red/gpu/shader/gpumath/kernels"
 	"poly.red/light"
 	"poly.red/material"
@@ -357,11 +356,7 @@ func toByte(v float32) uint8 {
 }
 
 func runDeferredKernel(dev *gpu.Device, n int, normals, worldpos, basecol, lights, matidx, materials, scene []float32) ([]float32, error) {
-	ks, err := gpushader.Compile(kernels.ShadeSrc)
-	if err != nil {
-		return nil, err
-	}
-	mod, err := dev.NewShaderModule(gpu.ShaderSource{MSL: ks["Shade"].MSL})
+	mod, err := kernelModule(dev, kernels.ShadeSrc, "Shade")
 	if err != nil {
 		return nil, err
 	}
@@ -429,11 +424,7 @@ func runDeferredKernel(dev *gpu.Device, n int, normals, worldpos, basecol, light
 }
 
 func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, mats, color, su []float32) error {
-	ks, err := gpushader.Compile(shadowKernel)
-	if err != nil {
-		return err
-	}
-	mod, err := dev.NewShaderModule(gpu.ShaderSource{MSL: ks["Shadow"].MSL})
+	mod, err := kernelModule(dev, shadowKernel, "Shadow")
 	if err != nil {
 		return err
 	}
@@ -493,11 +484,7 @@ func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, mats, color,
 }
 
 func runAOKernel(dev *gpu.Device, n int, fragxyz, aoflag, depthbuf, color, au []float32) error {
-	ks, err := gpushader.Compile(aoKernel)
-	if err != nil {
-		return err
-	}
-	mod, err := dev.NewShaderModule(gpu.ShaderSource{MSL: ks["AO"].MSL})
+	mod, err := kernelModule(dev, aoKernel, "AO")
 	if err != nil {
 		return err
 	}

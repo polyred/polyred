@@ -9,7 +9,6 @@ import (
 	"unsafe"
 
 	"poly.red/gpu"
-	"poly.red/gpu/shader"
 )
 
 // srgbKernel is the engine's analytic linear->sRGB transfer (color/srgb.go),
@@ -33,11 +32,7 @@ func SRGB(gid uint, in []float32, out []float32) {
 // on the GPU, in place, leaving alpha unchanged. This is the renderer's gamma
 // pass (shader.GammaCorrection) offloaded to the poly.red/gpu abstraction.
 func gpuGammaCorrect(dev *gpu.Device, img *image.RGBA) error {
-	ks, err := shader.Compile(srgbKernel)
-	if err != nil {
-		return err
-	}
-	mod, err := dev.NewShaderModule(gpu.ShaderSource{MSL: ks["SRGB"].MSL})
+	mod, err := kernelModule(dev, srgbKernel, "SRGB")
 	if err != nil {
 		return err
 	}
