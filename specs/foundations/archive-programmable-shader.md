@@ -1,6 +1,6 @@
 ---
 title: "Archive the programmable-shader pipeline + the attribute-map varyings"
-status: implemented (CI-pending)
+status: implemented (CI-verified)
 depends_on:
   - foundations/render-deferred-author-once.md
 affects:
