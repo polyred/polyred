@@ -102,18 +102,16 @@ func NewRenderer(opts ...Option) *Renderer {
 	// all-CPU. A device the renderer opens itself is closed in the finalizer; a
 	// caller-supplied device is left untouched.
 	if r.cfg.GPUDevice == nil && !r.cfg.forceCPU {
-		if dev, err := gpu.Open(); err == nil {
-			// The renderer's GPU offload (gpudeferred.go / gpugamma.go) is MSL
-			// today, so only a Metal device is usable; on other drivers fall back
-			// to CPU until the passes are authored once for all backends (see
-			// specs/foundations/unified-renderer.md). A caller can still force a
-			// specific device with render.GPU(dev).
-			if dev.Driver() == gpu.DriverMetal {
-				r.cfg.GPUDevice = dev
-				r.ownDevice = dev
-			} else {
-				dev.Close()
-			}
+		// The renderer's GPU offload (gpudeferred.go / gpugamma.go) emits MSL
+		// today, so only a Metal device is usable. Request Metal specifically:
+		// on non-Metal platforms Open returns ErrUnsupported and no device is
+		// created (so we never touch, e.g., a broken headless GL), and the
+		// renderer runs all-CPU. This restriction lifts when the passes are
+		// authored once for all backends (specs/foundations/unified-renderer.md).
+		// A caller can still force any device with render.GPU(dev).
+		if dev, err := gpu.Open(gpu.WithDriver(gpu.DriverMetal)); err == nil {
+			r.cfg.GPUDevice = dev
+			r.ownDevice = dev
 		}
 	}
 
