@@ -4,11 +4,6 @@
 
 package primitive
 
-// Edge is an interface that abstracts any edge representations.
-type Edge interface {
-	Verts() (*Vertex, *Vertex)
-}
-
 // Face is a polygon face that abstracts any face representations.
 type Face interface {
 	AABB() AABB
