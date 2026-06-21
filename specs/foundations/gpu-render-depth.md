@@ -1,6 +1,6 @@
 ---
 title: "GPU render pipeline: depth buffer (forward-rasterizer brick 1)"
-status: implemented (CI-pending)
+status: implemented (CI-verified)
 depends_on:
   - foundations/gpu-abstraction.md
 affects:
