@@ -13,6 +13,7 @@ import (
 	"poly.red/color"
 	"poly.red/geometry"
 	"poly.red/geometry/primitive"
+	"poly.red/gpu"
 	"poly.red/internal/imageutil"
 	"poly.red/material"
 	"poly.red/math"
@@ -46,6 +47,11 @@ type Renderer struct {
 	// passGPU records, per named pass of the last frame, whether the GPU path
 	// ran (true) or the CPU fallback (false). See runPass.
 	passGPU map[string]bool
+
+	// ownDevice is the GPU device NewRenderer acquired itself (GPU by default);
+	// it is closed by the finalizer. A caller-supplied device (render.GPU) is
+	// not stored here and not closed by the renderer.
+	ownDevice *gpu.Device
 }
 
 // runPass runs a pass on the GPU when a device is present and the GPU closure
@@ -90,12 +96,27 @@ func NewRenderer(opts ...Option) *Renderer {
 		opt(r.cfg)
 	}
 
+	// GPU by default: acquire a device automatically unless one was supplied
+	// (render.GPU) or the CPU path was forced (render.CPU). Acquisition failure
+	// (e.g. a headless machine with no driver) is non-fatal: the renderer runs
+	// all-CPU. A device the renderer opens itself is closed in the finalizer; a
+	// caller-supplied device is left untouched.
+	if r.cfg.GPUDevice == nil && !r.cfg.forceCPU {
+		if dev, err := gpu.Open(); err == nil {
+			r.cfg.GPUDevice = dev
+			r.ownDevice = dev
+		}
+	}
+
 	r.bufs = make([]*buffer.FragmentBuffer, r.buflen)
 	r.resetBufs()
 
 	r.sched = sched.New(sched.Workers(r.cfg.Workers))
 	runtime.SetFinalizer(r, func(r *Renderer) {
 		r.sched.Release()
+		if r.ownDevice != nil {
+			r.ownDevice.Close()
+		}
 	})
 
 	// initialize shadow maps

@@ -52,7 +52,7 @@ func TestGPUDeferredDirectional(t *testing.T) {
 	s, c := directionalScene(w, h)
 	opts := []Option{Camera(c), Size(w, h), MSAA(1), Scene(s), Background(color.RGBA{R: 0, G: 127, B: 255, A: 255})}
 
-	cpu := NewRenderer(opts...).Render()
+	cpu := NewRenderer(append(opts, CPU())...).Render()
 	gr := NewRenderer(append(opts, GPU(dev))...)
 	gpuImg := gr.Render()
 	if !gr.passOnGPU("deferred") {

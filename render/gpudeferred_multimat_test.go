@@ -50,7 +50,7 @@ func TestGPUDeferredMultiMaterial(t *testing.T) {
 	// GPU shading on an identical G-buffer.
 	opts := []Option{Camera(cam), Size(w, h), MSAA(1), Scene(s), Background(color.RGBA{R: 0, G: 127, B: 255, A: 255}), Workers(1), BatchSize(1)}
 
-	cpu := NewRenderer(opts...).Render()
+	cpu := NewRenderer(append(opts, CPU())...).Render()
 
 	debugDeferredSelfCheck = true
 	defer func() { debugDeferredSelfCheck = false }()

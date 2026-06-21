@@ -28,6 +28,7 @@ type option struct {
 	Scene         *scene.Scene
 	BlendFunc     BlendFunc
 	GPUDevice     *gpu.Device
+	forceCPU      bool
 }
 
 // Option represents a rendering option
@@ -75,6 +76,14 @@ func ShadowMap(enable bool) Option {
 // path is used. Pass a device from gpu.Open().
 func GPU(dev *gpu.Device) Option {
 	return func(o *option) { o.GPUDevice = dev }
+}
+
+// CPU forces the CPU path: NewRenderer will not acquire a GPU device, so every
+// pass runs on the CPU. Use it for the parity reference and benchmarks. Without
+// it, NewRenderer acquires a device automatically (GPU by default) and falls
+// back to the CPU when none is available or a pass is unsupported.
+func CPU() Option {
+	return func(o *option) { o.forceCPU = true }
 }
 
 // GammaCorrection is an option that customizes whether gamma correction

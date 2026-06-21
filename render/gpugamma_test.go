@@ -33,7 +33,7 @@ func TestGPUGammaParity(t *testing.T) {
 		GammaCorrection(true),
 	}
 
-	cpu := NewRenderer(opts...).Render()
+	cpu := NewRenderer(append(opts, CPU())...).Render()
 	gpuImg := NewRenderer(append(opts, GPU(dev))...).Render()
 
 	if cpu.Bounds() != gpuImg.Bounds() {

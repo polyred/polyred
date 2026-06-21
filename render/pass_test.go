@@ -14,7 +14,7 @@ import (
 // TestRunPassNoDevice: with no GPU device, runPass runs the CPU closure and
 // records the CPU path.
 func TestRunPassNoDevice(t *testing.T) {
-	r := NewRenderer()
+	r := NewRenderer(CPU()) // force no device
 	ran := ""
 	r.runPass("x", func() error { ran = "gpu"; return nil }, func() { ran = "cpu" })
 	if ran != "cpu" {
@@ -45,5 +45,26 @@ func TestRunPassWithDevice(t *testing.T) {
 	r.runPass("ok", func() error { ran = "gpu"; return nil }, func() { ran = "cpu" })
 	if ran != "gpu" || !r.passOnGPU("ok") {
 		t.Errorf("GPU success should record GPU (ran=%q, onGPU=%v)", ran, r.passOnGPU("ok"))
+	}
+}
+
+// TestGPUByDefault: without an explicit device, NewRenderer acquires one when
+// available and the deferred pass runs on the GPU; CPU() forces the CPU path.
+func TestGPUByDefault(t *testing.T) {
+	if _, err := gpu.Open(); err != nil {
+		t.Skipf("no GPU device: %v", err)
+	}
+	s, c := newscene(64, 64)
+	NewRenderer(Scene(s), Camera(c), Size(64, 64)).Render() // auto-acquire path
+
+	auto := NewRenderer(Scene(s), Camera(c), Size(64, 64))
+	auto.Render()
+	if !auto.passOnGPU("deferred") {
+		t.Errorf("GPU-by-default: deferred should run on GPU")
+	}
+	forced := NewRenderer(Scene(s), Camera(c), Size(64, 64), CPU())
+	forced.Render()
+	if forced.passOnGPU("deferred") {
+		t.Errorf("CPU(): deferred should run on CPU")
 	}
 }

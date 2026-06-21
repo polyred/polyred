@@ -58,7 +58,7 @@ func TestGPUDeferredShadowTwoLights(t *testing.T) {
 		Background(color.RGBA{R: 0, G: 127, B: 255, A: 255}), Workers(1), BatchSize(1),
 	}
 
-	cpu := NewRenderer(opts...).Render()
+	cpu := NewRenderer(append(opts, CPU())...).Render()
 	gr := NewRenderer(append(opts, GPU(dev))...)
 	gpuImg := gr.Render()
 	if !gr.passOnGPU("deferred") {
