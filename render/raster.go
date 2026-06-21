@@ -42,15 +42,38 @@ type Renderer struct {
 	bufs       []*buffer.FragmentBuffer
 	shadowBufs []shadowInfo
 	outBuf     *image.RGBA
+
+	// passGPU records, per named pass of the last frame, whether the GPU path
+	// ran (true) or the CPU fallback (false). See runPass.
+	passGPU map[string]bool
 }
+
+// runPass runs a pass on the GPU when a device is present and the GPU closure
+// succeeds, otherwise on the CPU; it records which path executed under name.
+// This is the single dispatch seam the unified renderer's passes share (see
+// specs/foundations/render-pass-runner.md).
+func (r *Renderer) runPass(name string, gpu func() error, cpu func()) {
+	if r.cfg.GPUDevice != nil && gpu != nil {
+		if err := gpu(); err == nil {
+			r.passGPU[name] = true
+			return
+		}
+	}
+	cpu()
+	r.passGPU[name] = false
+}
+
+// passOnGPU reports whether the named pass ran on the GPU in the last frame.
+func (r *Renderer) passOnGPU(name string) bool { return r.passGPU[name] }
 
 // NewRenderer creates a new renderer.
 //
 // The returned renderer implements a rasterization rendering pipeline.
 func NewRenderer(opts ...Option) *Renderer {
 	r := &Renderer{ // default settings
-		buflen: 2, // use 2 by default.
-		bufs:   nil,
+		buflen:  2, // use 2 by default.
+		bufs:    nil,
+		passGPU: map[string]bool{},
 		cfg: &option{
 			Width:     800,
 			Height:    600,
@@ -207,23 +230,20 @@ func (r *Renderer) passDeferred() {
 	// Offload deferred shading to the GPU when a device is provided and the
 	// scene is supported; otherwise shade on the CPU. Shadow mapping is not yet
 	// handled by the GPU path.
-	if r.cfg.GPUDevice != nil {
+	r.runPass("deferred", func() error {
 		ls, es := r.cfg.Scene.Lights()
 		var sd *gpuShadowData
-		ok := true
 		if r.cfg.ShadowMap {
-			sd, ok = r.gpuShadowData(uniforms)
-		}
-		if ok {
-			if err := gpuDeferredShade(r.cfg.GPUDevice, buf, ls, es, r.cfg.Camera.Position(), r.cfg.Background, sd); err == nil {
-				gpuDeferredUsed = true
-				return
+			var ok bool
+			if sd, ok = r.gpuShadowData(uniforms); !ok {
+				return errGPUDeferredUnsupported
 			}
 		}
-	}
-
-	r.DrawFragments(buf, func(frag *primitive.Fragment) color.RGBA {
-		return r.shade(frag, uniforms)
+		return gpuDeferredShade(r.cfg.GPUDevice, buf, ls, es, r.cfg.Camera.Position(), r.cfg.Background, sd)
+	}, func() {
+		r.DrawFragments(buf, func(frag *primitive.Fragment) color.RGBA {
+			return r.shade(frag, uniforms)
+		})
 	})
 }
 
@@ -274,15 +294,12 @@ func (r *Renderer) passAntialiasing() {
 	// converts color from linear to sRGB space, on the GPU when a device was
 	// provided (render.GPU(dev)), otherwise on the CPU.
 	if r.cfg.GammaCorrect {
-		if r.cfg.GPUDevice != nil {
+		r.runPass("gamma", func() error {
 			// Image() aliases the buffer's color storage, so this writes back.
-			if err := gpuGammaCorrect(r.cfg.GPUDevice, r.CurrBuffer().Image()); err != nil {
-				// fall back to the CPU path on any GPU error
-				r.DrawFragments(r.CurrBuffer(), shader.GammaCorrection)
-			}
-		} else {
+			return gpuGammaCorrect(r.cfg.GPUDevice, r.CurrBuffer().Image())
+		}, func() {
 			r.DrawFragments(r.CurrBuffer(), shader.GammaCorrection)
-		}
+		})
 	}
 	r.outBuf = imageutil.Resize(r.cfg.Width, r.cfg.Height, r.CurrBuffer().Image())
 }

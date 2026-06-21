@@ -54,9 +54,9 @@ func TestGPUDeferredMultiMaterial(t *testing.T) {
 
 	debugDeferredSelfCheck = true
 	defer func() { debugDeferredSelfCheck = false }()
-	gpuDeferredUsed = false
-	gpuImg := NewRenderer(append(opts, GPU(dev))...).Render()
-	if !gpuDeferredUsed {
+	gr := NewRenderer(append(opts, GPU(dev))...)
+	gpuImg := gr.Render()
+	if !gr.passOnGPU("deferred") {
 		t.Fatal("GPU deferred path not exercised (multi-material)")
 	}
 

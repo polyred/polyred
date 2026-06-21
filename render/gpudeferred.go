@@ -22,10 +22,6 @@ import (
 // scene; the caller falls back to the CPU shader.
 var errGPUDeferredUnsupported = errors.New("render: scene not supported by GPU deferred path")
 
-// gpuDeferredUsed is set when the GPU deferred path actually ran; tests use it
-// to confirm the path was exercised rather than silently falling back.
-var gpuDeferredUsed bool
-
 // deferredKernel re-expresses shade()/shader.FragmentShader's Blinn-Phong path
 // (ambient + point/directional diffuse + specular) as a Go GPU kernel,
 // generalized over a per-fragment G-buffer, N lights, and a materials table.
