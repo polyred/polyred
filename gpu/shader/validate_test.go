@@ -72,8 +72,8 @@ func K(gid uint, out []float32) {
 func TestCompileAcceptsRealKernels(t *testing.T) {
 	corpus := map[string]string{
 		"deferred": kernelpkg.ShadeSrc,
-		"shadow":   shadowKernelSrc,
-		"ao":       aoKernelSrc,
+		"shadow":   kernelpkg.ShadowSrc,
+		"ao":       kernelpkg.AOSrc,
 		"vertfrag": vertFragKernelSrc,
 	}
 	for name, src := range corpus {
@@ -89,120 +89,11 @@ func TestCompileAcceptsRealKernels(t *testing.T) {
 	}
 }
 
-// The deferred kernel comes from the canonical author-once source
-// (kernels.ShadeSrc) so this corpus cannot drift from the engine. The shadow,
-// ao, and vertfrag entries below are still local copies of the kernels inline in
-// render/ (shadowKernel, aoKernel) and an example vertex/fragment pair; keeping
-// copies here lets the pure-Go compiler tests run offline. Migrate them to the
-// kernels package (and reference them here) when those kernels become
-// author-once. If the originals change, update these.
-
-const shadowKernelSrc = `
-package kernels
-
-type Vec4 struct{ X, Y, Z, W float32 }
-
-type ShadowU struct {
-	W        float32
-	DepthLen float32
-	N        float32
-	Pad      float32
-}
-
-func Shadow(gid uint, fragxyz []float32, recv []float32, depths []float32, mats []float32, color []float32, s ShadowU) {
-	if recv[gid] < 0.5 {
-		return
-	}
-	fx := fragxyz[gid*4]
-	fy := fragxyz[gid*4+1]
-	fz := fragxyz[gid*4+2]
-	occ := float32(0)
-	n := int(s.N)
-	dl := int(s.DepthLen)
-	width := int(s.W)
-	for k := 0; k < n; k++ {
-		M := Mat4{
-			Vec4{mats[k*16], mats[k*16+1], mats[k*16+2], mats[k*16+3]},
-			Vec4{mats[k*16+4], mats[k*16+5], mats[k*16+6], mats[k*16+7]},
-			Vec4{mats[k*16+8], mats[k*16+9], mats[k*16+10], mats[k*16+11]},
-			Vec4{mats[k*16+12], mats[k*16+13], mats[k*16+14], mats[k*16+15]},
-		}
-		clip := M * Vec4{fx, fy, fz, 1}
-		sx := clip.X / clip.W
-		sy := clip.Y / clip.W
-		sz := clip.Z / clip.W
-		idx := int(sx) + int(sy)*width
-		if idx > 0 {
-			if idx < dl {
-				if sz < depths[k*dl+idx]-0.03 {
-					occ = occ + 1
-				}
-			}
-		}
-	}
-	wf := pow(0.5, occ)
-	color[gid*4] = floor(clamp(round(color[gid*4]), 0.0, 255.0) * wf)
-	color[gid*4+1] = floor(clamp(round(color[gid*4+1]), 0.0, 255.0) * wf)
-	color[gid*4+2] = floor(clamp(round(color[gid*4+2]), 0.0, 255.0) * wf)
-}
-`
-
-const aoKernelSrc = `
-package kernels
-
-type Vec4 struct{ X, Y, Z, W float32 }
-
-type AOU struct {
-	W    float32
-	H    float32
-	Pad1 float32
-	Pad2 float32
-}
-
-func AO(gid uint, fragxyz []float32, aoflag []float32, depthbuf []float32, color []float32, s AOU) {
-	if aoflag[gid] < 0.5 {
-		return
-	}
-	px := fragxyz[gid*4]
-	py := fragxyz[gid*4+1]
-	traceDepth := fragxyz[gid*4+2]
-	width := int(s.W)
-	height := int(s.H)
-	total := float32(0)
-	for d := 0; d < 8; d++ {
-		ang := float32(d) * 0.78539816339744830961
-		dirX := cos(ang)
-		dirY := sin(ang)
-		maxangle := float32(0)
-		for t := 0; t < 100; t++ {
-			ft := float32(t)
-			dx := dirX * ft
-			dy := dirY * ft
-			distance := sqrt(dx*dx + dy*dy)
-			if distance >= 1.0 {
-				ix := int(px + dx)
-				iy := int(py + dy)
-				if ix >= 0 {
-					if ix < width {
-						if iy >= 0 {
-							if iy < height {
-								elevation := depthbuf[iy*width+ix] - traceDepth
-								maxangle = max(maxangle, atan(elevation/distance))
-							}
-						}
-					}
-				}
-			}
-		}
-		total = total + (1.57079632679489661923 - maxangle)
-	}
-	total = total / (1.57079632679489661923 * 8.0)
-	total = pow(total, 10000.0)
-	color[gid*4] = floor(clamp(round(color[gid*4]), 0.0, 255.0) * total)
-	color[gid*4+1] = floor(clamp(round(color[gid*4+1]), 0.0, 255.0) * total)
-	color[gid*4+2] = floor(clamp(round(color[gid*4+2]), 0.0, 255.0) * total)
-}
-`
+// The deferred, shadow, and ao kernels come from the canonical author-once
+// sources (kernels.ShadeSrc / ShadowSrc / AOSrc) so this corpus cannot drift
+// from the engine. Only vertfrag below is a local copy: an example
+// vertex/fragment pair that is not a kernels-package kernel. Keeping it here lets
+// the pure-Go compiler tests run offline.
 
 const vertFragKernelSrc = `
 package kernels

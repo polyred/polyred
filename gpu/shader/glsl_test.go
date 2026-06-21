@@ -7,6 +7,8 @@ package shader
 import (
 	"strings"
 	"testing"
+
+	kernelpkg "poly.red/gpu/shader/gpumath/kernels"
 )
 
 // uniformSceneKernelSrc is a synthetic Blinn-Phong kernel that takes its scene
@@ -121,7 +123,7 @@ func TestCompileGLSLCompute(t *testing.T) {
 	}
 
 	// Matrix multiply (shadow kernel) lowers to mat4 * vec4.
-	sk, err := CompileGLSL(shadowKernelSrc)
+	sk, err := CompileGLSL(kernelpkg.ShadowSrc)
 	if err != nil {
 		t.Fatalf("compile shadow: %v", err)
 	}
@@ -130,7 +132,7 @@ func TestCompileGLSLCompute(t *testing.T) {
 	}
 
 	// AO kernel uses trig/atan and nested loops; just require it compiles.
-	if _, err := CompileGLSL(aoKernelSrc); err != nil {
+	if _, err := CompileGLSL(kernelpkg.AOSrc); err != nil {
 		t.Fatalf("compile AO: %v", err)
 	}
 }
