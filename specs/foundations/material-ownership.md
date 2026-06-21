@@ -1,6 +1,6 @@
 ---
 title: "Material ownership: de-globalize the material pool"
-status: scheduled (Option A, staged, index-based)
+status: implemented (CI-pending; Option A, staged, index-based)
 depends_on: []
 affects:
   - material/pool.go
