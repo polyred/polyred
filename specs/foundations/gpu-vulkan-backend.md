@@ -78,5 +78,9 @@ before implementation.
 4. **Done.** Descriptor set + compute pipeline + command buffer + `vkCmdDispatch`
    + readback: `TestVulkanComputeDispatch` doubles a buffer and matches the CPU,
    green in CI.
-5. Wire it behind the `backend` interface (so the Device API drives Vulkan like
-   it drives GL/Metal); then render pipeline; then Windows (`vulkan-1.dll`).
+5. **Done.** Wired behind the `backend` interface (`gpu/backend_vk.go`):
+   `gpu.Open(WithDriver(DriverVulkan))` drives Vulkan like Metal/GL.
+   `TestVulkanBackendCompute` runs an add kernel through the public Device API and
+   matches the CPU, green in CI. The compute pipeline + descriptor set are built
+   lazily from the recorded bindings at commit. Remaining: render pipeline; a
+   Go to SPIR-V emitter; then Windows (`vulkan-1.dll`).
