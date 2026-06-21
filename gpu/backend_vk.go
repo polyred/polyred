@@ -388,10 +388,11 @@ type vkPipeline struct {
 func (p *vkPipeline) maxThreads() int { return 1024 }
 
 func (b *vkBackend) newComputePipeline(mod backendShaderModule, entry string) (backendComputePipeline, error) {
-	if entry == "" {
-		entry = "main"
-	}
-	return &vkPipeline{b: b, module: mod.(vkModule).module, entry: append([]byte(entry), 0)}, nil
+	// SPIR-V from our GLSL pipeline (glslang) always names the compute entry
+	// point "main" (from GLSL's void main()), regardless of the Device-API entry
+	// name (which is the Go kernel name, used by the Metal/MSL backend). Use the
+	// SPIR-V convention here.
+	return &vkPipeline{b: b, module: mod.(vkModule).module, entry: append([]byte("main"), 0)}, nil
 }
 
 // build lazily creates the descriptor-set layout, pipeline layout and compute
