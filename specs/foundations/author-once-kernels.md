@@ -23,7 +23,7 @@ This is the first bounded slice of the unified renderer
 which the whole unification rests: **a kernel authored once in Go that runs as
 ordinary Go on the CPU and compiles to MSL/GLSL/SPIR-V for the GPU**, proven on
 one real kernel by cross-backend parity. It does **not** touch the renderer, the
-pass pipeline, GPU-by-default, or the CPU executor wiring — those are later
+pass pipeline, GPU-by-default, or the CPU executor wiring; those are later
 bounded specs. Scope here is just: the shared math library, the compiler support
 to lower it, and one parity proof.
 
