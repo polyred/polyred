@@ -32,13 +32,12 @@ import (
 // not to hide.
 func TestDeferredShadingEquivalence(t *testing.T) {
 	tex := buffer.NewUniformTexture(color.RGBA{R: 200, G: 150, B: 100, A: 255})
-	id := material.NewBlinnPhong(
+	mat := material.NewBlinnPhong(
 		material.Texture(tex),
 		material.Diffuse(color.RGBA{R: 220, G: 180, B: 160, A: 255}),
 		material.Specular(color.RGBA{R: 255, G: 255, B: 255, A: 255}),
 		material.Shininess(32),
 	)
-	mat := material.Get(id).(*material.BlinnPhong)
 
 	camPos := math.NewVec3[float32](0, 1.5, 3)
 	ls := []light.Source{

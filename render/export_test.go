@@ -12,7 +12,7 @@ import (
 
 var (
 	Draw = func(r *Renderer, mvp *shader.MVP, tri *primitive.Triangle) {
-		r.draw(mvp, tri)
+		r.draw(mvp, tri, tri.MaterialID)
 	}
 	PassForward = func(r *Renderer) {
 		r.passForward()

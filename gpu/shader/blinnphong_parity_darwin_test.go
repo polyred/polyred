@@ -72,13 +72,12 @@ func TestBlinnPhongDeferredParity(t *testing.T) {
 	defer dev.Close()
 
 	// Construct the engine inputs.
-	mid := material.NewBlinnPhong(
+	mat := material.NewBlinnPhong(
 		material.Texture(buffer.NewTexture()), // default 1x1 white
 		material.Diffuse(color.FromValue(0.6, 0.6, 0.6, 1.0)),
 		material.Specular(color.FromValue(0.7, 0.7, 0.7, 1.0)),
 		material.Shininess(25),
 	)
-	mat := material.Get(mid).(*material.BlinnPhong)
 
 	n := math.NewVec3[float32](0, 0, 1).ToVec4(0).Unit()
 	x := math.NewVec3[float32](0.1, 0.2, 0.0).ToVec4(1)

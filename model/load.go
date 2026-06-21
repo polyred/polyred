@@ -45,66 +45,72 @@ func loadObj(path string) (*scene.Group, error) {
 
 	g := scene.NewGroup()
 
-	// Create all materials.
-	allMats := map[string]material.ID{}
+	// Create all named materials. A .mtl name with no material (nil) is omitted;
+	// faces referencing it fall back to material.Default() below.
+	allMats := map[string]*material.BlinnPhong{}
 	for name, mat := range fi.Materials {
-		var id material.ID
-		// Convention: .obj loader will create a nil material if there is no material specified.
-		// FIXME: review obj loader logic.
-		if mat != nil {
-			switch mat.Illum {
-			case 0, 2:
-				opts := []material.Option{
-					material.Name(name),
-					material.Diffuse(mat.Diffuse),
-					material.Specular(mat.Specular),
-					material.Shininess(mat.Shininess),
-					material.FlatShading(false),
-					material.AmbientOcclusion(false),
-					material.ReceiveShadow(false),
-				}
-				if mat.MapKd == "" {
-					opts = append(opts, material.Texture(buffer.NewUniformTexture(color.Blue)))
-				} else {
-					p := filepath.Join(filepath.Clean(fi.MtlDir), filepath.Clean(mat.MapKd))
-					opts = append(opts, material.Texture(buffer.NewTexture(
-						buffer.TextureImage(
-							// FIXME: this might be problematic when the MapKd is a windows \ separated path.
-							imageutil.MustLoadImage(p,
-								// FIXME: make sure renderer know about this and do gamma correct if needed.
-								imageutil.GammaCorrect(true),
-							)),
-						buffer.TextureIsoMipmap(true),
-					)))
-				}
-
-				id = material.NewBlinnPhong(opts...)
-			default:
-				panic("unsupported illumination model")
-			}
+		if mat == nil {
+			continue
 		}
-		allMats[name] = id
+		switch mat.Illum {
+		case 0, 2:
+			opts := []material.Option{
+				material.Name(name),
+				material.Diffuse(mat.Diffuse),
+				material.Specular(mat.Specular),
+				material.Shininess(mat.Shininess),
+				material.FlatShading(false),
+				material.AmbientOcclusion(false),
+				material.ReceiveShadow(false),
+			}
+			if mat.MapKd == "" {
+				opts = append(opts, material.Texture(buffer.NewUniformTexture(color.Blue)))
+			} else {
+				p := filepath.Join(filepath.Clean(fi.MtlDir), filepath.Clean(mat.MapKd))
+				opts = append(opts, material.Texture(buffer.NewTexture(
+					buffer.TextureImage(
+						// FIXME: this might be problematic when the MapKd is a windows \ separated path.
+						imageutil.MustLoadImage(p,
+							// FIXME: make sure renderer know about this and do gamma correct if needed.
+							imageutil.GammaCorrect(true),
+						)),
+					buffer.TextureIsoMipmap(true),
+				)))
+			}
+			allMats[name] = material.NewBlinnPhong(opts...)
+		default:
+			panic("unsupported illumination model")
+		}
 	}
 
 	// Create all mesh objects.
-	usedMats := map[int64]string{}
 	for i := range fi.Objs {
 		var (
 			tris     []*primitive.Triangle
 			quads    []*primitive.Quad
 			polygons []*primitive.Polygon
 
-			// All used materials for the primitives of the current object.
-			ids = []material.ID{}
+			// The unique materials this geometry owns, and a map from material to
+			// its geometry-local index. Faces carry the local index.
+			geomMats []material.Material
+			localOf  = map[*material.BlinnPhong]int64{}
 		)
+		localIndex := func(m *material.BlinnPhong) int64 {
+			if idx, ok := localOf[m]; ok {
+				return idx
+			}
+			idx := int64(len(geomMats))
+			localOf[m] = idx
+			geomMats = append(geomMats, m)
+			return idx
+		}
 
 		for _, face := range fi.Objs[i].Faces {
-			materialID := int64(0)
-			if mat, ok := allMats[face.Material]; ok {
-				materialID = int64(mat)
+			mat := allMats[face.Material]
+			if mat == nil {
+				mat = material.Default()
 			}
-			ids = append(ids, material.ID(materialID))
-			usedMats[materialID] = face.Material
+			materialID := localIndex(mat)
 
 			switch len(face.Vertices) {
 			case 3:
@@ -137,18 +143,9 @@ func loadObj(path string) (*scene.Group, error) {
 			m = mesh.NewPolygonMesh(faces)
 		}
 
-		// All material ID for this current geometry.
-		g.Add(geometry.New(m, ids...))
-	}
-
-	// Remove used materials from allMats, then free the remaining
-	// materials from the material pool (because they are not used)
-	// so that we wont run into memory leak.
-	for _, name := range usedMats {
-		delete(allMats, name)
-	}
-	for _, id := range allMats {
-		material.Del(id)
+		// The geometry owns its materials; unused named materials are simply not
+		// referenced and get garbage-collected (no pool to free from).
+		g.Add(geometry.New(m, geomMats...))
 	}
 
 	return g, nil

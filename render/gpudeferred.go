@@ -72,7 +72,16 @@ func (r *Renderer) gpuShadowData(uniforms *shader.MVP) (*gpuShadowData, bool) {
 // the shaded colours back into buf. Supports point/directional lights +
 // ambient and multiple Blinn-Phong materials (ambient-occlusion off, no shadow
 // map); otherwise returns errGPUDeferredUnsupported and the caller uses the CPU.
-func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.Source, es []light.Environment, camPos math.Vec3[float32], bg color.RGBA, shadow *gpuShadowData) error {
+// matAt resolves a flat material index against the per-frame table, returning nil
+// for a negative or out-of-range index (use vertex color).
+func matAt(table []*material.BlinnPhong, id int64) *material.BlinnPhong {
+	if id < 0 || int(id) >= len(table) {
+		return nil
+	}
+	return table[id]
+}
+
+func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.Source, es []light.Environment, camPos math.Vec3[float32], bg color.RGBA, shadow *gpuShadowData, matTable []*material.BlinnPhong) error {
 	var lightData []float32
 	for _, l := range ls {
 		switch lt := l.(type) {
@@ -129,7 +138,7 @@ func gpuDeferredShade(dev *gpu.Device, buf *buffer.FragmentBuffer, ls []light.So
 			if !info.Ok {
 				continue
 			}
-			bp := material.Resolve(material.ID(info.MaterialID))
+			bp := matAt(matTable, info.MaterialID)
 			if bp == nil {
 				okMask[idx] = true
 				passthrough[idx] = true

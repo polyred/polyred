@@ -44,6 +44,12 @@ type Renderer struct {
 	shadowBufs []shadowInfo
 	outBuf     *image.RGBA
 
+	// matTable is the per-frame flat material table, rebuilt each forward pass by
+	// tabulating each geometry's materials (the global material pool was removed).
+	// A fragment's MaterialID indexes it; a negative index means "use vertex
+	// color". See material(). Read after the forward pass barrier, so no lock.
+	matTable []*material.BlinnPhong
+
 	// passGPU records, per named pass of the last frame, whether the GPU path
 	// ran (true) or the CPU fallback (false). See runPass.
 	passGPU map[string]bool
@@ -213,19 +219,34 @@ func (r *Renderer) passForward() {
 			float32(buf.Bounds().Dy()),
 		),
 	}
+	r.matTable = r.matTable[:0]
 	scene.IterObjects(r.cfg.Scene, func(g *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
 		mvp.Model = modelMatrix.MulM(g.ModelMatrix())
 		mvp.Normal = mvp.Model.Inv().T()
 		mvp.ViewInv = mvp.View.Inv()
 		mvp.ProjInv = mvp.Proj.Inv()
 		mvp.ViewportInv = mvp.Viewport.Inv()
+
+		// Tabulate this geometry's materials into the per-render flat table; its
+		// primitives carry geometry-local indices, so flat = base + local. This
+		// runs sequentially (IterObjects), before the concurrent draws read only
+		// their captured flat id, so there is no race on matTable.
+		base := int64(len(r.matTable))
+		for _, m := range g.Materials() {
+			bp, _ := m.(*material.BlinnPhong)
+			r.matTable = append(r.matTable, bp)
+		}
 		for _, tri := range g.Triangles() {
 			t := tri
+			flatMatID := t.MaterialID
+			if flatMatID >= 0 {
+				flatMatID += base
+			}
 			r.sched.Run(func() {
 				if !t.IsValid() {
 					return
 				}
-				r.draw(mvp, t)
+				r.draw(mvp, t, flatMatID)
 			})
 		}
 		return true
@@ -267,12 +288,19 @@ func (r *Renderer) passDeferred() {
 				return errGPUDeferredUnsupported
 			}
 		}
-		return gpuDeferredShade(r.cfg.GPUDevice, buf, ls, es, r.cfg.Camera.Position(), r.cfg.Background, sd)
+		return gpuDeferredShade(r.cfg.GPUDevice, buf, ls, es, r.cfg.Camera.Position(), r.cfg.Background, sd, r.matTable)
 	}, func() {
 		r.DrawFragments(buf, func(frag *primitive.Fragment) color.RGBA {
 			return r.shade(frag, uniforms)
 		})
 	})
+}
+
+// material resolves a fragment's flat MaterialID against the per-frame table,
+// returning nil when the index is negative or out of range (use vertex color).
+// This is the single material-resolution path for the CPU renderer.
+func (r *Renderer) material(id int64) *material.BlinnPhong {
+	return matAt(r.matTable, id)
 }
 
 func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.RGBA {
@@ -283,7 +311,7 @@ func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.R
 	}
 
 	col := info.Col
-	mat := material.Resolve(material.ID(frag.MaterialID))
+	mat := r.material(frag.MaterialID)
 	if mat != nil {
 		lightSources, lightEnv := r.cfg.Scene.Lights()
 		col = shader.FragmentShader(mat,
@@ -309,7 +337,7 @@ func (r *Renderer) shade(frag *primitive.Fragment, uniforms *shader.MVP) color.R
 
 	// FIXME: why it has to be frag?
 	frag.Col = col
-	return material.AmbientOcclusionShade(buf, frag)
+	return material.AmbientOcclusionShade(buf, frag, r.material(frag.MaterialID))
 }
 
 func (r *Renderer) passAntialiasing() {
@@ -331,7 +359,7 @@ func (r *Renderer) passAntialiasing() {
 	r.outBuf = imageutil.Resize(r.cfg.Width, r.cfg.Height, r.CurrBuffer().Image())
 }
 
-func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
+func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle, flatMatID int64) {
 	buf := r.CurrBuffer()
 	trans := mvp.Proj.MulM(mvp.View).MulM(mvp.Model)
 	t1 := &primitive.Vertex{
@@ -385,7 +413,7 @@ func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
 
 	// All vertices are inside the viewport, let's rasterize them directly
 	if viewportAABB.Contains(p1, p2, p3) {
-		r.drawClipped(mvp, t1, t2, t3, recipw, t.MaterialID)
+		r.drawClipped(mvp, t1, t2, t3, recipw, flatMatID)
 		return
 	}
 
@@ -393,7 +421,7 @@ func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle) {
 	h := float32(r.cfg.MSAA * buf.Bounds().Dy())
 	tris := r.clipTriangle(t1, t2, t3, w, h, recipw)
 	for _, tri := range tris {
-		r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, t.MaterialID)
+		r.drawClipped(mvp, tri.V1, tri.V2, tri.V3, recipw, flatMatID)
 	}
 }
 
@@ -449,9 +477,10 @@ func (r *Renderer) drawClipped(mvp *shader.MVP, t1, t2, t3 *primitive.Vertex, re
 			uvX := (wc1*t1.UV.X + wc2*t2.UV.X + wc3*t3.UV.X) * norm
 			uvY := (wc1*t1.UV.Y + wc2*t2.UV.Y + wc3*t3.UV.Y) * norm
 
-			// Compute du dv
+			// Compute du dv (only meaningful for a textured material; the flat
+			// material index is >= 0 when the fragment has one).
 			var du, dv float32
-			if materialId > 0 {
+			if materialId >= 0 {
 				p1 := math.NewVec2(p.X+1, p.Y)
 				p2 := math.NewVec2(p.X, p.Y+1)
 				bcx := math.Barycoord(p1, t1.Pos.ToVec2(), t2.Pos.ToVec2(), t3.Pos.ToVec2())

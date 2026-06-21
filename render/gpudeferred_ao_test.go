@@ -40,8 +40,8 @@ func TestGPUDeferredAO(t *testing.T) {
 	m.Scale(2, 2, 2)
 	s.Add(m)
 	scene.IterObjects(s, func(o *geometry.Geometry, _ math.Mat4[float32]) bool {
-		for _, mid := range o.Materials() {
-			material.Get(mid).Config(material.AmbientOcclusion(true))
+		for _, m := range o.Materials() {
+			m.Config(material.AmbientOcclusion(true))
 		}
 		return true
 	})

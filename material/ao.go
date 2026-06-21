@@ -14,10 +14,12 @@ import (
 
 type AmbientOcclusionPass struct{ Buf *buffer.FragmentBuffer }
 
-func AmbientOcclusionShade(buf *buffer.FragmentBuffer, info *primitive.Fragment) color.RGBA {
+// AmbientOcclusionShade darkens the fragment by screen-space ambient occlusion
+// when mat is non-nil and has AmbientOcclusion enabled. The renderer resolves and
+// passes mat (materials are no longer globally resolvable).
+func AmbientOcclusionShade(buf *buffer.FragmentBuffer, info *primitive.Fragment, mat *BlinnPhong) color.RGBA {
 	// FIXME: naive and super slow SSAO implementation. Optimize
 	// when denoiser is available.
-	mat := Resolve(ID(info.MaterialID))
 	if mat == nil || !mat.AmbientOcclusion {
 		return info.Col
 	}

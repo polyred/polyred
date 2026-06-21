@@ -19,35 +19,31 @@ var (
 )
 
 // Geometry represents a geometric object that can be rendered.
-// A geometry consists of a vertex-based object and a list of materials.
-// The vertices of the object contains an ID that refers the to associated list of materials.
+// A geometry consists of a vertex-based object and the materials it owns. Each
+// primitive's MaterialID is a geometry-local index into this list (or negative
+// to use vertex color); the renderer tabulates these per frame. There is no
+// global material pool.
 type Geometry struct {
 	mesh mesh.Mesh
-	mats []material.ID
+	mats []material.Material
 
 	math.TransformContext[float32]
 }
 
-func New(mesh mesh.Mesh, ids ...material.ID) *Geometry {
+// New builds a geometry from a mesh and the materials it owns. The mesh's
+// primitives carry geometry-local indices (0..len(mats)-1) into mats.
+func New(mesh mesh.Mesh, mats ...material.Material) *Geometry {
 	g := &Geometry{
 		mesh: mesh,
-		mats: ids,
+		mats: mats,
 	}
 	g.ResetContext()
-
-	// If we have multiple material IDs, let's don't do anything so far.
-	if len(ids) != 1 {
-		return g
-	}
-
-	// If there is only a single material ID, let assign them to all
-	// primitives.
-	// FIXME: todo
-
 	return g
 }
 
-func (g *Geometry) Materials() []material.ID {
+// Materials returns the materials this geometry owns, indexed by the local
+// MaterialID carried on its primitives.
+func (g *Geometry) Materials() []material.Material {
 	return g.mats
 }
 

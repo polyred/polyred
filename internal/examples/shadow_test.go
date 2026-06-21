@@ -45,7 +45,7 @@ func NewShadowScene(w, h int) (*scene.Scene, camera.Interface) {
 	scene.IterObjects(s, func(o *geometry.Geometry, modelMatrix math.Mat4[float32]) bool {
 		mats := o.Materials()
 		for i := range mats {
-			material.Get(mats[i]).Config(material.ReceiveShadow(true))
+			mats[i].Config(material.ReceiveShadow(true))
 		}
 		return true
 	})

@@ -51,10 +51,10 @@ type BlinnPhong struct {
 	Opacity   float32
 }
 
-// NewBlinnPhong creates a new Blinn-Phong material and returns the material ID.
-// To configure the material, one can use Get to fetch the Material then use
-// Config methods to customize the material.
-func NewBlinnPhong(opts ...Option) ID {
+// NewBlinnPhong creates and returns a new Blinn-Phong material. Materials are
+// owned by the geometry that uses them (geometry.New) and tabulated per render by
+// the renderer; there is no global pool. Use Config to customize after creation.
+func NewBlinnPhong(opts ...Option) *BlinnPhong {
 	t := &BlinnPhong{
 		Standard: Standard{
 			FlatShading:      false,
@@ -69,8 +69,7 @@ func NewBlinnPhong(opts ...Option) ID {
 	for _, opt := range opts {
 		opt(t)
 	}
-	id, _ := Put(t)
-	return id
+	return t
 }
 
 func (m *BlinnPhong) Name() string {

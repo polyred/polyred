@@ -43,8 +43,8 @@ func TestGPUDeferredShadowTwoLights(t *testing.T) {
 	g.Scale(2, 2, 2)
 	s.Add(g)
 	scene.IterObjects(s, func(o *geometry.Geometry, _ math.Mat4[float32]) bool {
-		for _, mid := range o.Materials() {
-			material.Get(mid).Config(material.ReceiveShadow(true))
+		for _, m := range o.Materials() {
+			m.Config(material.ReceiveShadow(true))
 		}
 		return true
 	})

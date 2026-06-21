@@ -58,7 +58,7 @@ func BenchmarkBlinnPhongShader(b *testing.B) {
 	b.ResetTimer()
 	var cc color.RGBA
 	for i := 0; i < b.N; i++ {
-		cc = shader.FragmentShader(material.Get(m).(*material.BlinnPhong), info, c, l, a)
+		cc = shader.FragmentShader(m, info, c, l, a)
 	}
 	_ = cc
 }
