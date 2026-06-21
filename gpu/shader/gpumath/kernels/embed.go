@@ -12,3 +12,8 @@ import _ "embed"
 //
 //go:embed shade.go
 var ShadeSrc string
+
+// SRGBSrc is the source of srgb.go (the gamma pass).
+//
+//go:embed srgb.go
+var SRGBSrc string

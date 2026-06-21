@@ -9,30 +9,16 @@ import (
 	"unsafe"
 
 	"poly.red/gpu"
+	"poly.red/gpu/shader/gpumath/kernels"
 )
-
-// srgbKernel is the engine's analytic linear->sRGB transfer (color/srgb.go),
-// authored in Go and compiled to the GPU backend's shading language. It matches
-// shader.GammaCorrection within ±1 on 8-bit output (the CPU path uses a LUT
-// approximation of the same curve).
-const srgbKernel = `
-package kernels
-
-func SRGB(gid uint, in []float32, out []float32) {
-	v := in[gid]
-	if v <= 0.0031308 {
-		out[gid] = v * 12.92
-	} else {
-		out[gid] = 1.055*pow(v, 0.4166666666) - 0.055
-	}
-}
-`
 
 // gpuGammaCorrect applies sRGB gamma correction to the R, G, B channels of img
 // on the GPU, in place, leaving alpha unchanged. This is the renderer's gamma
-// pass (shader.GammaCorrection) offloaded to the poly.red/gpu abstraction.
+// pass (shader.GammaCorrection) offloaded to the poly.red/gpu abstraction, using
+// the author-once kernels.SRGB (kernels.SRGBSrc). It matches the CPU LUT path
+// within +/-1 on 8-bit output.
 func gpuGammaCorrect(dev *gpu.Device, img *image.RGBA) error {
-	mod, err := kernelModule(dev, srgbKernel, "SRGB")
+	mod, err := kernelModule(dev, kernels.SRGBSrc, "SRGB")
 	if err != nil {
 		return err
 	}
