@@ -53,11 +53,22 @@ func TestGPUDeferredMultiMaterial(t *testing.T) {
 	cpu := NewRenderer(append(opts, CPU())...).Render()
 
 	debugDeferredSelfCheck = true
+	deferredSelfCheckResult = selfCheckResult{}
 	defer func() { debugDeferredSelfCheck = false }()
 	gr := NewRenderer(append(opts, GPU(dev))...)
 	gpuImg := gr.Render()
 	if !gr.passOnGPU("deferred") {
 		t.Fatal("GPU deferred path not exercised (multi-material)")
+	}
+
+	// The GPU deferred shader is compiled from kernels.ShadeSrc; assert it
+	// matches kernels.Shade run as Go over the same G-buffer, locking the
+	// author-once unification (GPU == one source).
+	if !deferredSelfCheckResult.ran {
+		t.Fatal("deferred self-check did not run")
+	}
+	if !deferredSelfCheckResult.matched {
+		t.Fatalf("GPU deferred != author-once kernels.Shade: %s", deferredSelfCheckResult.detail)
 	}
 
 	assertDeferredClose(t, cpu.Pix, gpuImg.Pix, "multi-material")

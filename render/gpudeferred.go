@@ -6,6 +6,7 @@ package render
 
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 
 	"poly.red/buffer"
@@ -554,63 +555,46 @@ func deferredBytes(d []float32) []byte {
 	return unsafe.Slice((*byte)(unsafe.Pointer(&d[0])), len(d)*4)
 }
 
-// debugDeferredSelfCheck enables a pure-Go replica of the deferred kernel to be
-// compared against the GPU output, isolating MSL-kernel bugs from marshaling
-// bugs. Set by tests.
+// debugDeferredSelfCheck enables the GPU deferred output to be compared against
+// the author-once kernels.Shade run as Go over the same G-buffer, isolating
+// compiler-lowering bugs from marshaling bugs. Set by tests.
 var debugDeferredSelfCheck bool
 
-// deferredSelfCheck recomputes the kernel in Go and logs the first fragment
-// where the GPU result diverges by more than 1 (per channel).
+// selfCheckResult records a self-check outcome so a test can hard-assert that
+// the GPU deferred path matches the author-once kernel.
+type selfCheckResult struct {
+	ran     bool
+	matched bool
+	detail  string
+}
+
+// deferredSelfCheckResult holds the most recent self-check outcome.
+var deferredSelfCheckResult selfCheckResult
+
+// deferredSelfCheck reruns the author-once kernels.Shade in Go over the same
+// G-buffer and compares it to the GPU output. Because the GPU shader is compiled
+// from the same source (kernels.ShadeSrc), this proves the compiler lowering:
+// GPU(ShadeSrc) == kernels.Shade-as-Go for every shaded fragment.
 func deferredSelfCheck(n int, okMask, passthrough []bool, normals, worldpos, basecol, lights, matidx, materials, scene []float32, gpu []float32) {
-	v4 := func(b []float32, i int) [4]float32 {
-		return [4]float32{b[i*4], b[i*4+1], b[i*4+2], b[i*4+3]}
-	}
-	dot := func(a, b [4]float32) float32 { return a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3] }
-	norm := func(a [4]float32) [4]float32 {
-		l := float32(math.Sqrt(dot(a, a)))
-		return [4]float32{a[0] / l, a[1] / l, a[2] / l, a[3] / l}
-	}
-	ambI, count := scene[4], int(scene[5])
-	camPos := v4(scene, 0)
+	replica := make([]float32, len(gpu))
 	for idx := 0; idx < n; idx++ {
 		if !okMask[idx] || passthrough[idx] {
 			continue
 		}
-		N, wpos, col := v4(normals, idx), v4(worldpos, idx), v4(basecol, idx)
-		mi := int(matidx[idx])
-		diff := [4]float32{materials[mi*9], materials[mi*9+1], materials[mi*9+2], materials[mi*9+3]}
-		spec := [4]float32{materials[mi*9+4], materials[mi*9+5], materials[mi*9+6], materials[mi*9+7]}
-		shin := materials[mi*9+8]
-		acc := [3]float32{col[0] * ambI, col[1] * ambI, col[2] * ambI}
-		for i := 0; i < count; i++ {
-			lt := lights[i*10]
-			lp := [4]float32{lights[i*10+1], lights[i*10+2], lights[i*10+3], lights[i*10+4]}
-			lc := [4]float32{lights[i*10+5], lights[i*10+6], lights[i*10+7], lights[i*10+8]}
-			li := lights[i*10+9]
-			var L [4]float32
-			var I float32
-			if lt < 0.5 {
-				Ldir := [4]float32{lp[0] - wpos[0], lp[1] - wpos[1], lp[2] - wpos[2], lp[3] - wpos[3]}
-				L = norm(Ldir)
-				I = li / float32(math.Sqrt(dot(Ldir, Ldir)))
-			} else {
-				L = [4]float32{-lp[0], -lp[1], -lp[2], 0}
-				I = li
-			}
-			V := norm([4]float32{camPos[0] - wpos[0], camPos[1] - wpos[1], camPos[2] - wpos[2], camPos[3] - wpos[3]})
-			H := norm([4]float32{L[0] + V[0], L[1] + V[1], L[2] + V[2], L[3] + V[3]})
-			Ld := math.Clamp(dot(N, L), 0, 1)
-			Ls := math.Pow(math.Clamp(dot(N, H), 0, 1), shin)
-			for c := 0; c < 3; c++ {
-				acc[c] += diff[c]*(col[c]*Ld*I)/255 + spec[c]*(lc[c]*Ls*I)/255
-			}
+		kernels.Shade(uint(idx), normals, worldpos, basecol, lights, matidx, materials, scene, replica)
+	}
+	for idx := 0; idx < n; idx++ {
+		if !okMask[idx] || passthrough[idx] {
+			continue
 		}
 		for c := 0; c < 3; c++ {
-			if d := acc[c] - gpu[idx*4+c]; d > 1 || d < -1 {
-				println("deferredSelfCheck: idx", idx, "chan", c, "go", int(acc[c]), "gpu", int(gpu[idx*4+c]), "matidx", mi)
+			if d := replica[idx*4+c] - gpu[idx*4+c]; d > 1 || d < -1 {
+				deferredSelfCheckResult = selfCheckResult{ran: true, detail: fmt.Sprintf("idx %d chan %d kernel %d gpu %d", idx, c, int(replica[idx*4+c]), int(gpu[idx*4+c]))}
+				println("deferredSelfCheck:", deferredSelfCheckResult.detail)
 				return
 			}
 		}
 	}
-	println("deferredSelfCheck: GPU matches pure-Go replica for all shaded fragments")
+	deferredSelfCheckResult = selfCheckResult{ran: true, matched: true}
+	println("deferredSelfCheck: GPU matches author-once kernels.Shade for all shaded fragments")
 }
