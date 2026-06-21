@@ -210,6 +210,16 @@ func (c *compiler) name(n string) string {
 	return n
 }
 
+// zero is the zero-initializer for a canonical (MSL-spelled) type. MSL accepts a
+// scalar 0 broadcast into vectors/matrices (`float4 v = 0;`), but GLSL does not,
+// so GLSL emits a constructor (`vec4(0.0)`). Scalars use `0` in both.
+func (c *compiler) zero(mt string) string {
+	if c.glsl && (isVecType(mt) || mt == "float4x4") {
+		return c.typ(mt) + "(0.0)"
+	}
+	return "0"
+}
+
 // typ maps a canonical (MSL-spelled) type to the target language's spelling. For
 // the MSL target it is the identity, so the Metal output stays byte-identical;
 // for GLSL it rewrites the vector/matrix/texture spellings.
@@ -681,7 +691,7 @@ func (c *compiler) declStmt(st *ast.DeclStmt, depth int) error {
 				}
 				c.buf.WriteString(fmt.Sprintf("%s %s = %s;\n", c.typ(mt), c.name(name.Name), v))
 			} else {
-				c.buf.WriteString(fmt.Sprintf("%s %s = 0;\n", c.typ(mt), c.name(name.Name)))
+				c.buf.WriteString(fmt.Sprintf("%s %s = %s;\n", c.typ(mt), c.name(name.Name), c.zero(mt)))
 			}
 		}
 	}
