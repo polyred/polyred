@@ -193,25 +193,17 @@ func cpuShade(s parityScene) []float32 {
 	return out
 }
 
-// runShadingParity runs the shared shading kernel on dev via mk (a backend
-// specific module + bindings builder) and compares the result to the CPU oracle.
-func runShadingParity(t *testing.T, dev *gpu.Device, mk func(goSrc, entry string) (*gpu.ShaderModule, []shader.Binding, error)) {
+// mkFunc builds a backend-specific shader module + bindings from a Go kernel.
+type mkFunc func(goSrc, entry string) (*gpu.ShaderModule, []shader.Binding, error)
+
+// runCompute compiles goSrc for dev, runs `entry` over count threads with the
+// named storage-buffer inputs, and returns the contents of outName.
+func runCompute(t *testing.T, dev *gpu.Device, mk mkFunc, goSrc, entry string, inputs map[string][]float32, outName string, count int) []float32 {
 	t.Helper()
-	const n = 64
-	sc := makeParityScene(n)
-	want := cpuShade(sc)
-
-	mod, binds, err := mk(shadingKernelSrc, "Shade")
+	mod, binds, err := mk(goSrc, entry)
 	if err != nil {
-		t.Fatalf("compile kernel for %v: %v", dev.Driver(), err)
+		t.Fatalf("compile %s for %v: %v", entry, dev.Driver(), err)
 	}
-
-	inputs := map[string][]float32{
-		"normals": sc.normals, "worldpos": sc.worldpos, "basecol": sc.basecol,
-		"lights": sc.lights, "matidx": sc.matidx, "materials": sc.materials,
-		"scene": sc.scene, "out": make([]float32, n*4),
-	}
-
 	var le []gpu.BindGroupLayoutEntry
 	var bge []gpu.BindGroupEntry
 	bufByName := map[string]*gpu.Buffer{}
@@ -230,26 +222,25 @@ func runShadingParity(t *testing.T, dev *gpu.Device, mk func(goSrc, entry string
 	}
 	layout := dev.NewBindGroupLayout(le...)
 	pipe, err := dev.NewComputePipeline(gpu.ComputePipelineDescriptor{
-		Layout: dev.NewPipelineLayout(layout), Module: mod, Entry: "Shade",
+		Layout: dev.NewPipelineLayout(layout), Module: mod, Entry: entry,
 	})
 	if err != nil {
-		t.Fatalf("pipeline: %v", err)
+		t.Fatalf("pipeline %s: %v", entry, err)
 	}
 	bg := dev.NewBindGroup(layout, bge...)
-
 	enc := dev.NewCommandEncoder()
 	pass := enc.BeginComputePass()
 	pass.SetPipeline(pipe)
 	pass.SetBindGroup(0, bg)
-	pass.Dispatch(n, 1, 1)
+	pass.Dispatch(count, 1, 1)
 	pass.End()
 	dev.Queue().Submit(enc.Finish())
 	dev.Queue().WaitIdle()
+	return parityFloats(bufByName[outName].Bytes(), len(inputs[outName]))
+}
 
-	got := parityFloats(bufByName["out"].Bytes(), n*4)
-
-	// pow/normalize/sqrt differ slightly across drivers; assert closeness.
-	const tol = 0.05
+func compareParity(t *testing.T, dev *gpu.Device, name string, got, want []float32, tol float64) {
+	t.Helper()
 	var maxDiff float64
 	for i := range want {
 		d := math.Abs(float64(got[i] - want[i]))
@@ -257,8 +248,55 @@ func runShadingParity(t *testing.T, dev *gpu.Device, mk func(goSrc, entry string
 			maxDiff = d
 		}
 		if d > tol {
-			t.Fatalf("%v parity: out[%d]=%v want %v (diff %v > tol %v)", dev.Driver(), i, got[i], want[i], d, tol)
+			t.Fatalf("%v %s parity: [%d]=%v want %v (diff %v > tol %v)", dev.Driver(), name, i, got[i], want[i], d, tol)
 		}
 	}
-	t.Logf("%v shading parity: %d pixels match the CPU oracle (max diff %.6f)", dev.Driver(), n, maxDiff)
+	t.Logf("%v %s parity: %d values match the CPU oracle (max diff %.6f)", dev.Driver(), name, len(want), maxDiff)
+}
+
+// runParity runs every cross-backend parity task on dev.
+func runParity(t *testing.T, dev *gpu.Device, mk mkFunc) {
+	runShadingParity(t, dev, mk)
+	runTrigParity(t, dev, mk)
+}
+
+// runShadingParity: the Blinn-Phong deferred shading scene.
+func runShadingParity(t *testing.T, dev *gpu.Device, mk mkFunc) {
+	t.Helper()
+	const n = 64
+	sc := makeParityScene(n)
+	inputs := map[string][]float32{
+		"normals": sc.normals, "worldpos": sc.worldpos, "basecol": sc.basecol,
+		"lights": sc.lights, "matidx": sc.matidx, "materials": sc.materials,
+		"scene": sc.scene, "out": make([]float32, n*4),
+	}
+	got := runCompute(t, dev, mk, shadingKernelSrc, "Shade", inputs, "out", n)
+	compareParity(t, dev, "shading", got, cpuShade(sc), 0.05)
+}
+
+// trigKernelSrc exercises the trig builtins (the sin/cos/atan path SSAO uses),
+// which can differ across drivers — a good cross-backend check.
+const trigKernelSrc = `
+package kernels
+func Trig(gid uint, a []float32, out []float32) {
+	x := a[gid]
+	out[gid] = sin(x) + cos(x*2.0) + atan(x) + sqrt(x*x+1.0)
+}
+`
+
+func runTrigParity(t *testing.T, dev *gpu.Device, mk mkFunc) {
+	t.Helper()
+	const n = 128
+	a := make([]float32, n)
+	for i := range a {
+		a[i] = float32(i)*0.1 - 6.4
+	}
+	want := make([]float32, n)
+	for i, x := range a {
+		want[i] = float32(math.Sin(float64(x))) + float32(math.Cos(float64(x*2))) +
+			float32(math.Atan(float64(x))) + float32(math.Sqrt(float64(x*x+1)))
+	}
+	got := runCompute(t, dev, mk, trigKernelSrc, "Trig", map[string][]float32{"a": a, "out": make([]float32, n)}, "out", n)
+	// trig implementations differ slightly across software rasterizers.
+	compareParity(t, dev, "trig", got, want, 1e-3)
 }

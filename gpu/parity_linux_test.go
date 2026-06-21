@@ -26,7 +26,7 @@ func TestShadingParityGL(t *testing.T) {
 		t.Skipf("no GL device: %v", err)
 	}
 	defer dev.Close()
-	runShadingParity(t, dev, func(goSrc, entry string) (*gpu.ShaderModule, []shader.Binding, error) {
+	runParity(t, dev, func(goSrc, entry string) (*gpu.ShaderModule, []shader.Binding, error) {
 		ks, err := shader.CompileGLSL(goSrc)
 		if err != nil {
 			return nil, nil, err
@@ -51,7 +51,7 @@ func TestShadingParityVulkan(t *testing.T) {
 		t.Skipf("no Vulkan device: %v", err)
 	}
 	defer dev.Close()
-	runShadingParity(t, dev, func(goSrc, entry string) (*gpu.ShaderModule, []shader.Binding, error) {
+	runParity(t, dev, func(goSrc, entry string) (*gpu.ShaderModule, []shader.Binding, error) {
 		ks, err := shader.CompileGLSL(goSrc)
 		if err != nil {
 			return nil, nil, err

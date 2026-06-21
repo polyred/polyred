@@ -21,7 +21,7 @@ func TestShadingParityMetal(t *testing.T) {
 		t.Skipf("no Metal device: %v", err)
 	}
 	defer dev.Close()
-	runShadingParity(t, dev, func(goSrc, entry string) (*gpu.ShaderModule, []shader.Binding, error) {
+	runParity(t, dev, func(goSrc, entry string) (*gpu.ShaderModule, []shader.Binding, error) {
 		ks, err := shader.Compile(goSrc)
 		if err != nil {
 			return nil, nil, err
