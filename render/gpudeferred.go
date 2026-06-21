@@ -23,62 +23,6 @@ import (
 // scene; the caller falls back to the CPU shader.
 var errGPUDeferredUnsupported = errors.New("render: scene not supported by GPU deferred path")
 
-// shadowKernel multiplies the shaded colour by the shadow factor for a single
-// shadow-casting light. It runs after the Blinn-Phong kernel on the shaded
-// float buffer, in place. Mirrors render/shadow.go:shadingVisibility for one
-// casting buffer: project the fragment to light space, look up the depth, and
-// darken by pow(0.5, occluded). Coordinates use the engine's combined matrix.
-const shadowKernel = `
-package kernels
-
-type Vec4 struct{ X, Y, Z, W float32 }
-
-type ShadowU struct {
-	W        float32
-	DepthLen float32
-	N        float32
-	Pad      float32
-}
-
-func Shadow(gid uint, fragxyz []float32, recv []float32, depths []float32, mats []float32, color []float32, s ShadowU) {
-	if recv[gid] < 0.5 {
-		return
-	}
-	fx := fragxyz[gid*4]
-	fy := fragxyz[gid*4+1]
-	fz := fragxyz[gid*4+2]
-	occ := float32(0)
-	n := int(s.N)
-	dl := int(s.DepthLen)
-	width := int(s.W)
-	for k := 0; k < n; k++ {
-		M := Mat4{
-			Vec4{mats[k*16], mats[k*16+1], mats[k*16+2], mats[k*16+3]},
-			Vec4{mats[k*16+4], mats[k*16+5], mats[k*16+6], mats[k*16+7]},
-			Vec4{mats[k*16+8], mats[k*16+9], mats[k*16+10], mats[k*16+11]},
-			Vec4{mats[k*16+12], mats[k*16+13], mats[k*16+14], mats[k*16+15]},
-		}
-		clip := M * Vec4{fx, fy, fz, 1}
-		sx := clip.X / clip.W
-		sy := clip.Y / clip.W
-		sz := clip.Z / clip.W
-		idx := int(sx) + int(sy)*width
-		if idx > 0 {
-			if idx < dl {
-				if sz < depths[k*dl+idx]-0.03 {
-					occ = occ + 1
-				}
-			}
-		}
-	}
-	wf := pow(0.5, occ)
-	// Match the engine: uint8(clamp(round(blinn),0,255) * w), truncated.
-	color[gid*4] = floor(clamp(round(color[gid*4]), 0.0, 255.0) * wf)
-	color[gid*4+1] = floor(clamp(round(color[gid*4+1]), 0.0, 255.0) * wf)
-	color[gid*4+2] = floor(clamp(round(color[gid*4+2]), 0.0, 255.0) * wf)
-}
-`
-
 // aoKernel applies screen-space ambient occlusion as a final pass, mirroring
 // material/ao.go: for 8 directions, march the depth buffer and accumulate the
 // max elevation angle, then darken by pow(total, 10000). NOTE: that exponent
@@ -424,7 +368,7 @@ func runDeferredKernel(dev *gpu.Device, n int, normals, worldpos, basecol, light
 }
 
 func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, mats, color, su []float32) error {
-	mod, err := kernelModule(dev, shadowKernel, "Shadow")
+	mod, err := kernelModule(dev, kernels.ShadowSrc, "Shadow")
 	if err != nil {
 		return err
 	}
@@ -432,8 +376,7 @@ func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, mats, color,
 		return gpu.BindGroupLayoutEntry{Binding: i, Visibility: gpu.StageCompute, Kind: gpu.StorageBuffer}
 	}
 	layout := dev.NewBindGroupLayout(
-		sb(0), sb(1), sb(2), sb(3), sb(4),
-		gpu.BindGroupLayoutEntry{Binding: 5, Visibility: gpu.StageCompute, Kind: gpu.UniformBuffer},
+		sb(0), sb(1), sb(2), sb(3), sb(4), sb(5),
 	)
 	pipe, err := dev.NewComputePipeline(gpu.ComputePipelineDescriptor{Layout: dev.NewPipelineLayout(layout), Module: mod, Entry: "Shadow"})
 	if err != nil {
@@ -453,7 +396,7 @@ func runShadowKernel(dev *gpu.Device, n int, fragxyz, recv, depths, mats, color,
 	if err != nil {
 		return err
 	}
-	ub := uniformBuf(dev, su)
+	ub := storageBuf(dev, su)
 	defer func() {
 		fb.Release()
 		rb.Release()

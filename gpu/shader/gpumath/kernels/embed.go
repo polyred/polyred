@@ -17,3 +17,8 @@ var ShadeSrc string
 //
 //go:embed srgb.go
 var SRGBSrc string
+
+// ShadowSrc is the source of shadow.go (the shadow-map pass).
+//
+//go:embed shadow.go
+var ShadowSrc string
