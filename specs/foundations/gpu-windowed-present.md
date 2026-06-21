@@ -20,6 +20,17 @@ dispatched_task_id: null
 
 # Windowed present (Surface / swapchain) for the GPU abstraction
 
+## Status
+
+The backend-agnostic **Surface/swapchain API is implemented and CI-verified
+headless** (`gpu/surface.go`): `Device.CreateSurface`, `AcquireNextTexture`,
+`Present`, `Texture`, `Resize`. `TestSurfaceHeadlessPresent` renders frames
+through the swapchain on the GL backend (Mesa llvmpipe) and reads them back, with
+double-buffering and resize checks. What remains is the **on-screen** attachment
+(handing a swapchain texture to a window: a `CAMetalLayer` drawable on darwin, an
+EGL/WGL window surface elsewhere), which needs a display and is not verifiable in
+headless CI. The sections below describe that remaining on-screen layer.
+
 ## Overview
 
 Today the GPU abstraction renders only headless: it draws into a texture and

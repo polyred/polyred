@@ -33,7 +33,7 @@ specs live here.
 | [gpu-phase3-render.md](foundations/gpu-phase3-render.md) | **Done** | Render pipelines + the renderer's full deferred pass offloaded to the GPU: lights, multi-material, shadow maps (N lights), ambient occlusion, gamma; CPU-parity verified |
 | [windows-present-port.md](foundations/windows-present-port.md) | **Build done, runtime deferred** | Windows window present ported to the modern textured-quad GLES blit; builds on Windows, runtime needs a Windows desktop |
 | [gpu-gl-backend.md](foundations/gpu-gl-backend.md) | **Compute + render done, CI-verified** | cgo-free GLES 3.1 backend behind the `backend` interface: compute (storage + UBO) and render-to-texture (FBO), driven through the Device API and verified on Mesa llvmpipe (software, surfaceless) in CI. Follow-ups: engine integration, Go-to-GLSL render shaders, Vulkan/DX12 |
-| [gpu-windowed-present.md](foundations/gpu-windowed-present.md) | **Drafted** | `Surface`/swapchain API over a cgo-free `CAMetalLayer`; headless render stays CI-testable, windowed present needs a display |
+| [gpu-windowed-present.md](foundations/gpu-windowed-present.md) | **Surface API done (headless), CI-verified** | backend-agnostic swapchain (`gpu/surface.go`): acquire/present/resize, render-through-swapchain verified headless on the GL backend. Remaining: on-screen attachment (needs a display) |
 
 The GPU abstraction's Metal-backend phases are complete: the renderer's deferred
 shading runs on the GPU, cgo-free, with shaders authored in Go. Remaining work is
