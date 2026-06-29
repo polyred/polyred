@@ -1,6 +1,6 @@
 ---
 title: "cgo-free windowed present: archive the cgo windowing toy"
-status: in progress (brick 1 done)
+status: in progress (darwin done; linux next)
 depends_on:
   - foundations/gpu-windowed-present.md
 affects:
@@ -9,7 +9,7 @@ affects:
   - gpu/gl
   - gpu/ctx/egl
 created: 2026-06-21
-updated: 2026-06-21
+updated: 2026-06-29
 author: changkun
 dispatched_task_id: null
 ---
@@ -40,12 +40,43 @@ brick gets the partial offscreen FFI verification that IS possible.
    `gpu/ctx/ca` is cgo-free. Verified: `metal_layer_darwin_test.go` exercises the
    ops on an off-screen CAMetalLayer (setters do not crash, pixel format
    round-trips); on-screen present is a maintainer check (run polyred/polywine).
-2. **NSWindow / NSView / event loop cgo-free (darwin).** Port `app/window_darwin.go`
-   from inline Obj-C to purego/objc (NSApplication, NSWindow, NSView, the run loop,
-   delegates, `layerForView`). The hardest brick; large FFI; on-screen only.
-3. **Archive `gpu/ctx/ca` cgo remnants + `gpu/gl` + `gpu/ctx/egl`** once their cgo
-   users (app windows) are cgo-free. Linux/Windows windows (X11/EGL/Win32) port
-   analogously (separate bricks, those platforms).
+2. **NSWindow / NSView / event loop cgo-free (darwin) — DONE.** Ported
+   `app/window_darwin.go` from inline Obj-C to purego/objc (NSApplication, NSWindow,
+   NSView, the run loop, delegates, `layerForView`), then wired mouse/keyboard
+   events, window focus, modifier-key reporting (`flagsChanged:`), trackpad scroll
+   scaling, and Shift+left-drag pan controls. Darwin app builds `CGO_ENABLED=0` and
+   imports neither `gpu/gl` nor `gpu/ctx/egl`. On-screen verified by the maintainer.
+3. **Linux window cgo-free (X11/EGL/GLES) — NEXT.** The Linux path is the only
+   remaining cgo windowing. Three layers, ported bottom-up, each its own commit
+   (each package builds independently `GOOS=linux CGO_ENABLED=0`):
+   - **(a) `gpu/gl/gl_unix.go` -> purego GLES.** This is the last cgo in package
+     `gl` (`gl_windows.go` is already syscall-based). Reuse the purego dlopen/sym +
+     GLES binding pattern from `gpu/backend_gl.go`. Only the Linux window imports it
+     now (darwin dropped it in brick 2), so it can narrow to `linux`.
+   - **(b) `gpu/ctx/egl` -> purego EGL incl. `eglCreateWindowSurface`.** The compute
+     backend's EGL in `gpu/backend_gl.go` is surfaceless; the window needs a real
+     window surface bound to the X11 window + `eglSwapBuffers` present.
+   - **(c) `app/window_linux.go` -> purego X11 (Xlib).** dlopen `libX11.so.6`:
+     `XOpenDisplay`/`XCreateWindow`/`XMapWindow`/`XNextEvent`/atoms/event structs.
+     Mirror the existing cgo structure 1:1; do NOT fix the pre-existing resize-freeze
+     FIXME (`window_linux.go:187`) in the same diff (one concern at a time).
+   Windows is ALREADY cgo-free (`GOOS=windows CGO_ENABLED=0 go build ./app/...` is
+   clean; it uses syscall-to-DLL). No Windows port work is needed; on-Windows runtime
+   testing is a separate, currently-unreachable concern.
+4. **Archive `gpu/ctx/ca` cgo remnants + the cgo bits of `gpu/gl`/`gpu/ctx/egl`**
+   once Linux is cgo-free (darwin + windows already are).
+
+## Verification (Linux)
+
+Unlike darwin (on-screen only), the Linux window is CI-gatable. `polyred.yml`
+already runs `Xvfb :99` + Mesa GL (`xvfb`, `xorg-dev`, `libgl1-mesa-dev`), and
+`gl-probe.yml` proves cgo-free purego EGL/GLES on llvmpipe. The Linux port lands a
+windowed-present smoke test (open an X11 window -> create EGL window surface ->
+draw one frame -> assert no crash / read back pixels) that runs under Xvfb. The
+discriminating unknown the test resolves: whether `eglCreateWindowSurface` on the
+X11 window matches a Mesa EGL config under Xvfb (the classic visual/config-matching
+snag). Dev loop on darwin: cross-compile `GOOS=linux CGO_ENABLED=0` locally, then
+push and let the Xvfb CI job exercise it at runtime.
 
 ## Testing Strategy
 
