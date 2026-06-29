@@ -1,6 +1,6 @@
 ---
 title: "GL windowed present via the Device API; retire gpu/gl + gpu/ctx/egl"
-status: in progress (brick 1 DONE + CI-proven; bricks 2-3 remain)
+status: complete (bricks 1-3 done; linux CI-proven, windows build-only)
 depends_on:
   - foundations/gpu-windowed-present.md
   - foundations/cgo-free-windowed-present.md
@@ -96,17 +96,26 @@ introducing a second GL-owning thread.
    opens the GL device first, reads `Device.WindowVisualID()`, and creates the
    window with that visual (`createX11Window`: XGetVisualInfo + XCreateColormap).
    `gpu/gl`+`gpu/ctx/egl` stay (windows still uses them).
-2. **Windows GL windowed present (build-only verified — user-approved).** Make
-   `gpu/backend_gl.go` cross-platform (linux + windows): load
-   `libEGL.so.1`/`libGLESv2.so.2` on linux, ANGLE `libEGL.dll`/`libGLESv2.dll` on
-   windows, by GOOS. Wire `app/window_windows.go` to the Device API; delete
-   `app/ctx_gl_windows.go` and its textured-quad. Windows present cannot be
-   runtime-verified here; it ships build-only-verified and the known-good ANGLE
-   path is removed (user chose "migrate both now, delete everything", 2026-06-29).
-3. **Delete the old stack.** Remove `gpu/gl` and `gpu/ctx/egl` (now unused),
-   including `egl_windows.go`'s `gl.LibGLESv2` dependency. Confirm
-   `GOOS={linux,windows,darwin} CGO_ENABLED=0 go build ./...` and the Xvfb job
-   stay green.
+2. **Windows GL windowed present (build-only — user-approved) — DONE.**
+   `gpu/backend_gl.go` is now `//go:build linux || windows`. The EGL/GLES lib names
+   and loader moved behind build-tagged `glDlopen`/`glDlsym`: linux keeps
+   `purego.Dlopen(libEGL.so.1/libGLESv2.so.2, RTLD_NOW|GLOBAL)` byte-identically;
+   windows uses `syscall.LoadLibrary`/`GetProcAddress` on ANGLE
+   `libEGL.dll`/`libGLESv2.dll` (purego's dlopen is Unix-only; the GL call sites
+   stay on `purego.SyscallN`, which IS on windows/amd64). The Vulkan dispatch is
+   `openVKBackend` (linux) + a non-linux ErrUnsupported stub; `backend_other.go`
+   now excludes windows. `app/window_windows.go` opens `gpu.Device`(GL,
+   WithNativeDisplay(hdc)) + `CreateWindowSurface(hwnd)` (no visual matching: ANGLE
+   takes the HWND directly) + `PresentImage`; deleted `app/ctx_gl_windows.go`.
+   Build-only verified (no Windows CI runtime). Sharpest runtime delta: relies on
+   ANGLE to load `d3dcompiler_47.dll` from the search path (the old path
+   LoadLibrary'd it explicitly). ANGLE may also not support surfaceless
+   `eglMakeCurrent` at init -- a real-hardware concern.
+3. **Delete the old stack — DONE.** Removed `gpu/gl` and `gpu/ctx/egl` entirely
+   (nothing imports them after bricks 1-2). The GPU backend's own purego EGL/GLES
+   in `backend_gl.go` is the single GL stack now; `gpu/ctx/ca`+`gpu/mtl` (darwin
+   Metal) untouched. `GOOS={linux,windows,darwin} CGO_ENABLED=0 go build ./...` +
+   gpu/app tests pass.
 
 ## Verification
 
