@@ -1,6 +1,6 @@
 ---
 title: "cgo-free windowed present: archive the cgo windowing toy"
-status: in progress (darwin done; linux next)
+status: in progress (all platforms cgo-free; linux runtime pending CI)
 depends_on:
   - foundations/gpu-windowed-present.md
 affects:
@@ -46,37 +46,58 @@ brick gets the partial offscreen FFI verification that IS possible.
    events, window focus, modifier-key reporting (`flagsChanged:`), trackpad scroll
    scaling, and Shift+left-drag pan controls. Darwin app builds `CGO_ENABLED=0` and
    imports neither `gpu/gl` nor `gpu/ctx/egl`. On-screen verified by the maintainer.
-3. **Linux window cgo-free (X11/EGL/GLES) — NEXT.** The Linux path is the only
-   remaining cgo windowing. Three layers, ported bottom-up, each its own commit
-   (each package builds independently `GOOS=linux CGO_ENABLED=0`):
-   - **(a) `gpu/gl/gl_unix.go` -> purego GLES.** This is the last cgo in package
-     `gl` (`gl_windows.go` is already syscall-based). Reuse the purego dlopen/sym +
-     GLES binding pattern from `gpu/backend_gl.go`. Only the Linux window imports it
-     now (darwin dropped it in brick 2), so it can narrow to `linux`.
-   - **(b) `gpu/ctx/egl` -> purego EGL incl. `eglCreateWindowSurface`.** The compute
-     backend's EGL in `gpu/backend_gl.go` is surfaceless; the window needs a real
-     window surface bound to the X11 window + `eglSwapBuffers` present.
-   - **(c) `app/window_linux.go` -> purego X11 (Xlib).** dlopen `libX11.so.6`:
-     `XOpenDisplay`/`XCreateWindow`/`XMapWindow`/`XNextEvent`/atoms/event structs.
-     Mirror the existing cgo structure 1:1; do NOT fix the pre-existing resize-freeze
-     FIXME (`window_linux.go:187`) in the same diff (one concern at a time).
-   Windows is ALREADY cgo-free (`GOOS=windows CGO_ENABLED=0 go build ./app/...` is
-   clean; it uses syscall-to-DLL). No Windows port work is needed; on-Windows runtime
-   testing is a separate, currently-unreachable concern.
-4. **Archive `gpu/ctx/ca` cgo remnants + the cgo bits of `gpu/gl`/`gpu/ctx/egl`**
-   once Linux is cgo-free (darwin + windows already are).
+3. **Linux window cgo-free (X11/EGL/GLES) — DONE (runtime pending CI).** Ported
+   bottom-up, each layer its own commit (each builds `GOOS=linux CGO_ENABLED=0`):
+   - **(a) `gpu/gl/gl_unix.go` -> purego GLES (DONE).** The last cgo in package
+     `gl`. Each GL entry point is a typed Go func resolved with
+     `purego.RegisterFunc` so the System V AMD64 float ABI is correct
+     (`glClearColor`/`glUniform*f` would be corrupted by integer-register
+     `SyscallN`). Required/optional symbol split + EXT fallbacks preserved 1:1.
+   - **(b) `gpu/ctx/egl` -> purego EGL (DONE).** `egl_linux.go` resolves
+     `libEGL.so.1` and calls via `purego.SyscallN` (EGL has no float args). Handle
+     types became uintptr, matching the cgo-free `egl_windows.go` sibling, so the
+     cross-platform `egl.go` is unchanged. Deleted `egl_x11.go` (dead cgo;
+     `NewDisplay` had no callers, its import-time libX11 dlopen was a fragile side
+     effect).
+   - **(c) `app/window_linux.go` -> purego X11 (DONE).** `libX11.so.6` + 14 Xlib
+     entry points via `purego.SyscallN`; `XEvent`/`XSetWindowAttributes`/
+     `XTextProperty` mirrored as Go structs with explicit LP64 padding (offsets
+     verified field-by-field against `X11/Xlib.h`/`Xutil.h`). Left the pre-existing
+     resize-freeze FIXME untouched.
+   Bonus bug fix (commit `18aae9f`): commit 3fd9c9d had left the linux build broken
+   (duplicate Mod consts in `event_linux.go` vs the untagged `event_mods.go`; main's
+   `polyred` CI was red). Deleted `event_linux.go`, added a unit-tested pure
+   `x11ModsToLogical` that maps raw X11 state to the logical ModifierKey bits
+   (without it, `Contain(ModShift)` never matched on linux and Shift+drag pan was
+   dead). The three event sites now use it.
 
-## Verification (Linux)
+   Windows was ALREADY cgo-free (`GOOS=windows CGO_ENABLED=0 go build ./...` clean;
+   syscall-to-DLL). No Windows port work needed; on-Windows runtime testing is a
+   separate, currently-unreachable concern.
+4. **Archive note.** With (a)-(c) done, the whole repo is cgo-free: `import "C"`
+   appears nowhere, and `./...` cross-builds `CGO_ENABLED=0` for linux, windows, and
+   darwin. The old cgo toy (`gpu/gl`, `gpu/ctx/egl`, `gpu/ctx/ca`) was *ported* to
+   purego rather than deleted, because linux/windows windowed present still ride
+   `gpu/gl`+`gpu/ctx/egl` (the textured-quad present), unlike darwin which presents
+   via the Device API (`gpu/ctx/ca`+`gpu/mtl`). Migrating linux/windows present onto
+   the Device API too (so `gpu/gl`/`egl` could finally be deleted) is a separate,
+   larger arc; the cgo-free HARD REQUIREMENT is now met on all platforms.
 
-Unlike darwin (on-screen only), the Linux window is CI-gatable. `polyred.yml`
-already runs `Xvfb :99` + Mesa GL (`xvfb`, `xorg-dev`, `libgl1-mesa-dev`), and
-`gl-probe.yml` proves cgo-free purego EGL/GLES on llvmpipe. The Linux port lands a
-windowed-present smoke test (open an X11 window -> create EGL window surface ->
-draw one frame -> assert no crash / read back pixels) that runs under Xvfb. The
-discriminating unknown the test resolves: whether `eglCreateWindowSurface` on the
-X11 window matches a Mesa EGL config under Xvfb (the classic visual/config-matching
-snag). Dev loop on darwin: cross-compile `GOOS=linux CGO_ENABLED=0` locally, then
-push and let the Xvfb CI job exercise it at runtime.
+## Verification
+
+Darwin: on-screen, maintainer-verified (done). Windows: builds cgo-free; runtime
+unreachable here. Linux: CI-gatable, and now gated. `TestX11WindowedPresent`
+(`app/window_linux_test.go`) drives the real path without the blocking event loop
+(open X11 window -> `eglCreateWindowSurface` -> make current -> clear to opaque red
+-> `ReadPixels` and assert ~255,0,0,255). Red is sRGB-invariant and channel-specific
+(catches channel-swap); `ClearColor` exercises the float ABI; `GetString`/`GetInteger`
+exercise out-parameter marshaling. It runs in a new `x11-windowed-present` job in
+`gl-probe.yml` (Xvfb + Mesa llvmpipe + libEGL/libGLESv2), now `pull_request`-gated.
+It skips cleanly without a display/EGL runtime, so it is a no-op on a bare dev box.
+The remaining unknown only a CI run resolves: whether `eglCreateWindowSurface` on the
+X11 window matches a Mesa EGL config under Xvfb (the classic visual/config snag).
+Dev loop on darwin was: cross-compile `GOOS=linux CGO_ENABLED=0` locally; push for
+the Xvfb job to exercise it at runtime.
 
 ## Testing Strategy
 
