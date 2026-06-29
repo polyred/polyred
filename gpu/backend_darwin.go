@@ -75,6 +75,12 @@ func (m *metalBackend) newCommandBuffer() backendCommandBuffer {
 	return &metalCmd{m: m, cb: m.queue.MakeCommandBuffer()}
 }
 
+// newWindowSurface is not implemented on the Metal backend yet; an on-screen
+// CAMetalLayer drawable lands in a later phase.
+func (m *metalBackend) newWindowSurface(display, window uintptr, w, h int) (backendWindowSurface, error) {
+	return nil, ErrUnsupported
+}
+
 func (m *metalBackend) waitIdle() {
 	if m.hasLast {
 		m.last.WaitUntilCompleted()

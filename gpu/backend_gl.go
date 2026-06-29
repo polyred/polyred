@@ -32,6 +32,7 @@ const (
 	eglOpenGLES3Bit   = 0x0040
 	eglSurfaceType    = 0x3033
 	eglPbufferBit     = 0x0001
+	eglWindowBit      = 0x0004
 	eglRedSize        = 0x3024
 	eglGreenSize      = 0x3023
 	eglBlueSize       = 0x3022
@@ -61,12 +62,17 @@ const (
 	glTriangles         = 0x0004
 	glTriangleStripEnum = 0x0005
 	glColor             = 0x1800 // GL_COLOR, for glClearBufferfv
+
+	glReadFramebuffer = 0x8CA8
+	glDrawFramebuffer = 0x8CA9
+	glColorBufferBit  = 0x00004000
 )
 
 // glFns holds the resolved EGL/GLES entry points (purego function pointers).
 type glFns struct {
 	eglGetDisplay, eglInitialize, eglBindAPI, eglChooseConfig    uintptr
 	eglCreateContext, eglMakeCurrent, eglDestroyContext, eglTerm uintptr
+	eglCreateWindowSurface, eglDestroySurface, eglSwapBuffers    uintptr
 
 	createShader, shaderSource, compileShader, getShaderiv, getShaderInfoLog uintptr
 	createProgram, attachShader, linkProgram, getProgramiv, useProgram       uintptr
@@ -79,6 +85,7 @@ type glFns struct {
 	genFramebuffers, bindFramebuffer, framebufferTexture2D, checkFramebuffer uintptr
 	genVertexArrays, bindVertexArray                                         uintptr
 	viewport, clearBufferfv, drawArrays, readPixels                          uintptr
+	blitFramebuffer, getError                                                uintptr
 }
 
 type glBackend struct {
@@ -86,6 +93,7 @@ type glBackend struct {
 	fns  glFns
 	dpy  uintptr
 	ctx  uintptr
+	cfg  uintptr
 }
 
 func openBackend(d Driver) (backend, Driver, error) {
@@ -156,6 +164,9 @@ func (b *glBackend) init() error {
 	f.eglMakeCurrent = sym(egl, "eglMakeCurrent")
 	f.eglDestroyContext = sym(egl, "eglDestroyContext")
 	f.eglTerm = sym(egl, "eglTerminate")
+	f.eglCreateWindowSurface = sym(egl, "eglCreateWindowSurface")
+	f.eglDestroySurface = sym(egl, "eglDestroySurface")
+	f.eglSwapBuffers = sym(egl, "eglSwapBuffers")
 	f.createShader = sym(gles, "glCreateShader")
 	f.shaderSource = sym(gles, "glShaderSource")
 	f.compileShader = sym(gles, "glCompileShader")
@@ -193,6 +204,8 @@ func (b *glBackend) init() error {
 	f.clearBufferfv = sym(gles, "glClearBufferfv")
 	f.drawArrays = sym(gles, "glDrawArrays")
 	f.readPixels = sym(gles, "glReadPixels")
+	f.blitFramebuffer = sym(gles, "glBlitFramebuffer")
+	f.getError = sym(gles, "glGetError")
 	if loadErr != nil {
 		return loadErr
 	}
@@ -206,11 +219,20 @@ func (b *glBackend) init() error {
 		return fmt.Errorf("gpu/gl: eglInitialize failed")
 	}
 	purego.SyscallN(f.eglBindAPI, uintptr(eglOpenGLESAPI))
-	cfgAttribs := []int32{eglRenderableType, eglOpenGLES3Bit, eglSurfaceType, eglPbufferBit, eglRedSize, 8, eglGreenSize, 8, eglBlueSize, 8, eglNone}
+	// Prefer a config usable for both pbuffer (headless) and window (on-screen)
+	// surfaces. Under EGL_PLATFORM=surfaceless there are no window-capable
+	// configs, so fall back to pbuffer-only to keep the headless compute path.
 	var cfg uintptr
 	var n int32
-	if r, _, _ := purego.SyscallN(f.eglChooseConfig, dpy, uintptr(unsafe.Pointer(&cfgAttribs[0])), uintptr(unsafe.Pointer(&cfg)), 1, uintptr(unsafe.Pointer(&n))); r == 0 || n == 0 {
-		return fmt.Errorf("gpu/gl: eglChooseConfig found no config")
+	choose := func(surfaceType int32) bool {
+		cfgAttribs := []int32{eglRenderableType, eglOpenGLES3Bit, eglSurfaceType, surfaceType, eglRedSize, 8, eglGreenSize, 8, eglBlueSize, 8, eglNone}
+		r, _, _ := purego.SyscallN(f.eglChooseConfig, dpy, uintptr(unsafe.Pointer(&cfgAttribs[0])), uintptr(unsafe.Pointer(&cfg)), 1, uintptr(unsafe.Pointer(&n)))
+		return r != 0 && n != 0
+	}
+	if !choose(eglPbufferBit | eglWindowBit) {
+		if !choose(eglPbufferBit) {
+			return fmt.Errorf("gpu/gl: eglChooseConfig found no config")
+		}
 	}
 	ctxAttribs := []int32{eglContextMajor, 3, eglNone}
 	ctx, _, _ := purego.SyscallN(f.eglCreateContext, dpy, cfg, uintptr(eglNoContext), uintptr(unsafe.Pointer(&ctxAttribs[0])))
@@ -226,7 +248,7 @@ func (b *glBackend) init() error {
 	var vao uint32
 	purego.SyscallN(f.genVertexArrays, 1, uintptr(unsafe.Pointer(&vao)))
 	purego.SyscallN(f.bindVertexArray, uintptr(vao))
-	b.dpy, b.ctx = dpy, ctx
+	b.dpy, b.ctx, b.cfg = dpy, ctx, cfg
 	return nil
 }
 
@@ -483,6 +505,119 @@ func (t *glTexture) write(pixels []byte, bytesPerRow int) {
 		purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glRGBA8), uintptr(t.w), uintptr(t.h), 0, uintptr(glRGBA), uintptr(glUnsignedByte), uintptr(unsafe.Pointer(&pixels[0])))
 		runtime.KeepAlive(pixels)
 	})
+}
+
+// --- on-screen window surface ---
+
+// glWindowSurface is an EGL window surface plus a persistent FBO-backed texture
+// the CPU frame is uploaded into. present blits that FBO to the window's default
+// framebuffer and swaps. All EGL/GL work runs on the backend's context thread.
+type glWindowSurface struct {
+	b    *glBackend
+	surf uintptr    // EGLSurface
+	tex  *glTexture // FBO-backed upload/render target (renderTarget=true)
+	w, h int
+}
+
+func (b *glBackend) newWindowSurface(display, window uintptr, w, h int) (backendWindowSurface, error) {
+	// The GL backend drives its own EGLDisplay (from eglGetDisplay); the app's
+	// native display handle is not needed here. Keep the parameter for other
+	// backends and silence the unused warning.
+	_ = display
+	// newTexture marshals onto the context thread itself, so it is called
+	// outside the do() below to avoid a nested (deadlocking) do.
+	bt, err := b.newTexture(RGBA8Unorm, w, h, true)
+	if err != nil {
+		return nil, err
+	}
+	s := &glWindowSurface{b: b, tex: bt.(*glTexture), w: w, h: h}
+	var serr error
+	b.do(func() {
+		surf, _, _ := purego.SyscallN(b.fns.eglCreateWindowSurface, b.dpy, b.cfg, window, 0)
+		if surf == 0 {
+			serr = fmt.Errorf("gpu/gl: eglCreateWindowSurface failed (window=%#x)", window)
+			return
+		}
+		s.surf = surf
+	})
+	if serr != nil {
+		return nil, serr
+	}
+	return s, nil
+}
+
+func (s *glWindowSurface) acquire() backendTexture { return s.tex }
+
+func (s *glWindowSurface) present() error {
+	var err error
+	s.b.do(func() {
+		f := &s.b.fns
+		// Bind the window surface as the current draw/read target.
+		purego.SyscallN(f.eglMakeCurrent, s.b.dpy, s.surf, s.surf, s.b.ctx)
+		// Blit the upload texture's FBO to the default framebuffer (the window).
+		// The destination Y is inverted (0,h..w,0) because the uploaded CPU image
+		// is top-down while GL's window origin is bottom-left; this matches the
+		// row-flip in glTexture.readPixels.
+		w, h := uintptr(s.w), uintptr(s.h)
+		purego.SyscallN(f.bindFramebuffer, uintptr(glReadFramebuffer), uintptr(s.tex.fbo))
+		purego.SyscallN(f.bindFramebuffer, uintptr(glDrawFramebuffer), 0)
+		purego.SyscallN(f.blitFramebuffer, 0, 0, w, h, 0, h, w, 0, uintptr(glColorBufferBit), uintptr(glNearest))
+		if e, _, _ := purego.SyscallN(f.getError); e != 0 {
+			err = fmt.Errorf("gpu/gl: present blit failed (GL error %#x)", e)
+		}
+		purego.SyscallN(f.eglSwapBuffers, s.b.dpy, s.surf)
+		// Restore the surfaceless binding so subsequent headless/FBO work runs on
+		// the same context without a bound window surface.
+		purego.SyscallN(f.eglMakeCurrent, s.b.dpy, uintptr(eglNoSurface), uintptr(eglNoSurface), s.b.ctx)
+	})
+	return err
+}
+
+func (s *glWindowSurface) resize(w, h int) error {
+	// The EGL window surface auto-tracks the window size on most drivers; only the
+	// upload/blit texture needs reallocating. newTexture self-marshals onto the
+	// context thread, so it is not wrapped in do() here.
+	bt, err := s.b.newTexture(RGBA8Unorm, w, h, true)
+	if err != nil {
+		return err
+	}
+	s.tex = bt.(*glTexture)
+	s.w, s.h = w, h
+	return nil
+}
+
+func (s *glWindowSurface) release() {
+	s.b.do(func() {
+		purego.SyscallN(s.b.fns.eglDestroySurface, s.b.dpy, s.surf)
+	})
+}
+
+// readback returns the pixels present() puts on the window, top-down RGBA. It
+// re-runs the same blit into the window's back buffer and reads that, rather than
+// reading after present's eglSwapBuffers (a double-buffered surface's back buffer
+// is undefined post-swap). Deterministic, so the windowed CI test can assert the
+// on-screen pixels. Rows are flipped top-down like glTexture.readPixels.
+func (s *glWindowSurface) readback() []byte {
+	dst := make([]byte, s.w*s.h*4)
+	s.b.do(func() {
+		f := &s.b.fns
+		w, h := uintptr(s.w), uintptr(s.h)
+		purego.SyscallN(f.eglMakeCurrent, s.b.dpy, s.surf, s.surf, s.b.ctx)
+		// Re-blit the upload texture into the back buffer (same blit as present).
+		purego.SyscallN(f.bindFramebuffer, uintptr(glReadFramebuffer), uintptr(s.tex.fbo))
+		purego.SyscallN(f.bindFramebuffer, uintptr(glDrawFramebuffer), 0)
+		purego.SyscallN(f.blitFramebuffer, 0, 0, w, h, 0, h, w, 0, uintptr(glColorBufferBit), uintptr(glNearest))
+		// Read the back buffer (framebuffer 0).
+		purego.SyscallN(f.bindFramebuffer, uintptr(glReadFramebuffer), 0)
+		purego.SyscallN(f.readPixels, 0, 0, w, h, uintptr(glRGBA), uintptr(glUnsignedByte), uintptr(unsafe.Pointer(&dst[0])))
+		purego.SyscallN(f.eglMakeCurrent, s.b.dpy, uintptr(eglNoSurface), uintptr(eglNoSurface), s.b.ctx)
+	})
+	row := s.w * 4
+	flipped := make([]byte, len(dst))
+	for y := 0; y < s.h; y++ {
+		copy(flipped[y*row:(y+1)*row], dst[(s.h-1-y)*row:(s.h-y)*row])
+	}
+	return flipped
 }
 
 type glRenderPipeline struct{ program uint32 }

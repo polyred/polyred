@@ -15,6 +15,7 @@ type backend interface {
 	newSampler(desc SamplerDescriptor) backendSampler
 	newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat, extraColor []TextureFormat, depth TextureFormat) (backendRenderPipeline, error)
 	newCommandBuffer() backendCommandBuffer
+	newWindowSurface(display, window uintptr, w, h int) (backendWindowSurface, error)
 	waitIdle()
 	close() error
 }
@@ -22,6 +23,15 @@ type backend interface {
 type backendTexture interface {
 	readPixels() []byte
 	write(pixels []byte, bytesPerRow int)
+}
+
+// backendWindowSurface is an on-screen swapchain bound to a native window.
+type backendWindowSurface interface {
+	acquire() backendTexture // render target for the next frame
+	present() error          // blit the acquired texture to the window, swap buffers
+	resize(w, h int) error
+	readback() []byte // the presented pixels, top-down RGBA (for testing/screenshots)
+	release()
 }
 
 type backendSampler interface{ isSampler() }

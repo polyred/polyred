@@ -431,6 +431,12 @@ type vkCmd struct {
 
 func (b *vkBackend) newCommandBuffer() backendCommandBuffer { return &vkCmd{b: b} }
 
+// newWindowSurface is not implemented on the Vulkan backend yet (no swapchain /
+// WSI wiring); an on-screen present lands in a later phase.
+func (b *vkBackend) newWindowSurface(display, window uintptr, w, h int) (backendWindowSurface, error) {
+	return nil, ErrUnsupported
+}
+
 func (c *vkCmd) beginCompute() {}
 func (c *vkCmd) setComputePipeline(p backendComputePipeline) {
 	c.pipe = p.(*vkPipeline)
