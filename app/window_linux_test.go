@@ -13,14 +13,14 @@ import (
 
 	"github.com/ebitengine/purego"
 
-	"poly.red/gpu/gl"
+	"poly.red/gpu"
 )
 
 // requireOrSkip turns a skip into a hard failure when POLYRED_REQUIRE_WINDOW is
-// set. CI runs the windowed test in an environment where the display and the
-// EGL/GLES runtime are guaranteed present (Xvfb + Mesa), so a skip there means
-// the very thing the test exists to prove (EGL config match, X11 setup) silently
-// did not run. On a bare dev box the env var is unset and the test skips cleanly.
+// set. CI runs the windowed test in an environment where the display and the GL
+// runtime are guaranteed present (Xvfb + Mesa), so a skip there means the very
+// thing the test exists to prove silently did not run. On a bare dev box the env
+// var is unset and the test skips cleanly.
 func requireOrSkip(t *testing.T, format string, args ...any) {
 	t.Helper()
 	if os.Getenv("POLYRED_REQUIRE_WINDOW") != "" {
@@ -29,23 +29,33 @@ func requireOrSkip(t *testing.T, format string, args ...any) {
 	t.Skipf(format, args...)
 }
 
-// TestX11WindowedPresent exercises the cgo-free X11 + EGL + GLES windowed-present
-// path end to end: open an X display, create and map a window, create an EGL
-// window surface bound to it, make a GLES context current, draw the same
-// textured fullscreen quad that flush() presents every frame, and read the
-// pixels back. It is the only runtime check of the purego X11 struct offsets,
-// the EGL window-surface config match, and the gl.Functions marshaling
-// (out-parameters, the **char of ShaderSource, the offset-as-uintptr of
-// VertexAttribPointer, the pixel pointer of TexImage2D, floats), none of which a
-// cgo-free *build* can prove.
+// solidRGBA returns a tightly-packed w*h RGBA image filled with c.
+func solidRGBA(w, h int, c [4]byte) *image.RGBA {
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	for i := 0; i < len(img.Pix); i += 4 {
+		img.Pix[i], img.Pix[i+1], img.Pix[i+2], img.Pix[i+3] = c[0], c[1], c[2], c[3]
+	}
+	return img
+}
+
+// TestX11WindowedPresent drives the cgo-free X11 + GPU-Device windowed present
+// path end to end: open an X display, create+map a window, open the GL device,
+// bind an on-screen Surface to the window, and present several frames across a
+// resize, reading the presented pixels back each time. It is the runtime proof of
+// the present path AND the thread/context-ownership model: all GL/EGL runs on the
+// backend's single locked thread while the app drives present from another, so a
+// per-thread current-context bug would deadlock or render wrong here (a single
+// clear-and-readback would miss it -- hence multiple frames + a resize).
 //
-// It runs under Xvfb + Mesa llvmpipe in CI (see the gl-probe workflow) with
-// POLYRED_REQUIRE_WINDOW=1 so a skip is a failure there.
+// It runs under Xvfb + Mesa llvmpipe in CI (the gl-probe x11-windowed-present job)
+// with POLYRED_REQUIRE_WINDOW=1 so a skip is a failure there; on a bare dev box it
+// skips cleanly.
 func TestX11WindowedPresent(t *testing.T) {
 	if os.Getenv("DISPLAY") == "" {
 		requireOrSkip(t, "no X display (set DISPLAY / run under Xvfb)")
 	}
-	// X11 + GL are thread-bound; pin this goroutine like run()/draw() do.
+	// X11 is thread-bound; pin this goroutine like run() does. (The GL backend
+	// owns its own locked thread; present marshals onto it.)
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -56,22 +66,17 @@ func TestX11WindowedPresent(t *testing.T) {
 	if d == 0 {
 		requireOrSkip(t, "XOpenDisplay returned NULL (no reachable X server)")
 	}
-	const w, h = 64, 48
-	win := &osWindow{
-		config:    &config{title: "polyred-test", size: image.Pt(w, h)},
-		display:   uintptr(d),
-		closed:    make(chan struct{}, 1),
-		terminate: make(chan struct{}, 1),
-	}
+	display := uintptr(d)
 
+	const w, h = 64, 48
 	swa := x11SetWindowAttributes{
 		eventMask:        xExposureMask | xStructureNotifyMask,
 		backgroundPixmap: xNone,
 		overrideRedirect: xFalse,
 	}
-	root, _, _ := purego.SyscallN(_XDefaultRootWindow, win.display)
+	root, _, _ := purego.SyscallN(_XDefaultRootWindow, display)
 	oswin, _, _ := purego.SyscallN(_XCreateWindow,
-		win.display, root, 0, 0, uintptr(w), uintptr(h),
+		display, root, 0, 0, uintptr(w), uintptr(h),
 		0, xCopyFromParent, xInputOutput, 0,
 		xCWEventMask|xCWBackPixmap|xCWOverrideRedirect,
 		uintptr(unsafe.Pointer(&swa)))
@@ -79,107 +84,71 @@ func TestX11WindowedPresent(t *testing.T) {
 	if oswin == 0 {
 		t.Fatal("XCreateWindow returned 0 (window creation failed)")
 	}
-	win.oswin = uint64(oswin)
-	purego.SyscallN(_XMapWindow, win.display, uintptr(win.oswin))
+	window := uint64(oswin)
+	purego.SyscallN(_XMapWindow, display, uintptr(window))
 	defer func() {
-		purego.SyscallN(_XDestroyWindow, win.display, uintptr(win.oswin))
-		purego.SyscallN(_XCloseDisplay, win.display)
+		purego.SyscallN(_XDestroyWindow, display, uintptr(window))
+		purego.SyscallN(_XCloseDisplay, display)
 	}()
 
-	ctx, err := newX11EGLContext(win)
+	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL))
 	if err != nil {
-		requireOrSkip(t, "no EGL/GLES runtime (libEGL/libGLESv2/driver missing): %v", err)
+		requireOrSkip(t, "no GL device (libEGL/libGLESv2/driver missing): %v", err)
 	}
-	win.ctx = ctx
-	defer ctx.Release()
+	defer dev.Close()
 
-	// Refresh creates the EGL window surface (eglCreateWindowSurface). A failure
-	// here is the classic X11-visual / EGL-config mismatch, so it is a hard fail
-	// once we have a context: it is exactly what this test exists to catch.
-	if err := ctx.Refresh(); err != nil {
-		t.Fatalf("eglCreateWindowSurface failed (X11 visual / EGL config mismatch): %v", err)
-	}
-	if err := ctx.Lock(); err != nil {
-		t.Fatalf("eglMakeCurrent failed: %v", err)
-	}
-	defer ctx.Unlock()
-
-	f := ctx.gl
-	// String + integer queries exercise the *byte-return and glGetIntegerv
-	// out-parameter purego marshaling.
-	if v := f.GetString(gl.VERSION); v == "" {
-		t.Fatal("glGetString(VERSION) is empty (purego *byte-return marshaling)")
-	}
-	if m := f.GetInteger(gl.MAX_TEXTURE_SIZE); m <= 0 {
-		t.Fatalf("glGetIntegerv(MAX_TEXTURE_SIZE)=%d (out-parameter marshaling)", m)
-	}
-
-	// Mirror draw()/flush(): upload a solid-red texture and draw the fullscreen
-	// quad that samples it, then read it back. This drives the real present path
-	// (BufferData, ShaderSource's **char, VertexAttribPointer's offset-as-uintptr,
-	// TexImage2D's pixel pointer, DrawArrays) rather than only a clear. Red is
-	// sRGB-invariant (0 and 1 map to themselves) and channel-specific, so a
-	// channel-swapped readback is caught too.
-	f.Viewport(0, 0, w, h)
-	f.ClearColor(0, 0, 0, 1) // clear black so a passing red readback means the quad drew
-	f.Clear(gl.COLOR_BUFFER_BIT)
-
-	vertices := slice2bytes([]float32{
-		-1, +1, 0, 0,
-		+1, +1, 1, 0,
-		-1, -1, 0, 1,
-		+1, -1, 1, 1,
+	surf, err := dev.CreateWindowSurface(gpu.WindowSurfaceDescriptor{
+		Display: display,
+		Window:  uintptr(window),
+		Width:   w,
+		Height:  h,
+		Format:  gpu.RGBA8Unorm,
 	})
-	vbo := f.CreateBuffer()
-	f.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	f.BufferData(gl.ARRAY_BUFFER, len(vertices), gl.STATIC_DRAW, vertices)
-	defer f.DeleteBuffer(vbo)
-
-	program, err := gl.CreateProgram(f, vert, frag, []string{"position", "uvcoord"})
 	if err != nil {
-		t.Fatalf("gl.CreateProgram (ShaderSource **char marshaling): %v", err)
+		// eglCreateWindowSurface failing here is the classic X11-visual / EGL-config
+		// mismatch -- the thing this test exists to catch once we have a device.
+		t.Fatalf("CreateWindowSurface failed (X11 visual / EGL config mismatch): %v", err)
 	}
-	f.UseProgram(program)
-	defer f.DeleteProgram(program)
+	defer surf.Release()
 
-	position := f.GetAttribLocation(program, "position")
-	uvcoord := f.GetAttribLocation(program, "uvcoord")
-	f.EnableVertexAttribArray(position)
-	f.EnableVertexAttribArray(uvcoord)
-	f.VertexAttribPointer(position, 2, gl.FLOAT, false, 4*4, 0)
-	f.VertexAttribPointer(uvcoord, 2, gl.FLOAT, false, 4*4, 2*4)
+	red := [4]byte{255, 0, 0, 255}
 
-	// Solid opaque-red source image.
-	src := make([]byte, w*h*4)
-	for i := 0; i < len(src); i += 4 {
-		src[i], src[i+1], src[i+2], src[i+3] = 255, 0, 0, 255
-	}
-	tex := f.CreateTexture()
-	f.BindTexture(gl.TEXTURE_2D, tex)
-	defer f.DeleteTexture(tex)
-	f.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, gl.RGBA, gl.UNSIGNED_BYTE, src)
-	f.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-	f.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-	f.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-	f.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-
-	f.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-	f.Finish()
-
-	pix := make([]byte, w*h*4)
-	f.ReadPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pix)
-	// Sample the center pixel to avoid any edge interpolation.
-	off := ((h/2)*w + w/2) * 4
-	got := [4]byte{pix[off], pix[off+1], pix[off+2], pix[off+3]}
-	want := [4]byte{255, 0, 0, 255}
-	for i := range want {
-		if diff := int(got[i]) - int(want[i]); diff < -2 || diff > 2 {
-			t.Fatalf("textured-quad readback center = %v, want ~%v (gl present-path marshaling)", got, want)
+	// presentAndCheck presents a solid-red frame of size sw x sh and asserts the
+	// presented pixels read back red. Driving this several times and across a
+	// resize exercises the present loop and the resize realloc on the backend
+	// thread, not just a one-shot.
+	presentAndCheck := func(sw, sh int) {
+		img := solidRGBA(sw, sh, red)
+		if err := surf.PresentImage(img); err != nil {
+			t.Fatalf("PresentImage(%dx%d) failed: %v", sw, sh, err)
+		}
+		pix := surf.PresentedPixels()
+		if len(pix) != sw*sh*4 {
+			t.Fatalf("PresentedPixels len=%d, want %d", len(pix), sw*sh*4)
+		}
+		// Check the center pixel (and a corner) to catch all-black / channel-swap.
+		off := ((sh/2)*sw + sw/2) * 4
+		got := [4]byte{pix[off], pix[off+1], pix[off+2], pix[off+3]}
+		for i := range red {
+			if diff := int(got[i]) - int(red[i]); diff < -2 || diff > 2 {
+				t.Fatalf("presented center pixel=%v, want ~%v (gl present/blit marshaling)", got, red)
+			}
 		}
 	}
 
-	// Exercise eglSwapBuffers; it must not error on a mapped window surface.
-	if err := ctx.Present(); err != nil {
-		t.Fatalf("eglSwapBuffers failed: %v", err)
+	// Several frames at the original size.
+	for range 4 {
+		presentAndCheck(w, h)
+	}
+
+	// Resize the swapchain and present several more frames. surf.Resize reallocates
+	// the upload/blit texture on the backend thread; if the thread/context model is
+	// wrong this is where it shows up.
+	const w2, h2 = 48, 32
+	if err := surf.Resize(w2, h2); err != nil {
+		t.Fatalf("surface Resize failed: %v", err)
+	}
+	for range 4 {
+		presentAndCheck(w2, h2)
 	}
 }

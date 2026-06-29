@@ -6,8 +6,6 @@ package app
 
 import (
 	"fmt"
-	"image"
-	"reflect"
 	"runtime"
 	"sync"
 	"time"
@@ -15,7 +13,7 @@ import (
 
 	"github.com/ebitengine/purego"
 
-	"poly.red/gpu/gl"
+	"poly.red/gpu"
 	"poly.red/math"
 )
 
@@ -255,7 +253,8 @@ type x11ClientMessageEvent struct {
 
 type osWindow struct {
 	config  *config
-	ctx     *x11Context
+	dev     *gpu.Device
+	surf    *gpu.Surface
 	display uintptr
 	oswin   uint64
 	atoms   struct {
@@ -361,72 +360,38 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 	purego.SyscallN(_XMapWindow, w.win.display, uintptr(w.win.oswin))
 	purego.SyscallN(_XClearWindow, w.win.display, uintptr(w.win.oswin))
 
-	// EGL context must be created after the window is created.
-	var err error
-	w.win.ctx, err = newX11EGLContext(w.win)
+	// The GPU device (GL backend) drives windowed present through the Device API:
+	// the app uploads each CPU frame to an on-screen Surface bound to this X11
+	// window, and the backend blits + swaps it. The window must exist first
+	// (eglCreateWindowSurface needs the native window).
+	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL))
 	if err != nil {
-		panic(fmt.Sprintf("egl: cannot create EGL context for x11: %v", err))
+		panic(fmt.Sprintf("gpu: cannot open GL device: %v", err))
 	}
-	err = w.win.ctx.Refresh()
+	w.win.dev = dev
+	surf, err := dev.CreateWindowSurface(gpu.WindowSurfaceDescriptor{
+		Display: w.win.display,
+		Window:  uintptr(w.win.oswin),
+		Width:   w.win.config.size.X,
+		Height:  w.win.config.size.Y,
+		Format:  gpu.RGBA8Unorm,
+	})
 	if err != nil {
-		panic(fmt.Sprintf("egl: cannot create EGL surface: %v", err))
+		panic(fmt.Sprintf("gpu: cannot create window surface: %v", err))
 	}
+	w.win.surf = surf
 
 	go w.draw(app)
 	w.ready <- event{}
 }
 
-func slice2bytes(s any) []byte {
-	v := reflect.ValueOf(s)
-	first := v.Index(0)
-	sz := int(first.Type().Size())
-	res := unsafe.Slice((*byte)(unsafe.Pointer(v.Pointer())), sz*v.Cap())
-	return res[:sz*v.Len()]
-}
-
 func (w *window) draw(app Window) {
 	defer func() { w.win.terminate <- event{} }()
-
-	// Make sure the drawing calls are always on the same thread.
-	runtime.LockOSThread()
-	w.win.ctx.Lock()
-	defer w.win.ctx.Unlock()
-
-	vertices := slice2bytes([]float32{
-		-1, +1, 0, 0,
-		+1, +1, 1, 0,
-		-1, -1, 0, 1,
-		+1, -1, 1, 1,
-	})
-	vbo := w.win.ctx.gl.CreateBuffer()
-	w.win.ctx.gl.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	w.win.ctx.gl.BufferData(gl.ARRAY_BUFFER, len(vertices), gl.STATIC_DRAW, vertices)
-	defer w.win.ctx.gl.DeleteBuffer(vbo)
-
-	program, err := gl.CreateProgram(w.win.ctx.gl, vert, frag, []string{"position", "uvcoord"})
-	if err != nil {
-		panic(fmt.Sprintf("gles: cannot creating shader program: %v", err))
-	}
-
-	w.win.ctx.gl.UseProgram(program)
-	defer w.win.ctx.gl.DeleteProgram(program)
-
-	position := w.win.ctx.gl.GetAttribLocation(program, "position")
-	uvcoord := w.win.ctx.gl.GetAttribLocation(program, "uvcoord")
-
-	w.win.ctx.gl.EnableVertexAttribArray(position)
-	w.win.ctx.gl.EnableVertexAttribArray(uvcoord)
-
-	w.win.ctx.gl.VertexAttribPointer(position, 2, gl.FLOAT, false, 4*4, 0)
-	w.win.ctx.gl.VertexAttribPointer(uvcoord, 2, gl.FLOAT, false, 4*4, 2*4)
-
-	tex := w.win.ctx.gl.CreateTexture()
-	w.win.ctx.gl.BindTexture(gl.TEXTURE_2D, tex)
-	defer w.win.ctx.gl.DeleteTexture(tex)
 
 	last := time.Now()
 	tPerFrame := time.Second / 240 // 120 fps
 	tk := time.NewTicker(tPerFrame)
+	defer tk.Stop()
 	terminate := false
 	for !terminate {
 		select {
@@ -436,6 +401,9 @@ func (w *window) draw(app Window) {
 			// some of drivers.
 			w.win.config.size.X = siz.w
 			w.win.config.size.Y = siz.h
+			if err := w.win.surf.Resize(siz.w, siz.h); err != nil {
+				panic(fmt.Sprintf("gpu: surface resize failed: %v", err))
+			}
 			if a, ok := app.(ResizeHandler); ok {
 				a.OnResize(siz.w, siz.h)
 			}
@@ -458,31 +426,29 @@ func (w *window) draw(app Window) {
 				continue
 			}
 
+			// Keep the surface sized to the frame so PresentImage's upload
+			// matches (the app renders at the window size; this also covers any
+			// transient mismatch before a resize event lands).
+			if b := img.Bounds(); b.Dx() != w.win.config.size.X || b.Dy() != w.win.config.size.Y {
+				w.win.config.size.X, w.win.config.size.Y = b.Dx(), b.Dy()
+				if err := w.win.surf.Resize(b.Dx(), b.Dy()); err != nil {
+					panic(fmt.Sprintf("gpu: surface resize failed: %v", err))
+				}
+			}
+
 			if w.win.config.fps {
 				w.fontDrawer.Dot = math.P(5, 15)
 				w.fontDrawer.Dst = img
 				fps := fmt.Sprintf("%d", time.Second/e.Sub(s))
 				w.fontDrawer.DrawString(fps)
 			}
-			w.flush(img)
-			if err := w.win.ctx.Present(); err != nil {
-				panic(fmt.Errorf("egl: swap buffer failed: %v", err))
+			if err := w.win.surf.PresentImage(img); err != nil {
+				panic(fmt.Sprintf("gpu: present failed: %v", err))
 			}
 		case <-w.win.closed:
 			terminate = true
 		}
 	}
-}
-
-func (w *window) flush(img *image.RGBA) {
-	w.win.ctx.gl.Viewport(0, 0, w.win.config.size.X, w.win.config.size.Y)
-	w.win.ctx.gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, img.Bounds().Dx(), img.Bounds().Dy(), gl.RGBA, gl.UNSIGNED_BYTE, img.Pix)
-	w.win.ctx.gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-	w.win.ctx.gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-	w.win.ctx.gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-	w.win.ctx.gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-	w.win.ctx.gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-	w.win.ctx.gl.Finish()
 }
 
 func (w *window) main(app Window) {
@@ -601,31 +567,8 @@ func (w *window) main(app Window) {
 	<-w.win.terminate
 
 	// Close the window gracefully.
-	w.win.ctx.Release()
+	w.win.surf.Release()
+	w.win.dev.Close()
 	purego.SyscallN(_XDestroyWindow, w.win.display, uintptr(w.win.oswin))
 	purego.SyscallN(_XCloseDisplay, w.win.display)
 }
-
-const (
-	vert = `#version 100
-precision highp float;
-
-attribute vec2 position;
-attribute vec2 uvcoord;
-
-varying vec2 outUV;
-
-void main() {
-	outUV = uvcoord;
-	gl_Position = vec4(position, 0.0, 1.0);
-}`
-	frag = `#version 100
-precision highp float;
-
-varying vec2 outUV;
-uniform sampler2D tex;
-
-void main() {
-	gl_FragColor = texture2D(tex, outUV);
-}`
-)
