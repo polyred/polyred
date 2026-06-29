@@ -8,6 +8,8 @@ name: gl-probe
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -52,3 +54,36 @@ jobs:
       env:
         CGO_ENABLED: '0'
       run: go test -v -run 'TestGLDeferredRender' ./render/
+
+  x11-windowed-present:
+    name: cgo-free X11 windowed present (Xvfb + Mesa llvmpipe)
+    # Proves the purego X11 + EGL window-surface + GLES present path: a real
+    # X11 window (under Xvfb) with an eglCreateWindowSurface bound to it, cleared
+    # and read back. This is the runtime check of the X11 struct offsets and the
+    # EGL config match that a cgo-free build alone cannot exercise.
+    runs-on: ubuntu-latest
+    env:
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      GALLIUM_DRIVER: llvmpipe
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '1.26.x'
+        check-latest: true
+
+    - name: Install Mesa (EGL + GLES + llvmpipe), X11 and Xvfb
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libegl1 libgles2 libgbm1 libgl1-mesa-dri \
+          libx11-6 xvfb
+
+    - name: X11 windowed present (cgo-free, real window surface)
+      env:
+        CGO_ENABLED: '0'
+      run: |
+        Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        export DISPLAY=:99.0
+        go test -v -run 'TestX11WindowedPresent' ./app/
