@@ -16,6 +16,7 @@ type backend interface {
 	newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat, extraColor []TextureFormat, depth TextureFormat) (backendRenderPipeline, error)
 	newCommandBuffer() backendCommandBuffer
 	newWindowSurface(display, window uintptr, w, h int) (backendWindowSurface, error)
+	windowVisualID() uint32 // native visual an on-screen window must use (0 if N/A)
 	waitIdle()
 	close() error
 }

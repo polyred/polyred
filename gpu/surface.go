@@ -63,6 +63,12 @@ type WindowSurfaceDescriptor struct {
 	Format  TextureFormat
 }
 
+// WindowVisualID returns the native visual id that an on-screen window must be
+// created with for CreateWindowSurface to succeed (the EGL config's
+// EGL_NATIVE_VISUAL_ID on the GL backend). It is 0 when the backend does not
+// constrain the window visual (e.g. Metal) or has no on-screen support.
+func (d *Device) WindowVisualID() uint32 { return d.b.windowVisualID() }
+
 // CreateWindowSurface creates an on-screen swapchain bound to a native window.
 // The backend presents acquired frames to the window (the GL backend blits and
 // swaps an EGL window surface). Not all backends support this; those that do not

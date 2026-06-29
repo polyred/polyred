@@ -437,6 +437,8 @@ func (b *vkBackend) newWindowSurface(display, window uintptr, w, h int) (backend
 	return nil, ErrUnsupported
 }
 
+func (b *vkBackend) windowVisualID() uint32 { return 0 }
+
 func (c *vkCmd) beginCompute() {}
 func (c *vkCmd) setComputePipeline(p backendComputePipeline) {
 	c.pipe = p.(*vkPipeline)

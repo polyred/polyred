@@ -66,6 +66,8 @@ const (
 	glReadFramebuffer = 0x8CA8
 	glDrawFramebuffer = 0x8CA9
 	glColorBufferBit  = 0x00004000
+
+	eglNativeVisualID = 0x302E
 )
 
 // glFns holds the resolved EGL/GLES entry points (purego function pointers).
@@ -73,6 +75,7 @@ type glFns struct {
 	eglGetDisplay, eglInitialize, eglBindAPI, eglChooseConfig    uintptr
 	eglCreateContext, eglMakeCurrent, eglDestroyContext, eglTerm uintptr
 	eglCreateWindowSurface, eglDestroySurface, eglSwapBuffers    uintptr
+	eglGetConfigAttrib, eglGetError                              uintptr
 
 	createShader, shaderSource, compileShader, getShaderiv, getShaderInfoLog uintptr
 	createProgram, attachShader, linkProgram, getProgramiv, useProgram       uintptr
@@ -89,12 +92,15 @@ type glFns struct {
 }
 
 type glBackend struct {
-	reqs chan func()
-	fns  glFns
-	dpy  uintptr
-	ctx  uintptr
-	cfg  uintptr
+	reqs     chan func()
+	fns      glFns
+	dpy      uintptr
+	ctx      uintptr
+	cfg      uintptr
+	visualID uint32 // EGL_NATIVE_VISUAL_ID of cfg; the X11 window must use it
 }
+
+func (b *glBackend) windowVisualID() uint32 { return b.visualID }
 
 func openBackend(d Driver) (backend, Driver, error) {
 	if d == DriverVulkan {
@@ -167,6 +173,8 @@ func (b *glBackend) init() error {
 	f.eglCreateWindowSurface = sym(egl, "eglCreateWindowSurface")
 	f.eglDestroySurface = sym(egl, "eglDestroySurface")
 	f.eglSwapBuffers = sym(egl, "eglSwapBuffers")
+	f.eglGetConfigAttrib = sym(egl, "eglGetConfigAttrib")
+	f.eglGetError = sym(egl, "eglGetError")
 	f.createShader = sym(gles, "glCreateShader")
 	f.shaderSource = sym(gles, "glShaderSource")
 	f.compileShader = sym(gles, "glCompileShader")
@@ -253,6 +261,12 @@ func (b *glBackend) init() error {
 	purego.SyscallN(f.genVertexArrays, 1, uintptr(unsafe.Pointer(&vao)))
 	purego.SyscallN(f.bindVertexArray, uintptr(vao))
 	b.dpy, b.ctx, b.cfg = dpy, ctx, cfg
+	// The native visual the chosen config maps to. An X11 window handed to
+	// eglCreateWindowSurface must be created with this visual, or the call fails
+	// with EGL_BAD_MATCH (the app reads this via Device.WindowVisualID).
+	var vid int32
+	purego.SyscallN(f.eglGetConfigAttrib, dpy, cfg, uintptr(eglNativeVisualID), uintptr(unsafe.Pointer(&vid)))
+	b.visualID = uint32(vid)
 	return nil
 }
 
@@ -539,7 +553,8 @@ func (b *glBackend) newWindowSurface(display, window uintptr, w, h int) (backend
 	b.do(func() {
 		surf, _, _ := purego.SyscallN(b.fns.eglCreateWindowSurface, b.dpy, b.cfg, window, 0)
 		if surf == 0 {
-			serr = fmt.Errorf("gpu/gl: eglCreateWindowSurface failed (window=%#x)", window)
+			e, _, _ := purego.SyscallN(b.fns.eglGetError)
+			serr = fmt.Errorf("gpu/gl: eglCreateWindowSurface failed (window=%#x, EGL error %#x, visual=%#x)", window, e, b.visualID)
 			return
 		}
 		s.surf = surf

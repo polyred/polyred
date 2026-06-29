@@ -9,7 +9,6 @@ import (
 	"os"
 	"runtime"
 	"testing"
-	"unsafe"
 
 	"github.com/ebitengine/purego"
 
@@ -69,33 +68,23 @@ func TestX11WindowedPresent(t *testing.T) {
 	display := uintptr(d)
 
 	const w, h = 64, 48
-	swa := x11SetWindowAttributes{
-		eventMask:        xExposureMask | xStructureNotifyMask,
-		backgroundPixmap: xNone,
-		overrideRedirect: xFalse,
-	}
-	root, _, _ := purego.SyscallN(_XDefaultRootWindow, display)
-	oswin, _, _ := purego.SyscallN(_XCreateWindow,
-		display, root, 0, 0, uintptr(w), uintptr(h),
-		0, xCopyFromParent, xInputOutput, 0,
-		xCWEventMask|xCWBackPixmap|xCWOverrideRedirect,
-		uintptr(unsafe.Pointer(&swa)))
-	runtime.KeepAlive(&swa)
-	if oswin == 0 {
-		t.Fatal("XCreateWindow returned 0 (window creation failed)")
-	}
-	window := uint64(oswin)
-	purego.SyscallN(_XMapWindow, display, uintptr(window))
-	defer func() {
-		purego.SyscallN(_XDestroyWindow, display, uintptr(window))
-		purego.SyscallN(_XCloseDisplay, display)
-	}()
 
+	// Open the GL device first so the window can be created with the EGL config's
+	// visual (eglCreateWindowSurface needs the matching visual), mirroring run().
 	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL))
 	if err != nil {
 		requireOrSkip(t, "no GL device (libEGL/libGLESv2/driver missing): %v", err)
 	}
 	defer dev.Close()
+
+	window, err := createX11Window(display, dev.WindowVisualID(), w, h)
+	if err != nil {
+		t.Fatalf("createX11Window: %v", err)
+	}
+	defer func() {
+		purego.SyscallN(_XDestroyWindow, display, uintptr(window))
+		purego.SyscallN(_XCloseDisplay, display)
+	}()
 
 	surf, err := dev.CreateWindowSurface(gpu.WindowSurfaceDescriptor{
 		Display: display,

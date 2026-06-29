@@ -31,8 +31,15 @@ const (
 
 	// Window attribute valuemask bits.
 	xCWBackPixmap       = 1 << 0
+	xCWBackPixel        = 1 << 1
+	xCWBorderPixel      = 1 << 3
 	xCWOverrideRedirect = 1 << 9
 	xCWEventMask        = 1 << 11
+	xCWColormap         = 1 << 13
+
+	// XGetVisualInfo / XCreateColormap.
+	xVisualIDMask = 0x1
+	xAllocNone    = 0
 
 	// Misc.
 	xNone           = 0
@@ -74,6 +81,8 @@ var (
 	_XNextEvent         uintptr
 	_XFilterEvent       uintptr
 	_XDestroyWindow     uintptr
+	_XGetVisualInfo     uintptr
+	_XCreateColormap    uintptr
 )
 
 var x11LoadOnce sync.Once
@@ -116,6 +125,8 @@ func loadX11Symbols() error {
 	_XNextEvent = sym("XNextEvent")
 	_XFilterEvent = sym("XFilterEvent")
 	_XDestroyWindow = sym("XDestroyWindow")
+	_XGetVisualInfo = sym("XGetVisualInfo")
+	_XCreateColormap = sym("XCreateColormap")
 	return loadErr
 }
 
@@ -155,6 +166,78 @@ type x11TextProperty struct {
 	format   int32
 	_        int32
 	nitems   uint64
+}
+
+// x11VisualInfo mirrors XVisualInfo (X11/Xutil.h) on LP64. We read visual and
+// depth to create a window matching an EGL config's native visual.
+type x11VisualInfo struct {
+	visual    uintptr // Visual*
+	visualid  uint64
+	screen    int32
+	depth     int32
+	class     int32
+	_         int32 // pad before redMask
+	redMask   uint64
+	greenMask uint64
+	blueMask  uint64
+	cmapSize  int32
+	bitsPerR  int32
+}
+
+// createX11Window creates and maps an InputOutput window. When visualID is
+// non-zero (the GL/EGL backend's required visual) the window is created with that
+// visual + a matching colormap, which eglCreateWindowSurface requires or it fails
+// with EGL_BAD_MATCH. A zero visualID falls back to the parent's visual.
+func createX11Window(display uintptr, visualID uint32, width, height int) (uint64, error) {
+	root, _, _ := purego.SyscallN(_XDefaultRootWindow, display)
+	const eventMask = xExposureMask | xFocusChangeMask |
+		xKeyPressMask | xKeyReleaseMask |
+		xButtonPressMask | xButtonReleaseMask |
+		xPointerMotionMask | xStructureNotifyMask
+
+	if visualID == 0 {
+		swa := x11SetWindowAttributes{eventMask: eventMask, backgroundPixmap: xNone, overrideRedirect: xFalse}
+		win, _, _ := purego.SyscallN(_XCreateWindow, display, root, 0, 0,
+			uintptr(width), uintptr(height), 0, xCopyFromParent, xInputOutput, 0,
+			xCWEventMask|xCWBackPixmap|xCWOverrideRedirect, uintptr(unsafe.Pointer(&swa)))
+		runtime.KeepAlive(&swa)
+		if win == 0 {
+			return 0, fmt.Errorf("x11: XCreateWindow failed")
+		}
+		purego.SyscallN(_XMapWindow, display, win)
+		purego.SyscallN(_XClearWindow, display, win)
+		return uint64(win), nil
+	}
+
+	// Resolve the visual by id.
+	tmpl := x11VisualInfo{visualid: uint64(visualID)}
+	var nitems int32
+	vi, _, _ := purego.SyscallN(_XGetVisualInfo, display, uintptr(xVisualIDMask),
+		uintptr(unsafe.Pointer(&tmpl)), uintptr(unsafe.Pointer(&nitems)))
+	runtime.KeepAlive(&tmpl)
+	if vi == 0 || nitems == 0 {
+		return 0, fmt.Errorf("x11: no visual for id %#x", visualID)
+	}
+	info := (*x11VisualInfo)(unsafe.Pointer(vi))
+
+	cmap, _, _ := purego.SyscallN(_XCreateColormap, display, root, info.visual, uintptr(xAllocNone))
+	swa := x11SetWindowAttributes{
+		eventMask:        eventMask,
+		colormap:         uint64(cmap),
+		borderPixel:      0,
+		backgroundPixel:  0,
+		backgroundPixmap: xNone,
+	}
+	win, _, _ := purego.SyscallN(_XCreateWindow, display, root, 0, 0,
+		uintptr(width), uintptr(height), 0, uintptr(info.depth), xInputOutput, info.visual,
+		xCWColormap|xCWEventMask|xCWBorderPixel|xCWBackPixel, uintptr(unsafe.Pointer(&swa)))
+	runtime.KeepAlive(&swa)
+	if win == 0 {
+		return 0, fmt.Errorf("x11: XCreateWindow failed (visual %#x)", visualID)
+	}
+	purego.SyscallN(_XMapWindow, display, win)
+	purego.SyscallN(_XClearWindow, display, win)
+	return uint64(win), nil
 }
 
 // x11KeyEvent mirrors XKeyEvent on LP64.
@@ -310,27 +393,20 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 		panic("x11: cannot connect to the X server")
 	}
 
-	swa := x11SetWindowAttributes{
-		eventMask: xExposureMask | xFocusChangeMask | // update
-			xKeyPressMask | xKeyReleaseMask | // keyboard
-			xButtonPressMask | xButtonReleaseMask | // mouse clicks
-			xPointerMotionMask | // mouse movement
-			xStructureNotifyMask, // resize
-		backgroundPixmap: xNone,
-		overrideRedirect: xFalse,
+	// Open the GPU device (GL backend) first: the window must be created with the
+	// visual the EGL config maps to, or eglCreateWindowSurface fails (EGL_BAD_MATCH).
+	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL))
+	if err != nil {
+		panic(fmt.Sprintf("gpu: cannot open GL device: %v", err))
 	}
+	w.win.dev = dev
 
-	root, _, _ := purego.SyscallN(_XDefaultRootWindow, w.win.display)
-	oswin, _, _ := purego.SyscallN(_XCreateWindow,
-		w.win.display,
-		root,
-		0, 0,
-		uintptr(w.win.config.size.X), uintptr(w.win.config.size.Y),
-		0, xCopyFromParent, xInputOutput, 0, // border_width, depth, class, visual
-		xCWEventMask|xCWBackPixmap|xCWOverrideRedirect,
-		uintptr(unsafe.Pointer(&swa)))
-	w.win.oswin = uint64(oswin)
-	runtime.KeepAlive(&swa)
+	oswin, err := createX11Window(w.win.display, dev.WindowVisualID(),
+		w.win.config.size.X, w.win.config.size.Y)
+	if err != nil {
+		panic(fmt.Sprintf("x11: %v", err))
+	}
+	w.win.oswin = oswin
 
 	w.win.atoms.utf8string = w.atom("UTF8_STRING", false)
 	w.win.atoms.plaintext = w.atom("text/plain;charset=utf-8", false)
@@ -356,19 +432,10 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 	runtime.KeepAlive(ctitle)
 	runtime.KeepAlive(&tp)
 
-	// Let the window to appear.
-	purego.SyscallN(_XMapWindow, w.win.display, uintptr(w.win.oswin))
-	purego.SyscallN(_XClearWindow, w.win.display, uintptr(w.win.oswin))
-
-	// The GPU device (GL backend) drives windowed present through the Device API:
-	// the app uploads each CPU frame to an on-screen Surface bound to this X11
-	// window, and the backend blits + swaps it. The window must exist first
-	// (eglCreateWindowSurface needs the native window).
-	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL))
-	if err != nil {
-		panic(fmt.Sprintf("gpu: cannot open GL device: %v", err))
-	}
-	w.win.dev = dev
+	// Bind an on-screen Surface to the window: the app uploads each CPU frame to
+	// it and the GL backend blits + swaps. The window already exists with the
+	// EGL config's visual (createX11Window above), which eglCreateWindowSurface
+	// requires.
 	surf, err := dev.CreateWindowSurface(gpu.WindowSurfaceDescriptor{
 		Display: w.win.display,
 		Window:  uintptr(w.win.oswin),

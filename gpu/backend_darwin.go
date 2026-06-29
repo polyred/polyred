@@ -81,6 +81,8 @@ func (m *metalBackend) newWindowSurface(display, window uintptr, w, h int) (back
 	return nil, ErrUnsupported
 }
 
+func (m *metalBackend) windowVisualID() uint32 { return 0 }
+
 func (m *metalBackend) waitIdle() {
 	if m.hasLast {
 		m.last.WaitUntilCompleted()
