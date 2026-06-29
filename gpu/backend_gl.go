@@ -219,9 +219,13 @@ func (b *glBackend) init() error {
 		return fmt.Errorf("gpu/gl: eglInitialize failed")
 	}
 	purego.SyscallN(f.eglBindAPI, uintptr(eglOpenGLESAPI))
-	// Prefer a config usable for both pbuffer (headless) and window (on-screen)
-	// surfaces. Under EGL_PLATFORM=surfaceless there are no window-capable
-	// configs, so fall back to pbuffer-only to keep the headless compute path.
+	// Choose a window-capable config first so on-screen present works
+	// (eglCreateWindowSurface needs EGL_WINDOW_BIT). Requesting WINDOW|PBUFFER
+	// together demands a single config supporting both, which some drivers
+	// (e.g. Mesa llvmpipe) do not offer, so request window-only. Under
+	// EGL_PLATFORM=surfaceless there are no window configs at all; fall back to
+	// pbuffer-only to keep the headless compute path (it renders to FBOs and
+	// binds the context surfaceless, so the surface type does not matter there).
 	var cfg uintptr
 	var n int32
 	choose := func(surfaceType int32) bool {
@@ -229,7 +233,7 @@ func (b *glBackend) init() error {
 		r, _, _ := purego.SyscallN(f.eglChooseConfig, dpy, uintptr(unsafe.Pointer(&cfgAttribs[0])), uintptr(unsafe.Pointer(&cfg)), 1, uintptr(unsafe.Pointer(&n)))
 		return r != 0 && n != 0
 	}
-	if !choose(eglPbufferBit | eglWindowBit) {
+	if !choose(eglWindowBit) {
 		if !choose(eglPbufferBit) {
 			return fmt.Errorf("gpu/gl: eglChooseConfig found no config")
 		}

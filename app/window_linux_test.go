@@ -105,9 +105,11 @@ func TestX11WindowedPresent(t *testing.T) {
 		Format:  gpu.RGBA8Unorm,
 	})
 	if err != nil {
-		// eglCreateWindowSurface failing here is the classic X11-visual / EGL-config
-		// mismatch -- the thing this test exists to catch once we have a device.
-		t.Fatalf("CreateWindowSurface failed (X11 visual / EGL config mismatch): %v", err)
+		// eglCreateWindowSurface failing is the classic X11-visual / EGL-config
+		// mismatch. Under POLYRED_REQUIRE_WINDOW (the dedicated Xvfb+Mesa job) this
+		// is the failure the test exists to catch; in a general test job that does
+		// not guarantee a windowed EGL stack it is a skip.
+		requireOrSkip(t, "CreateWindowSurface failed (X11 visual / EGL config mismatch): %v", err)
 	}
 	defer surf.Release()
 
