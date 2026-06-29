@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build linux
+//go:build linux || windows
 
 // This file is the cgo-free OpenGL ES 3.1 compute backend. It reaches EGL/GLES
 // through purego (no cgo), creates a headless surfaceless context (works on a
@@ -104,11 +104,7 @@ func (b *glBackend) windowVisualID() uint32 { return b.visualID }
 
 func openBackend(c config) (backend, Driver, error) {
 	if c.driver == DriverVulkan {
-		vb, err := newVKBackend()
-		if err != nil {
-			return nil, DriverAuto, err
-		}
-		return vb, DriverVulkan, nil
+		return openVKBackend(c)
 	}
 	if c.driver != DriverAuto && c.driver != DriverGL {
 		return nil, DriverAuto, ErrUnsupported
@@ -145,17 +141,17 @@ func (b *glBackend) do(fn func()) {
 }
 
 func (b *glBackend) init() error {
-	egl, err := purego.Dlopen("libEGL.so.1", purego.RTLD_NOW|purego.RTLD_GLOBAL)
+	egl, err := glDlopen(eglLibName)
 	if err != nil {
 		return fmt.Errorf("gpu/gl: %w", err)
 	}
-	gles, err := purego.Dlopen("libGLESv2.so.2", purego.RTLD_NOW|purego.RTLD_GLOBAL)
+	gles, err := glDlopen(glesLibName)
 	if err != nil {
 		return fmt.Errorf("gpu/gl: %w", err)
 	}
 	var loadErr error
 	sym := func(h uintptr, name string) uintptr {
-		p, e := purego.Dlsym(h, name)
+		p, e := glDlsym(h, name)
 		if e != nil && loadErr == nil {
 			loadErr = fmt.Errorf("gpu/gl: dlsym %s: %w", name, e)
 		}

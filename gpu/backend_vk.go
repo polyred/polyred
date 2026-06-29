@@ -212,6 +212,17 @@ func (b *vkBackend) c(name string, args ...uintptr) {
 	}
 }
 
+// openVKBackend opens the Vulkan backend; it is the linux entry point dispatched
+// from the GL backend's openBackend when DriverVulkan is requested. Non-linux
+// builds use the stub in backend_vk_other.go.
+func openVKBackend(c config) (backend, Driver, error) {
+	vb, err := newVKBackend()
+	if err != nil {
+		return nil, DriverAuto, err
+	}
+	return vb, DriverVulkan, nil
+}
+
 func newVKBackend() (b *vkBackend, err error) {
 	defer func() {
 		if r := recover(); r != nil {

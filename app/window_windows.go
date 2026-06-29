@@ -6,15 +6,13 @@ package app
 
 import (
 	"fmt"
-	"image"
-	"reflect"
 	"runtime"
 	"sync"
 	"syscall"
 	"time"
 	"unsafe"
 
-	"poly.red/gpu/gl"
+	"poly.red/gpu"
 	"poly.red/gpu/syscall/windows"
 	"poly.red/math"
 )
@@ -22,7 +20,8 @@ import (
 type osWindow struct {
 	hwnd syscall.Handle
 	hdc  syscall.Handle
-	ctx  *winContext
+	dev  *gpu.Device
+	surf *gpu.Surface
 
 	viewScale int
 	config    *config
@@ -126,15 +125,24 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 	windows.SetForegroundWindow(w.win.hwnd)
 	windows.SetFocus(w.win.hwnd)
 
-	// The EGL (ANGLE) context is created after the window is shown, mirroring
-	// the X11 path which builds the context after the window is mapped.
-	w.win.ctx, err = newWinContext(w.win)
+	// Open the GPU device (GL backend, ANGLE on Windows) on the window's device
+	// context, then bind an on-screen Surface to the HWND. ANGLE's
+	// eglCreateWindowSurface takes the HWND directly, so unlike X11 there is no
+	// visual to match. This mirrors the X11 path which builds the device + surface
+	// after the window is shown.
+	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL), gpu.WithNativeDisplay(uintptr(w.win.hdc)))
 	if err != nil {
-		panic(fmt.Errorf("egl: cannot create context for window: %w", err))
+		panic(fmt.Errorf("gpu: cannot open GL device: %w", err))
 	}
-	if err := w.win.ctx.Refresh(); err != nil {
-		panic(fmt.Errorf("egl: cannot create surface: %w", err))
+	w.win.dev = dev
+	surf, err := dev.CreateWindowSurface(gpu.WindowSurfaceDescriptor{
+		Display: uintptr(w.win.hdc), Window: uintptr(w.win.hwnd),
+		Width: w.win.config.size.X, Height: w.win.config.size.Y, Format: gpu.RGBA8Unorm,
+	})
+	if err != nil {
+		panic(fmt.Errorf("gpu: cannot create window surface: %w", err))
 	}
+	w.win.surf = surf
 
 	// A single background goroutine owns rendering; the Win32 message pump runs
 	// here on the locked thread. This mirrors the Linux model (go w.draw(app) +
@@ -181,44 +189,9 @@ loop:
 }
 
 func (w *window) draw(app Window) {
-	// GL calls must stay on a single thread; the EGL context is made current
-	// here. Mirrors the X11 draw goroutine.
+	// The GL backend owns its own context thread; locking here mirrors the X11
+	// draw goroutine and the Win32 model.
 	runtime.LockOSThread()
-	if err := w.win.ctx.Lock(); err != nil {
-		panic(fmt.Errorf("egl: cannot make context current: %w", err))
-	}
-	defer w.win.ctx.Unlock()
-
-	g := w.win.ctx.gl
-
-	vertices := slice2bytes([]float32{
-		-1, +1, 0, 0,
-		+1, +1, 1, 0,
-		-1, -1, 0, 1,
-		+1, -1, 1, 1,
-	})
-	vbo := g.CreateBuffer()
-	g.BindBuffer(gl.ARRAY_BUFFER, vbo)
-	g.BufferData(gl.ARRAY_BUFFER, len(vertices), gl.STATIC_DRAW, vertices)
-	defer g.DeleteBuffer(vbo)
-
-	program, err := gl.CreateProgram(g, vert, frag, []string{"position", "uvcoord"})
-	if err != nil {
-		panic(fmt.Sprintf("gles: cannot create shader program: %v", err))
-	}
-	g.UseProgram(program)
-	defer g.DeleteProgram(program)
-
-	position := g.GetAttribLocation(program, "position")
-	uvcoord := g.GetAttribLocation(program, "uvcoord")
-	g.EnableVertexAttribArray(position)
-	g.EnableVertexAttribArray(uvcoord)
-	g.VertexAttribPointer(position, 2, gl.FLOAT, false, 4*4, 0)
-	g.VertexAttribPointer(uvcoord, 2, gl.FLOAT, false, 4*4, 2*4)
-
-	tex := g.CreateTexture()
-	g.BindTexture(gl.TEXTURE_2D, tex)
-	defer g.DeleteTexture(tex)
 
 	last := time.Now()
 	tPerFrame := time.Second / 240 // 120 fps
@@ -228,6 +201,9 @@ func (w *window) draw(app Window) {
 		case siz := <-w.resize:
 			w.win.config.size.X = siz.w
 			w.win.config.size.Y = siz.h
+			if err := w.win.surf.Resize(siz.w, siz.h); err != nil {
+				panic(fmt.Errorf("gpu: surface resize failed: %w", err))
+			}
 			if a, ok := app.(ResizeHandler); ok {
 				a.OnResize(w.win.config.size.X, w.win.config.size.Y)
 				continue
@@ -249,65 +225,29 @@ func (w *window) draw(app Window) {
 			if t < tPerFrame {
 				continue
 			}
+
+			// Keep the surface sized to the frame so PresentImage's upload matches
+			// (the app renders at the window size; this also covers any transient
+			// mismatch before a resize event lands).
+			if b := img.Bounds(); b.Dx() != w.win.config.size.X || b.Dy() != w.win.config.size.Y {
+				w.win.config.size.X, w.win.config.size.Y = b.Dx(), b.Dy()
+				if err := w.win.surf.Resize(b.Dx(), b.Dy()); err != nil {
+					panic(fmt.Errorf("gpu: surface resize failed: %w", err))
+				}
+			}
+
 			if w.win.config.fps {
 				w.fontDrawer.Dot = math.P(5, 15)
 				w.fontDrawer.Dst = img
 				w.fontDrawer.DrawString(fmt.Sprintf("%d", time.Second/t))
 			}
 
-			w.flush(img)
-			if err := w.win.ctx.Present(); err != nil {
-				panic(fmt.Errorf("egl: swap buffer failed: %v", err))
+			if err := w.win.surf.PresentImage(img); err != nil {
+				panic(fmt.Errorf("gpu: present failed: %w", err))
 			}
 		}
 	}
 }
-
-// flush uploads the rendered image to a texture and draws it as a full-screen
-// quad. The given image is assumed to be a non-nil pointer.
-func (w *window) flush(img *image.RGBA) {
-	g := w.win.ctx.gl
-	g.Viewport(0, 0, w.win.config.size.X, w.win.config.size.Y)
-	g.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, img.Bounds().Dx(), img.Bounds().Dy(), gl.RGBA, gl.UNSIGNED_BYTE, img.Pix)
-	g.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
-	g.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
-	g.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
-	g.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-	g.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-	g.Finish()
-}
-
-func slice2bytes(s any) []byte {
-	v := reflect.ValueOf(s)
-	first := v.Index(0)
-	sz := int(first.Type().Size())
-	res := unsafe.Slice((*byte)(unsafe.Pointer(v.Pointer())), sz*v.Cap())
-	return res[:sz*v.Len()]
-}
-
-const (
-	vert = `#version 100
-precision highp float;
-
-attribute vec2 position;
-attribute vec2 uvcoord;
-
-varying vec2 outUV;
-
-void main() {
-	outUV = uvcoord;
-	gl_Position = vec4(position, 0.0, 1.0);
-}`
-	frag = `#version 100
-precision highp float;
-
-varying vec2 outUV;
-uniform sampler2D tex;
-
-void main() {
-	gl_FragColor = texture2D(tex, outUV);
-}`
-)
 
 func windowProc(hwnd syscall.Handle, msg uint32, wParam, lParam uintptr) uintptr {
 	win, exists := winMap.Load(hwnd)
