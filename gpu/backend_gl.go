@@ -22,7 +22,6 @@ import (
 
 // EGL / GLES constants.
 const (
-	eglDefaultDisplay = 0
 	eglNoContext      = 0
 	eglNoSurface      = 0
 	eglOpenGLESAPI    = 0x30A0
@@ -92,28 +91,29 @@ type glFns struct {
 }
 
 type glBackend struct {
-	reqs     chan func()
-	fns      glFns
-	dpy      uintptr
-	ctx      uintptr
-	cfg      uintptr
-	visualID uint32 // EGL_NATIVE_VISUAL_ID of cfg; the X11 window must use it
+	reqs       chan func()
+	fns        glFns
+	nativeDisp uintptr // X11 Display* for the EGL X11 platform (0 = default display)
+	dpy        uintptr
+	ctx        uintptr
+	cfg        uintptr
+	visualID   uint32 // EGL_NATIVE_VISUAL_ID of cfg; the X11 window must use it
 }
 
 func (b *glBackend) windowVisualID() uint32 { return b.visualID }
 
-func openBackend(d Driver) (backend, Driver, error) {
-	if d == DriverVulkan {
+func openBackend(c config) (backend, Driver, error) {
+	if c.driver == DriverVulkan {
 		vb, err := newVKBackend()
 		if err != nil {
 			return nil, DriverAuto, err
 		}
 		return vb, DriverVulkan, nil
 	}
-	if d != DriverAuto && d != DriverGL {
+	if c.driver != DriverAuto && c.driver != DriverGL {
 		return nil, DriverAuto, ErrUnsupported
 	}
-	b := &glBackend{reqs: make(chan func())}
+	b := &glBackend{reqs: make(chan func()), nativeDisp: c.nativeDisplay}
 	ready := make(chan error, 1)
 	go b.loop(ready)
 	if err := <-ready; err != nil {
@@ -218,7 +218,10 @@ func (b *glBackend) init() error {
 		return loadErr
 	}
 
-	dpy, _, _ := purego.SyscallN(f.eglGetDisplay, uintptr(eglDefaultDisplay))
+	// With a native X11 Display* this binds EGL to the X11 platform so an X11
+	// window is a valid native window; with 0 it is EGL_DEFAULT_DISPLAY (the
+	// surfaceless/headless compute path).
+	dpy, _, _ := purego.SyscallN(f.eglGetDisplay, b.nativeDisp)
 	if dpy == 0 {
 		return fmt.Errorf("gpu/gl: eglGetDisplay returned EGL_NO_DISPLAY (need EGL_PLATFORM=surfaceless or a display)")
 	}

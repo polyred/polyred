@@ -393,9 +393,11 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 		panic("x11: cannot connect to the X server")
 	}
 
-	// Open the GPU device (GL backend) first: the window must be created with the
-	// visual the EGL config maps to, or eglCreateWindowSurface fails (EGL_BAD_MATCH).
-	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL))
+	// Open the GPU device (GL backend) on this X11 display first: the EGL display
+	// must be the X11 platform (or eglCreateWindowSurface fails with
+	// EGL_BAD_NATIVE_WINDOW), and the window must be created with the visual the
+	// EGL config maps to (or EGL_BAD_MATCH).
+	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL), gpu.WithNativeDisplay(w.win.display))
 	if err != nil {
 		panic(fmt.Sprintf("gpu: cannot open GL device: %v", err))
 	}

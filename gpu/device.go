@@ -47,12 +47,22 @@ var ErrUnsupported = errors.New("gpu: no supported GPU driver available")
 type Option func(*config)
 
 type config struct {
-	driver Driver
+	driver        Driver
+	nativeDisplay uintptr
 }
 
 // WithDriver forces a specific driver instead of auto-selection.
 func WithDriver(d Driver) Option {
 	return func(c *config) { c.driver = d }
+}
+
+// WithNativeDisplay binds the device to a native display handle (an X11 Display*
+// for the GL backend). On-screen windowed present requires this so the EGL
+// display uses the X11 platform and an X11 window is a valid native window;
+// eglCreateWindowSurface otherwise fails with EGL_BAD_NATIVE_WINDOW. Leave unset
+// (0) for headless/compute, which uses the default EGL display.
+func WithNativeDisplay(d uintptr) Option {
+	return func(c *config) { c.nativeDisplay = d }
 }
 
 // Device is the root object: the factory for GPU resources and the owner of the
@@ -69,7 +79,7 @@ func Open(opts ...Option) (*Device, error) {
 	for _, o := range opts {
 		o(&c)
 	}
-	b, drv, err := openBackend(c.driver)
+	b, drv, err := openBackend(c)
 	if err != nil {
 		return nil, err
 	}

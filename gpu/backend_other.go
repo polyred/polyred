@@ -8,6 +8,6 @@ package gpu
 
 // openBackend has no GPU driver wired on platforms without Metal (darwin) or the
 // GL backend (linux) yet; Windows/Vulkan/DX12 land in later phases.
-func openBackend(d Driver) (backend, Driver, error) {
+func openBackend(c config) (backend, Driver, error) {
 	return nil, DriverAuto, ErrUnsupported
 }

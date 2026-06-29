@@ -69,9 +69,9 @@ func TestX11WindowedPresent(t *testing.T) {
 
 	const w, h = 64, 48
 
-	// Open the GL device first so the window can be created with the EGL config's
-	// visual (eglCreateWindowSurface needs the matching visual), mirroring run().
-	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL))
+	// Open the GL device on this X11 display first (so EGL uses the X11 platform),
+	// then create the window with the EGL config's visual, mirroring run().
+	dev, err := gpu.Open(gpu.WithDriver(gpu.DriverGL), gpu.WithNativeDisplay(display))
 	if err != nil {
 		requireOrSkip(t, "no GL device (libEGL/libGLESv2/driver missing): %v", err)
 	}

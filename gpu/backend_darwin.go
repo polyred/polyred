@@ -14,8 +14,8 @@ import (
 )
 
 // openBackend selects the Metal backend on darwin.
-func openBackend(d Driver) (backend, Driver, error) {
-	switch d {
+func openBackend(c config) (backend, Driver, error) {
+	switch c.driver {
 	case DriverAuto, DriverMetal:
 		dev, err := mtl.CreateSystemDefaultDevice()
 		if err != nil || !dev.Available() {
