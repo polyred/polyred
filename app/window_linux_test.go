@@ -50,6 +50,14 @@ func solidRGBA(w, h int, c [4]byte) *image.RGBA {
 // with POLYRED_REQUIRE_WINDOW=1 so a skip is a failure there; on a bare dev box it
 // skips cleanly.
 func TestX11WindowedPresent(t *testing.T) {
+	// Only run in the dedicated Xvfb + Mesa-llvmpipe job, which sets
+	// POLYRED_REQUIRE_WINDOW and forces deterministic software rendering. The
+	// general `go test ./...` job also has a display + libEGL, but its GL path is
+	// whatever the runner provides (hardware/DRI3), so the present + pixel
+	// readback there is non-deterministic; skip rather than flake.
+	if os.Getenv("POLYRED_REQUIRE_WINDOW") == "" {
+		t.Skip("windowed present runs only in the dedicated Xvfb+Mesa job (POLYRED_REQUIRE_WINDOW)")
+	}
 	if os.Getenv("DISPLAY") == "" {
 		requireOrSkip(t, "no X display (set DISPLAY / run under Xvfb)")
 	}
