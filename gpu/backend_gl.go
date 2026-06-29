@@ -49,6 +49,11 @@ const (
 
 	glFramebuffer       = 0x8D40
 	glColorAttachment0  = 0x8CE0
+	glColorAttachment1  = 0x8CE1
+	glDepthAttachment   = 0x8D00
+	glDepthComponent    = 0x1902
+	glDepthComponent32F = 0x8CAC
+	glFloat             = 0x1406
 	glTexture2D         = 0x0DE1
 	glRGBA              = 0x1908
 	glRGBA8             = 0x8058
@@ -61,6 +66,10 @@ const (
 	glTriangles         = 0x0004
 	glTriangleStripEnum = 0x0005
 	glColor             = 0x1800 // GL_COLOR, for glClearBufferfv
+	glDepth             = 0x1801 // GL_DEPTH, for glClearBufferfv
+	glDepthTest         = 0x0B71
+	glLess              = 0x0201
+	glTrue              = 1
 
 	glReadFramebuffer = 0x8CA8
 	glDrawFramebuffer = 0x8CA9
@@ -88,6 +97,7 @@ type glFns struct {
 	genVertexArrays, bindVertexArray                                         uintptr
 	viewport, clearBufferfv, drawArrays, readPixels                          uintptr
 	blitFramebuffer, getError                                                uintptr
+	enable, disable, depthFunc, depthMask, drawBuffers                       uintptr
 }
 
 type glBackend struct {
@@ -210,6 +220,11 @@ func (b *glBackend) init() error {
 	f.readPixels = sym(gles, "glReadPixels")
 	f.blitFramebuffer = sym(gles, "glBlitFramebuffer")
 	f.getError = sym(gles, "glGetError")
+	f.enable = sym(gles, "glEnable")
+	f.disable = sym(gles, "glDisable")
+	f.depthFunc = sym(gles, "glDepthFunc")
+	f.depthMask = sym(gles, "glDepthMask")
+	f.drawBuffers = sym(gles, "glDrawBuffers")
 	if loadErr != nil {
 		return loadErr
 	}
@@ -474,22 +489,30 @@ func glPrim(p Primitive) uintptr {
 }
 
 type glTexture struct {
-	b    *glBackend
-	id   uint32
-	fbo  uint32
-	w, h int
+	b     *glBackend
+	id    uint32
+	fbo   uint32
+	w, h  int
+	depth bool // a Depth32Float texture (attached as a depth attachment, not color)
 }
 
 func (b *glBackend) newTexture(format TextureFormat, w, h int, renderTarget bool) (backendTexture, error) {
-	t := &glTexture{b: b, w: w, h: h}
+	t := &glTexture{b: b, w: w, h: h, depth: format == Depth32Float}
 	b.do(func() {
 		f := &b.fns
 		purego.SyscallN(f.genTextures, 1, uintptr(unsafe.Pointer(&t.id)))
 		purego.SyscallN(f.bindTexture, uintptr(glTexture2D), uintptr(t.id))
-		purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glRGBA8), uintptr(w), uintptr(h), 0, uintptr(glRGBA), uintptr(glUnsignedByte), 0)
+		if t.depth {
+			purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glDepthComponent32F), uintptr(w), uintptr(h), 0, uintptr(glDepthComponent), uintptr(glFloat), 0)
+		} else {
+			purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glRGBA8), uintptr(w), uintptr(h), 0, uintptr(glRGBA), uintptr(glUnsignedByte), 0)
+		}
 		purego.SyscallN(f.texParameteri, uintptr(glTexture2D), uintptr(glTexMinFilter), uintptr(glNearest))
 		purego.SyscallN(f.texParameteri, uintptr(glTexture2D), uintptr(glTexMagFilter), uintptr(glNearest))
-		if renderTarget {
+		// A color render target gets its own framebuffer (color attachment 0). A
+		// depth texture carries no framebuffer of its own: beginRender attaches it
+		// to a color pass's framebuffer as the depth attachment.
+		if renderTarget && !t.depth {
 			purego.SyscallN(f.genFramebuffers, 1, uintptr(unsafe.Pointer(&t.fbo)))
 			purego.SyscallN(f.bindFramebuffer, uintptr(glFramebuffer), uintptr(t.fbo))
 			purego.SyscallN(f.framebufferTexture2D, uintptr(glFramebuffer), uintptr(glColorAttachment0), uintptr(glTexture2D), uintptr(t.id), 0)
@@ -705,15 +728,49 @@ func (c *glCmd) beginRender(info renderPassInfo) {
 	t := info.color.(*glTexture)
 	clear := info.load == LoadClear
 	cc := info.clearColor
+	extra := info.extraColor
+	depth, _ := info.depth.(*glTexture)
+	clearDepth := float32(info.clearDepth)
 	c.record(func() {
 		f := &c.b.fns
 		purego.SyscallN(f.bindFramebuffer, uintptr(glFramebuffer), uintptr(t.fbo))
 		purego.SyscallN(f.viewport, 0, 0, uintptr(t.w), uintptr(t.h))
+
+		// MRT: attach the extra color targets (1..N) to this framebuffer and route
+		// the fragment shader's outputs to all of them via glDrawBuffers.
+		bufs := []uint32{glColorAttachment0}
+		for i, ec := range extra {
+			et := ec.tex.(*glTexture)
+			att := uint32(glColorAttachment1 + i)
+			purego.SyscallN(f.framebufferTexture2D, uintptr(glFramebuffer), uintptr(att), uintptr(glTexture2D), uintptr(et.id), 0)
+			bufs = append(bufs, att)
+		}
+		if len(bufs) > 1 {
+			purego.SyscallN(f.drawBuffers, uintptr(len(bufs)), uintptr(unsafe.Pointer(&bufs[0])))
+		}
+
+		// Depth: attach + enable the standard 3D test (less, write, fresh clear), or
+		// disable depth testing for a color-only pass.
+		if depth != nil {
+			purego.SyscallN(f.framebufferTexture2D, uintptr(glFramebuffer), uintptr(glDepthAttachment), uintptr(glTexture2D), uintptr(depth.id), 0)
+			purego.SyscallN(f.enable, uintptr(glDepthTest))
+			purego.SyscallN(f.depthFunc, uintptr(glLess))
+			purego.SyscallN(f.depthMask, uintptr(glTrue))
+			dv := clearDepth
+			purego.SyscallN(f.clearBufferfv, uintptr(glDepth), 0, uintptr(unsafe.Pointer(&dv)))
+		} else {
+			purego.SyscallN(f.disable, uintptr(glDepthTest))
+		}
+
 		if clear {
 			// glClearBufferfv takes a *GLfloat (an integer-register pointer arg),
 			// so it is safe through SyscallN, unlike glClearColor's float args.
 			vals := [4]float32{float32(cc[0]), float32(cc[1]), float32(cc[2]), float32(cc[3])}
 			purego.SyscallN(f.clearBufferfv, uintptr(glColor), 0, uintptr(unsafe.Pointer(&vals[0])))
+			for i, ec := range extra {
+				ev := [4]float32{float32(ec.clear[0]), float32(ec.clear[1]), float32(ec.clear[2]), float32(ec.clear[3])}
+				purego.SyscallN(f.clearBufferfv, uintptr(glColor), uintptr(i+1), uintptr(unsafe.Pointer(&ev[0])))
+			}
 		}
 	})
 }
