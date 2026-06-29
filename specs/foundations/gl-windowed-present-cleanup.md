@@ -1,6 +1,6 @@
 ---
 title: "GL windowed present via the Device API; retire gpu/gl + gpu/ctx/egl"
-status: in progress (brick 1)
+status: in progress (brick 1 DONE + CI-proven; bricks 2-3 remain)
 depends_on:
   - foundations/gpu-windowed-present.md
   - foundations/cgo-free-windowed-present.md
@@ -81,12 +81,20 @@ introducing a second GL-owning thread.
 
 ## Bricks
 
-1. **Linux GL windowed present (CI-verifiable).** Implement the seam + the GL
-   `backendWindowSurface`; rewire `app/window_linux.go` to create a `gpu.Device`
-   (GL) + `CreateWindowSurface(x11 display, window)` and present each frame via
-   `PresentImage`; delete `app/ctx_egl_linux.go` and the inline textured-quad GL
-   code. Gate with an extended `TestX11WindowedPresent` that drives SEVERAL frames
-   + a RESIZE (a one-frame test won't surface a per-thread current-context bug).
+1. **Linux GL windowed present (CI-verifiable) — DONE, CI-PROVEN.** Implemented the
+   seam + the GL `backendWindowSurface`; rewired `app/window_linux.go` onto
+   `gpu.Device`(GL) + `CreateWindowSurface` + `PresentImage`; deleted
+   `app/ctx_egl_linux.go` + the inline textured-quad. `TestX11WindowedPresent`
+   drives several frames + a resize and asserts the presented pixels (red) read
+   back, under the Xvfb+Mesa gl-probe job (`--- PASS` on main). Two non-obvious
+   runtime fixes CI caught (build-green is not enough here): (a) request a
+   window-only EGL config (WINDOW|PBUFFER together has no llvmpipe config -> fell
+   back to pbuffer-only, no WINDOW_BIT); (b) the window must use the EGL config's
+   EGL_NATIVE_VISUAL_ID (else EGL_BAD_MATCH) AND the device must bind the X11
+   Display* via `gpu.WithNativeDisplay` so EGL uses the X11 platform (else
+   eglGetDisplay(DEFAULT) picks surfaceless/GBM -> EGL_BAD_NATIVE_WINDOW). The app
+   opens the GL device first, reads `Device.WindowVisualID()`, and creates the
+   window with that visual (`createX11Window`: XGetVisualInfo + XCreateColormap).
    `gpu/gl`+`gpu/ctx/egl` stay (windows still uses them).
 2. **Windows GL windowed present (build-only verified — user-approved).** Make
    `gpu/backend_gl.go` cross-platform (linux + windows): load
