@@ -4,14 +4,6 @@
 
 package app
 
-/*
-#cgo linux pkg-config: x11
-
-#include <stdlib.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
-*/
-import "C"
 import (
 	"fmt"
 	"image"
@@ -21,33 +13,270 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/ebitengine/purego"
+
 	"poly.red/gpu/gl"
 	"poly.red/math"
 )
 
+// X11 constants (values from X11/X.h).
+const (
+	// Event masks.
+	xExposureMask        = 1 << 15
+	xKeyPressMask        = 1 << 0
+	xKeyReleaseMask      = 1 << 1
+	xButtonPressMask     = 1 << 2
+	xButtonReleaseMask   = 1 << 3
+	xPointerMotionMask   = 1 << 6
+	xStructureNotifyMask = 1 << 17
+	xFocusChangeMask     = 1 << 21
+
+	// Window attribute valuemask bits.
+	xCWBackPixmap       = 1 << 0
+	xCWOverrideRedirect = 1 << 9
+	xCWEventMask        = 1 << 11
+
+	// Misc.
+	xNone           = 0
+	xCopyFromParent = 0
+	xInputOutput    = 1
+	xFalse          = 0
+	xTrue           = 1
+
+	// Event type ints.
+	xKeyPress        = 2
+	xKeyRelease      = 3
+	xButtonPress     = 4
+	xButtonRelease   = 5
+	xMotionNotify    = 6
+	xConfigureNotify = 22
+	xClientMessage   = 33
+
+	// Button consts.
+	xButton1 = 1
+	xButton2 = 2
+	xButton3 = 3
+	xButton4 = 4
+	xButton5 = 5
+)
+
+// Resolved libX11 entry points (purego function pointers).
+var (
+	_XInitThreads       uintptr
+	_XOpenDisplay       uintptr
+	_XCloseDisplay      uintptr
+	_XDefaultRootWindow uintptr
+	_XCreateWindow      uintptr
+	_XInternAtom        uintptr
+	_XSetWMProtocols    uintptr
+	_XStoreName         uintptr
+	_XSetTextProperty   uintptr
+	_XMapWindow         uintptr
+	_XClearWindow       uintptr
+	_XNextEvent         uintptr
+	_XFilterEvent       uintptr
+	_XDestroyWindow     uintptr
+)
+
+var x11LoadOnce sync.Once
+
+func loadX11() error {
+	var err error
+	x11LoadOnce.Do(func() {
+		err = loadX11Symbols()
+	})
+	return err
+}
+
+func loadX11Symbols() error {
+	h, err := purego.Dlopen("libX11.so.6", purego.RTLD_NOW|purego.RTLD_GLOBAL)
+	if err != nil {
+		h, err = purego.Dlopen("libX11.so", purego.RTLD_NOW|purego.RTLD_GLOBAL)
+		if err != nil {
+			return fmt.Errorf("x11: failed to load libX11: %w", err)
+		}
+	}
+	var loadErr error
+	sym := func(name string) uintptr {
+		p, e := purego.Dlsym(h, name)
+		if e != nil && loadErr == nil {
+			loadErr = fmt.Errorf("x11: dlsym %s: %w", name, e)
+		}
+		return p
+	}
+	_XInitThreads = sym("XInitThreads")
+	_XOpenDisplay = sym("XOpenDisplay")
+	_XCloseDisplay = sym("XCloseDisplay")
+	_XDefaultRootWindow = sym("XDefaultRootWindow")
+	_XCreateWindow = sym("XCreateWindow")
+	_XInternAtom = sym("XInternAtom")
+	_XSetWMProtocols = sym("XSetWMProtocols")
+	_XStoreName = sym("XStoreName")
+	_XSetTextProperty = sym("XSetTextProperty")
+	_XMapWindow = sym("XMapWindow")
+	_XClearWindow = sym("XClearWindow")
+	_XNextEvent = sym("XNextEvent")
+	_XFilterEvent = sym("XFilterEvent")
+	_XDestroyWindow = sym("XDestroyWindow")
+	return loadErr
+}
+
+// cstring returns a NUL-terminated copy of s suitable for passing as a C char*.
+func cstring(s string) []byte {
+	b := make([]byte, len(s)+1)
+	copy(b, s)
+	return b
+}
+
+// x11SetWindowAttributes mirrors XSetWindowAttributes (X11/Xlib.h) on LP64.
+type x11SetWindowAttributes struct {
+	backgroundPixmap   uint64 // 0
+	backgroundPixel    uint64
+	borderPixmap       uint64
+	borderPixel        uint64
+	bitGravity         int32
+	winGravity         int32
+	backingStore       int32
+	_                  int32 // pad before backingPlanes
+	backingPlanes      uint64
+	backingPixel       uint64
+	saveUnder          int32
+	_                  int32 // pad before eventMask
+	eventMask          int64 // offset 72
+	doNotPropagateMask int64
+	overrideRedirect   int32 // offset 88
+	_                  int32 // pad before colormap
+	colormap           uint64
+	cursor             uint64
+}
+
+// x11TextProperty mirrors XTextProperty (X11/Xutil.h) on LP64.
+type x11TextProperty struct {
+	value    uintptr
+	encoding uint64
+	format   int32
+	_        int32
+	nitems   uint64
+}
+
+// x11KeyEvent mirrors XKeyEvent on LP64.
+type x11KeyEvent struct {
+	typ        int32
+	_          int32
+	serial     uint64
+	sendEvent  int32
+	_          int32
+	display    uintptr
+	window     uint64
+	root       uint64
+	subwindow  uint64
+	time       uint64
+	x, y       int32
+	xRoot      int32
+	yRoot      int32
+	state      uint32
+	keycode    uint32 // offset 84
+	sameScreen int32
+	_          int32
+}
+
+// x11ButtonEvent mirrors XButtonEvent on LP64 (identical prefix to key event,
+// the field at offset 84 is the button number).
+type x11ButtonEvent struct {
+	typ        int32
+	_          int32
+	serial     uint64
+	sendEvent  int32
+	_          int32
+	display    uintptr
+	window     uint64
+	root       uint64
+	subwindow  uint64
+	time       uint64
+	x, y       int32
+	xRoot      int32
+	yRoot      int32
+	state      uint32
+	button     uint32 // offset 84
+	sameScreen int32
+	_          int32
+}
+
+// x11MotionEvent mirrors XMotionEvent on LP64 (we only read x, y, state).
+type x11MotionEvent struct {
+	typ       int32
+	_         int32
+	serial    uint64
+	sendEvent int32
+	_         int32
+	display   uintptr
+	window    uint64
+	root      uint64
+	subwindow uint64
+	time      uint64
+	x, y      int32
+	xRoot     int32
+	yRoot     int32
+	state     uint32
+	// is_hint, same_screen unused.
+}
+
+// x11ConfigureEvent mirrors XConfigureEvent on LP64 (we only read width/height).
+type x11ConfigureEvent struct {
+	typ       int32
+	_         int32
+	serial    uint64
+	sendEvent int32
+	_         int32
+	display   uintptr
+	event     uint64
+	window    uint64
+	x, y      int32
+	width     int32
+	height    int32
+	// (rest unused)
+}
+
+// x11ClientMessageEvent mirrors XClientMessageEvent on LP64 (we only read
+// data.l[0]).
+type x11ClientMessageEvent struct {
+	typ         int32
+	_           int32
+	serial      uint64
+	sendEvent   int32
+	_           int32
+	display     uintptr
+	window      uint64
+	messageType uint64
+	format      int32
+	_           int32
+	data0       int64 // data.l[0], offset 56
+}
+
 type osWindow struct {
 	config  *config
 	ctx     *x11Context
-	display *C.Display
-	oswin   C.Window
+	display uintptr
+	oswin   uint64
 	atoms   struct {
-		utf8string  C.Atom // "UTF8_STRING".
-		plaintext   C.Atom // "text/plain;charset=utf-8".
-		wmName      C.Atom // "_NET_WM_NAME"
-		evDelWindow C.Atom // "WM_DELETE_WINDOW"
+		utf8string  uint64 // "UTF8_STRING".
+		plaintext   uint64 // "text/plain;charset=utf-8".
+		wmName      uint64 // "_NET_WM_NAME"
+		evDelWindow uint64 // "WM_DELETE_WINDOW"
 	}
 	closed    chan struct{}
 	terminate chan struct{}
 }
 
-func (w *window) atom(name string, onlyIfExists bool) C.Atom {
-	cname := C.CString(name)
-	defer C.free(unsafe.Pointer(cname))
-	flag := C.Bool(C.False)
+func (w *window) atom(name string, onlyIfExists bool) uint64 {
+	cname := cstring(name)
+	var flag uintptr = xFalse
 	if onlyIfExists {
-		flag = C.True
+		flag = xTrue
 	}
-	return C.XInternAtom(w.win.display, cname, flag)
+	r, _, _ := purego.SyscallN(_XInternAtom, w.win.display, uintptr(unsafe.Pointer(&cname[0])), flag)
+	runtime.KeepAlive(cname)
+	return uint64(r)
 }
 
 var x11Threads sync.Once
@@ -65,31 +294,44 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 		o(w.win.config)
 	}
 
+	if err := loadX11(); err != nil {
+		panic(err.Error())
+	}
+
 	x11Threads.Do(func() {
-		if C.XInitThreads() == 0 {
+		r, _, _ := purego.SyscallN(_XInitThreads)
+		if r == 0 {
 			panic("x11: threads init failed")
 		}
 	})
 
-	w.win.display = C.XOpenDisplay(nil)
-	if w.win.display == nil {
+	d, _, _ := purego.SyscallN(_XOpenDisplay, 0)
+	w.win.display = uintptr(d)
+	if w.win.display == 0 {
 		panic("x11: cannot connect to the X server")
 	}
 
-	swa := C.XSetWindowAttributes{
-		event_mask: C.ExposureMask | C.FocusChangeMask | // update
-			C.KeyPressMask | C.KeyReleaseMask | // keyboard
-			C.ButtonPressMask | C.ButtonReleaseMask | // mouse clicks
-			C.PointerMotionMask | // mouse movement
-			C.StructureNotifyMask, // resize
-		background_pixmap: C.None,
-		override_redirect: C.False,
+	swa := x11SetWindowAttributes{
+		eventMask: xExposureMask | xFocusChangeMask | // update
+			xKeyPressMask | xKeyReleaseMask | // keyboard
+			xButtonPressMask | xButtonReleaseMask | // mouse clicks
+			xPointerMotionMask | // mouse movement
+			xStructureNotifyMask, // resize
+		backgroundPixmap: xNone,
+		overrideRedirect: xFalse,
 	}
-	w.win.oswin = C.XCreateWindow(w.win.display,
-		C.XDefaultRootWindow(w.win.display),
-		0, 0, C.uint(w.win.config.size.X), C.uint(w.win.config.size.Y),
-		0, C.CopyFromParent, C.InputOutput, nil,
-		C.CWEventMask|C.CWBackPixmap|C.CWOverrideRedirect, &swa)
+
+	root, _, _ := purego.SyscallN(_XDefaultRootWindow, w.win.display)
+	oswin, _, _ := purego.SyscallN(_XCreateWindow,
+		w.win.display,
+		root,
+		0, 0,
+		uintptr(w.win.config.size.X), uintptr(w.win.config.size.Y),
+		0, xCopyFromParent, xInputOutput, 0, // border_width, depth, class, visual
+		xCWEventMask|xCWBackPixmap|xCWOverrideRedirect,
+		uintptr(unsafe.Pointer(&swa)))
+	w.win.oswin = uint64(oswin)
+	runtime.KeepAlive(&swa)
 
 	w.win.atoms.utf8string = w.atom("UTF8_STRING", false)
 	w.win.atoms.plaintext = w.atom("text/plain;charset=utf-8", false)
@@ -97,22 +339,27 @@ func (w *window) run(app Window, cfg config, opts ...Option) {
 	w.win.atoms.evDelWindow = w.atom("WM_DELETE_WINDOW", false)
 
 	// extensions
-	C.XSetWMProtocols(w.win.display, w.win.oswin, &w.win.atoms.evDelWindow, 1)
+	purego.SyscallN(_XSetWMProtocols, w.win.display, uintptr(w.win.oswin),
+		uintptr(unsafe.Pointer(&w.win.atoms.evDelWindow)), 1)
+	runtime.KeepAlive(&w.win.atoms.evDelWindow)
 
-	ctitle := C.CString(w.win.config.title)
-	defer C.free(unsafe.Pointer(ctitle))
-	C.XStoreName(w.win.display, w.win.oswin, ctitle)
-	C.XSetTextProperty(w.win.display, w.win.oswin,
-		&C.XTextProperty{
-			value:    (*C.uchar)(unsafe.Pointer(ctitle)),
-			encoding: w.win.atoms.utf8string,
-			format:   8,
-			nitems:   C.ulong(len(w.win.config.title)),
-		}, w.win.atoms.wmName)
+	ctitle := cstring(w.win.config.title)
+	purego.SyscallN(_XStoreName, w.win.display, uintptr(w.win.oswin),
+		uintptr(unsafe.Pointer(&ctitle[0])))
+	tp := x11TextProperty{
+		value:    uintptr(unsafe.Pointer(&ctitle[0])),
+		encoding: w.win.atoms.utf8string,
+		format:   8,
+		nitems:   uint64(len(w.win.config.title)),
+	}
+	purego.SyscallN(_XSetTextProperty, w.win.display, uintptr(w.win.oswin),
+		uintptr(unsafe.Pointer(&tp)), uintptr(w.win.atoms.wmName))
+	runtime.KeepAlive(ctitle)
+	runtime.KeepAlive(&tp)
 
 	// Let the window to appear.
-	C.XMapWindow(w.win.display, w.win.oswin)
-	C.XClearWindow(w.win.display, w.win.oswin)
+	purego.SyscallN(_XMapWindow, w.win.display, uintptr(w.win.oswin))
+	purego.SyscallN(_XClearWindow, w.win.display, uintptr(w.win.oswin))
 
 	// EGL context must be created after the window is created.
 	var err error
@@ -244,66 +491,66 @@ func (w *window) main(app Window) {
 
 	closed := false
 	lastButton := MouseBtnNone
-	ev := C.XEvent{}
+	var ev [24]uint64 // XEvent union: long pad[24] (192 bytes).
 	for !closed {
-		C.XNextEvent(w.win.display, &ev)
-		if C.XFilterEvent(&ev, C.None) == C.True {
+		purego.SyscallN(_XNextEvent, w.win.display, uintptr(unsafe.Pointer(&ev[0])))
+		if r, _, _ := purego.SyscallN(_XFilterEvent, uintptr(unsafe.Pointer(&ev[0])), xNone); r == xTrue {
 			continue
 		}
 
-		switch _type := (*C.XAnyEvent)(unsafe.Pointer(&ev))._type; _type {
-		case C.KeyPress, C.KeyRelease:
+		switch etype := *(*int32)(unsafe.Pointer(&ev[0])); etype {
+		case xKeyPress, xKeyRelease:
 			ke := KeyEvent{}
-			if _type == C.KeyPress {
+			if etype == xKeyPress {
 				ke.Pressed = true
 			}
-			kevt := (*C.XKeyEvent)(unsafe.Pointer(&ev))
+			kevt := (*x11KeyEvent)(unsafe.Pointer(&ev[0]))
 
 			ke.Keycode = Key{
 				code: uint32(kevt.keycode),
 				char: "",
 			}
-			ke.Mods = ModifierKey(kevt.state)
+			ke.Mods = x11ModsToLogical(uint32(kevt.state))
 			// FIXME: convert keycode to char
 			a, ok := app.(KeyboardHanlder)
 			if !ok {
 				continue
 			}
 			a.OnKey(ke)
-		case C.ButtonPress, C.ButtonRelease:
-			bevt := (*C.XButtonEvent)(unsafe.Pointer(&ev))
+		case xButtonPress, xButtonRelease:
+			bevt := (*x11ButtonEvent)(unsafe.Pointer(&ev[0]))
 			mev := MouseEvent{
 				Action: MouseDown,
-				Mods:   ModifierKey(bevt.state),
+				Mods:   x11ModsToLogical(uint32(bevt.state)),
 				Xpos:   float32(bevt.x),
 				Ypos:   float32(bevt.y),
 			}
-			if bevt._type == C.ButtonRelease {
+			if etype == xButtonRelease {
 				mev.Action = MouseUp
 				lastButton = MouseBtnNone
 			}
 
 			switch bevt.button {
-			case C.Button1:
+			case xButton1:
 				mev.Button = MouseBtnLeft
-				if bevt._type == C.ButtonPress {
+				if etype == xButtonPress {
 					lastButton = MouseBtnLeft
 				}
-			case C.Button2:
-				if bevt._type == C.ButtonPress {
+			case xButton2:
+				if etype == xButtonPress {
 					lastButton = MouseBtnMiddle
 				}
 				mev.Button = MouseBtnMiddle
-			case C.Button3:
-				if bevt._type == C.ButtonPress {
+			case xButton3:
+				if etype == xButtonPress {
 					lastButton = MouseBtnRight
 				}
 				mev.Button = MouseBtnRight
-			case C.Button4:
+			case xButton4:
 				// scroll up
 				mev.Action = MouseScroll
 				mev.Yoffset = -1
-			case C.Button5:
+			case xButton5:
 				// scroll down
 				mev.Action = MouseScroll
 				mev.Yoffset = +1
@@ -322,12 +569,12 @@ func (w *window) main(app Window) {
 				continue
 			}
 			a.OnMouse(mev)
-		case C.MotionNotify:
-			mevt := (*C.XMotionEvent)(unsafe.Pointer(&ev))
+		case xMotionNotify:
+			mevt := (*x11MotionEvent)(unsafe.Pointer(&ev[0]))
 			mev := MouseEvent{
 				Button: lastButton,
 				Action: MouseMove,
-				Mods:   ModifierKey(mevt.state),
+				Mods:   x11ModsToLogical(uint32(mevt.state)),
 				Xpos:   float32(mevt.x),
 				Ypos:   float32(mevt.y),
 			}
@@ -336,14 +583,14 @@ func (w *window) main(app Window) {
 				continue
 			}
 			a.OnMouse(mev)
-		case C.ConfigureNotify: // window configuration change
-			cevt := (*C.XConfigureEvent)(unsafe.Pointer(&ev))
+		case xConfigureNotify: // window configuration change
+			cevt := (*x11ConfigureEvent)(unsafe.Pointer(&ev[0]))
 			siz := resizeEvent{w: int(cevt.width), h: int(cevt.height)}
 			w.resize <- siz
-		case C.ClientMessage: // extensions
-			cevt := (*C.XClientMessageEvent)(unsafe.Pointer(&ev))
-			switch *(*C.long)(unsafe.Pointer(&cevt.data)) {
-			case C.long(w.win.atoms.evDelWindow):
+		case xClientMessage: // extensions
+			cevt := (*x11ClientMessageEvent)(unsafe.Pointer(&ev[0]))
+			switch uint64(cevt.data0) {
+			case w.win.atoms.evDelWindow:
 				closed = true
 			}
 		}
@@ -355,8 +602,8 @@ func (w *window) main(app Window) {
 
 	// Close the window gracefully.
 	w.win.ctx.Release()
-	C.XDestroyWindow(w.win.display, w.win.oswin)
-	C.XCloseDisplay(w.win.display)
+	purego.SyscallN(_XDestroyWindow, w.win.display, uintptr(w.win.oswin))
+	purego.SyscallN(_XCloseDisplay, w.win.display)
 }
 
 const (
