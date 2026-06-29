@@ -16,30 +16,45 @@ import (
 	"poly.red/gpu/gl"
 )
 
+// requireOrSkip turns a skip into a hard failure when POLYRED_REQUIRE_WINDOW is
+// set. CI runs the windowed test in an environment where the display and the
+// EGL/GLES runtime are guaranteed present (Xvfb + Mesa), so a skip there means
+// the very thing the test exists to prove (EGL config match, X11 setup) silently
+// did not run. On a bare dev box the env var is unset and the test skips cleanly.
+func requireOrSkip(t *testing.T, format string, args ...any) {
+	t.Helper()
+	if os.Getenv("POLYRED_REQUIRE_WINDOW") != "" {
+		t.Fatalf("POLYRED_REQUIRE_WINDOW set but the windowed path is unavailable: "+format, args...)
+	}
+	t.Skipf(format, args...)
+}
+
 // TestX11WindowedPresent exercises the cgo-free X11 + EGL + GLES windowed-present
 // path end to end: open an X display, create and map a window, create an EGL
-// window surface bound to it, make a GLES context current, clear to a known
-// color, and read the pixels back. It is the only runtime check of the purego
-// X11 struct offsets, the EGL window-surface config match, and the gl.Functions
-// out-parameter/float marshaling, none of which a cgo-free *build* can prove.
+// window surface bound to it, make a GLES context current, draw the same
+// textured fullscreen quad that flush() presents every frame, and read the
+// pixels back. It is the only runtime check of the purego X11 struct offsets,
+// the EGL window-surface config match, and the gl.Functions marshaling
+// (out-parameters, the **char of ShaderSource, the offset-as-uintptr of
+// VertexAttribPointer, the pixel pointer of TexImage2D, floats), none of which a
+// cgo-free *build* can prove.
 //
-// It runs under Xvfb + Mesa llvmpipe in CI (see the gl-probe workflow). It skips
-// cleanly when there is no display or no EGL/GLES runtime, so it is a no-op on a
-// dev box without that stack rather than a spurious failure.
+// It runs under Xvfb + Mesa llvmpipe in CI (see the gl-probe workflow) with
+// POLYRED_REQUIRE_WINDOW=1 so a skip is a failure there.
 func TestX11WindowedPresent(t *testing.T) {
 	if os.Getenv("DISPLAY") == "" {
-		t.Skip("no X display (set DISPLAY / run under Xvfb)")
+		requireOrSkip(t, "no X display (set DISPLAY / run under Xvfb)")
 	}
 	// X11 + GL are thread-bound; pin this goroutine like run()/draw() do.
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
 	if err := loadX11(); err != nil {
-		t.Skipf("libX11 unavailable: %v", err)
+		requireOrSkip(t, "libX11 unavailable: %v", err)
 	}
 	d, _, _ := purego.SyscallN(_XOpenDisplay, 0)
 	if d == 0 {
-		t.Skip("XOpenDisplay returned NULL (no reachable X server)")
+		requireOrSkip(t, "XOpenDisplay returned NULL (no reachable X server)")
 	}
 	const w, h = 64, 48
 	win := &osWindow{
@@ -73,7 +88,7 @@ func TestX11WindowedPresent(t *testing.T) {
 
 	ctx, err := newX11EGLContext(win)
 	if err != nil {
-		t.Skipf("no EGL/GLES runtime (libEGL/libGLESv2/driver missing): %v", err)
+		requireOrSkip(t, "no EGL/GLES runtime (libEGL/libGLESv2/driver missing): %v", err)
 	}
 	win.ctx = ctx
 	defer ctx.Release()
@@ -99,22 +114,67 @@ func TestX11WindowedPresent(t *testing.T) {
 		t.Fatalf("glGetIntegerv(MAX_TEXTURE_SIZE)=%d (out-parameter marshaling)", m)
 	}
 
-	// Clear to opaque red and read it back. Red is sRGB-invariant (0 and 1 map to
-	// themselves whether or not the surface is sRGB) and channel-specific, so it
-	// also catches a channel-swapped readback. ClearColor takes floats, so this
-	// is the float-ABI path (purego.RegisterFunc) too.
+	// Mirror draw()/flush(): upload a solid-red texture and draw the fullscreen
+	// quad that samples it, then read it back. This drives the real present path
+	// (BufferData, ShaderSource's **char, VertexAttribPointer's offset-as-uintptr,
+	// TexImage2D's pixel pointer, DrawArrays) rather than only a clear. Red is
+	// sRGB-invariant (0 and 1 map to themselves) and channel-specific, so a
+	// channel-swapped readback is caught too.
 	f.Viewport(0, 0, w, h)
-	f.ClearColor(1, 0, 0, 1)
+	f.ClearColor(0, 0, 0, 1) // clear black so a passing red readback means the quad drew
 	f.Clear(gl.COLOR_BUFFER_BIT)
+
+	vertices := slice2bytes([]float32{
+		-1, +1, 0, 0,
+		+1, +1, 1, 0,
+		-1, -1, 0, 1,
+		+1, -1, 1, 1,
+	})
+	vbo := f.CreateBuffer()
+	f.BindBuffer(gl.ARRAY_BUFFER, vbo)
+	f.BufferData(gl.ARRAY_BUFFER, len(vertices), gl.STATIC_DRAW, vertices)
+	defer f.DeleteBuffer(vbo)
+
+	program, err := gl.CreateProgram(f, vert, frag, []string{"position", "uvcoord"})
+	if err != nil {
+		t.Fatalf("gl.CreateProgram (ShaderSource **char marshaling): %v", err)
+	}
+	f.UseProgram(program)
+	defer f.DeleteProgram(program)
+
+	position := f.GetAttribLocation(program, "position")
+	uvcoord := f.GetAttribLocation(program, "uvcoord")
+	f.EnableVertexAttribArray(position)
+	f.EnableVertexAttribArray(uvcoord)
+	f.VertexAttribPointer(position, 2, gl.FLOAT, false, 4*4, 0)
+	f.VertexAttribPointer(uvcoord, 2, gl.FLOAT, false, 4*4, 2*4)
+
+	// Solid opaque-red source image.
+	src := make([]byte, w*h*4)
+	for i := 0; i < len(src); i += 4 {
+		src[i], src[i+1], src[i+2], src[i+3] = 255, 0, 0, 255
+	}
+	tex := f.CreateTexture()
+	f.BindTexture(gl.TEXTURE_2D, tex)
+	defer f.DeleteTexture(tex)
+	f.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, gl.RGBA, gl.UNSIGNED_BYTE, src)
+	f.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+	f.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+	f.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	f.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+
+	f.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 	f.Finish()
 
 	pix := make([]byte, w*h*4)
 	f.ReadPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pix)
-	got := [4]byte{pix[0], pix[1], pix[2], pix[3]}
+	// Sample the center pixel to avoid any edge interpolation.
+	off := ((h/2)*w + w/2) * 4
+	got := [4]byte{pix[off], pix[off+1], pix[off+2], pix[off+3]}
 	want := [4]byte{255, 0, 0, 255}
 	for i := range want {
 		if diff := int(got[i]) - int(want[i]); diff < -2 || diff > 2 {
-			t.Fatalf("readback pixel = %v, want ~%v (gl/egl present marshaling)", got, want)
+			t.Fatalf("textured-quad readback center = %v, want ~%v (gl present-path marshaling)", got, want)
 		}
 	}
 

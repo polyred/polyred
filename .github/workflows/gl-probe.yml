@@ -83,6 +83,9 @@ jobs:
     - name: X11 windowed present (cgo-free, real window surface)
       env:
         CGO_ENABLED: '0'
+        # Turn the test's "no display / no EGL runtime" skips into hard failures:
+        # this job guarantees that stack, so a skip here would hide a real break.
+        POLYRED_REQUIRE_WINDOW: '1'
       run: |
         Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
         export DISPLAY=:99.0
