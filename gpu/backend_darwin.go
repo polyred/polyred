@@ -170,6 +170,8 @@ func mtlFormat(f TextureFormat) mtl.PixelFormat {
 	switch f {
 	case RGBA8Unorm:
 		return mtl.PixelFormatRGBA8UNorm
+	case RGBA32Float:
+		return mtl.PixelFormatRGBA32Float
 	case Depth32Float:
 		return mtl.PixelFormatDepth32Float
 	default:

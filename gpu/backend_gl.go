@@ -53,6 +53,7 @@ const (
 	glDepthAttachment   = 0x8D00
 	glDepthComponent    = 0x1902
 	glDepthComponent32F = 0x8CAC
+	glRGBA32F           = 0x8814
 	glFloat             = 0x1406
 	glTexture2D         = 0x0DE1
 	glRGBA              = 0x1908
@@ -489,22 +490,26 @@ func glPrim(p Primitive) uintptr {
 }
 
 type glTexture struct {
-	b     *glBackend
-	id    uint32
-	fbo   uint32
-	w, h  int
-	depth bool // a Depth32Float texture (attached as a depth attachment, not color)
+	b       *glBackend
+	id      uint32
+	fbo     uint32
+	w, h    int
+	depth   bool // a Depth32Float texture (attached as a depth attachment, not color)
+	floatTx bool // an RGBA32Float color texture (readback is 16 bytes/pixel, GL_FLOAT)
 }
 
 func (b *glBackend) newTexture(format TextureFormat, w, h int, renderTarget bool) (backendTexture, error) {
-	t := &glTexture{b: b, w: w, h: h, depth: format == Depth32Float}
+	t := &glTexture{b: b, w: w, h: h, depth: format == Depth32Float, floatTx: format == RGBA32Float}
 	b.do(func() {
 		f := &b.fns
 		purego.SyscallN(f.genTextures, 1, uintptr(unsafe.Pointer(&t.id)))
 		purego.SyscallN(f.bindTexture, uintptr(glTexture2D), uintptr(t.id))
-		if t.depth {
+		switch {
+		case t.depth:
 			purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glDepthComponent32F), uintptr(w), uintptr(h), 0, uintptr(glDepthComponent), uintptr(glFloat), 0)
-		} else {
+		case t.floatTx:
+			purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glRGBA32F), uintptr(w), uintptr(h), 0, uintptr(glRGBA), uintptr(glFloat), 0)
+		default:
 			purego.SyscallN(f.texImage2D, uintptr(glTexture2D), 0, uintptr(glRGBA8), uintptr(w), uintptr(h), 0, uintptr(glRGBA), uintptr(glUnsignedByte), 0)
 		}
 		purego.SyscallN(f.texParameteri, uintptr(glTexture2D), uintptr(glTexMinFilter), uintptr(glNearest))
@@ -522,15 +527,20 @@ func (b *glBackend) newTexture(format TextureFormat, w, h int, renderTarget bool
 }
 
 func (t *glTexture) readPixels() []byte {
-	dst := make([]byte, t.w*t.h*4)
+	// 4 bytes/pixel for RGBA8, 16 (4 float32) for RGBA32Float.
+	bpp, gltype := 4, uintptr(glUnsignedByte)
+	if t.floatTx {
+		bpp, gltype = 16, uintptr(glFloat)
+	}
+	dst := make([]byte, t.w*t.h*bpp)
 	t.b.do(func() {
 		f := &t.b.fns
 		purego.SyscallN(f.bindFramebuffer, uintptr(glFramebuffer), uintptr(t.fbo))
-		purego.SyscallN(f.readPixels, 0, 0, uintptr(t.w), uintptr(t.h), uintptr(glRGBA), uintptr(glUnsignedByte), uintptr(unsafe.Pointer(&dst[0])))
+		purego.SyscallN(f.readPixels, 0, 0, uintptr(t.w), uintptr(t.h), uintptr(glRGBA), gltype, uintptr(unsafe.Pointer(&dst[0])))
 	})
 	// GL's framebuffer origin is bottom-left; flip rows so the result is
 	// top-down, matching the Metal backend and image.RGBA.
-	row := t.w * 4
+	row := t.w * bpp
 	flipped := make([]byte, len(dst))
 	for y := 0; y < t.h; y++ {
 		copy(flipped[y*row:(y+1)*row], dst[(t.h-1-y)*row:(t.h-y)*row])

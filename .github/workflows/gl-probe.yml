@@ -48,7 +48,7 @@ jobs:
     - name: GL backend conformance (cgo-free, through the Device API)
       env:
         CGO_ENABLED: '0'
-      run: go test -v -run 'TestGLBackend|TestSurface|TestShadingParity|TestGLRenderDepthOcclusion|TestGLRenderMRT' ./gpu/
+      run: go test -v -run 'TestGLBackend|TestSurface|TestShadingParity|TestGLRenderDepthOcclusion|TestGLRenderMRT|TestGLFloatRenderTarget' ./gpu/
 
     - name: Renderer deferred pass on the GL backend (multi-backend render)
       env:

@@ -262,6 +262,7 @@ const (
 	PixelFormatRGBA8UNorm     PixelFormat = 70  // Ordinary format with four 8-bit normalized unsigned integer components in RGBA order.
 	PixelFormatBGRA8UNorm     PixelFormat = 80  // Ordinary format with four 8-bit normalized unsigned integer components in BGRA order.
 	PixelFormatBGRA8UNormSRGB PixelFormat = 81  // Ordinary format with four 8-bit normalized unsigned integer components in BGRA order with conversion between sRGB and linear space.
+	PixelFormatRGBA32Float    PixelFormat = 125 // Four 32-bit floating-point components in RGBA order, for a float render target (G-buffer).
 	PixelFormatDepth32Float   PixelFormat = 252 // A pixel format with one 32-bit floating-point component, used for a depth render target.
 )
 

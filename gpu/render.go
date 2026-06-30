@@ -17,6 +17,9 @@ const (
 	RGBA8Unorm
 	// Depth32Float is a 32-bit float depth format, for a depth render target.
 	Depth32Float
+	// RGBA32Float is 32-bit float RGBA, for a float render target such as a
+	// G-buffer attachment that stores world positions or normals at full precision.
+	RGBA32Float
 )
 
 // TextureDescriptor describes a texture to create.
