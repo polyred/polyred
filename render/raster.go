@@ -425,6 +425,22 @@ func (r *Renderer) draw(mvp *shader.MVP, t *primitive.Triangle, flatMatID int64)
 	}
 }
 
+// interpWorldPos barycentrically interpolates the three world-space vertex
+// positions m1,m2,m3 of a triangle, giving the per-fragment world position.
+//
+// This previously had a bug -- each axis was summed from a SINGLE vertex
+// (bc[0]*m1.X + bc[1]*m1.X + bc[2]*m1.X == m1.X), so worldpos collapsed to
+// (m1.X, m2.Y, m3.Z), a per-triangle constant unrelated to the fragment. The
+// deferred shading reads WordPos for lighting, so this distorted illumination.
+func interpWorldPos(bc [3]float32, m1, m2, m3 math.Vec4[float32]) math.Vec4[float32] {
+	return math.Vec4[float32]{
+		X: bc[0]*m1.X + bc[1]*m2.X + bc[2]*m3.X,
+		Y: bc[0]*m1.Y + bc[1]*m2.Y + bc[2]*m3.Y,
+		Z: bc[0]*m1.Z + bc[1]*m2.Z + bc[2]*m3.Z,
+		W: 1,
+	}
+}
+
 func (r *Renderer) drawClipped(mvp *shader.MVP, t1, t2, t3 *primitive.Vertex, recipw [3]float32, materialId int64) {
 	buf := r.CurrBuffer()
 
@@ -507,12 +523,7 @@ func (r *Renderer) drawClipped(mvp *shader.MVP, t1, t2, t3 *primitive.Vertex, re
 				Z: (bc[0]*t1.Nor.Z + bc[1]*t2.Nor.Z + bc[2]*t3.Nor.Z),
 				W: 0,
 			}).Unit()
-			pos := math.Vec4[float32]{
-				X: (bc[0]*m1.X + bc[1]*m1.X + bc[2]*m1.X),
-				Y: (bc[0]*m2.Y + bc[1]*m2.Y + bc[2]*m2.Y),
-				Z: (bc[0]*m3.Z + bc[1]*m3.Z + bc[2]*m3.Z),
-				W: 1,
-			}
+			pos := interpWorldPos(bc, m1, m2, m3)
 			col := color.RGBA{
 				R: uint8(math.Clamp((wc1*float32(t1.Col.R)+wc2*float32(t2.Col.R)+wc3*float32(t3.Col.R))*norm, 0, 0xff)),
 				G: uint8(math.Clamp((wc1*float32(t1.Col.G)+wc2*float32(t2.Col.G)+wc3*float32(t3.Col.G))*norm, 0, 0xff)),
