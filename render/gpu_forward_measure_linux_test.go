@@ -295,8 +295,8 @@ func TestGPUForwardPassUV(t *testing.T) {
 		t.Skipf("gpuForwardPass unavailable: %v", err)
 	}
 
-	var n int
-	var sU, sV, sDu, sDv, mU, mV float32
+	var n, matMismatch int
+	var sU, sV, sDu, sDv, mU, mV, sNor float32
 	var dumped int
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -311,6 +311,14 @@ func TestGPUForwardPassUV(t *testing.T) {
 			sV += dv
 			sDu += absf(cf.Du - gf.Du)
 			sDv += absf(cf.Dv - gf.Dv)
+			// Normal delta at the SAME pixel: small => GPU & CPU picked the same
+			// surface (so a large UV delta is UV-interpolation-specific); large =>
+			// they shaded different triangles (a coverage/depth divergence).
+			dn := cf.Nor.Sub(gf.Nor)
+			sNor += absf(dn.X) + absf(dn.Y) + absf(dn.Z)
+			if cf.MaterialID != gf.MaterialID {
+				matMismatch++
+			}
 			if du > mU {
 				mU = du
 			}
@@ -318,8 +326,9 @@ func TestGPUForwardPassUV(t *testing.T) {
 				mV = dv
 			}
 			if (du > 0.05 || dv > 0.05) && dumped < 8 {
-				t.Logf("  (%d,%d) cpu UV=(%.4f,%.4f) Du,Dv=(%.5f,%.5f)  gpu UV=(%.4f,%.4f) Du,Dv=(%.5f,%.5f)",
-					x, y, cf.U, cf.V, cf.Du, cf.Dv, gf.U, gf.V, gf.Du, gf.Dv)
+				t.Logf("  (%d,%d) cpu UV=(%.4f,%.4f) mat=%d  gpu UV=(%.4f,%.4f) mat=%d  |dNor|=%.3f",
+					x, y, cf.U, cf.V, cf.MaterialID, gf.U, gf.V, gf.MaterialID,
+					absf(dn.X)+absf(dn.Y)+absf(dn.Z))
 				dumped++
 			}
 		}
@@ -327,8 +336,8 @@ func TestGPUForwardPassUV(t *testing.T) {
 	if n == 0 {
 		t.Fatal("no shared fragments")
 	}
-	t.Logf("GPU vs CPU forward UV over %d shared fragments: meanU=%.5f meanV=%.5f (max %.4f/%.4f) meanDu=%.6f meanDv=%.6f",
-		n, sU/float32(n), sV/float32(n), mU, mV, sDu/float32(n), sDv/float32(n))
+	t.Logf("GPU vs CPU forward over %d shared fragments: meanU=%.5f meanV=%.5f (max %.4f/%.4f) meanDu=%.6f meanDv=%.6f meanNorL1=%.4f matMismatch=%d",
+		n, sU/float32(n), sV/float32(n), mU, mV, sDu/float32(n), sDv/float32(n), sNor/float32(n), matMismatch)
 }
 
 func absf(v float32) float32 {
