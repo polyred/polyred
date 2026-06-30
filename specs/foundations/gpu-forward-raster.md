@@ -1,6 +1,6 @@
 ---
 title: "GPU forward rasterizer (brick 3b): scene wiring + parity-by-measurement"
-status: in progress (step 1 DONE — coverage pixel-exact; step 2 next)
+status: in progress (primitives + G-buffer raster done; attribute conventions next)
 depends_on:
   - foundations/gpu-render-depth.md
   - foundations/gpu-render-mrt.md
@@ -64,6 +64,35 @@ and percentile deltas), and pick the gate from what is observed. Template:
 `<2% of channels differ by >8`). Likely shape: interior pixels within epsilon +
 a bounded fraction allowed to differ (the edge band), plus a golden-stability
 test on the GPU output itself.
+
+## Characterization of the GPU vs CPU G-buffer (measured on Mesa, brick 3b)
+
+All GPU primitives exist and are CI-exact: coverage raster, GPU vertex transform
+(coverage pixel-identical), depth, MRT, RGBA32Float targets. The float G-buffer
+raster runs. Measuring its attributes against the CPU forward pass
+(`buf.UnsafeGet`) shows three divergences, all rooted in CPU quirks, NOT GPU bugs
+(so EXACT parity is impossible; tolerance-by-measurement is required, as planned):
+- **Normal** (mean ~0.88 after back-face culling): the per-vertex world normals
+  are identical (verified: CPU-computed vs in-shader matrix give bit-identical
+  results). The divergence is INTERPOLATION -- GLSL varyings are perspective-
+  correct, but CPU `drawClipped` interpolates normals LINEARLY (plain barycentric,
+  no recipw). With this close/wide-FoV scene that is large. The GPU normal is the
+  more-correct one. GLSL ES has no `noperspective` qualifier to match the CPU.
+- **World position** (mean ~0.53): the CPU `drawClipped` has a BUG --
+  `pos = (v0.worldX, v1.worldY, v2.worldZ)`, a per-triangle constant (lines
+  ~510-515). The GPU computes correct interpolated world pos.
+- **Depth** (mean ~0.95): pure encoding offset, ordering identical -- CPU stores
+  ndc_z in [-1,1] (~-0.9 near), GPU `gl_FragCoord.z` is (ndc_z+1)/2 in [0,1].
+  Remap with `2*z-1` when populating the FragmentBuffer.
+- Back-face culling matched via `gl_FrontFacing` discard (the position negation
+  preserves NDC winding, GL CCW-front matches the CPU screen cross-z>0).
+
+DECISION NEEDED (product call): for a drop-in GPU forward pass, either (A)
+replicate the CPU quirks bug-for-bug (linear normal interp via a w-trick;
+per-triangle worldpos) for exact image parity, or (B) ship the more-correct GPU
+G-buffer and gate the FINAL deferred-shaded image with a measured tolerance
+(accepting it differs from -- and improves on -- the CPU). (B) is cleaner but
+changes output; (A) preserves current output incl. a known bug.
 
 ## Steps
 

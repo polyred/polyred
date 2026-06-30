@@ -341,8 +341,11 @@ func reportCoverage(t *testing.T, label string, cpuCov, gpuCov []bool, cpuN, w, 
 	if cpuN == 0 || gpuN == 0 {
 		t.Fatalf("one side rendered nothing (cpu=%d gpu=%d)", cpuN, gpuN)
 	}
-	if frac > 0.25 {
-		t.Fatalf("CPU/GPU forward coverage differs on %.2f%% of pixels (gross mismatch; see log)", frac*100)
+	// Coverage and the GPU transform are pixel-EXACT against the CPU (measured 0%);
+	// gate tightly so a convention regression is caught, with a small margin for
+	// any single-pixel edge rounding.
+	if frac > 0.01 {
+		t.Fatalf("CPU/GPU forward coverage differs on %.2f%% of pixels (want ~0%%; convention regression)", frac*100)
 	}
 }
 
