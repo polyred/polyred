@@ -51,7 +51,7 @@ func TestScenePresentReadback(t *testing.T) {
 	s, c := presentTestScene(w, h)
 	img := render.NewRenderer(
 		render.Scene(s), render.Camera(c), render.Size(w, h),
-		render.Background(color.RGBA{0, 127, 255, 255}),
+		render.Background(color.RGBA{R: 0, G: 127, B: 255, A: 255}),
 		render.Workers(1), render.CPU(),
 	).Render()
 	if len(img.Pix) != w*h*4 {
@@ -125,7 +125,7 @@ func presentTestScene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene(
 		light.NewPoint(
 			light.Intensity(5),
-			light.Color(color.RGBA{0, 0, 0, 255}),
+			light.Color(color.RGBA{R: 0, G: 0, B: 0, A: 255}),
 			light.Position(math.NewVec3[float32](-2, 2.5, 6)),
 		),
 		light.NewAmbient(light.Intensity(0.5)),
