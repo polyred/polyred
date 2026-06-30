@@ -295,8 +295,27 @@ func TestGPUForwardPassUV(t *testing.T) {
 		t.Skipf("gpuForwardPass unavailable: %v", err)
 	}
 
-	var n, matMismatch int
-	var sU, sV, sDu, sDv, mU, mV, sNor float32
+	// GPU-vs-GPU reference: gpuGBuffer is the proven helper the integration test
+	// injected at 0%. It runs the same vertex transform + raster, so its per-pixel
+	// world/normal must be bit-identical to gpuForwardPass's. Comparing against it
+	// (not the CPU) removes the perspective-vs-linear confound: any nonzero delta is
+	// a bug in gpuForwardPass's own setup (binding map / readback), per advisor.
+	gWorld, gNormal := gpuGBuffer(t, dev, buildGBufObjs(s, c), w, h)
+
+	var nCPU, nGPU, nShared, matMismatch int
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			if cpu.UnsafeGet(x, y).Ok {
+				nCPU++
+			}
+			if gbuf.UnsafeGet(x, y).Ok {
+				nGPU++
+			}
+		}
+	}
+
+	var sU, sV, mU, mV float32
+	var sNorGG, sWPGG, mNorGG float32 // gpuForwardPass vs gpuGBuffer (GPU-vs-GPU)
 	var dumped int
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
@@ -305,39 +324,43 @@ func TestGPUForwardPassUV(t *testing.T) {
 			if !cf.Ok || !gf.Ok {
 				continue
 			}
-			n++
+			nShared++
+			idx := (y*w + x) * 4
+			// gpuForwardPass vs gpuGBuffer normal+worldpos at the same pixel.
+			nGG := absf(gf.Nor.X-gNormal[idx]) + absf(gf.Nor.Y-gNormal[idx+1]) + absf(gf.Nor.Z-gNormal[idx+2])
+			wGG := absf(gf.WordPos.X-gWorld[idx]) + absf(gf.WordPos.Y-gWorld[idx+1]) + absf(gf.WordPos.Z-gWorld[idx+2])
+			sNorGG += nGG
+			sWPGG += wGG
+			if nGG > mNorGG {
+				mNorGG = nGG
+			}
 			du, dv := absf(cf.U-gf.U), absf(cf.V-gf.V)
 			sU += du
 			sV += dv
-			sDu += absf(cf.Du - gf.Du)
-			sDv += absf(cf.Dv - gf.Dv)
-			// Normal delta at the SAME pixel: small => GPU & CPU picked the same
-			// surface (so a large UV delta is UV-interpolation-specific); large =>
-			// they shaded different triangles (a coverage/depth divergence).
-			dn := cf.Nor.Sub(gf.Nor)
-			sNor += absf(dn.X) + absf(dn.Y) + absf(dn.Z)
-			if cf.MaterialID != gf.MaterialID {
-				matMismatch++
-			}
 			if du > mU {
 				mU = du
 			}
 			if dv > mV {
 				mV = dv
 			}
-			if (du > 0.05 || dv > 0.05) && dumped < 8 {
-				t.Logf("  (%d,%d) cpu UV=(%.4f,%.4f) mat=%d  gpu UV=(%.4f,%.4f) mat=%d  |dNor|=%.3f",
-					x, y, cf.U, cf.V, cf.MaterialID, gf.U, gf.V, gf.MaterialID,
-					absf(dn.X)+absf(dn.Y)+absf(dn.Z))
+			if cf.MaterialID != gf.MaterialID {
+				matMismatch++
+			}
+			if (du > 0.05 || dv > 0.05) && dumped < 6 {
+				t.Logf("  (%d,%d) cpuUV=(%.4f,%.4f) gpuUV=(%.4f,%.4f)  fwd-vs-gbuf |dNor|=%.4f |dWP|=%.4f",
+					x, y, cf.U, cf.V, gf.U, gf.V, nGG, wGG)
 				dumped++
 			}
 		}
 	}
-	if n == 0 {
+	if nShared == 0 {
 		t.Fatal("no shared fragments")
 	}
-	t.Logf("GPU vs CPU forward over %d shared fragments: meanU=%.5f meanV=%.5f (max %.4f/%.4f) meanDu=%.6f meanDv=%.6f meanNorL1=%.4f matMismatch=%d",
-		n, sU/float32(n), sV/float32(n), mU, mV, sDu/float32(n), sDv/float32(n), sNor/float32(n), matMismatch)
+	t.Logf("coverage: cpu=%d gpu=%d shared=%d (gpuForwardPass vs CPU)", nCPU, nGPU, nShared)
+	t.Logf("GPU-vs-GPU (gpuForwardPass vs proven gpuGBuffer) over %d shared: meanNorL1=%.5f (max %.4f) meanWPL1=%.5f -- should be ~0 if raster identical",
+		nShared, sNorGG/float32(nShared), mNorGG, sWPGG/float32(nShared))
+	t.Logf("UV vs CPU: meanU=%.5f meanV=%.5f (max %.4f/%.4f) matMismatch=%d",
+		sU/float32(nShared), sV/float32(nShared), mU, mV, matMismatch)
 }
 
 func absf(v float32) float32 {
