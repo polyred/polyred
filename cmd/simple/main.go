@@ -5,7 +5,9 @@
 package main
 
 import (
+	"flag"
 	"image"
+	"log"
 
 	"poly.red/app"
 	"poly.red/camera"
@@ -20,18 +22,23 @@ type App struct {
 	buf *image.RGBA
 }
 
-func New() *App {
+// New builds the renderer for the demo. By default the renderer is GPU-by-default:
+// on macOS it offloads the deferred shading pass to Metal (the forward rasterizer
+// still runs on the CPU), elsewhere it runs all-CPU. Pass forceCPU to run entirely
+// on the CPU.
+func New(forceCPU bool) *App {
 	cam := camera.NewPerspective()
-	// Create a renderer and specify scene and camera
-	r := render.NewRenderer(
+	opts := []render.Option{
 		render.Scene(scene.NewScene(
 			model.StanfordBunny(),
 			light.NewPoint(),
 		)),
 		render.Camera(cam),
-	)
-
-	return &App{r: r}
+	}
+	if forceCPU {
+		opts = append(opts, render.CPU())
+	}
+	return &App{r: render.NewRenderer(opts...)}
 }
 
 func (a *App) Draw() (*image.RGBA, bool) {
@@ -41,4 +48,13 @@ func (a *App) Draw() (*image.RGBA, bool) {
 	return a.buf, true
 }
 
-func main() { app.Run(New()) }
+func main() {
+	cpu := flag.Bool("cpu", false, "force the CPU rasterizer instead of the default GPU-offloaded renderer")
+	flag.Parse()
+	if *cpu {
+		log.Println("simple: rendering on the CPU")
+	} else {
+		log.Println("simple: rendering with the default renderer (GPU deferred shading where available; -cpu to force CPU)")
+	}
+	app.Run(New(*cpu))
+}

@@ -580,6 +580,15 @@ func (w *window) draw(app Window) {
 }
 
 func (w *window) flush(f frame) {
+	// flush presents on the draw goroutine, i.e. a background thread. Cocoa needs
+	// an autorelease pool on any thread that makes Objective-C calls: nextDrawable
+	// returns an AUTORELEASED CAMetalDrawable, and with no pool in scope it is
+	// freed out from under us, so the next objc_msgSend on it (or the layer)
+	// dereferences freed memory and crashes (SIGSEGV in objc_msgSend). Scope a
+	// fresh pool to each presented frame and drain it when the frame is done.
+	pool := objc.ID(objc.GetClass("NSAutoreleasePool")).Send(selAlloc).Send(selInit)
+	defer pool.Send(selRelease)
+
 	<-f.done
 
 	dx, dy := f.img.Bounds().Dx(), f.img.Bounds().Dy()
