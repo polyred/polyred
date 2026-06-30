@@ -95,6 +95,12 @@ in vec3 vNormal;
 layout(location = 0) out vec4 outWorld;  // xyz = world position, w = depth
 layout(location = 1) out vec4 outNormal; // xyz = unit world normal
 void main() {
+	// Match the CPU forward pass, which culls back faces (screen cross-z < 0)
+	// before depth testing. The position negation preserves NDC winding, so GL's
+	// default CCW-front matches; discard back faces so only front-face fragments
+	// compete for the depth test (otherwise a nearer back face at a non-convex
+	// fold would win and store an opposite normal).
+	if (!gl_FrontFacing) discard;
 	outWorld = vec4(vWorld, gl_FragCoord.z);
 	outNormal = vec4(normalize(vNormal), 0.0);
 }`
