@@ -142,6 +142,8 @@ func TestGPUForwardGBuffer(t *testing.T) {
 
 	var n int
 	var sumN, maxN, sumWP, maxWP, sumD, maxD float32
+	var hist [4]int // normal-delta buckets: <0.1, <0.5, <1.0, >=1.0
+	var dumped int
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			f := buf.UnsafeGet(x, y)
@@ -154,6 +156,20 @@ func TestGPUForwardGBuffer(t *testing.T) {
 			dN := gN.Sub(f.Nor).Len()
 			dWP := gWP.Sub(f.WordPos).Len()
 			dD := absf(world[idx+3] - f.Depth)
+			switch {
+			case dN < 0.1:
+				hist[0]++
+			case dN < 0.5:
+				hist[1]++
+			case dN < 1.0:
+				hist[2]++
+			default:
+				hist[3]++
+			}
+			if dN > 1.0 && dumped < 4 {
+				t.Logf("  bad normal @(%d,%d): cpu=(%.2f,%.2f,%.2f) gpu=(%.2f,%.2f,%.2f)", x, y, f.Nor.X, f.Nor.Y, f.Nor.Z, gN.X, gN.Y, gN.Z)
+				dumped++
+			}
 			sumN += dN
 			sumWP += dWP
 			sumD += dD
@@ -169,6 +185,7 @@ func TestGPUForwardGBuffer(t *testing.T) {
 			n++
 		}
 	}
+	t.Logf("normal-delta histogram (<0.1, <0.5, <1, >=1): %v of %d", hist, n)
 	if n == 0 {
 		t.Fatal("no covered pixels")
 	}
