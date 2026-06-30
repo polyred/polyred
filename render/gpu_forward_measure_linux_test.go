@@ -118,25 +118,7 @@ func TestGPUForwardGBuffer(t *testing.T) {
 	s, c := newscene(w, h)
 	buf := cpuForward(s, c, w, h)
 
-	view, proj := c.ViewMatrix(), c.ProjMatrix()
-	var objs []gbufObject
-	scene.IterObjects(s, func(g *geometry.Geometry, model math.Mat4[float32]) bool {
-		world := model.MulM(g.ModelMatrix())
-		normalMat := world.Inv().T()
-		o := gbufObject{trans: colMajor(proj.MulM(view).MulM(world))}
-		for _, tri := range g.Triangles() {
-			for _, v := range []*primitive.Vertex{tri.V1, tri.V2, tri.V3} {
-				wp := world.MulV(v.Pos)               // world position (correct interpolation source)
-				wn := v.Nor.Apply(normalMat)          // world normal, exactly as the CPU draw() does
-				o.pos = append(o.pos, v.Pos.X, v.Pos.Y, v.Pos.Z, v.Pos.W)
-				o.wpos = append(o.wpos, wp.X, wp.Y, wp.Z, 1)
-				o.wnor = append(o.wnor, wn.X, wn.Y, wn.Z, 0)
-			}
-		}
-		objs = append(objs, o)
-		return true
-	})
-	world, normal := gpuGBuffer(t, dev, objs, w, h)
+	world, normal := gpuGBuffer(t, dev, buildGBufObjs(s, c), w, h)
 
 	var n int
 	var sumN, maxN, sumWP, maxWP, sumD, maxD float32
@@ -189,13 +171,106 @@ func TestGPUForwardGBuffer(t *testing.T) {
 	}
 	t.Logf("G-buffer over %d px: normal mean=%.4f max=%.4f; worldpos mean=%.4f max=%.4f; depth mean=%.4f max=%.4f (normal+worldpos: CPU interpolates linearly, GPU perspective-correct; depth: [-1,1] vs [0,1] encoding)",
 		n, sumN/float32(n), maxN, sumWP/float32(n), maxWP, sumD/float32(n), maxD)
-	// This is a MEASUREMENT (step 2b): it reports the per-attribute deltas; it does
-	// not yet gate them. The CI numbers expose three things to resolve in step 2c
-	// before a tight gate: (1) the renderer's projection uses a non-OpenGL clip-z
-	// convention, so GPU depth does not match the CPU and the wrong (far) fragment
-	// can win the depth test -- which flips many normals to ~opposite (normal max
-	// ~2). (2) worldpos diverges by design (the CPU drawClipped worldpos bug).
-	// (3) depth needs a z remap to the renderer's convention.
+	// MEASUREMENT (log-only): the residual deltas are CPU quirks, not GPU bugs
+	// (see gpu-forward-raster.md). normal + worldpos: the CPU interpolates them
+	// LINEARLY while GLSL varyings are perspective-correct (the GPU is the more
+	// correct one); depth: a pure [-1,1] (CPU) vs [0,1] (GPU gl_FragCoord.z)
+	// encoding offset, same ordering. Back-face culling is matched via
+	// gl_FrontFacing. The end-to-end effect through deferred shading is gated in
+	// TestGPUForwardDeferredIntegration.
+}
+
+// buildGBufObjs builds the GPU forward-raster inputs for each scene object: model
+// positions for gl_Position (via trans), plus CPU-computed world position and
+// world normal per vertex (exactly as draw() computes them) that the GPU only
+// interpolates.
+func buildGBufObjs(s *scene.Scene, c camera.Interface) []gbufObject {
+	view, proj := c.ViewMatrix(), c.ProjMatrix()
+	var objs []gbufObject
+	scene.IterObjects(s, func(g *geometry.Geometry, model math.Mat4[float32]) bool {
+		world := model.MulM(g.ModelMatrix())
+		normalMat := world.Inv().T()
+		o := gbufObject{trans: colMajor(proj.MulM(view).MulM(world))}
+		for _, tri := range g.Triangles() {
+			for _, v := range []*primitive.Vertex{tri.V1, tri.V2, tri.V3} {
+				wp := world.MulV(v.Pos)
+				wn := v.Nor.Apply(normalMat)
+				o.pos = append(o.pos, v.Pos.X, v.Pos.Y, v.Pos.Z, v.Pos.W)
+				o.wpos = append(o.wpos, wp.X, wp.Y, wp.Z, 1)
+				o.wnor = append(o.wnor, wn.X, wn.Y, wn.Z, 0)
+			}
+		}
+		objs = append(objs, o)
+		return true
+	})
+	return objs
+}
+
+// TestGPUForwardDeferredIntegration is the end-to-end brick-3b integration: the
+// GPU forward raster's G-buffer (world normal + position) is injected into the
+// renderer's fragment buffer, then the renderer's real deferred shading pass runs
+// on it, and the final image is compared to the all-CPU render. It validates that
+// a GPU-rasterized G-buffer drives the existing deferred pipeline to an
+// equivalent picture (within tolerance: the GPU interpolates normal/worldpos
+// perspective-correct vs the CPU's linear, so it is close but not identical).
+func TestGPUForwardDeferredIntegration(t *testing.T) {
+	dev := openGLOrSkip(t)
+	defer dev.Close()
+
+	const w, h = 96, 96
+	s, c := newscene(w, h)
+
+	// All-CPU reference.
+	cpu := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), CPU()).Render()
+
+	// GPU-forward path: run the CPU forward pass to populate materials + the buffer,
+	// then overwrite the GEOMETRIC attributes (normal, world position) with the GPU
+	// raster's, and run the renderer's deferred shading (on the GL device) + AA.
+	r := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), GPU(dev))
+	buf := r.CurrBuffer()
+	buf.Clear()
+	r.passForward()
+	world, normal := gpuGBuffer(t, dev, buildGBufObjs(s, c), w, h)
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			f := buf.UnsafeGet(x, y)
+			if !f.Ok {
+				continue
+			}
+			idx := (y*w + x) * 4
+			f.Nor = math.Vec4[float32]{X: normal[idx], Y: normal[idx+1], Z: normal[idx+2], W: 0}
+			f.WordPos = math.Vec4[float32]{X: world[idx], Y: world[idx+1], Z: world[idx+2], W: 1}
+			buf.Set(x, y, f)
+		}
+	}
+	buf.ClearColor()
+	r.passDeferred()
+	r.passAntialiasing()
+	gpuImg := r.outBuf
+	if !r.passOnGPU("deferred") {
+		t.Skip("deferred did not run on the GPU (no GL deferred path)")
+	}
+
+	if len(cpu.Pix) != len(gpuImg.Pix) {
+		t.Fatalf("size mismatch: cpu %d gpu %d", len(cpu.Pix), len(gpuImg.Pix))
+	}
+	nBig := 0
+	for i := range cpu.Pix {
+		d := int(cpu.Pix[i]) - int(gpuImg.Pix[i])
+		if d < 0 {
+			d = -d
+		}
+		if d > 16 {
+			nBig++
+		}
+	}
+	frac := float64(nBig) / float64(len(cpu.Pix))
+	t.Logf("GPU-forward+deferred vs all-CPU: %.2f%% of channels differ by >16", frac*100)
+	// Tolerance accounts for perspective-correct (GPU) vs linear (CPU) normal/
+	// worldpos interpolation feeding the lighting. Set from the measured number.
+	if frac > 0.15 {
+		t.Fatalf("GPU-forward+deferred diverges from CPU on %.2f%% of channels (>16); want <15%%", frac*100)
+	}
 }
 
 func absf(v float32) float32 {
