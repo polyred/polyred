@@ -78,9 +78,10 @@ raster runs. Measuring its attributes against the CPU forward pass
   correct, but CPU `drawClipped` interpolates normals LINEARLY (plain barycentric,
   no recipw). With this close/wide-FoV scene that is large. The GPU normal is the
   more-correct one. GLSL ES has no `noperspective` qualifier to match the CPU.
-- **World position** (mean ~0.53): the CPU `drawClipped` has a BUG --
-  `pos = (v0.worldX, v1.worldY, v2.worldZ)`, a per-triangle constant (lines
-  ~510-515). The GPU computes correct interpolated world pos.
+- **World position** (mean ~0.53): the CPU `drawClipped` worldpos BUG
+  (`pos = (m1.X, m2.Y, m3.Z)`) is now FIXED (interpWorldPos + TestInterpWorldPos;
+  goldens still pass). The residual delta is the SAME quirk as normals -- the CPU
+  interpolates worldpos linearly, the GPU perspective-correct.
 - **Depth** (mean ~0.95): pure encoding offset, ordering identical -- CPU stores
   ndc_z in [-1,1] (~-0.9 near), GPU `gl_FragCoord.z` is (ndc_z+1)/2 in [0,1].
   Remap with `2*z-1` when populating the FragmentBuffer.

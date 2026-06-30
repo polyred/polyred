@@ -187,7 +187,7 @@ func TestGPUForwardGBuffer(t *testing.T) {
 	if n == 0 {
 		t.Fatal("no covered pixels")
 	}
-	t.Logf("G-buffer over %d px: normal mean=%.4f max=%.4f; worldpos mean=%.4f max=%.4f (CPU worldpos is buggy); depth mean=%.4f max=%.4f",
+	t.Logf("G-buffer over %d px: normal mean=%.4f max=%.4f; worldpos mean=%.4f max=%.4f; depth mean=%.4f max=%.4f (normal+worldpos: CPU interpolates linearly, GPU perspective-correct; depth: [-1,1] vs [0,1] encoding)",
 		n, sumN/float32(n), maxN, sumWP/float32(n), maxWP, sumD/float32(n), maxD)
 	// This is a MEASUREMENT (step 2b): it reports the per-attribute deltas; it does
 	// not yet gate them. The CI numbers expose three things to resolve in step 2c
