@@ -301,19 +301,53 @@ func TestGPUForwardPassUV(t *testing.T) {
 	// (not the CPU) removes the perspective-vs-linear confound: any nonzero delta is
 	// a bug in gpuForwardPass's own setup (binding map / readback), per advisor.
 	gWorld, gNormal := gpuGBuffer(t, dev, buildGBufObjs(s, c), w, h)
+	gbCov := func(x, y int) bool { // gpuGBuffer covered: normalized normal is unit, clear is 0
+		idx := (y*w + x) * 4
+		return absf(gNormal[idx])+absf(gNormal[idx+1])+absf(gNormal[idx+2]) > 0.5
+	}
 
-	var nCPU, nGPU, nShared, matMismatch int
+	// Localize the coverage divergence: counts + overlaps, no-flip vs Y-flip, across
+	// CPU, gpuForwardPass (gbuf), and the proven gpuGBuffer helper.
+	var nCPU, nGPU, nGB int
+	var ovCG, ovCGflip, ovCB, ovCBflip, ovGB int
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			if cpu.UnsafeGet(x, y).Ok {
+			c0 := cpu.UnsafeGet(x, y).Ok
+			g0 := gbuf.UnsafeGet(x, y).Ok
+			b0 := gbCov(x, y)
+			cf := cpu.UnsafeGet(x, h-1-y).Ok
+			if c0 {
 				nCPU++
 			}
-			if gbuf.UnsafeGet(x, y).Ok {
+			if g0 {
 				nGPU++
+			}
+			if b0 {
+				nGB++
+			}
+			if c0 && g0 {
+				ovCG++
+			}
+			if cf && g0 {
+				ovCGflip++
+			}
+			if c0 && b0 {
+				ovCB++
+			}
+			if cf && b0 {
+				ovCBflip++
+			}
+			if g0 && b0 {
+				ovGB++
 			}
 		}
 	}
+	t.Logf("counts: cpu=%d gpuForward=%d gpuGBuffer=%d", nCPU, nGPU, nGB)
+	t.Logf("overlap cpu&gpuForward: noflip=%d flip=%d", ovCG, ovCGflip)
+	t.Logf("overlap cpu&gpuGBuffer: noflip=%d flip=%d", ovCB, ovCBflip)
+	t.Logf("overlap gpuForward&gpuGBuffer: %d", ovGB)
 
+	var nShared, matMismatch int
 	var sU, sV, mU, mV float32
 	var sNorGG, sWPGG, mNorGG float32 // gpuForwardPass vs gpuGBuffer (GPU-vs-GPU)
 	var dumped int
