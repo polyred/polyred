@@ -25,6 +25,7 @@ import (
 	"os"
 	"testing"
 
+	"poly.red/buffer"
 	"poly.red/camera"
 	"poly.red/geometry"
 	"poly.red/geometry/primitive"
@@ -51,6 +52,188 @@ func cpuForwardCoverage(s *scene.Scene, c camera.Interface, w, h int) (cov []boo
 		}
 	}
 	return cov, n
+}
+
+// cpuForward runs the CPU forward pass and returns the filled G-buffer so a test
+// can read per-fragment attributes via UnsafeGet.
+func cpuForward(s *scene.Scene, c camera.Interface, w, h int) *buffer.FragmentBuffer {
+	r := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), CPU())
+	buf := r.CurrBuffer()
+	buf.Clear()
+	r.passForward()
+	return buf
+}
+
+type gbufObject struct {
+	pos, nor                []float32
+	trans, model, normalMat [16]float32 // column-major
+}
+
+const gbufVert = `#version 310 es
+layout(std430, binding = 0) readonly buffer _pos { float pos[]; };
+layout(std430, binding = 1) readonly buffer _nor { float nor[]; };
+layout(std430, binding = 2) readonly buffer _mat { float m[]; }; // trans[0..15], model[16..31], normalMat[32..47]
+out vec3 vWorld;
+out vec3 vNormal;
+mat4 mat(int o) {
+	return mat4(m[o],m[o+1],m[o+2],m[o+3], m[o+4],m[o+5],m[o+6],m[o+7],
+	            m[o+8],m[o+9],m[o+10],m[o+11], m[o+12],m[o+13],m[o+14],m[o+15]);
+}
+void main() {
+	int i = gl_VertexID;
+	vec4 p = vec4(pos[i*4], pos[i*4+1], pos[i*4+2], pos[i*4+3]);
+	vec4 nn = vec4(nor[i*4], nor[i*4+1], nor[i*4+2], 0.0);
+	gl_Position = -(mat(0) * p);
+	vWorld = (mat(16) * p).xyz;
+	vNormal = (mat(32) * nn).xyz;
+}`
+
+const gbufFrag = `#version 310 es
+precision highp float;
+in vec3 vWorld;
+in vec3 vNormal;
+layout(location = 0) out vec4 outWorld;  // xyz = world position, w = depth
+layout(location = 1) out vec4 outNormal; // xyz = unit world normal
+void main() {
+	outWorld = vec4(vWorld, gl_FragCoord.z);
+	outNormal = vec4(normalize(vNormal), 0.0);
+}`
+
+// TestGPUForwardGBuffer produces the float G-buffer (world position + depth,
+// world normal) on the GPU and measures each attribute against the CPU forward
+// pass's actual fragments (buf.UnsafeGet). Normals are the clean parity signal
+// (validated tightly); world position is expected to diverge because the CPU
+// drawClipped has a worldpos bug -- pos = (v0.worldX, v1.worldY, v2.worldZ), a
+// per-triangle constant -- so its delta is logged as a finding, not gated. Depth
+// is logged (encoding may differ).
+func TestGPUForwardGBuffer(t *testing.T) {
+	dev := openGLOrSkip(t)
+	defer dev.Close()
+
+	const w, h = 128, 128
+	s, c := newscene(w, h)
+	buf := cpuForward(s, c, w, h)
+
+	view, proj := c.ViewMatrix(), c.ProjMatrix()
+	var objs []gbufObject
+	scene.IterObjects(s, func(g *geometry.Geometry, model math.Mat4[float32]) bool {
+		world := model.MulM(g.ModelMatrix())
+		o := gbufObject{
+			trans:     colMajor(proj.MulM(view).MulM(world)),
+			model:     colMajor(world),
+			normalMat: colMajor(world.Inv().T()),
+		}
+		for _, tri := range g.Triangles() {
+			for _, v := range []*primitive.Vertex{tri.V1, tri.V2, tri.V3} {
+				o.pos = append(o.pos, v.Pos.X, v.Pos.Y, v.Pos.Z, v.Pos.W)
+				o.nor = append(o.nor, v.Nor.X, v.Nor.Y, v.Nor.Z, 0)
+			}
+		}
+		objs = append(objs, o)
+		return true
+	})
+	world, normal := gpuGBuffer(t, dev, objs, w, h)
+
+	var n int
+	var sumN, maxN, sumWP, maxWP, sumD, maxD float32
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			f := buf.UnsafeGet(x, y)
+			if !f.Ok {
+				continue
+			}
+			idx := (y*w + x) * 4
+			gN := math.Vec4[float32]{X: normal[idx], Y: normal[idx+1], Z: normal[idx+2], W: 0}
+			gWP := math.Vec4[float32]{X: world[idx], Y: world[idx+1], Z: world[idx+2], W: 1}
+			dN := gN.Sub(f.Nor).Len()
+			dWP := gWP.Sub(f.WordPos).Len()
+			dD := absf(world[idx+3] - f.Depth)
+			sumN += dN
+			sumWP += dWP
+			sumD += dD
+			if dN > maxN {
+				maxN = dN
+			}
+			if dWP > maxWP {
+				maxWP = dWP
+			}
+			if dD > maxD {
+				maxD = dD
+			}
+			n++
+		}
+	}
+	if n == 0 {
+		t.Fatal("no covered pixels")
+	}
+	t.Logf("G-buffer over %d px: normal mean=%.4f max=%.4f; worldpos mean=%.4f max=%.4f (CPU worldpos is buggy); depth mean=%.4f max=%.4f",
+		n, sumN/float32(n), maxN, sumWP/float32(n), maxWP, sumD/float32(n), maxD)
+	// Normals are the clean parity check: GPU perspective-correct interpolation vs
+	// CPU barycentric, both unit world-space, should agree closely.
+	if mean := sumN / float32(n); mean > 0.1 {
+		t.Fatalf("GPU vs CPU normal mean delta %.4f too large (want <0.1)", mean)
+	}
+}
+
+func absf(v float32) float32 {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+// gpuGBuffer rasterizes objs into two RGBA32F attachments (world+depth, normal)
+// with depth testing and returns the two readbacks as []float32 (w*h*4 each).
+func gpuGBuffer(t *testing.T, dev *gpu.Device, objs []gbufObject, w, h int) (world, normal []float32) {
+	t.Helper()
+	pipe, err := dev.NewRenderPipeline(gpu.RenderPipelineDescriptor{
+		VertexModule: mkMod(t, dev, gbufVert), VertexEntry: "main",
+		FragmentModule:    mkMod(t, dev, gbufFrag),
+		FragmentEntry:     "main",
+		ColorFormat:       gpu.RGBA32Float,
+		ExtraColorFormats: []gpu.TextureFormat{gpu.RGBA32Float},
+		DepthFormat:       gpu.Depth32Float,
+	})
+	if err != nil {
+		t.Fatalf("pipeline: %v", err)
+	}
+	mkF32 := func() *gpu.Texture {
+		tex, err := dev.NewTexture(gpu.TextureDescriptor{Format: gpu.RGBA32Float, Width: w, Height: h, RenderTarget: true})
+		if err != nil {
+			t.Fatalf("float texture: %v", err)
+		}
+		return tex
+	}
+	wt, nt := mkF32(), mkF32()
+	depth, err := dev.NewTexture(gpu.TextureDescriptor{Format: gpu.Depth32Float, Width: w, Height: h, RenderTarget: true})
+	if err != nil {
+		t.Fatalf("depth texture: %v", err)
+	}
+	enc := dev.NewCommandEncoder()
+	rp := enc.BeginRenderPass(gpu.RenderPassDescriptor{
+		ColorTexture: wt, Load: gpu.LoadClear, ClearColor: [4]float64{0, 0, 0, 0},
+		ExtraColorTargets: []gpu.ColorTarget{{Texture: nt, ClearColor: [4]float64{0, 0, 0, 0}}},
+		DepthTexture:      depth, ClearDepth: 1,
+	})
+	rp.SetPipeline(pipe)
+	for _, o := range objs {
+		rp.SetVertexBuffer(0, mkBuf(t, dev, o.pos))
+		rp.SetVertexBuffer(1, mkBuf(t, dev, o.nor))
+		rp.SetVertexBuffer(2, mkBuf(t, dev, append(append(append([]float32{}, o.trans[:]...), o.model[:]...), o.normalMat[:]...)))
+		rp.Draw(gpu.TriangleList, 0, len(o.pos)/4)
+	}
+	rp.End()
+	dev.Queue().Submit(enc.Finish())
+	dev.Queue().WaitIdle()
+	return f32s(wt.ReadPixels()), f32s(nt.ReadPixels())
+}
+
+func f32s(b []byte) []float32 {
+	out := make([]float32, len(b)/4)
+	for i := range out {
+		out[i] = stdmath.Float32frombits(uint32(b[i*4]) | uint32(b[i*4+1])<<8 | uint32(b[i*4+2])<<16 | uint32(b[i*4+3])<<24)
+	}
+	return out
 }
 
 func TestGPUForwardRasterCoverage(t *testing.T) {
