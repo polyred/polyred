@@ -53,7 +53,7 @@ jobs:
     - name: Renderer deferred pass on the GL backend (multi-backend render)
       env:
         CGO_ENABLED: '0'
-      run: go test -v -run 'TestGLDeferredRender|TestGPUForwardRasterCoverage' ./render/
+      run: go test -v -run 'TestGLDeferredRender|TestGPUForward' ./render/
 
   x11-windowed-present:
     name: cgo-free X11 windowed present (Xvfb + Mesa llvmpipe)
