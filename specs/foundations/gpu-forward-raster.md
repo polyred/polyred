@@ -1,6 +1,6 @@
 ---
 title: "GPU forward rasterizer (brick 3b): scene wiring + parity-by-measurement"
-status: in progress (primitives + G-buffer raster done; attribute conventions next)
+status: GPU forward -> deferred CI-proven equivalent to CPU; renderer wiring + Metal remain
 depends_on:
   - foundations/gpu-render-depth.md
   - foundations/gpu-render-mrt.md
@@ -106,14 +106,24 @@ changes output; (A) preserves current output incl. a known bug.
    screen-space input on the CI oracle; the coverage gate can be tight. The
    parity deltas to worry about are in ATTRIBUTE INTERPOLATION + depth precision,
    measured in step 2 -- not coverage.
-2. **Full G-buffer raster.** Vertex shader (`trans*pos`, normal/worldpos/uv
-   varyings) + fragment writing the MRT G-buffer (normal, worldpos, basecol,
-   matid) + depth; produce the `FragmentBuffer` (seam option A). Gate by
-   `passGPU["forward"]`, parity vs CPU at the measured tolerance, feeding the
-   existing GPU deferred shading. Backend-agnostic: GL is the CI oracle, Metal is
-   the darwin runtime.
-3. **Remove the round-trip (seam option B)** once parity holds: keep the G-buffer
-   on GPU textures into the deferred pass.
+2. **Full G-buffer raster + deferred integration — DONE (CI-proven on GL).**
+   `TestGPUForwardDeferredIntegration`: the GPU forward raster's G-buffer
+   (world normal + position, RGBA32F MRT, depth-tested, back-face culled via
+   gl_FrontFacing) is injected into the renderer's FragmentBuffer and the real
+   deferred shading pass runs on the GL device; the final image matches the
+   all-CPU render at **0.00% of channels differing by >16** (gated at 2%). The
+   perspective-correct (GPU) vs linear (CPU) normal/worldpos interpolation only
+   produces sub-quantization lighting differences, so the shaded image is
+   equivalent. The CPU worldpos bug was fixed (interpWorldPos) so CPU+GPU agree.
+   REMAINING to fully finish brick 3b:
+   - Wire it as `passGPU["forward"]` IN the renderer (a real `gpuForwardRaster`
+     emitting the G-buffer incl. matid/col, gated like the deferred pass), so the
+     renderer uses the GPU forward by default -- today it is proven via a
+     white-box test that injects the G-buffer, not yet the default path.
+   - Port the forward raster to the Metal backend (darwin runtime; GL is the CI
+     oracle), as the deferred pass already is.
+3. **Remove the round-trip (seam option B)** once wired: keep the G-buffer on GPU
+   textures into the deferred pass (no CPU FragmentBuffer round-trip).
 
 ## Out of scope
 
