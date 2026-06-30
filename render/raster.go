@@ -205,11 +205,10 @@ func (r *Renderer) NextBuffer() *buffer.FragmentBuffer {
 	return r.bufs[r.bufcur]
 }
 
-// passForward rasterizes the scene into the G-buffer. The GPU forward path
-// (gpuForwardPass) is being brought up under test; until it matches the CPU's
-// textured output it is not wired as the default.
+// passForward rasterizes the scene into the G-buffer, on the GPU when a device is
+// present and the GPU raster succeeds (gpuForwardPass), otherwise on the CPU.
 func (r *Renderer) passForward() {
-	r.cpuForwardPass()
+	r.runPass("forward", r.gpuForwardPass, r.cpuForwardPass)
 }
 
 func (r *Renderer) cpuForwardPass() {

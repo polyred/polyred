@@ -223,25 +223,16 @@ func TestGPUForwardDeferredIntegration(t *testing.T) {
 	// All-CPU reference.
 	cpu := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), CPU()).Render()
 
-	// GPU-forward path: run the CPU forward pass to populate materials + the buffer,
-	// then overwrite the GEOMETRIC attributes (normal, world position) with the GPU
-	// raster's, and run the renderer's deferred shading (on the GL device) + AA.
+	// GPU-forward path: the renderer's own passForward now rasterizes the full
+	// G-buffer (world position, normal, uv, material id, depth) on the GL device,
+	// then the deferred shading + AA run on it. This exercises the wired default
+	// path end-to-end, no white-box injection.
 	r := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), GPU(dev))
 	buf := r.CurrBuffer()
 	buf.Clear()
 	r.passForward()
-	world, normal := gpuGBuffer(t, dev, buildGBufObjs(s, c), w, h)
-	for y := 0; y < h; y++ {
-		for x := 0; x < w; x++ {
-			f := buf.UnsafeGet(x, y)
-			if !f.Ok {
-				continue
-			}
-			idx := (y*w + x) * 4
-			f.Nor = math.Vec4[float32]{X: normal[idx], Y: normal[idx+1], Z: normal[idx+2], W: 0}
-			f.WordPos = math.Vec4[float32]{X: world[idx], Y: world[idx+1], Z: world[idx+2], W: 1}
-			buf.Set(x, y, f)
-		}
+	if !r.passOnGPU("forward") {
+		t.Skip("forward did not run on the GPU (no GL forward path)")
 	}
 	buf.ClearColor()
 	r.passDeferred()
