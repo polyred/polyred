@@ -1,6 +1,6 @@
 ---
 title: "GPU forward rasterizer (brick 3b): scene wiring + parity-by-measurement"
-status: in progress (step 1: measurement)
+status: in progress (step 1 DONE — coverage pixel-exact; step 2 next)
 depends_on:
   - foundations/gpu-render-depth.md
   - foundations/gpu-render-mrt.md
@@ -67,14 +67,15 @@ test on the GPU output itself.
 
 ## Steps
 
-1. **Measurement (this step).** A minimal GPU forward raster of the scene
-   geometry producing one comparable attribute (start with DEPTH and/or
-   world-space normal), rendered on the GL backend (3a depth/MRT), compared
-   against the CPU `passForward` output for the same attribute. Dump the delta
-   distribution (CI log) and assert a deliberately loose bound first; tighten to
-   the measured tolerance once the distribution is known. This calibrates the
-   gate before the full G-buffer exists. CI: a new `render` test, Mesa
-   surfaceless, in the gl-probe filter.
+1. **Measurement — DONE.** `render/gpu_forward_measure_linux_test.go`
+   (`TestGPUForwardRasterCoverage`): rasterize the scene's triangles in identical
+   SCREEN space (computed CPU-side exactly as `draw()`, mapped to NDC w=1 to dodge
+   the projection's negated-W) on the GL backend and compare silhouette coverage
+   to the CPU `passForward`. RESULT (Mesa llvmpipe, in CI): cpu=3220 gpu=3220
+   differ=0 (0.00%, no Y-flip). So COVERAGE is pixel-exact given identical
+   screen-space input on the CI oracle; the coverage gate can be tight. The
+   parity deltas to worry about are in ATTRIBUTE INTERPOLATION + depth precision,
+   measured in step 2 -- not coverage.
 2. **Full G-buffer raster.** Vertex shader (`trans*pos`, normal/worldpos/uv
    varyings) + fragment writing the MRT G-buffer (normal, worldpos, basecol,
    matid) + depth; produce the `FragmentBuffer` (seam option A). Gate by
