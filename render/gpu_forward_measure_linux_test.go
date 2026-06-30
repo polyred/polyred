@@ -359,7 +359,9 @@ func TestGPUForwardPassUV(t *testing.T) {
 				continue
 			}
 			nShared++
-			idx := (y*w + x) * 4
+			// gpuForwardPass now un-flips Y; the gpuGBuffer helper readback is still
+			// raw (flipped), so index it at the mirrored row to hit the same screen pixel.
+			idx := ((h-1-y)*w + x) * 4
 			// gpuForwardPass vs gpuGBuffer normal+worldpos at the same pixel.
 			nGG := absf(gf.Nor.X-gNormal[idx]) + absf(gf.Nor.Y-gNormal[idx+1]) + absf(gf.Nor.Z-gNormal[idx+2])
 			wGG := absf(gf.WordPos.X-gWorld[idx]) + absf(gf.WordPos.Y-gWorld[idx+1]) + absf(gf.WordPos.Z-gWorld[idx+2])

@@ -166,9 +166,13 @@ func (r *Renderer) gpuForwardPass() error {
 	wp := floats32(wt.ReadPixels())
 	nr := floats32(nt.ReadPixels())
 	uv := floats32(ut.ReadPixels())
+	// Render-target texture readback follows GL's bottom-left origin: source row r is
+	// screen row h-1-r. The FragmentBuffer (like the CPU pass) is top-down, so read
+	// the mirrored row when writing each (x, y). (The deferred pass reads a compute
+	// SSBO, which is not flipped, hence only the render path needs this.)
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
-			idx := (y*w + x) * 4
+			idx := ((h-1-y)*w + x) * 4
 			if nr[idx+3] < noFragment+0.5 { // no fragment written
 				continue
 			}
