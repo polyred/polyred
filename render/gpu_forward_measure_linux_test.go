@@ -266,10 +266,11 @@ func TestGPUForwardDeferredIntegration(t *testing.T) {
 	}
 	frac := float64(nBig) / float64(len(cpu.Pix))
 	t.Logf("GPU-forward+deferred vs all-CPU: %.2f%% of channels differ by >16", frac*100)
-	// Tolerance accounts for perspective-correct (GPU) vs linear (CPU) normal/
-	// worldpos interpolation feeding the lighting. Set from the measured number.
-	if frac > 0.15 {
-		t.Fatalf("GPU-forward+deferred diverges from CPU on %.2f%% of channels (>16); want <15%%", frac*100)
+	// Measured 0%: the GPU's perspective-correct normal/worldpos vs the CPU's linear
+	// interpolation produces only sub-quantization lighting differences, so the
+	// shaded 8-bit image matches. Gate at 2% (the deferred tolerance) for headroom.
+	if frac > 0.02 {
+		t.Fatalf("GPU-forward+deferred diverges from CPU on %.2f%% of channels (>16); want <2%%", frac*100)
 	}
 }
 
