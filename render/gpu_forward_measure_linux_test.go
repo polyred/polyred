@@ -65,27 +65,25 @@ func cpuForward(s *scene.Scene, c camera.Interface, w, h int) *buffer.FragmentBu
 }
 
 type gbufObject struct {
-	pos, nor                []float32
-	trans, model, normalMat [16]float32 // column-major
+	pos, wpos, wnor []float32 // model pos; world pos + world normal (CPU-computed)
+	trans           [16]float32
 }
 
 const gbufVert = `#version 310 es
-layout(std430, binding = 0) readonly buffer _pos { float pos[]; };
-layout(std430, binding = 1) readonly buffer _nor { float nor[]; };
-layout(std430, binding = 2) readonly buffer _mat { float m[]; }; // trans[0..15], model[16..31], normalMat[32..47]
+layout(std430, binding = 0) readonly buffer _pos { float pos[]; };  // model position
+layout(std430, binding = 1) readonly buffer _wp { float wpos[]; };  // world position
+layout(std430, binding = 2) readonly buffer _wn { float wnor[]; };  // world normal
+layout(std430, binding = 3) readonly buffer _m { float m[]; };      // trans (col-major)
 out vec3 vWorld;
 out vec3 vNormal;
-mat4 mat(int o) {
-	return mat4(m[o],m[o+1],m[o+2],m[o+3], m[o+4],m[o+5],m[o+6],m[o+7],
-	            m[o+8],m[o+9],m[o+10],m[o+11], m[o+12],m[o+13],m[o+14],m[o+15]);
-}
 void main() {
 	int i = gl_VertexID;
 	vec4 p = vec4(pos[i*4], pos[i*4+1], pos[i*4+2], pos[i*4+3]);
-	vec4 nn = vec4(nor[i*4], nor[i*4+1], nor[i*4+2], 0.0);
-	gl_Position = -(mat(0) * p);
-	vWorld = (mat(16) * p).xyz;
-	vNormal = (mat(32) * nn).xyz;
+	mat4 T = mat4(m[0],m[1],m[2],m[3], m[4],m[5],m[6],m[7],
+	              m[8],m[9],m[10],m[11], m[12],m[13],m[14],m[15]);
+	gl_Position = -(T * p);
+	vWorld = vec3(wpos[i*4], wpos[i*4+1], wpos[i*4+2]);
+	vNormal = vec3(wnor[i*4], wnor[i*4+1], wnor[i*4+2]);
 }`
 
 const gbufFrag = `#version 310 es
@@ -124,15 +122,15 @@ func TestGPUForwardGBuffer(t *testing.T) {
 	var objs []gbufObject
 	scene.IterObjects(s, func(g *geometry.Geometry, model math.Mat4[float32]) bool {
 		world := model.MulM(g.ModelMatrix())
-		o := gbufObject{
-			trans:     colMajor(proj.MulM(view).MulM(world)),
-			model:     colMajor(world),
-			normalMat: colMajor(world.Inv().T()),
-		}
+		normalMat := world.Inv().T()
+		o := gbufObject{trans: colMajor(proj.MulM(view).MulM(world))}
 		for _, tri := range g.Triangles() {
 			for _, v := range []*primitive.Vertex{tri.V1, tri.V2, tri.V3} {
+				wp := world.MulV(v.Pos)               // world position (correct interpolation source)
+				wn := v.Nor.Apply(normalMat)          // world normal, exactly as the CPU draw() does
 				o.pos = append(o.pos, v.Pos.X, v.Pos.Y, v.Pos.Z, v.Pos.W)
-				o.nor = append(o.nor, v.Nor.X, v.Nor.Y, v.Nor.Z, 0)
+				o.wpos = append(o.wpos, wp.X, wp.Y, wp.Z, 1)
+				o.wnor = append(o.wnor, wn.X, wn.Y, wn.Z, 0)
 			}
 		}
 		objs = append(objs, o)
@@ -243,8 +241,9 @@ func gpuGBuffer(t *testing.T, dev *gpu.Device, objs []gbufObject, w, h int) (wor
 	rp.SetPipeline(pipe)
 	for _, o := range objs {
 		rp.SetVertexBuffer(0, mkBuf(t, dev, o.pos))
-		rp.SetVertexBuffer(1, mkBuf(t, dev, o.nor))
-		rp.SetVertexBuffer(2, mkBuf(t, dev, append(append(append([]float32{}, o.trans[:]...), o.model[:]...), o.normalMat[:]...)))
+		rp.SetVertexBuffer(1, mkBuf(t, dev, o.wpos))
+		rp.SetVertexBuffer(2, mkBuf(t, dev, o.wnor))
+		rp.SetVertexBuffer(3, mkBuf(t, dev, o.trans[:]))
 		rp.Draw(gpu.TriangleList, 0, len(o.pos)/4)
 	}
 	rp.End()
