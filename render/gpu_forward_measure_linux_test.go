@@ -274,6 +274,63 @@ func TestGPUForwardDeferredIntegration(t *testing.T) {
 	}
 }
 
+// TestGPUForwardPassUV measures gpuForwardPass's per-fragment texture coordinates
+// and derivatives (U, V, Du, Dv) against the CPU forward pass, at fragments both
+// cover. The first textured-scene wiring diverged because the GPU G-buffer omitted
+// UV; this isolates whether the UV values OR the du/dv mipmap LOD are the gap.
+// Log-only: it is a measurement, not a gate, while the GPU forward path is brought
+// up; the production wiring stays on the CPU until this is ~0.
+func TestGPUForwardPassUV(t *testing.T) {
+	dev := openGLOrSkip(t)
+	defer dev.Close()
+
+	const w, h = 96, 96
+	s, c := newscene(w, h)
+	cpu := cpuForward(s, c, w, h)
+
+	r := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), GPU(dev))
+	gbuf := r.CurrBuffer()
+	gbuf.Clear()
+	if err := r.gpuForwardPass(); err != nil {
+		t.Skipf("gpuForwardPass unavailable: %v", err)
+	}
+
+	var n int
+	var sU, sV, sDu, sDv, mU, mV float32
+	var dumped int
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			cf := cpu.UnsafeGet(x, y)
+			gf := gbuf.UnsafeGet(x, y)
+			if !cf.Ok || !gf.Ok {
+				continue
+			}
+			n++
+			du, dv := absf(cf.U-gf.U), absf(cf.V-gf.V)
+			sU += du
+			sV += dv
+			sDu += absf(cf.Du - gf.Du)
+			sDv += absf(cf.Dv - gf.Dv)
+			if du > mU {
+				mU = du
+			}
+			if dv > mV {
+				mV = dv
+			}
+			if (du > 0.05 || dv > 0.05) && dumped < 8 {
+				t.Logf("  (%d,%d) cpu UV=(%.4f,%.4f) Du,Dv=(%.5f,%.5f)  gpu UV=(%.4f,%.4f) Du,Dv=(%.5f,%.5f)",
+					x, y, cf.U, cf.V, cf.Du, cf.Dv, gf.U, gf.V, gf.Du, gf.Dv)
+				dumped++
+			}
+		}
+	}
+	if n == 0 {
+		t.Fatal("no shared fragments")
+	}
+	t.Logf("GPU vs CPU forward UV over %d shared fragments: meanU=%.5f meanV=%.5f (max %.4f/%.4f) meanDu=%.6f meanDv=%.6f",
+		n, sU/float32(n), sV/float32(n), mU, mV, sDu/float32(n), sDv/float32(n))
+}
+
 func absf(v float32) float32 {
 	if v < 0 {
 		return -v
