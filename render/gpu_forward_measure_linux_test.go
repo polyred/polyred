@@ -223,16 +223,15 @@ func TestGPUForwardDeferredIntegration(t *testing.T) {
 	// All-CPU reference.
 	cpu := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), CPU()).Render()
 
-	// GPU-forward path: the renderer's own passForward now rasterizes the full
-	// G-buffer (world position, normal, uv, material id, depth) on the GL device,
-	// then the deferred shading + AA run on it. This exercises the wired default
-	// path end-to-end, no white-box injection.
+	// GPU-forward path: gpuForwardPass rasterizes the full G-buffer (world position,
+	// normal, uv, material id, depth) on the GL device, then deferred shading + AA
+	// run on it. Calls gpuForwardPass directly so it exercises the GPU forward path
+	// regardless of whether passForward is wired to it as the default yet.
 	r := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), GPU(dev))
 	buf := r.CurrBuffer()
 	buf.Clear()
-	r.passForward()
-	if !r.passOnGPU("forward") {
-		t.Skip("forward did not run on the GPU (no GL forward path)")
+	if err := r.gpuForwardPass(); err != nil {
+		t.Skipf("gpuForwardPass unavailable: %v", err)
 	}
 	buf.ClearColor()
 	r.passDeferred()
@@ -263,6 +262,65 @@ func TestGPUForwardDeferredIntegration(t *testing.T) {
 	if frac > 0.02 {
 		t.Fatalf("GPU-forward+deferred diverges from CPU on %.2f%% of channels (>16); want <2%%", frac*100)
 	}
+}
+
+// TestGPUForwardAttribution isolates what the residual full-pipeline divergence is.
+// It runs gpuForwardPass (correct geometry, GPU UV/depth/matid) but substitutes the
+// CPU forward pass's Nor/WordPos at each pixel, then runs deferred shading. If the
+// final image then matches all-CPU closely (<2% @>8), the entire residual is the
+// GPU's perspective-correct vs the CPU's linear normal/worldpos interpolation -- the
+// documented, user-accepted parity-trap difference -- and the GPU UV is interior
+// clean. If it stays high, normal/worldpos is not the whole story (a second bug).
+func TestGPUForwardAttribution(t *testing.T) {
+	dev := openGLOrSkip(t)
+	defer dev.Close()
+
+	const w, h = 96, 96
+	s, c := newscene(w, h)
+	cpu := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), CPU()).Render()
+	cpuG := cpuForward(s, c, w, h)
+
+	r := NewRenderer(Scene(s), Camera(c), Size(w, h), MSAA(1), Workers(1), GPU(dev))
+	buf := r.CurrBuffer()
+	buf.Clear()
+	if err := r.gpuForwardPass(); err != nil {
+		t.Skipf("gpuForwardPass unavailable: %v", err)
+	}
+	// Keep GPU UV/Depth/MaterialID; take Nor/WordPos from the CPU (coverage matches).
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			gf := buf.UnsafeGet(x, y)
+			if !gf.Ok {
+				continue
+			}
+			cf := cpuG.UnsafeGet(x, y)
+			gf.Nor = cf.Nor
+			gf.WordPos = cf.WordPos
+			buf.Set(x, y, gf)
+		}
+	}
+	buf.ClearColor()
+	r.passDeferred()
+	r.passAntialiasing()
+	if !r.passOnGPU("deferred") {
+		t.Skip("deferred did not run on the GPU")
+	}
+	g := r.outBuf
+	var n8, n16 int
+	for i := range cpu.Pix {
+		d := int(cpu.Pix[i]) - int(g.Pix[i])
+		if d < 0 {
+			d = -d
+		}
+		if d > 8 {
+			n8++
+		}
+		if d > 16 {
+			n16++
+		}
+	}
+	t.Logf("attribution (GPU forward + CPU Nor/WordPos, GPU UV): %.2f%%@>8 %.2f%%@>16 -- if <2%%@>8, the full-pipeline residual is purely perspective-vs-linear normal/worldpos",
+		100*float64(n8)/float64(len(cpu.Pix)), 100*float64(n16)/float64(len(cpu.Pix)))
 }
 
 // TestGPUForwardPassUV measures gpuForwardPass's per-fragment texture coordinates
