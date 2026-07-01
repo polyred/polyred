@@ -1,6 +1,6 @@
 ---
 title: "GPU forward rasterizer (brick 3b): scene wiring + parity-by-measurement"
-status: GPU forward -> deferred CI-proven equivalent to CPU; renderer wiring + Metal remain
+status: GPU forward wired as the default passForward (GL), gated by measured parity; Metal port remains
 depends_on:
   - foundations/gpu-render-depth.md
   - foundations/gpu-render-mrt.md
@@ -124,6 +124,50 @@ changes output; (A) preserves current output incl. a known bug.
      oracle), as the deferred pass already is.
 3. **Remove the round-trip (seam option B)** once wired: keep the G-buffer on GPU
    textures into the deferred pass (no CPU FragmentBuffer round-trip).
+
+## Wired as the default (2026-07-01): the Y-flip bug and the parity band
+
+`passForward` now dispatches `runPass("forward", gpuForwardPass, cpuForwardPass)`:
+the GL device rasterizes the full G-buffer (world position, normal, uv + du/dv
+mipmap-LOD gradients via dFdx/dFdy, material id, depth) by default; the CPU is the
+fallback when there is no device or it cannot run the GLSL pipeline (Metal errors on
+missing MSL, so darwin/goldens are unchanged).
+
+Bringing it up surfaced ONE real data-path bug and then the expected parity band:
+
+- **Y-flip (fixed).** Render-target *texture* readback follows GL's bottom-left
+  origin, so `glReadPixels` row r is screen row h-1-r. `gpuForwardPass` wrote
+  readback row y to FragmentBuffer row y, vertically mirroring the whole G-buffer --
+  every fragment sampled the texture at the mirror pixel (meanU 0.21 / meanV 0.34;
+  final image 24.9% @>8). The deferred pass reads a *compute SSBO* (linear, not
+  flipped), which is why `TestGLDeferredRender` never caught it. Found by overlap
+  measurement: overlap(cpu, gpuForward) flip=1811/1811 vs noflip=950. Fix: read the
+  mirrored source row when filling the buffer. (Metal/other texture-readback callers
+  should assume the same bottom-origin convention.)
+
+- **Parity band (accepted, gated by measurement).** After the fix the residual vs
+  the all-CPU render is deterministically **4.38% @>8 / 0.97% @>16** (96x96 bunny).
+  Attribution: substituting the CPU's Nor/WordPos into the GPU G-buffer leaves >8
+  *unchanged*, so the residual is 100% UV, not the perspective-vs-linear normal/
+  worldpos (that washes out, as measured). Interior split: of ~1600 interior
+  fragments the smooth surface is UV-clean (same-triangle meanU/V ~0), and ~4% are
+  large-magnitude UV diffs concentrated at internal folds -- where GPU (hardware
+  hyperbolic depth) and CPU (float barycentric depth) pick different but coincident
+  triangles at a depth tie. That plus the silhouette edge band is the parity trap
+  this spec predicted; the GPU is not wrong, it makes an equally-valid choice at
+  ties. Per the user's "ship correct GPU + tolerance" call, the gate is measured,
+  not zero.
+
+Three gates lock this in (all GL, Mesa surfaceless, in the gl-probe run filter):
+- `TestGPUForwardPassUV` -- confound-free forward gate (no shading/AA): interior
+  same-triangle UV must agree to ~float precision (<0.01, catches any interpolation
+  regression at the source, e.g. a re-introduced Y-flip); interior different-triangle
+  (fold/seam) fraction bounded <8% (measured ~4.2%).
+- `TestGPUForwardDeferredIntegration` -- full pipeline (GPU forward -> deferred -> AA
+  vs all-CPU), gated <6% @>8 (measured 4.38%; @>8 not @>16, so the 8-16 band a subtle
+  regression would first show in is not blind).
+- `TestGLDeferredRender` -- now CPU forward + GPU deferred, keeping the pure
+  deferred-shading gate tight (<2% @>8) independent of the forward parity band.
 
 ## Out of scope
 

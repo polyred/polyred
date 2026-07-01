@@ -13,13 +13,16 @@ import (
 	"poly.red/gpu"
 )
 
-// TestGLDeferredRender drives the renderer's real deferred pass on the cgo-free
-// GL backend: render.GPU(glDev) routes through the same runDeferredKernel that
-// serves Metal, now compiled to GLSL by kernelModule. It asserts the deferred
-// pass actually ran on the GPU and that the GL image matches a CPU reference
-// within the deferred tolerance. Runs in CI on Mesa llvmpipe (surfaceless);
-// skipped under standard `go test ./...` (env unset) so it never opens GL on a
-// runner without surfaceless Mesa (which would segfault, not error).
+// TestGLDeferredRender isolates deferred-shading parity on the cgo-free GL backend:
+// it runs the CPU forward pass (so the G-buffer input is identical to the CPU
+// reference) then the GPU deferred pass, which routes through the same
+// runDeferredKernel that serves Metal, now compiled to GLSL by kernelModule. This
+// keeps the gate tight (<2% @>8) as a pure deferred-shading gate -- the full GPU
+// pipeline (GPU forward too) is gated separately by TestGPUForwardDeferredIntegration,
+// where the forward rasterizer's boundary parity band lives. It asserts the deferred
+// pass actually ran on the GPU. Runs in CI on Mesa llvmpipe (surfaceless); skipped
+// under standard `go test ./...` (env unset) so it never opens GL on a runner without
+// surfaceless Mesa (which would segfault, not error).
 func TestGLDeferredRender(t *testing.T) {
 	if os.Getenv("EGL_PLATFORM") != "surfaceless" {
 		t.Skip("set EGL_PLATFORM=surfaceless to run the GL render test")
@@ -41,8 +44,16 @@ func TestGLDeferredRender(t *testing.T) {
 
 	cpu := NewRenderer(append(opts, CPU())...).Render()
 
+	// Force the CPU forward pass on the GPU renderer so the deferred pass shades the
+	// SAME G-buffer as the CPU reference; only the deferred stage differs (GPU vs CPU).
 	gr := NewRenderer(append(opts, GPU(dev))...)
-	gl := gr.Render()
+	buf := gr.CurrBuffer()
+	buf.Clear()
+	gr.cpuForwardPass()
+	buf.ClearColor()
+	gr.passDeferred()
+	gr.passAntialiasing()
+	gl := gr.outBuf
 	if !gr.passOnGPU("deferred") {
 		t.Fatal("deferred pass did not run on the GL GPU (fell back to CPU)")
 	}

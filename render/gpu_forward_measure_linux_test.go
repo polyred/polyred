@@ -244,23 +244,31 @@ func TestGPUForwardDeferredIntegration(t *testing.T) {
 	if len(cpu.Pix) != len(gpuImg.Pix) {
 		t.Fatalf("size mismatch: cpu %d gpu %d", len(cpu.Pix), len(gpuImg.Pix))
 	}
-	nBig := 0
+	var n8, n16 int
 	for i := range cpu.Pix {
 		d := int(cpu.Pix[i]) - int(gpuImg.Pix[i])
 		if d < 0 {
 			d = -d
 		}
+		if d > 8 {
+			n8++
+		}
 		if d > 16 {
-			nBig++
+			n16++
 		}
 	}
-	frac := float64(nBig) / float64(len(cpu.Pix))
-	t.Logf("GPU-forward+deferred vs all-CPU: %.2f%% of channels differ by >16", frac*100)
-	// Measured 0%: the GPU's perspective-correct normal/worldpos vs the CPU's linear
-	// interpolation produces only sub-quantization lighting differences, so the
-	// shaded 8-bit image matches. Gate at 2% (the deferred tolerance) for headroom.
-	if frac > 0.02 {
-		t.Fatalf("GPU-forward+deferred diverges from CPU on %.2f%% of channels (>16); want <2%%", frac*100)
+	f8 := float64(n8) / float64(len(cpu.Pix))
+	f16 := float64(n16) / float64(len(cpu.Pix))
+	t.Logf("GPU-forward+deferred vs all-CPU: %.2f%%@>8 %.2f%%@>16", f8*100, f16*100)
+	// Measured deterministically at 4.38%@>8 / 0.97%@>16. Attribution (substituting the
+	// CPU's Nor/WordPos leaves >8 unchanged) proves the residual is 100% UV, and the
+	// interior split proves the smooth surface is UV-clean: the >8 band is the boundary
+	// parity trap (silhouette edges + depth-tie folds where CPU and GPU pick different
+	// but equally-valid coincident triangles). Gate at >8 (not >16, which would blind
+	// us to the 8-16 band a subtle forward regression would first show in) with
+	// headroom above the measured 4.38%. See specs/foundations/gpu-forward-raster.md.
+	if f8 > 0.06 {
+		t.Fatalf("GPU-forward+deferred diverges from CPU on %.2f%%@>8; want <6%% (measured 4.38%%)", f8*100)
 	}
 }
 
@@ -323,12 +331,15 @@ func TestGPUForwardAttribution(t *testing.T) {
 		100*float64(n8)/float64(len(cpu.Pix)), 100*float64(n16)/float64(len(cpu.Pix)))
 }
 
-// TestGPUForwardPassUV measures gpuForwardPass's per-fragment texture coordinates
-// and derivatives (U, V, Du, Dv) against the CPU forward pass, at fragments both
-// cover. The first textured-scene wiring diverged because the GPU G-buffer omitted
-// UV; this isolates whether the UV values OR the du/dv mipmap LOD are the gap.
-// Log-only: it is a measurement, not a gate, while the GPU forward path is brought
-// up; the production wiring stays on the CPU until this is ~0.
+// TestGPUForwardPassUV is the confound-free forward-rasterizer gate (no shading/AA):
+// it compares gpuForwardPass's per-fragment texture coordinates against the CPU
+// forward pass. It partitions interior fragments (all 4 neighbors covered) by
+// magnitude: same-triangle (diff < 0.1) must agree to ~float precision (a tight
+// interpolation-regression gate, since the inputs are float-identical), while
+// different-triangle (diff > 0.1, only possible where surfaces overlap -- depth-tie
+// folds / UV seams) is a bounded band, not required to be zero. The first textured
+// wiring failed here (a Y-flip in the render-target readback made every UV wrong);
+// this catches any regression at the source, independent of the final image.
 func TestGPUForwardPassUV(t *testing.T) {
 	dev := openGLOrSkip(t)
 	defer dev.Close()
@@ -396,8 +407,8 @@ func TestGPUForwardPassUV(t *testing.T) {
 	t.Logf("overlap cpu&gpuGBuffer: noflip=%d flip=%d", ovCB, ovCBflip)
 	t.Logf("overlap gpuForward&gpuGBuffer: %d", ovGB)
 
-	var nShared, matMismatch, nInt, nIntBig int
-	var sU, sV, mU, mV, sUint, sVint float32
+	var nShared, matMismatch, nInt, nIntSame, nIntDiff int
+	var sU, sV, mU, mV, sUsame, sVsame float32
 	var sNorGG, sWPGG, mNorGG float32 // gpuForwardPass vs gpuGBuffer (GPU-vs-GPU)
 	var dumped int
 	for y := 0; y < h; y++ {
@@ -439,10 +450,16 @@ func TestGPUForwardPassUV(t *testing.T) {
 				x > 0 && x < w-1 && y > 0 && y < h-1
 			if interior {
 				nInt++
-				sUint += du
-				sVint += dv
-				if du > 0.02 || dv > 0.02 {
-					nIntBig++
+				if du > 0.1 || dv > 0.1 {
+					// Different winning triangle (depth-tie fold / UV seam): the
+					// bounded boundary band. Only possible where surfaces overlap.
+					nIntDiff++
+				} else {
+					// Same triangle: identical vertex UVs + weights + sample point,
+					// so the interpolated UV must agree to ~float precision.
+					nIntSame++
+					sUsame += du
+					sVsame += dv
 				}
 			}
 			if (du > 0.05 || dv > 0.05) && dumped < 6 {
@@ -460,8 +477,27 @@ func TestGPUForwardPassUV(t *testing.T) {
 		nShared, sNorGG/float32(nShared), mNorGG, sWPGG/float32(nShared))
 	t.Logf("UV vs CPU: meanU=%.5f meanV=%.5f (max %.4f/%.4f) matMismatch=%d",
 		sU/float32(nShared), sV/float32(nShared), mU, mV, matMismatch)
-	t.Logf("UV interior-only (%d frags): meanU=%.5f meanV=%.5f  interior frags with dU|dV>0.02: %d (%.2f%%)",
-		nInt, sUint/float32(nInt), sVint/float32(nInt), nIntBig, 100*float64(nIntBig)/float64(nInt))
+
+	if matMismatch > 0 {
+		t.Errorf("material id mismatch on %d shared fragments; want 0", matMismatch)
+	}
+	// Tight interpolation gate: interior same-triangle fragments must agree to ~float
+	// precision (identical inputs). A regression in the UV varying/perspective weights
+	// shows here immediately, independent of shading/AA.
+	meanUsame := sUsame / float32(nIntSame)
+	meanVsame := sVsame / float32(nIntSame)
+	t.Logf("UV interior same-triangle (%d frags): meanU=%.6f meanV=%.6f -- want ~0", nIntSame, meanUsame, meanVsame)
+	if meanUsame > 0.01 || meanVsame > 0.01 {
+		t.Errorf("interior same-triangle UV drifts (meanU=%.5f meanV=%.5f); want <0.01 -- interpolation regression", meanUsame, meanVsame)
+	}
+	// Bounded boundary band: interior fragments where GPU and CPU pick different
+	// coincident triangles (depth-tie folds / UV seams). Measured ~4.2%; the parity
+	// trap, gated with headroom, not required to be zero.
+	fracDiff := float64(nIntDiff) / float64(nInt)
+	t.Logf("UV interior different-triangle (fold/seam band): %d/%d = %.2f%% -- want <8%%", nIntDiff, nInt, fracDiff*100)
+	if fracDiff > 0.08 {
+		t.Errorf("interior fold/seam band %.2f%% exceeds 8%% -- possible depth/coverage regression", fracDiff*100)
+	}
 }
 
 func absf(v float32) float32 {
