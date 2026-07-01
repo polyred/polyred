@@ -73,6 +73,67 @@ void main() {
 	outUV = vec4(vUV, dot(dx, dx), dot(dy, dy));
 }`
 
+// Metal (darwin runtime) equivalents of the GLSL forward shaders. The vertex reads
+// the same six storage buffers by [[vertex_id]]; the matrix is column-major (matching
+// the colMajorMat4 upload and MSL's float4x4(col0..col3)). [[position]].z is Metal's
+// [0,1] depth, remapped to the CPU's [-1,1] like the GL path. Back faces are dropped
+// via [[front_facing]] (Metal has no hardware cull configured here); the sense is
+// verified against the CPU on darwin. dfdx/dfdy give the squared uv gradients for LOD.
+const fwdGBufMSL = `
+#include <metal_stdlib>
+using namespace metal;
+struct VOut {
+	float4 pos [[position]];
+	float3 world;
+	float3 normal;
+	float2 uv;
+	float  matid [[flat]];
+};
+struct FOut {
+	float4 wp  [[color(0)]]; // xyz world position, w depth (CPU [-1,1])
+	float4 n   [[color(1)]]; // xyz unit world normal, w material id
+	float4 uvo [[color(2)]]; // u, v, du, dv
+};
+vertex VOut fwdVert(uint vid [[vertex_id]],
+	device const float* pos  [[buffer(0)]],
+	device const float* wpos [[buffer(1)]],
+	device const float* wnor [[buffer(2)]],
+	device const float* mid  [[buffer(3)]],
+	device const float* uv   [[buffer(4)]],
+	device const float* m    [[buffer(5)]]) {
+	float4 p = float4(pos[vid*4], pos[vid*4+1], pos[vid*4+2], pos[vid*4+3]);
+	float4x4 T = float4x4(float4(m[0], m[1], m[2], m[3]),
+	                      float4(m[4], m[5], m[6], m[7]),
+	                      float4(m[8], m[9], m[10], m[11]),
+	                      float4(m[12], m[13], m[14], m[15]));
+	VOut o;
+	o.pos    = -(T * p);
+	// The renderer's projection yields GL-style clip z in [-w, w] (ndc [-1,1]); Metal
+	// clips to [0, w] (ndc [0,1]) and would discard the near half. Remap z to Metal's
+	// convention: z' = (z + w)/2. The fragment then recovers the CPU's [-1,1] depth
+	// via position.z*2-1, exactly as the GL path does from gl_FragCoord.z.
+	o.pos.z  = (o.pos.z + o.pos.w) * 0.5;
+	o.world  = float3(wpos[vid*4], wpos[vid*4+1], wpos[vid*4+2]);
+	o.normal = float3(wnor[vid*4], wnor[vid*4+1], wnor[vid*4+2]);
+	o.uv     = float2(uv[vid*2], uv[vid*2+1]);
+	o.matid  = mid[vid];
+	return o;
+}
+fragment FOut fwdFrag(VOut in [[stage_in]], bool front [[front_facing]]) {
+	// Drop back faces to match the CPU. Metal's default front-facing winding is the
+	// OPPOSITE of GL's (clockwise vs counter-clockwise) for this same NDC geometry, so
+	// the GLSL keeps !gl_FrontFacing while the MSL keeps front -- both keep the CPU's
+	// front faces. Verified against the CPU on darwin (coverage 1811 == CPU exactly).
+	if (front) discard_fragment();
+	FOut o;
+	o.wp  = float4(in.world, in.pos.z * 2.0 - 1.0);
+	o.n   = float4(normalize(in.normal), in.matid);
+	float2 dx = dfdx(in.uv);
+	float2 dy = dfdy(in.uv);
+	o.uvo = float4(in.uv, dot(dx, dx), dot(dy, dy));
+	return o;
+}`
+
 const noFragment = -2.0
 
 var errGPUForwardUnavailable = errors.New("render: no GPU device for the forward pass")
@@ -93,17 +154,20 @@ func (r *Renderer) gpuForwardPass() error {
 	w, h := buf.Bounds().Dx(), buf.Bounds().Dy()
 	objs := r.buildForwardObjects()
 
-	vmod, err := dev.NewShaderModule(gpu.ShaderSource{GLSL: fwdGBufVert})
+	// Provide both GLSL and MSL: the GL backend uses the GLSL (entry is always main,
+	// ventry/fentry ignored), the Metal backend compiles the MSL library and selects
+	// fwdVert/fwdFrag by entry. Both modules carry the same MSL library on darwin.
+	vmod, err := dev.NewShaderModule(gpu.ShaderSource{GLSL: fwdGBufVert, MSL: fwdGBufMSL})
 	if err != nil {
 		return err
 	}
-	fmod, err := dev.NewShaderModule(gpu.ShaderSource{GLSL: fwdGBufFrag})
+	fmod, err := dev.NewShaderModule(gpu.ShaderSource{GLSL: fwdGBufFrag, MSL: fwdGBufMSL})
 	if err != nil {
 		return err
 	}
 	pipe, err := dev.NewRenderPipeline(gpu.RenderPipelineDescriptor{
-		VertexModule: vmod, VertexEntry: "main",
-		FragmentModule: fmod, FragmentEntry: "main",
+		VertexModule: vmod, VertexEntry: "fwdVert",
+		FragmentModule: fmod, FragmentEntry: "fwdFrag",
 		ColorFormat:       gpu.RGBA32Float,
 		ExtraColorFormats: []gpu.TextureFormat{gpu.RGBA32Float, gpu.RGBA32Float},
 		DepthFormat:       gpu.Depth32Float,

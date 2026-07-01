@@ -211,7 +211,12 @@ func (m *metalBackend) newTexture(format TextureFormat, w, h int, renderTarget b
 		StorageMode: storage,
 		Usage:       usage,
 	})
-	return &metalTexture{tex: tex, w: w, h: h}, nil
+	// Bytes per pixel for CPU readback: RGBA32Float is 16, RGBA8Unorm is 4.
+	bpp := 4
+	if format == RGBA32Float {
+		bpp = 16
+	}
+	return &metalTexture{tex: tex, w: w, h: h, bpp: bpp}, nil
 }
 
 func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string, fmod backendShaderModule, fentry string, color TextureFormat, extraColor []TextureFormat, depth TextureFormat) (backendRenderPipeline, error) {
@@ -252,11 +257,16 @@ func (m *metalBackend) newRenderPipeline(vmod backendShaderModule, ventry string
 type metalTexture struct {
 	tex  mtl.Texture
 	w, h int
+	bpp  int // bytes per pixel (RGBA8Unorm=4, RGBA32Float=16), for readback sizing
 }
 
 func (t *metalTexture) readPixels() []byte {
-	dst := make([]byte, t.w*t.h*4)
-	t.tex.GetBytes(dst, t.w*4, mtl.RegionMake2D(0, 0, t.w, t.h), 0)
+	bpp := t.bpp
+	if bpp == 0 {
+		bpp = 4
+	}
+	dst := make([]byte, t.w*t.h*bpp)
+	t.tex.GetBytes(dst, t.w*bpp, mtl.RegionMake2D(0, 0, t.w, t.h), 0)
 	return dst
 }
 
