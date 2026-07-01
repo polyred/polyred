@@ -1,6 +1,6 @@
 ---
 title: "GPU forward rasterizer (brick 3b): scene wiring + parity-by-measurement"
-status: GPU forward wired as the default passForward (GL), gated by measured parity; Metal port remains
+status: DONE -- GPU forward is the default passForward on GL (CI) and Metal (darwin), gated by measured parity
 depends_on:
   - foundations/gpu-render-depth.md
   - foundations/gpu-render-mrt.md
@@ -158,7 +158,38 @@ Bringing it up surfaced ONE real data-path bug and then the expected parity band
   ties. Per the user's "ship correct GPU + tolerance" call, the gate is measured,
   not zero.
 
-Three gates lock this in (all GL, Mesa surfaceless, in the gl-probe run filter):
+## Metal port (2026-07-01): runs on the darwin runtime too
+
+`gpuForwardPass` carries MSL shaders (`fwdGBufMSL`) beside the GLSL, so `passForward`
+runs fully on the GPU on darwin (Metal), not only GL in CI. Both shader modules carry
+the MSL library; GL ignores the pipeline entry names (GLSL is always `main`), Metal
+selects `fwdVert`/`fwdFrag`. Three Metal conventions differ from GL and were each found
+empirically against the CPU (all fixed in the MSL; the GLSL is unchanged):
+
+- **Clip z range.** The renderer's projection yields GL-style ndc z in [-1,1], but
+  Metal clips z to [0,1] and dropped the near half (coverage 0). The MSL vertex remaps
+  `z' = (z + w)/2`; the fragment still recovers the CPU's [-1,1] via `position.z*2-1`.
+  The deferred pass never hit this because it is a compute kernel (no clip).
+- **Back-face winding is inverted.** Metal's default front-facing winding is the
+  opposite of GL's for this NDC geometry, so the MSL discards `front` where the GLSL
+  discards `!gl_FrontFacing` (both keep the CPU's front faces). The wrong sense keeps
+  back faces: correct silhouette, wrong per-pixel data, ~15% off. No Y-flip is needed
+  on Metal despite its top-left texture origin (the readback here is bottom-origin like
+  GL, confirmed by coverage overlap = CPU exactly).
+- **RGBA32Float texture readback.** `metalTexture.readPixels` hardcoded 4 bytes/pixel;
+  a float G-buffer target needs 16. Added a bytes-per-pixel field set from the format,
+  mirroring the GL backend's float-aware readback.
+
+Result on Metal: coverage == CPU exactly, final image 4.37%@>8 / 0.97%@>16 -- the same
+parity band as GL. `TestGPUForwardMetal` (render/gpu_forward_darwin_test.go) gates it.
+
+Wiring GPU-forward as the default silently widened every full-`Render()` GPU-vs-CPU
+gate to include the forward parity band; the darwin deferred/gamma parity tests (tight
+exactness bound) then failed. Fixed with an unexported `forwardCPU` config flag +
+test-only `forwardOnCPU()` option: those single-pass gates force the CPU forward and
+shade the same G-buffer as the CPU reference (same isolation as `TestGLDeferredRender`).
+
+Three gates lock the GL path in (all GL, Mesa surfaceless, in the gl-probe run filter):
 - `TestGPUForwardPassUV` -- confound-free forward gate (no shading/AA): interior
   same-triangle UV must agree to ~float precision (<0.01, catches any interpolation
   regression at the source, e.g. a re-introduced Y-flip); interior different-triangle
