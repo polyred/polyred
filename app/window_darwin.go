@@ -591,39 +591,18 @@ func (w *window) flush(f frame) {
 
 	<-f.done
 
-	dx, dy := f.img.Bounds().Dx(), f.img.Bounds().Dy()
 	drawable, err := w.win.ctx.layer.NextDrawable()
 	if err != nil {
 		panic(fmt.Errorf("app: couldn't get the next drawable: %w", err))
 	}
 
-	tex := w.win.ctx.device.MakeTexture(mtl.TextureDescriptor{
-		PixelFormat: mtl.PixelFormatBGRA8UNorm,
-		Width:       dx,
-		Height:      dy,
-		StorageMode: mtl.StorageModeManaged,
-	})
-
-	region := mtl.RegionMake2D(0, 0, dx, dy)
-	tex.ReplaceRegion(region, 0, f.img.Pix, uintptr(4*dx))
-	cb := w.win.ctx.queue.MakeCommandBuffer()
-	bce := cb.MakeBlitCommandEncoder()
-	drawTex := drawable.Texture()
-	bce.CopyFromTexture(tex, 0, 0, mtl.Origin{},
-		mtl.Size{Width: dx, Height: dy, Depth: 1},
-		drawTex, 0, 0, mtl.Origin{})
-	bce.EndEncoding()
-	cb.PresentDrawable(drawable)
-
-	cb.AddCompletedHandler(func() {
-		f.done <- event{}
-		bce.Release()
-		cb.Release()
-		tex.Release()
-		drawTex.Release()
-	})
-
-	cb.Commit()
+	// Blit the frame into the drawable and present. The command buffer, blit encoder
+	// and the drawable's texture are autoreleased and owned by this frame's pool /
+	// the drawable; blitPresent must not release them (see its doc -- doing so was a
+	// use-after-free SIGSEGV, since this pool drains before the completion handler).
+	w.win.ctx.blitPresent(f.img, drawable.Texture(),
+		func(cb mtl.CommandBuffer) { cb.PresentDrawable(drawable) },
+		func() { f.done <- event{} })
 }
 
 type funcData struct {
