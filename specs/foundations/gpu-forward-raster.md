@@ -122,8 +122,22 @@ changes output; (A) preserves current output incl. a known bug.
      white-box test that injects the G-buffer, not yet the default path.
    - Port the forward raster to the Metal backend (darwin runtime; GL is the CI
      oracle), as the deferred pass already is.
-3. **Remove the round-trip (seam option B)** once wired: keep the G-buffer on GPU
-   textures into the deferred pass (no CPU FragmentBuffer round-trip).
+3. **Remove the round-trip (seam option B)** -- BLOCKED, reclassified as a follow-on
+   brick (2026-07-01). The forward rasterizer emits its G-buffer into GPU textures,
+   reads them back to the CPU `FragmentBuffer`, and the deferred pass re-uploads to GPU
+   storage buffers (seam A). Eliminating that round-trip requires the deferred pass to
+   consume the forward pass's GPU textures directly. But the "GPU deferred" pass is a
+   HYBRID: the material `basecol` is sampled on the CPU (`gpudeferred.go`,
+   `bp.Texture.Query(lod, info.U, 1-info.V)`) from the FragmentBuffer's UV/Du/Dv; only
+   the Blinn-Phong lighting math runs in the compute kernel (which reads storage
+   BUFFERS, not texture samplers). So for a TEXTURED scene, removing the round-trip
+   forces material texture sampling (mipmap generation, LOD, bilinear filtering, all
+   parity-matched to `buffer.Texture.Query`) ONTO the GPU -- exactly the item this spec
+   lists as out of scope. Seam B is therefore only cleanly achievable for FLAT
+   materials today; the textured path is gated behind a GPU-material-texture-sampling
+   brick. The forward RASTERIZER itself (this brick's deliverable) is complete: it runs
+   on the GPU by default on both backends, gated by measured parity. Seam B + GPU
+   texture sampling is tracked as the next brick, not part of the rasterizer impl.
 
 ## Wired as the default (2026-07-01): the Y-flip bug and the parity band
 
