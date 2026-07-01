@@ -59,7 +59,7 @@ func TestGPUDeferredShadow(t *testing.T) {
 	}
 
 	cpu := NewRenderer(append(opts, CPU())...).Render()
-	gr := NewRenderer(append(opts, GPU(dev))...)
+	gr := NewRenderer(append(opts, GPU(dev), forwardOnCPU())...)
 	gpuImg := gr.Render()
 	if !gr.passOnGPU("deferred") {
 		t.Fatal("GPU deferred path not exercised (shadow)")

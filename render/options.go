@@ -29,6 +29,7 @@ type option struct {
 	BlendFunc     BlendFunc
 	GPUDevice     *gpu.Device
 	forceCPU      bool
+	forwardCPU    bool // force the forward raster on the CPU while other passes may use the GPU
 }
 
 // Option represents a rendering option

@@ -53,7 +53,7 @@ func TestGPUDeferredDirectional(t *testing.T) {
 	opts := []Option{Camera(c), Size(w, h), MSAA(1), Scene(s), Background(color.RGBA{R: 0, G: 127, B: 255, A: 255})}
 
 	cpu := NewRenderer(append(opts, CPU())...).Render()
-	gr := NewRenderer(append(opts, GPU(dev))...)
+	gr := NewRenderer(append(opts, GPU(dev), forwardOnCPU())...)
 	gpuImg := gr.Render()
 	if !gr.passOnGPU("deferred") {
 		t.Fatal("GPU deferred path not exercised (directional light)")

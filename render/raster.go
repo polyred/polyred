@@ -212,6 +212,14 @@ func (r *Renderer) NextBuffer() *buffer.FragmentBuffer {
 // in the shaded image; the residual vs the CPU is a bounded boundary band (silhouette
 // edges + depth-tie folds), the parity trap documented in the forward-raster spec.
 func (r *Renderer) passForward() {
+	if r.cfg.forwardCPU {
+		// Deferred/gamma parity gates set this to shade a CPU-built G-buffer, so they
+		// isolate the pass under test (identical input to the CPU reference) rather
+		// than folding in the GPU forward rasterizer's boundary parity band.
+		r.cpuForwardPass()
+		r.passGPU["forward"] = false
+		return
+	}
 	r.runPass("forward", r.gpuForwardPass, r.cpuForwardPass)
 }
 

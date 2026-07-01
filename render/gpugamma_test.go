@@ -34,7 +34,7 @@ func TestGPUGammaParity(t *testing.T) {
 	}
 
 	cpu := NewRenderer(append(opts, CPU())...).Render()
-	gpuImg := NewRenderer(append(opts, GPU(dev))...).Render()
+	gpuImg := NewRenderer(append(opts, GPU(dev), forwardOnCPU())...).Render()
 
 	if cpu.Bounds() != gpuImg.Bounds() {
 		t.Fatalf("bounds differ: cpu %v gpu %v", cpu.Bounds(), gpuImg.Bounds())

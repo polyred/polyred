@@ -44,16 +44,10 @@ func TestGLDeferredRender(t *testing.T) {
 
 	cpu := NewRenderer(append(opts, CPU())...).Render()
 
-	// Force the CPU forward pass on the GPU renderer so the deferred pass shades the
-	// SAME G-buffer as the CPU reference; only the deferred stage differs (GPU vs CPU).
-	gr := NewRenderer(append(opts, GPU(dev))...)
-	buf := gr.CurrBuffer()
-	buf.Clear()
-	gr.cpuForwardPass()
-	buf.ClearColor()
-	gr.passDeferred()
-	gr.passAntialiasing()
-	gl := gr.outBuf
+	// forwardOnCPU: shade the SAME G-buffer as the CPU reference so only the deferred
+	// stage differs (GPU vs CPU), keeping this a pure deferred-shading gate.
+	gr := NewRenderer(append(opts, GPU(dev), forwardOnCPU())...)
+	gl := gr.Render()
 	if !gr.passOnGPU("deferred") {
 		t.Fatal("deferred pass did not run on the GL GPU (fell back to CPU)")
 	}

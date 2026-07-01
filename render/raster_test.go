@@ -23,6 +23,12 @@ import (
 	"poly.red/shader"
 )
 
+// forwardOnCPU forces the forward raster onto the CPU while other passes may still
+// run on the GPU. Deferred/gamma parity gates use it so the GPU pass under test
+// shades the same G-buffer as the CPU reference, isolating that pass from the GPU
+// forward rasterizer's boundary parity band.
+func forwardOnCPU() Option { return func(o *option) { o.forwardCPU = true } }
+
 func newscene(w, h int) (*scene.Scene, camera.Interface) {
 	s := scene.NewScene(light.NewPoint(
 		light.Intensity(5),
