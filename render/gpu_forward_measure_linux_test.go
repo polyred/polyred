@@ -396,8 +396,8 @@ func TestGPUForwardPassUV(t *testing.T) {
 	t.Logf("overlap cpu&gpuGBuffer: noflip=%d flip=%d", ovCB, ovCBflip)
 	t.Logf("overlap gpuForward&gpuGBuffer: %d", ovGB)
 
-	var nShared, matMismatch int
-	var sU, sV, mU, mV float32
+	var nShared, matMismatch, nInt, nIntBig int
+	var sU, sV, mU, mV, sUint, sVint float32
 	var sNorGG, sWPGG, mNorGG float32 // gpuForwardPass vs gpuGBuffer (GPU-vs-GPU)
 	var dumped int
 	for y := 0; y < h; y++ {
@@ -431,9 +431,23 @@ func TestGPUForwardPassUV(t *testing.T) {
 			if cf.MaterialID != gf.MaterialID {
 				matMismatch++
 			}
+			// Interior = all 4 CPU neighbors covered (not a silhouette/edge fragment).
+			// Split the UV delta interior vs edge: a large interior delta is an
+			// interpolation bug; edge-only is the expected silhouette band.
+			interior := cpu.UnsafeGet(x-1, y).Ok && cpu.UnsafeGet(x+1, y).Ok &&
+				cpu.UnsafeGet(x, y-1).Ok && cpu.UnsafeGet(x, y+1).Ok &&
+				x > 0 && x < w-1 && y > 0 && y < h-1
+			if interior {
+				nInt++
+				sUint += du
+				sVint += dv
+				if du > 0.02 || dv > 0.02 {
+					nIntBig++
+				}
+			}
 			if (du > 0.05 || dv > 0.05) && dumped < 6 {
-				t.Logf("  (%d,%d) cpuUV=(%.4f,%.4f) gpuUV=(%.4f,%.4f)  fwd-vs-gbuf |dNor|=%.4f |dWP|=%.4f",
-					x, y, cf.U, cf.V, gf.U, gf.V, nGG, wGG)
+				t.Logf("  (%d,%d) interior=%v cpuUV=(%.4f,%.4f) gpuUV=(%.4f,%.4f)",
+					x, y, interior, cf.U, cf.V, gf.U, gf.V)
 				dumped++
 			}
 		}
@@ -446,6 +460,8 @@ func TestGPUForwardPassUV(t *testing.T) {
 		nShared, sNorGG/float32(nShared), mNorGG, sWPGG/float32(nShared))
 	t.Logf("UV vs CPU: meanU=%.5f meanV=%.5f (max %.4f/%.4f) matMismatch=%d",
 		sU/float32(nShared), sV/float32(nShared), mU, mV, matMismatch)
+	t.Logf("UV interior-only (%d frags): meanU=%.5f meanV=%.5f  interior frags with dU|dV>0.02: %d (%.2f%%)",
+		nInt, sUint/float32(nInt), sVint/float32(nInt), nIntBig, 100*float64(nIntBig)/float64(nInt))
 }
 
 func absf(v float32) float32 {
