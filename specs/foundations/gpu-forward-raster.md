@@ -115,29 +115,27 @@ changes output; (A) preserves current output incl. a known bug.
    perspective-correct (GPU) vs linear (CPU) normal/worldpos interpolation only
    produces sub-quantization lighting differences, so the shaded image is
    equivalent. The CPU worldpos bug was fixed (interpWorldPos) so CPU+GPU agree.
-   REMAINING to fully finish brick 3b:
-   - Wire it as `passGPU["forward"]` IN the renderer (a real `gpuForwardRaster`
-     emitting the G-buffer incl. matid/col, gated like the deferred pass), so the
-     renderer uses the GPU forward by default -- today it is proven via a
-     white-box test that injects the G-buffer, not yet the default path.
-   - Port the forward raster to the Metal backend (darwin runtime; GL is the CI
-     oracle), as the deferred pass already is.
-3. **Remove the round-trip (seam option B)** -- BLOCKED, reclassified as a follow-on
-   brick (2026-07-01). The forward rasterizer emits its G-buffer into GPU textures,
-   reads them back to the CPU `FragmentBuffer`, and the deferred pass re-uploads to GPU
-   storage buffers (seam A). Eliminating that round-trip requires the deferred pass to
-   consume the forward pass's GPU textures directly. But the "GPU deferred" pass is a
-   HYBRID: the material `basecol` is sampled on the CPU (`gpudeferred.go`,
-   `bp.Texture.Query(lod, info.U, 1-info.V)`) from the FragmentBuffer's UV/Du/Dv; only
-   the Blinn-Phong lighting math runs in the compute kernel (which reads storage
-   BUFFERS, not texture samplers). So for a TEXTURED scene, removing the round-trip
-   forces material texture sampling (mipmap generation, LOD, bilinear filtering, all
-   parity-matched to `buffer.Texture.Query`) ONTO the GPU -- exactly the item this spec
-   lists as out of scope. Seam B is therefore only cleanly achievable for FLAT
-   materials today; the textured path is gated behind a GPU-material-texture-sampling
-   brick. The forward RASTERIZER itself (this brick's deliverable) is complete: it runs
-   on the GPU by default on both backends, gated by measured parity. Seam B + GPU
-   texture sampling is tracked as the next brick, not part of the rasterizer impl.
+   Both remaining items are now **DONE**:
+   - Wired as the default `passForward` (`runPass("forward", gpuForwardPass,
+     cpuForwardPass)`) emitting the full G-buffer incl. matid + uv, gated like the
+     deferred pass -- see "Wired as the default" below.
+   - Ported the forward raster to the Metal backend (darwin runtime) -- see "Metal
+     port" below.
+
+   So brick 3b's two rasterizer steps are complete on both backends, gated by measured
+   parity.
+
+**Seam option B (remove the CPU round-trip) is NOT a step of this brick.** It was
+originally sketched here as a "step 3", but it turned out to depend on an item this
+spec lists as out of scope (GPU-side material texture sampling), so it cannot be a step
+of the rasterizer brick. It has been split into its own successor brick,
+[`gpu-material-texture-sampling.md`](gpu-material-texture-sampling.md) (status: not
+started), which carries the full analysis. In short: the "GPU deferred" pass is a
+hybrid -- material `basecol` is sampled on the CPU (`bp.Texture.Query` from the
+FragmentBuffer UV), only the lighting math runs in the compute kernel -- so removing
+the round-trip for a textured scene forces texture sampling onto the GPU. The forward
+RASTERIZER (this brick's deliverable) is complete; the round-trip removal is the next
+brick. User decision 2026-07-01: "consider rasterizer done; defer seam B."
 
 ## Wired as the default (2026-07-01): the Y-flip bug and the parity band
 
@@ -218,4 +216,5 @@ Three gates lock the GL path in (all GL, Mesa surfaceless, in the gl-probe run f
 
 - MSAA on the GPU raster (the CPU path supersamples; match at MSAA=1 first).
 - Texture-sampled materials in the GPU G-buffer (basecol from texture) until flat
-  materials parity holds.
+  materials parity holds. This, and the seam-B round-trip removal that depends on it,
+  are the successor brick [`gpu-material-texture-sampling.md`](gpu-material-texture-sampling.md).
